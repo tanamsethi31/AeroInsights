@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SourceTag = "heuristic" | "desk-keyed" | "user-overridden";
@@ -156,6 +154,9 @@ export function resolvedValue(
   if (override) {
     return { value: override.value, source: "user-overridden", bandLow: override.value, bandHigh: override.value };
   }
+  if (key === "partOut") {
+    return { ...v.partOut, value: computedPartOut(v) };
+  }
   return v[key];
 }
 
@@ -199,5 +200,3 @@ export function AircraftValuationPanel(_props: {
   );
 }
 
-// Suppress unused import warning until Task 2
-void useState;
