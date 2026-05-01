@@ -250,6 +250,150 @@ function fmtUnits(n: number, basis: "$/FH" | "$/cycle"): string {
   return basis === "$/FH" ? `${(n / 1000).toFixed(1)}k FH` : `${(n / 1000).toFixed(1)}k cy`;
 }
 
+// ─── Expanded Panel ───────────────────────────────────────────────────────────
+
+function ExpandedPanel({ lease, condition }: { lease: LeaseSDMR; condition: "half-life" | "full-life" }) {
+  const conservOff = conservativeOffset(lease);
+  const optOff = optimisticOffset(lease);
+  const adjLGD = adjustedLGD(lease);
+
+  return (
+    <div style={{ padding: "1.25rem", display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "1.25rem", alignItems: "start" }}>
+
+      {/* Left: Security Deposit card */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>Security Deposit</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
+          <span style={{
+            fontSize: "0.8125rem", fontWeight: 700, padding: "0.25rem 0.75rem", borderRadius: "9999px",
+            background: lease.sd.type === "Cash" ? "rgba(3,105,161,0.08)" : "rgba(124,58,237,0.08)",
+            color: lease.sd.type === "Cash" ? "#0369A1" : "#7C3AED",
+            border: `1px solid ${lease.sd.type === "Cash" ? "rgba(3,105,161,0.2)" : "rgba(124,58,237,0.2)"}`,
+          }}>
+            {lease.sd.type === "LC" ? "Letter of Credit" : "Cash"}
+          </span>
+          <span style={{ fontSize: "1rem", fontWeight: 700, color: "#0F172A" }}>{fmtUSD(lease.sd.amount)}</span>
+          <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>{lease.sd.currency}</span>
+        </div>
+
+        <div style={{ marginBottom: "0.75rem" }}>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.375rem" }}>Refund Triggers</div>
+          <ul style={{ margin: 0, paddingLeft: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+            {lease.sd.refundTriggers.map((t, i) => (
+              <li key={i} style={{ fontSize: "0.8125rem", color: "#334155", lineHeight: 1.5 }}>{t}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>Governing Law</div>
+          <div style={{ fontSize: "0.8125rem", color: "#475569" }}>{lease.sd.governingLaw}</div>
+        </div>
+      </div>
+
+      {/* Centre: MR Ledger */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+        <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #E2E8F0", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          MR Ledger by Component
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+          <thead>
+            <tr style={{ background: "#F8FAFC" }}>
+              {["Component", "Rate", "Basis", "Accumulated", "Balance", "Refund Cap Test", "Refundable"].map((h) => (
+                <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {lease.mrComponents.map((comp, i) => {
+              const netRefund = mrNetRefund(comp);
+              return (
+                <tr key={comp.component} style={{ borderTop: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
+                  <td style={{ padding: "0.5rem 0.75rem", fontWeight: 600, color: "#0F172A", whiteSpace: "nowrap" }}>{comp.component}</td>
+                  <td style={{ padding: "0.5rem 0.75rem", fontVariantNumeric: "tabular-nums", color: "#0F172A" }}>${comp.rateAmount.toLocaleString()}</td>
+                  <td style={{ padding: "0.5rem 0.75rem", color: "#475569", fontSize: "0.75rem" }}>{comp.rateBasis}</td>
+                  <td style={{ padding: "0.5rem 0.75rem", color: "#475569", fontVariantNumeric: "tabular-nums" }}>{fmtUnits(comp.unitsAccumulated, comp.rateBasis)}</td>
+                  <td style={{ padding: "0.5rem 0.75rem", fontWeight: 600, color: "#0F172A", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(comp.cumulativeBalance)}</td>
+                  <td style={{ padding: "0.5rem 0.75rem", fontVariantNumeric: "tabular-nums" }}>
+                    {comp.refundable ? (
+                      <span style={{ color: netRefund < comp.cumulativeBalance ? "#B45309" : "#15803D", fontWeight: 500 }}>
+                        {fmtUSD(netRefund)}
+                        {netRefund < comp.cumulativeBalance && (
+                          <span style={{ fontSize: "0.6875rem", color: "#94A3B8", marginLeft: "0.25rem" }}>(capped)</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span style={{ color: "#94A3B8", fontSize: "0.75rem" }}>N/A</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "0.5rem 0.75rem" }}>
+                    <StatusPill stage={comp.refundable ? "green" : ("neutral" as any)} label={comp.refundable ? "Yes" : "No"} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: "2px solid #E2E8F0", background: "#F4F5F7" }}>
+              <td colSpan={4} style={{ padding: "0.5rem 0.75rem", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem" }}>Total</td>
+              <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#002147", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(totalMRBalance(lease))}</td>
+              <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#15803D", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(refundableMRCapped(lease))}</td>
+              <td />
+            </tr>
+          </tfoot>
+        </table>
+        <div style={{ padding: "0.5rem 0.75rem", borderTop: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#94A3B8" }}>
+          Cap rule: refund = min(MR paid net of refunds, evidenced maintenance cost)
+        </div>
+      </div>
+
+      {/* Right: LGD Offset Breakdown */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>LGD Offset Breakdown</div>
+        {[
+          { label: "Security Deposit", value: fmtUSD(lease.sd.amount), note: "Full recovery assumed", color: "#0369A1" },
+          { label: "Non-refundable MR", value: fmtUSD(nonRefundableMR(lease)), note: "Lessor retains in default", color: "#002147" },
+          { label: "Refundable MR (capped)", value: fmtUSD(refundableMRCapped(lease)), note: "Conditional on evidence", color: "#B45309" },
+        ].map(({ label, value, note, color }) => (
+          <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.625rem", paddingBottom: "0.625rem", borderBottom: "1px solid #F1F5F9" }}>
+            <div>
+              <div style={{ fontSize: "0.8125rem", fontWeight: 600, color }}>{label}</div>
+              <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>{note}</div>
+            </div>
+            <span style={{ fontSize: "0.875rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>{value}</span>
+          </div>
+        ))}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.5rem" }}>
+          {[
+            { label: "Base LGD", value: `${lease.baseLGD}%`, sub: "ECL dataset", dim: true },
+            { label: "Adj. LGD", value: `${adjLGD.toFixed(1)}%`, sub: "Conservative", dim: false },
+            { label: "Conservative offset", value: `${(conservOff * 100).toFixed(1)} pp`, sub: "SD + non-ref MR", dim: false },
+            { label: "Optimistic offset", value: `${(optOff * 100).toFixed(1)} pp`, sub: "SD + all MR", dim: false },
+          ].map(({ label, value, sub, dim }) => (
+            <div key={label} style={{ background: dim ? "#F8FAFC" : "rgba(0,33,71,0.04)", borderRadius: "0.5rem", padding: "0.5rem 0.625rem" }}>
+              <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+              <div style={{ fontSize: "1rem", fontWeight: 700, color: dim ? "#94A3B8" : "#002147", fontVariantNumeric: "tabular-nums" }}>{value}</div>
+              <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>{sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: "0.875rem", paddingTop: "0.75rem", borderTop: "1px solid #F1F5F9" }}>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.375rem" }}>
+            EOL Compensation ({condition === "half-life" ? "½ Life" : "Full Life"} return)
+          </div>
+          <div style={{ fontSize: "1rem", fontWeight: 700, color: eolCompensation(lease, condition) > 0 ? "#B91C1C" : "#15803D", fontVariantNumeric: "tabular-nums" }}>
+            {eolCompensation(lease, condition) > 0 ? `+${fmtUSD(eolCompensation(lease, condition))}` : "—"}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+            {eolCompensation(lease, condition) > 0 ? "Lessee owes lessor at redelivery" : "No compensation required"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function SDMRTab() {
@@ -358,10 +502,7 @@ export function SDMRTab() {
                     {isOpen && (
                       <tr key={`${lease.leaseId}-detail`} style={{ borderBottom: "1px solid #E2E8F0" }}>
                         <td colSpan={10} style={{ padding: "0", background: "#FAFAFA" }}>
-                          {/* Expanded panel — implemented in Task 3 */}
-                          <div style={{ padding: "1rem 1.25rem", color: "#94A3B8", fontSize: "0.8125rem" }}>
-                            Detail panel — implemented in Task 3
-                          </div>
+                          <ExpandedPanel lease={lease} condition={conditions[lease.leaseId]} />
                         </td>
                       </tr>
                     )}
