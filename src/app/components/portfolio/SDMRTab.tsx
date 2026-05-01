@@ -1,0 +1,257 @@
+import { useState } from "react";
+import { Card } from "../ui/Card";
+import { KpiCard } from "../ui/KpiCard";
+import { StatusPill } from "../ui/StatusPill";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SDRecord {
+  type: "Cash" | "LC";
+  amount: number;
+  currency: string;
+  refundTriggers: string[];
+  governingLaw: string;
+}
+
+interface MRComponent {
+  component: "Airframe HSI" | "Engine PR" | "LLPs" | "Landing Gear" | "APU";
+  rateBasis: "$/FH" | "$/cycle";
+  rateAmount: number;
+  unitsAccumulated: number;
+  cumulativeBalance: number;
+  refundable: boolean;
+  capRule: string;
+  evidencedCost: number;
+  fullIntervalUnits: number;
+  remainingUnits: number;
+}
+
+interface LeaseSDMR {
+  leaseId: string;
+  lessee: string;
+  aircraft: string;
+  eadNum: number;
+  baseLGD: number;
+  sd: SDRecord;
+  mrComponents: MRComponent[];
+  returnCondition: "half-life" | "full-life";
+}
+
+// ─── Synthetic Dataset ────────────────────────────────────────────────────────
+
+const sdmrData: LeaseSDMR[] = [
+  {
+    leaseId: "LSE-2019-001",
+    lessee: "IndiGo Airlines",
+    aircraft: "A320neo",
+    eadNum: 24.2,
+    baseLGD: 54,
+    sd: {
+      type: "Cash",
+      amount: 1_710_000,
+      currency: "USD",
+      refundTriggers: [
+        "No payment default in preceding 12 months",
+        "Aircraft returned per agreed maintenance return conditions",
+        "All outstanding maintenance claims settled at return",
+      ],
+      governingLaw: "Ireland — Cape Town Convention",
+    },
+    mrComponents: [
+      { component: "Airframe HSI", rateBasis: "$/FH", rateAmount: 420, unitsAccumulated: 21_350, cumulativeBalance: 8_967_000, refundable: true, capRule: "Max 18 months' contributions", evidencedCost: 7_200_000, fullIntervalUnits: 36_000, remainingUnits: 6_200 },
+      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 310, unitsAccumulated: 21_350, cumulativeBalance: 6_618_500, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 5_400_000, fullIntervalUnits: 20_000, remainingUnits: 3_100 },
+      { component: "LLPs", rateBasis: "$/cycle", rateAmount: 90, unitsAccumulated: 14_200, cumulativeBalance: 1_278_000, refundable: false, capRule: "Non-refundable — lessor retains", evidencedCost: 0, fullIntervalUnits: 20_000, remainingUnits: 5_800 },
+      { component: "Landing Gear", rateBasis: "$/FH", rateAmount: 62, unitsAccumulated: 21_350, cumulativeBalance: 1_323_700, refundable: true, capRule: "Max 24 months' contributions", evidencedCost: 1_200_000, fullIntervalUnits: 60_000, remainingUnits: 22_400 },
+      { component: "APU", rateBasis: "$/FH", rateAmount: 38, unitsAccumulated: 21_350, cumulativeBalance: 811_300, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 650_000, fullIntervalUnits: 25_000, remainingUnits: 4_900 },
+    ],
+    returnCondition: "half-life",
+  },
+  {
+    leaseId: "LSE-2020-014",
+    lessee: "Aeromexico",
+    aircraft: "B737-800",
+    eadNum: 32.1,
+    baseLGD: 58,
+    sd: {
+      type: "LC",
+      amount: 1_860_000,
+      currency: "USD",
+      refundTriggers: [
+        "No Chapter 11 or insolvency filing in preceding 24 months",
+        "Aircraft returned in agreed maintenance condition",
+        "Letter of Credit not drawn upon during lease term",
+      ],
+      governingLaw: "New York — US UCC Article 2A",
+    },
+    mrComponents: [
+      { component: "Airframe HSI", rateBasis: "$/FH", rateAmount: 360, unitsAccumulated: 20_300, cumulativeBalance: 7_308_000, refundable: true, capRule: "Max 18 months' contributions", evidencedCost: 5_900_000, fullIntervalUnits: 32_000, remainingUnits: 4_800 },
+      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 260, unitsAccumulated: 20_300, cumulativeBalance: 5_278_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 4_100_000, fullIntervalUnits: 18_000, remainingUnits: 2_600 },
+      { component: "LLPs", rateBasis: "$/cycle", rateAmount: 78, unitsAccumulated: 16_000, cumulativeBalance: 1_248_000, refundable: false, capRule: "Non-refundable — lessor retains", evidencedCost: 0, fullIntervalUnits: 20_000, remainingUnits: 4_000 },
+      { component: "Landing Gear", rateBasis: "$/FH", rateAmount: 56, unitsAccumulated: 20_300, cumulativeBalance: 1_136_800, refundable: true, capRule: "Max 24 months' contributions", evidencedCost: 900_000, fullIntervalUnits: 55_000, remainingUnits: 18_600 },
+      { component: "APU", rateBasis: "$/FH", rateAmount: 32, unitsAccumulated: 20_300, cumulativeBalance: 649_600, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 520_000, fullIntervalUnits: 23_000, remainingUnits: 4_200 },
+    ],
+    returnCondition: "half-life",
+  },
+  {
+    leaseId: "LSE-2021-022",
+    lessee: "Emirates",
+    aircraft: "B777-300ER",
+    eadNum: 88.4,
+    baseLGD: 28,
+    sd: {
+      type: "Cash",
+      amount: 1_240_000,
+      currency: "USD",
+      refundTriggers: [
+        "Lease expires without payment default",
+        "Aircraft redelivered in full-life condition",
+      ],
+      governingLaw: "England & Wales — Cape Town Convention",
+    },
+    mrComponents: [
+      { component: "Airframe HSI", rateBasis: "$/FH", rateAmount: 610, unitsAccumulated: 26_500, cumulativeBalance: 16_165_000, refundable: true, capRule: "Max 18 months' contributions", evidencedCost: 14_800_000, fullIntervalUnits: 48_000, remainingUnits: 21_500 },
+      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 680, unitsAccumulated: 26_500, cumulativeBalance: 18_020_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 16_200_000, fullIntervalUnits: 22_000, remainingUnits: 9_800 },
+      { component: "LLPs", rateBasis: "$/cycle", rateAmount: 165, unitsAccumulated: 7_400, cumulativeBalance: 1_221_000, refundable: false, capRule: "Non-refundable — lessor retains", evidencedCost: 0, fullIntervalUnits: 15_000, remainingUnits: 7_600 },
+      { component: "Landing Gear", rateBasis: "$/FH", rateAmount: 125, unitsAccumulated: 26_500, cumulativeBalance: 3_312_500, refundable: true, capRule: "Max 24 months' contributions", evidencedCost: 3_100_000, fullIntervalUnits: 70_000, remainingUnits: 43_500 },
+      { component: "APU", rateBasis: "$/FH", rateAmount: 58, unitsAccumulated: 26_500, cumulativeBalance: 1_537_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 1_400_000, fullIntervalUnits: 28_000, remainingUnits: 14_200 },
+    ],
+    returnCondition: "full-life",
+  },
+  {
+    leaseId: "LSE-2020-031",
+    lessee: "SriLankan Airlines",
+    aircraft: "A330-300",
+    eadNum: 34.2,
+    baseLGD: 52,
+    sd: {
+      type: "Cash",
+      amount: 1_440_000,
+      currency: "USD",
+      refundTriggers: [
+        "No payment default in preceding 12 months",
+        "Aircraft returned with maintenance reserves current",
+        "No outstanding lessor indemnity claims",
+      ],
+      governingLaw: "Ireland — Cape Town Convention",
+    },
+    mrComponents: [
+      { component: "Airframe HSI", rateBasis: "$/FH", rateAmount: 530, unitsAccumulated: 28_000, cumulativeBalance: 14_840_000, refundable: true, capRule: "Max 18 months' contributions", evidencedCost: 11_200_000, fullIntervalUnits: 40_000, remainingUnits: 7_400 },
+      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 540, unitsAccumulated: 28_000, cumulativeBalance: 15_120_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 12_000_000, fullIntervalUnits: 20_000, remainingUnits: 4_600 },
+      { component: "LLPs", rateBasis: "$/cycle", rateAmount: 128, unitsAccumulated: 9_000, cumulativeBalance: 1_152_000, refundable: false, capRule: "Non-refundable — lessor retains", evidencedCost: 0, fullIntervalUnits: 18_000, remainingUnits: 9_000 },
+      { component: "Landing Gear", rateBasis: "$/FH", rateAmount: 105, unitsAccumulated: 28_000, cumulativeBalance: 2_940_000, refundable: true, capRule: "Max 24 months' contributions", evidencedCost: 2_600_000, fullIntervalUnits: 60_000, remainingUnits: 32_000 },
+      { component: "APU", rateBasis: "$/FH", rateAmount: 52, unitsAccumulated: 28_000, cumulativeBalance: 1_456_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 1_200_000, fullIntervalUnits: 25_000, remainingUnits: 9_800 },
+    ],
+    returnCondition: "half-life",
+  },
+  {
+    leaseId: "LSE-2022-009",
+    lessee: "Ryanair",
+    aircraft: "B737 MAX 8",
+    eadNum: 44.7,
+    baseLGD: 18,
+    sd: {
+      type: "LC",
+      amount: 340_000,
+      currency: "USD",
+      refundTriggers: [
+        "Lease expires at scheduled end date",
+        "No draw events during lease term",
+      ],
+      governingLaw: "Ireland — Cape Town Convention",
+    },
+    mrComponents: [
+      { component: "Airframe HSI", rateBasis: "$/FH", rateAmount: 385, unitsAccumulated: 10_500, cumulativeBalance: 4_042_500, refundable: true, capRule: "Max 18 months' contributions", evidencedCost: 3_800_000, fullIntervalUnits: 36_000, remainingUnits: 25_500 },
+      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 300, unitsAccumulated: 10_500, cumulativeBalance: 3_150_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 2_900_000, fullIntervalUnits: 20_000, remainingUnits: 14_200 },
+      { component: "LLPs", rateBasis: "$/cycle", rateAmount: 80, unitsAccumulated: 8_400, cumulativeBalance: 672_000, refundable: false, capRule: "Non-refundable — lessor retains", evidencedCost: 0, fullIntervalUnits: 20_000, remainingUnits: 11_600 },
+      { component: "Landing Gear", rateBasis: "$/FH", rateAmount: 59, unitsAccumulated: 10_500, cumulativeBalance: 619_500, refundable: true, capRule: "Max 24 months' contributions", evidencedCost: 580_000, fullIntervalUnits: 55_000, remainingUnits: 44_500 },
+      { component: "APU", rateBasis: "$/FH", rateAmount: 33, unitsAccumulated: 10_500, cumulativeBalance: 346_500, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 310_000, fullIntervalUnits: 23_000, remainingUnits: 16_800 },
+    ],
+    returnCondition: "full-life",
+  },
+  {
+    leaseId: "LSE-2018-047",
+    lessee: "Air France",
+    aircraft: "A350-900",
+    eadNum: 68.3,
+    baseLGD: 22,
+    sd: {
+      type: "Cash",
+      amount: 960_000,
+      currency: "USD",
+      refundTriggers: [
+        "Lease expires at scheduled end date without default",
+        "Aircraft redelivered in agreed condition",
+      ],
+      governingLaw: "France — Cape Town Convention (Alt A declared)",
+    },
+    mrComponents: [
+      { component: "Airframe HSI", rateBasis: "$/FH", rateAmount: 590, unitsAccumulated: 39_000, cumulativeBalance: 23_010_000, refundable: true, capRule: "Max 18 months' contributions", evidencedCost: 21_000_000, fullIntervalUnits: 48_000, remainingUnits: 16_200 },
+      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 640, unitsAccumulated: 39_000, cumulativeBalance: 24_960_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 22_500_000, fullIntervalUnits: 25_000, remainingUnits: 11_400 },
+      { component: "LLPs", rateBasis: "$/cycle", rateAmount: 145, unitsAccumulated: 10_400, cumulativeBalance: 1_508_000, refundable: false, capRule: "Non-refundable — lessor retains", evidencedCost: 0, fullIntervalUnits: 18_000, remainingUnits: 7_600 },
+      { component: "Landing Gear", rateBasis: "$/FH", rateAmount: 112, unitsAccumulated: 39_000, cumulativeBalance: 4_368_000, refundable: true, capRule: "Max 24 months' contributions", evidencedCost: 4_100_000, fullIntervalUnits: 70_000, remainingUnits: 38_400 },
+      { component: "APU", rateBasis: "$/FH", rateAmount: 54, unitsAccumulated: 39_000, cumulativeBalance: 2_106_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 1_900_000, fullIntervalUnits: 28_000, remainingUnits: 13_600 },
+    ],
+    returnCondition: "full-life",
+  },
+];
+
+// ─── Computed Functions ───────────────────────────────────────────────────────
+
+function mrNetRefund(comp: MRComponent): number {
+  if (!comp.refundable) return 0;
+  return Math.min(comp.cumulativeBalance, comp.evidencedCost);
+}
+
+function totalMRBalance(lease: LeaseSDMR): number {
+  return lease.mrComponents.reduce((s, c) => s + c.cumulativeBalance, 0);
+}
+
+function nonRefundableMR(lease: LeaseSDMR): number {
+  return lease.mrComponents
+    .filter((c) => !c.refundable)
+    .reduce((s, c) => s + c.cumulativeBalance, 0);
+}
+
+function refundableMRCapped(lease: LeaseSDMR): number {
+  return lease.mrComponents
+    .filter((c) => c.refundable)
+    .reduce((s, c) => s + mrNetRefund(c), 0);
+}
+
+function conservativeOffset(lease: LeaseSDMR): number {
+  return (lease.sd.amount + nonRefundableMR(lease)) / (lease.eadNum * 1_000_000);
+}
+
+function optimisticOffset(lease: LeaseSDMR): number {
+  return (lease.sd.amount + nonRefundableMR(lease) + refundableMRCapped(lease)) / (lease.eadNum * 1_000_000);
+}
+
+function adjustedLGD(lease: LeaseSDMR): number {
+  return Math.max(0, lease.baseLGD * (1 - conservativeOffset(lease)));
+}
+
+function eolCompensation(lease: LeaseSDMR, condition: "half-life" | "full-life"): number {
+  return lease.mrComponents.reduce((sum, comp) => {
+    const target = condition === "half-life"
+      ? comp.fullIntervalUnits / 2
+      : comp.fullIntervalUnits;
+    const shortfall = Math.max(0, target - comp.remainingUnits);
+    return sum + shortfall * comp.rateAmount;
+  }, 0);
+}
+
+function fmtUSD(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`;
+  return `$${n.toFixed(0)}`;
+}
+
+function fmtUnits(n: number, basis: "$/FH" | "$/cycle"): string {
+  return basis === "$/FH" ? `${(n / 1000).toFixed(1)}k FH` : `${(n / 1000).toFixed(1)}k cy`;
+}
+
+// ─── Shell component (replaced in Task 2) ────────────────────────────────────
+
+export function SDMRTab() {
+  return <div style={{ padding: "2rem", color: "#475569" }}>SD / MR loading…</div>;
+}
