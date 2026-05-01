@@ -226,7 +226,8 @@ function ExpandedPanel({
     (s, c) => s + c.componentValue * c.recoveryFactor,
     0,
   );
-  const canSave = overrideValueStr.trim() !== "" && overrideNote.trim() !== "";
+  const parsed = parseFloat(overrideValueStr);
+  const canSave = !isNaN(parsed) && parsed > 0 && overrideNote.trim() !== "";
 
   return (
     <div style={{ padding: "1.25rem", display: "grid", gridTemplateColumns: "1fr 1.5fr 1fr", gap: "1.25rem", alignItems: "start" }}>
