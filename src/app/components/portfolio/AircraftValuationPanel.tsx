@@ -216,7 +216,7 @@ function ExpandedPanel({
 
   function handleSave() {
     const num = parseFloat(overrideValueStr) * 1_000_000;
-    if (isNaN(num) || !overrideNote.trim()) return;
+    if (isNaN(num) || num <= 0 || !overrideNote.trim()) return;
     onOverride(valuation.msn, overrideKey, { value: num, note: overrideNote.trim() });
     setOverrideValueStr("");
     setOverrideNote("");
@@ -302,7 +302,7 @@ function ExpandedPanel({
             </tr>
             <tr style={{ borderTop: "2px solid #E2E8F0", background: "#F4F5F7" }}>
               <td colSpan={3} style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#002147", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Net Part-out</td>
-              <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#002147", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(computedPartOut(valuation))}</td>
+              <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#002147", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(resolvedValue(valuation, "partOut", overrides).value)}</td>
             </tr>
           </tfoot>
         </table>
@@ -374,7 +374,9 @@ function ExpandedPanel({
               No overrides — all values from heuristic model
             </div>
           ) : (
-            (Object.entries(activeOverrides) as [OverrideKey, OverrideEntry][]).map(([k, entry]) => {
+            (Object.entries(activeOverrides) as [OverrideKey, OverrideEntry | undefined][])
+              .filter((pair): pair is [OverrideKey, OverrideEntry] => pair[1] !== undefined)
+              .map(([k, entry]) => {
               const label = VALUE_KEYS.find((v) => v.key === k)?.label ?? k;
               return (
                 <div
