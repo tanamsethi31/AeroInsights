@@ -513,6 +513,50 @@ export function SDMRTab() {
           </table>
         </div>
       </Card>
+
+      {/* ECL Feedback Table */}
+      <Card
+        title="SD / MR → ECL LGD Feedback"
+        subtitle="How SD and MR reserves reduce LGD per lease — conservative floor and optimistic ceiling"
+        noPadding
+      >
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
+            <thead>
+              <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+                {["Lease ID", "Lessee", "EAD", "Base LGD", "Conservative Adj. LGD", "Optimistic Adj. LGD", "ECL Δ (conservative)"].map((h) => (
+                  <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sdmrData.map((lease, i) => {
+                const adjLGD = adjustedLGD(lease);
+                const optLGD = Math.max(0, lease.baseLGD * (1 - optimisticOffset(lease)));
+                const eclBase = lease.eadNum * (lease.baseLGD / 100);
+                const eclAdj = lease.eadNum * (adjLGD / 100);
+                const eclDelta = eclAdj - eclBase;
+                return (
+                  <tr key={lease.leaseId} style={{ borderBottom: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
+                    <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569" }}>{lease.leaseId}</td>
+                    <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{lease.lessee}</td>
+                    <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>${lease.eadNum.toFixed(1)}M</td>
+                    <td style={{ padding: "0.75rem 1rem", color: lease.baseLGD >= 50 ? "#B91C1C" : lease.baseLGD >= 30 ? "#B45309" : "#475569", fontWeight: 600 }}>{lease.baseLGD}%</td>
+                    <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#002147" }}>{adjLGD.toFixed(1)}%</td>
+                    <td style={{ padding: "0.75rem 1rem", color: "#15803D", fontWeight: 500 }}>{optLGD.toFixed(1)}%</td>
+                    <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                      {Math.abs(eclDelta) < 0.005 ? "—" : `${eclDelta >= 0 ? "+" : ""}$${Math.abs(eclDelta).toFixed(2)}M`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#94A3B8", background: "#F8FAFC" }}>
+          SD/MR LGD adjustments shown for reference. Full integration into probability-weighted ECL computation delivered in Sprint 12 (F09 — Risk Mitigation Action Simulator).
+        </div>
+      </Card>
     </div>
   );
 }
