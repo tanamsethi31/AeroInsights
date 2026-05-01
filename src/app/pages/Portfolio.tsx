@@ -1,4 +1,14 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
+import {
+  AircraftValuationPanel,
+  valuationData,
+  resolvedValue,
+  fmtUSD,
+  SourceBadge,
+  type OverrideKey,
+  type OverrideEntry,
+  type OverrideMap,
+} from "../components/portfolio/AircraftValuationPanel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { KpiCard } from "../components/ui/KpiCard";
 import { StatusPill } from "../components/ui/StatusPill";
@@ -76,12 +86,6 @@ const leaseAccessors = {
   stage: (l: typeof leases[0]) => parseInt(l.stage),
 };
 
-const aircraftAccessors = {
-  type: (a: typeof aircraft[0]) => a.type,
-  vintage: (a: typeof aircraft[0]) => a.vintage,
-  nbv: (a: typeof aircraft[0]) => parseFloat(a.nbv.replace(/[$M]/g, "")),
-  mv: (a: typeof aircraft[0]) => parseFloat(a.mv.replace(/[$M]/g, "")),
-};
 
 const lesseeAccessors = {
   name: (l: typeof lessees[0]) => l.name,
@@ -96,12 +100,55 @@ const lesseeAccessors = {
 export default function Portfolio() {
   const [activeTab, setActiveTab] = useState("Leases");
   const [stageFilter, setStageFilter] = useState("All");
+  const [aircraftExpanded, setAircraftExpanded] = useState<Set<string>>(new Set());
+  const [aircraftOverrides, setAircraftOverrides] = useState<OverrideMap>({});
+
+  function toggleAircraftExpand(msn: string) {
+    setAircraftExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(msn) ? next.delete(msn) : next.add(msn);
+      return next;
+    });
+  }
+
+  function handleOverride(msn: string, key: OverrideKey, entry: OverrideEntry) {
+    setAircraftOverrides((prev) => ({
+      ...prev,
+      [msn]: { ...prev[msn], [key]: entry },
+    }));
+  }
+
+  function handleRevertOverride(msn: string, key: OverrideKey) {
+    setAircraftOverrides((prev) => {
+      const msnOverrides = { ...prev[msn] };
+      delete msnOverrides[key];
+      return { ...prev, [msn]: msnOverrides };
+    });
+  }
+
+  const aircraftWithValuation = aircraft.map((a) => {
+    const v = valuationData.find((d) => d.msn === a.msn);
+    return {
+      ...a,
+      hlbVal: v ? resolvedValue(v, "halfLifeBase", aircraftOverrides).value : 0,
+      cmvVal: v ? resolvedValue(v, "currentMV",    aircraftOverrides).value : 0,
+      mavVal: v ? resolvedValue(v, "mav",           aircraftOverrides).value : 0,
+    };
+  });
+
+  const aircraftAccessors = {
+    type:         (a: typeof aircraftWithValuation[0]) => a.type,
+    vintage:      (a: typeof aircraftWithValuation[0]) => a.vintage,
+    halfLifeBase: (a: typeof aircraftWithValuation[0]) => a.hlbVal,
+    currentMV:    (a: typeof aircraftWithValuation[0]) => a.cmvVal,
+    mav:          (a: typeof aircraftWithValuation[0]) => a.mavVal,
+  };
 
   const filteredLeases =
     stageFilter === "All" ? leases : leases.filter((l) => l.stage === stageFilter);
 
   const { sorted: sortedLeases, sortState: leaseSortState, toggleSort: toggleLeaseSort } = useSortable(filteredLeases, leaseAccessors);
-  const { sorted: sortedAircraft, sortState: aircraftSortState, toggleSort: toggleAircraftSort } = useSortable(aircraft, aircraftAccessors);
+  const { sorted: sortedAircraft, sortState: aircraftSortState, toggleSort: toggleAircraftSort } = useSortable(aircraftWithValuation, aircraftAccessors);
   const { sorted: sortedLessees, sortState: lesseeSortState, toggleSort: toggleLesseeSort } = useSortable(lessees, lesseeAccessors);
 
   return (
@@ -255,15 +302,17 @@ export default function Portfolio() {
               <thead>
                 <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
                   {([
-                    { label: "MSN", key: null },
-                    { label: "Type", key: "type" },
-                    { label: "Registration", key: null },
-                    { label: "Vintage", key: "vintage" },
-                    { label: "Net Book Value", key: "nbv" },
-                    { label: "Market Value", key: "mv" },
-                    { label: "Adj. Market Value", key: null },
-                    { label: "Lessee", key: null },
-                    { label: "MR Balance", key: null },
+                    { label: "MSN",          key: null           },
+                    { label: "Type",         key: "type"         },
+                    { label: "Reg",          key: null           },
+                    { label: "Vintage",      key: "vintage"      },
+                    { label: "Half-life BV", key: "halfLifeBase" },
+                    { label: "Current MV",   key: "currentMV"    },
+                    { label: "MAV",          key: "mav"          },
+                    { label: "Lease-Enc.",   key: null           },
+                    { label: "Part-out",     key: null           },
+                    { label: "Lessee",       key: null           },
+                    { label: "Expand",       key: null           },
                   ] as { label: string; key: string | null }[]).map(({ label, key }) => (
                     <th
                       key={label}
@@ -277,22 +326,53 @@ export default function Portfolio() {
                 </tr>
               </thead>
               <tbody>
-                {sortedAircraft.map((a, i) => (
-                  <tr key={a.msn} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = i % 2 === 0 ? "#FFFFFF" : "#F4F5F7")}
-                  >
-                    <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", color: "#475569" }}>{a.msn}</td>
-                    <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{a.type}</td>
-                    <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", color: "#475569" }}>{a.reg}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{a.vintage}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{a.nbv}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{a.mv}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{a.mvAdj}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{a.lessee}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{a.maintenanceReserve}</td>
-                  </tr>
-                ))}
+                {sortedAircraft.map((a, i) => {
+                  const v = valuationData.find((d) => d.msn === a.msn);
+                  const isOpen = aircraftExpanded.has(a.msn);
+                  const rowBg = i % 2 === 0 ? "#FFFFFF" : "#F4F5F7";
+                  return (
+                    <Fragment key={a.msn}>
+                      <tr
+                        style={{ borderBottom: isOpen ? "none" : "1px solid #E2E8F0", background: rowBg, cursor: "pointer" }}
+                        onClick={() => toggleAircraftExpand(a.msn)}
+                      >
+                        <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", color: "#475569" }}>{a.msn}</td>
+                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{a.type}</td>
+                        <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", color: "#475569" }}>{a.reg}</td>
+                        <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{a.vintage}</td>
+                        {(["halfLifeBase", "currentMV", "mav", "leaseEncumbered", "partOut"] as OverrideKey[]).map((key) => {
+                          const rv = v ? resolvedValue(v, key, aircraftOverrides) : null;
+                          return (
+                            <td key={key} style={{ padding: "0.75rem 1rem" }}>
+                              {rv ? (
+                                <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                                  <span style={{ fontWeight: 600, color: "#0F172A", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(rv.value)}</span>
+                                  <SourceBadge source={rv.source} />
+                                </span>
+                              ) : "—"}
+                            </td>
+                          );
+                        })}
+                        <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{a.lessee}</td>
+                        <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", fontSize: "1rem" }}>
+                          {isOpen ? "▲" : "▶"}
+                        </td>
+                      </tr>
+                      {isOpen && (
+                        <tr key={`${a.msn}-detail`} style={{ borderBottom: "1px solid #E2E8F0" }}>
+                          <td colSpan={11} style={{ padding: 0, background: "#FAFAFA" }}>
+                            <AircraftValuationPanel
+                              msn={a.msn}
+                              overrides={aircraftOverrides}
+                              onOverride={handleOverride}
+                              onRevertOverride={handleRevertOverride}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
