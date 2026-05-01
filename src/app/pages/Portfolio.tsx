@@ -359,7 +359,7 @@ export default function Portfolio() {
                         </td>
                       </tr>
                       {isOpen && (
-                        <tr key={`${a.msn}-detail`} style={{ borderBottom: "1px solid #E2E8F0" }}>
+                        <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
                           <td colSpan={11} style={{ padding: 0, background: "#FAFAFA" }}>
                             <AircraftValuationPanel
                               msn={a.msn}
