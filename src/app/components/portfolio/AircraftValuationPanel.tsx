@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SourceTag = "heuristic" | "desk-keyed" | "user-overridden";
@@ -185,18 +187,249 @@ export function SourceBadge({ source }: { source: SourceTag }) {
   );
 }
 
-// ─── AircraftValuationPanel (stub — UI added in Task 2) ───────────────────────
+// ─── ExpandedPanel ────────────────────────────────────────────────────────────
 
-export function AircraftValuationPanel(_props: {
+const VALUE_KEYS: { key: OverrideKey; label: string }[] = [
+  { key: "halfLifeBase",    label: "Half-life Base"    },
+  { key: "currentMV",       label: "Current MV"        },
+  { key: "mav",             label: "MAV"               },
+  { key: "leaseEncumbered", label: "Lease-Encumbered"  },
+  { key: "partOut",         label: "Part-out"          },
+];
+
+function ExpandedPanel({
+  valuation,
+  overrides,
+  onOverride,
+  onRevertOverride,
+}: {
+  valuation: AircraftValuation;
+  overrides: OverrideMap;
+  onOverride: (msn: string, key: OverrideKey, entry: OverrideEntry) => void;
+  onRevertOverride: (msn: string, key: OverrideKey) => void;
+}) {
+  const [overrideKey, setOverrideKey] = useState<OverrideKey>("currentMV");
+  const [overrideValueStr, setOverrideValueStr] = useState("");
+  const [overrideNote, setOverrideNote] = useState("");
+
+  const activeOverrides = overrides[valuation.msn] ?? {};
+
+  function handleSave() {
+    const num = parseFloat(overrideValueStr) * 1_000_000;
+    if (isNaN(num) || !overrideNote.trim()) return;
+    onOverride(valuation.msn, overrideKey, { value: num, note: overrideNote.trim() });
+    setOverrideValueStr("");
+    setOverrideNote("");
+  }
+
+  const grossPartOut = valuation.partOutComponents.reduce(
+    (s, c) => s + c.componentValue * c.recoveryFactor,
+    0,
+  );
+  const canSave = overrideValueStr.trim() !== "" && overrideNote.trim() !== "";
+
+  return (
+    <div style={{ padding: "1.25rem", display: "grid", gridTemplateColumns: "1fr 1.5fr 1fr", gap: "1.25rem", alignItems: "start" }}>
+
+      {/* ── Left: Value Hierarchy ── */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
+          Value Hierarchy
+        </div>
+        {VALUE_KEYS.map(({ key, label }, idx) => {
+          const rv = resolvedValue(valuation, key, overrides);
+          return (
+            <div
+              key={key}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                marginBottom: idx < VALUE_KEYS.length - 1 ? "0.625rem" : 0,
+                paddingBottom: idx < VALUE_KEYS.length - 1 ? "0.625rem" : 0,
+                borderBottom: idx < VALUE_KEYS.length - 1 ? "1px solid #F1F5F9" : "none",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                  {label} <SourceBadge source={rv.source} />
+                </div>
+                <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.125rem" }}>
+                  {rv.source !== "user-overridden"
+                    ? `${fmtUSD(rv.bandLow)} – ${fmtUSD(rv.bandHigh)}`
+                    : "user override"}
+                </div>
+              </div>
+              <span style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#002147", fontVariantNumeric: "tabular-nums" }}>
+                {fmtUSD(rv.value)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Centre: Part-out Calculator ── */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+        <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #E2E8F0", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Part-out Calculator
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+          <thead>
+            <tr style={{ background: "#F8FAFC" }}>
+              {["Component", "Value", "Recovery %", "Recovered"].map((h) => (
+                <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {valuation.partOutComponents.map((comp, i) => (
+              <tr key={comp.name} style={{ borderTop: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
+                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 600, color: "#0F172A" }}>{comp.name}</td>
+                <td style={{ padding: "0.5rem 0.75rem", color: "#475569", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(comp.componentValue)}</td>
+                <td style={{ padding: "0.5rem 0.75rem", color: "#475569", fontVariantNumeric: "tabular-nums" }}>{(comp.recoveryFactor * 100).toFixed(0)}%</td>
+                <td style={{ padding: "0.5rem 0.75rem", fontWeight: 500, color: "#0F172A", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(comp.componentValue * comp.recoveryFactor)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: "1px solid #E2E8F0", background: "#F8FAFC" }}>
+              <td colSpan={3} style={{ padding: "0.5rem 0.75rem", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem" }}>Gross recovery</td>
+              <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#002147", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(grossPartOut)}</td>
+            </tr>
+            <tr style={{ background: "#F8FAFC" }}>
+              <td colSpan={3} style={{ padding: "0.5rem 0.75rem", color: "#94A3B8", fontSize: "0.75rem" }}>Tear-down cost</td>
+              <td style={{ padding: "0.5rem 0.75rem", color: "#B91C1C", fontVariantNumeric: "tabular-nums" }}>−{fmtUSD(valuation.tearDownCost)}</td>
+            </tr>
+            <tr style={{ borderTop: "2px solid #E2E8F0", background: "#F4F5F7" }}>
+              <td colSpan={3} style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#002147", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Net Part-out</td>
+              <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: "#002147", fontSize: "1rem", fontVariantNumeric: "tabular-nums" }}>{fmtUSD(computedPartOut(valuation))}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* ── Right: Override Panel ── */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
+          Override a Value
+        </div>
+
+        <div style={{ marginBottom: "0.625rem" }}>
+          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "0.25rem" }}>Value</label>
+          <select
+            value={overrideKey}
+            onChange={(e) => setOverrideKey(e.target.value as OverrideKey)}
+            style={{ width: "100%", fontSize: "0.8125rem", border: "1px solid #E2E8F0", borderRadius: "0.5rem", padding: "0.375rem 0.625rem", background: "#FFFFFF", color: "#0F172A", outline: "none" }}
+          >
+            {VALUE_KEYS.map(({ key, label }) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: "0.625rem" }}>
+          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "0.25rem" }}>New value (USD M)</label>
+          <input
+            type="number"
+            step="0.1"
+            placeholder="e.g. 27.5"
+            value={overrideValueStr}
+            onChange={(e) => setOverrideValueStr(e.target.value)}
+            style={{ width: "100%", fontSize: "0.8125rem", border: "1px solid #E2E8F0", borderRadius: "0.5rem", padding: "0.375rem 0.625rem", background: "#FFFFFF", color: "#0F172A", outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "0.875rem" }}>
+          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "0.25rem" }}>Note</label>
+          <input
+            type="text"
+            placeholder="e.g. Avitas BlueBook Q1 2026"
+            value={overrideNote}
+            onChange={(e) => setOverrideNote(e.target.value)}
+            style={{ width: "100%", fontSize: "0.8125rem", border: "1px solid #E2E8F0", borderRadius: "0.5rem", padding: "0.375rem 0.625rem", background: "#FFFFFF", color: "#0F172A", outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={!canSave}
+          style={{
+            width: "100%", padding: "0.5rem", fontSize: "0.8125rem", fontWeight: 600,
+            background: canSave ? "#002147" : "#E2E8F0",
+            color: canSave ? "#FFFFFF" : "#94A3B8",
+            border: "none", borderRadius: "0.5rem",
+            cursor: canSave ? "pointer" : "default",
+            marginBottom: "1rem",
+          }}
+        >
+          Save override
+        </button>
+
+        <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: "0.75rem" }}>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.5rem" }}>
+            Active overrides
+          </div>
+          {Object.keys(activeOverrides).length === 0 ? (
+            <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+              No overrides — all values from heuristic model
+            </div>
+          ) : (
+            (Object.entries(activeOverrides) as [OverrideKey, OverrideEntry][]).map(([k, entry]) => {
+              const label = VALUE_KEYS.find((v) => v.key === k)?.label ?? k;
+              return (
+                <div
+                  key={k}
+                  style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                    marginBottom: "0.5rem", padding: "0.375rem 0.5rem",
+                    background: "rgba(180,83,9,0.06)", borderRadius: "0.375rem",
+                    border: "1px solid rgba(180,83,9,0.15)",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#B45309" }}>
+                      {label} → {fmtUSD(entry.value)}
+                    </div>
+                    <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>{entry.note}</div>
+                  </div>
+                  <button
+                    onClick={() => onRevertOverride(valuation.msn, k)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", fontSize: "0.875rem", padding: "0 0.25rem", lineHeight: 1 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AircraftValuationPanel ───────────────────────────────────────────────────
+
+export function AircraftValuationPanel({
+  msn,
+  overrides,
+  onOverride,
+  onRevertOverride,
+}: {
   msn: string;
   overrides: OverrideMap;
   onOverride: (msn: string, key: OverrideKey, entry: OverrideEntry) => void;
   onRevertOverride: (msn: string, key: OverrideKey) => void;
 }) {
+  const valuation = valuationData.find((v) => v.msn === msn);
+  if (!valuation) return null;
   return (
-    <div style={{ padding: "1rem", color: "#94A3B8", fontSize: "0.8125rem" }}>
-      Valuation panel loading…
-    </div>
+    <ExpandedPanel
+      valuation={valuation}
+      overrides={overrides}
+      onOverride={onOverride}
+      onRevertOverride={onRevertOverride}
+    />
   );
 }
 
