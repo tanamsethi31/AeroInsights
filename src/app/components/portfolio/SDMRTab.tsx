@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
@@ -250,8 +250,128 @@ function fmtUnits(n: number, basis: "$/FH" | "$/cycle"): string {
   return basis === "$/FH" ? `${(n / 1000).toFixed(1)}k FH` : `${(n / 1000).toFixed(1)}k cy`;
 }
 
-// ─── Shell component (replaced in Task 2) ────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function SDMRTab() {
-  return <div style={{ padding: "2rem", color: "#475569" }}>SD / MR loading…</div>;
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [conditions, setConditions] = useState<Record<string, "half-life" | "full-life">>(
+    Object.fromEntries(sdmrData.map((l) => [l.leaseId, l.returnCondition]))
+  );
+
+  function toggleExpand(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleCondition(id: string) {
+    setConditions((prev) => ({
+      ...prev,
+      [id]: prev[id] === "half-life" ? "full-life" : "half-life",
+    }));
+  }
+
+  const totalSD = sdmrData.reduce((s, l) => s + l.sd.amount, 0);
+  const totalMR = sdmrData.reduce((s, l) => s + totalMRBalance(l), 0);
+  const totalEAD = sdmrData.reduce((a, x) => a + x.eadNum, 0);
+  const wtdLGDReduction = sdmrData.reduce((s, l) => {
+    const w = l.eadNum / totalEAD;
+    return s + (l.baseLGD - adjustedLGD(l)) * w;
+  }, 0);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+      {/* KPI Strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+        <KpiCard label="Total SD Posted" value={fmtUSD(totalSD)} subtitle="Across 6 active leases" />
+        <KpiCard label="Total MR Reserves" value={fmtUSD(totalMR)} subtitle="Cumulative balances held" />
+        <KpiCard label="Wtd Avg LGD Reduction" value={`${wtdLGDReduction.toFixed(1)} pp`} subtitle="Conservative offset applied" deltaType="positive" />
+      </div>
+
+      {/* Accordion Table */}
+      <Card title="Security Deposit & Maintenance Reserve Register" noPadding>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
+            <thead>
+              <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+                {["Lease ID", "Lessee", "Aircraft", "SD Type", "SD Amount", "MR Balance", "Return Condition", "EOL Compensation", "LGD Offset", ""].map((h) => (
+                  <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sdmrData.map((lease, i) => {
+                const cond = conditions[lease.leaseId];
+                const isOpen = expanded.has(lease.leaseId);
+                const eol = eolCompensation(lease, cond);
+                const lgdOff = conservativeOffset(lease) * 100;
+                const optOff = optimisticOffset(lease) * 100;
+                return (
+                  <Fragment key={lease.leaseId}>
+                    <tr
+                      style={{ borderBottom: isOpen ? "none" : "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7", cursor: "pointer" }}
+                      onClick={() => toggleExpand(lease.leaseId)}
+                    >
+                      <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569" }}>{lease.leaseId}</td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{lease.lessee}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{lease.aircraft}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        <span style={{
+                          fontSize: "0.75rem", fontWeight: 600, padding: "0.2rem 0.5rem", borderRadius: "0.5rem",
+                          background: lease.sd.type === "Cash" ? "rgba(3,105,161,0.08)" : "rgba(124,58,237,0.08)",
+                          color: lease.sd.type === "Cash" ? "#0369A1" : "#7C3AED",
+                          border: `1px solid ${lease.sd.type === "Cash" ? "rgba(3,105,161,0.2)" : "rgba(124,58,237,0.2)"}`,
+                        }}>
+                          {lease.sd.type}
+                        </span>
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 500, color: "#0F172A" }}>{fmtUSD(lease.sd.amount)}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{fmtUSD(totalMRBalance(lease))}</td>
+                      <td style={{ padding: "0.75rem 1rem" }} onClick={(e) => { e.stopPropagation(); toggleCondition(lease.leaseId); }}>
+                        <button style={{
+                          display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                          fontSize: "0.75rem", fontWeight: 600, border: "1px solid #E2E8F0",
+                          borderRadius: "9999px", padding: "0.25rem 0.625rem", cursor: "pointer",
+                          background: cond === "full-life" ? "#002147" : "#F4F5F7",
+                          color: cond === "full-life" ? "#FFFFFF" : "#475569",
+                        }}>
+                          {cond === "half-life" ? "½ Life" : "Full Life"}
+                        </button>
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 500, color: eol > 0 ? "#0F172A" : "#15803D" }}>
+                        {eol > 0 ? `+${fmtUSD(eol)}` : "—"}
+                        <span style={{ fontSize: "0.6875rem", color: "#94A3B8", marginLeft: "0.25rem" }}>{eol > 0 ? "lessee owes" : "no comp"}</span>
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        <span style={{ fontWeight: 600, color: "#002147" }}>{lgdOff.toFixed(1)} pp</span>
+                        <span style={{ fontSize: "0.6875rem", color: "#94A3B8", display: "block" }}>up to {optOff.toFixed(1)} pp</span>
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", fontSize: "1rem" }}>
+                        {isOpen ? "▲" : "▶"}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr key={`${lease.leaseId}-detail`} style={{ borderBottom: "1px solid #E2E8F0" }}>
+                        <td colSpan={10} style={{ padding: "0", background: "#FAFAFA" }}>
+                          {/* Expanded panel — implemented in Task 3 */}
+                          <div style={{ padding: "1rem 1.25rem", color: "#94A3B8", fontSize: "0.8125rem" }}>
+                            Detail panel — implemented in Task 3
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
 }
