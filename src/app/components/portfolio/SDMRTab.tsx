@@ -227,7 +227,7 @@ function optimisticOffset(lease: LeaseSDMR): number {
 }
 
 function adjustedLGD(lease: LeaseSDMR): number {
-  return Math.max(0, lease.baseLGD * (1 - conservativeOffset(lease)));
+  return Math.max(0, lease.baseLGD - conservativeOffset(lease) * 100);
 }
 
 function eolCompensation(lease: LeaseSDMR, condition: "half-life" | "full-life"): number {
@@ -235,7 +235,9 @@ function eolCompensation(lease: LeaseSDMR, condition: "half-life" | "full-life")
     const target = condition === "half-life"
       ? comp.fullIntervalUnits / 2
       : comp.fullIntervalUnits;
-    const shortfall = Math.max(0, target - comp.remainingUnits);
+    const shortfall = condition === "half-life"
+      ? Math.max(0, target - comp.remainingUnits)
+      : target - comp.remainingUnits;
     return sum + shortfall * comp.rateAmount;
   }, 0);
 }
@@ -327,7 +329,7 @@ function ExpandedPanel({ lease, condition }: { lease: LeaseSDMR; condition: "hal
                     )}
                   </td>
                   <td style={{ padding: "0.5rem 0.75rem" }}>
-                    <StatusPill stage={comp.refundable ? "green" : ("neutral" as any)} label={comp.refundable ? "Yes" : "No"} />
+                    <StatusPill stage={comp.refundable ? "green" : "neutral"} label={comp.refundable ? "Yes" : "No"} />
                   </td>
                 </tr>
               );
@@ -441,7 +443,7 @@ export function SDMRTab() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
             <thead>
               <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-                {["Lease ID", "Lessee", "Aircraft", "SD Type", "SD Amount", "MR Balance", "Return Condition", "EOL Compensation", "LGD Offset", ""].map((h) => (
+                {["Lease ID", "Lessee", "Aircraft", "SD Type", "SD Amount", "MR Balance", "Return Condition", "EOL Compensation", "LGD Offset", "Expand"].map((h) => (
                   <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
                     {h}
                   </th>
@@ -532,7 +534,7 @@ export function SDMRTab() {
             <tbody>
               {sdmrData.map((lease, i) => {
                 const adjLGD = adjustedLGD(lease);
-                const optLGD = Math.max(0, lease.baseLGD * (1 - optimisticOffset(lease)));
+                const optLGD = Math.max(0, lease.baseLGD - optimisticOffset(lease) * 100);
                 const eclBase = lease.eadNum * (lease.baseLGD / 100);
                 const eclAdj = lease.eadNum * (adjLGD / 100);
                 const eclDelta = eclAdj - eclBase;
