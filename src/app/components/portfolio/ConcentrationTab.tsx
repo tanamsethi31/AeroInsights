@@ -156,18 +156,344 @@ function heatColour(eclPct: number): string {
   return "#F0FDF4";
 }
 
-// ─── ConcentrationTab (stub — UI added in Task 2) ─────────────────────────────
+// ─── Sub-tab definitions ─────────────────────────────────────────────────────
 
-export function ConcentrationTab() {
+const VALUE_DIMS: DimKey[] = ["Lessee", "Country", "Region", "Type", "Vintage", "Currency"];
+type SubTab = DimKey | "Heatmap";
+
+// ─── ConcentrationView ────────────────────────────────────────────────────────
+
+function ConcentrationView({
+  dimKey,
+  data,
+  threshold,
+  onThresholdChange,
+}: {
+  dimKey: DimKey;
+  data: ConcentrationRow[];
+  threshold: number;
+  onThresholdChange: (val: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(threshold));
+  useEffect(() => { setDraft(String(threshold)); }, [threshold]);
+
+  function handleApply() {
+    const val = parseFloat(draft);
+    if (!isNaN(val) && val > 0 && val <= 100) onThresholdChange(val);
+  }
+
+  const chartHeight = Math.max(220, data.length * 46);
+  const xMax = Math.max(30, Math.ceil(threshold * 2));
+
   return (
-    <div style={{ padding: "1rem", color: "#94A3B8", fontSize: "0.8125rem" }}>
-      Concentration tab loading…
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", alignItems: "start" }}>
+
+      {/* ── Left: Bar chart ── */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
+          {dimKey} Concentration — % of Portfolio
+        </div>
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <BarChart data={data} layout="vertical" margin={{ left: 0, right: 52, top: 4, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+            <XAxis
+              type="number"
+              domain={[0, xMax]}
+              tick={{ fontSize: 10, fill: "#475569" }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v: number) => `${v}%`}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fontSize: 10, fill: "#475569" }}
+              axisLine={false}
+              tickLine={false}
+              width={136}
+            />
+            <Tooltip
+              cursor={{ fill: "rgba(0,33,71,0.04)" }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const row = payload[0].payload as ConcentrationRow;
+                return (
+                  <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "0.625rem 0.875rem", fontSize: "0.8125rem" }}>
+                    <div style={{ fontWeight: 600, color: "#0F172A", marginBottom: "0.25rem" }}>{row.name}</div>
+                    <div style={{ color: "#475569" }}>Exposure: {fmtM(row.exposure)} ({fmtPct(row.exposurePct)})</div>
+                    <div style={{ color: "#475569" }}>ECL: {fmtM(row.ecl)} · Loss rate: {fmtPct(row.eclPct)}</div>
+                  </div>
+                );
+              }}
+            />
+            <ReferenceLine
+              x={threshold}
+              stroke="#B45309"
+              strokeDasharray="4 2"
+              label={{ value: `${threshold}%`, position: "insideTopRight", fontSize: 9, fill: "#B45309" }}
+            />
+            <Bar dataKey="exposurePct" radius={[0, 3, 3, 0]}>
+              {data.map((row) => (
+                <Cell key={row.name} fill={barColour(breachLevel(row.exposurePct, threshold))} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* ── Right: Threshold + Ranked table ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+
+        {/* Threshold input */}
+        <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "0.875rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.8125rem", color: "#475569", fontWeight: 500 }}>Policy limit:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleApply()}
+              style={{ width: "3.75rem", fontSize: "0.875rem", fontWeight: 600, color: "#0F172A", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.25rem 0.5rem", textAlign: "right", outline: "none" }}
+            />
+            <span style={{ fontSize: "0.875rem", color: "#475569" }}>%</span>
+          </div>
+          <button
+            onClick={handleApply}
+            style={{ fontSize: "0.75rem", fontWeight: 600, padding: "0.3rem 0.875rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "0.375rem", cursor: "pointer" }}
+          >
+            Apply
+          </button>
+          <span style={{ fontSize: "0.6875rem", color: "#94A3B8", marginLeft: "auto" }}>
+            ▲ amber &gt;{threshold}% · ● red &gt;{(threshold * 1.5).toFixed(0)}%
+          </span>
+        </div>
+
+        {/* Ranked table */}
+        <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+            <thead>
+              <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+                {["#", "Name", "Exposure", "% Portfolio", "ECL", "Loss Rate"].map((h) => (
+                  <th key={h} style={{ padding: "0.625rem 0.875rem", textAlign: h === "#" ? "center" : "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row, i) => {
+                const level = breachLevel(row.exposurePct, threshold);
+                return (
+                  <tr key={row.name} style={{ borderBottom: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
+                    <td style={{ padding: "0.5rem 0.875rem", textAlign: "center", fontSize: "0.75rem", color: "#94A3B8", fontWeight: 600 }}>{i + 1}</td>
+                    <td style={{ padding: "0.5rem 0.875rem", fontWeight: 600, color: "#0F172A" }}>{row.name}</td>
+                    <td style={{ padding: "0.5rem 0.875rem", color: "#475569", fontVariantNumeric: "tabular-nums" }}>{fmtM(row.exposure)}</td>
+                    <td style={{ padding: "0.5rem 0.875rem", fontVariantNumeric: "tabular-nums" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                        <span style={{ color: level === "none" ? "#0F172A" : level === "amber" ? "#B45309" : "#B91C1C", fontWeight: level !== "none" ? 700 : 500 }}>
+                          {fmtPct(row.exposurePct)}
+                        </span>
+                        {level !== "none" && (
+                          <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "0.1rem 0.3rem", borderRadius: "0.25rem", background: level === "amber" ? "rgba(180,83,9,0.1)" : "rgba(185,28,28,0.1)", color: level === "amber" ? "#B45309" : "#B91C1C", border: `1px solid ${level === "amber" ? "rgba(180,83,9,0.2)" : "rgba(185,28,28,0.2)"}` }}>
+                            {level === "amber" ? "▲" : "●"} +{(row.exposurePct - threshold).toFixed(1)}pp
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0.5rem 0.875rem", color: "#475569", fontVariantNumeric: "tabular-nums" }}>{fmtM(row.ecl)}</td>
+                    <td style={{ padding: "0.5rem 0.875rem", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: row.eclPct >= 5 ? "#B91C1C" : row.eclPct >= 2 ? "#B45309" : "#15803D" }}>
+                      {fmtPct(row.eclPct)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
 
-// Suppress unused import warnings until Task 2
-void useState; void useEffect; void Fragment;
-void BarChart; void Bar; void XAxis; void YAxis; void CartesianGrid;
-void Tooltip; void ResponsiveContainer; void ReferenceLine; void Cell;
-void KpiCard;
+// ─── HeatmapView ──────────────────────────────────────────────────────────────
+
+const HEATMAP_LESSEES = [
+  "Emirates", "Ryanair", "Singapore Airlines", "Air France", "Lufthansa",
+  "IndiGo Airlines", "SriLankan Airlines", "Azul Brazilian Airlines", "Air Transat", "Aeromexico",
+];
+
+const HEATMAP_COUNTRIES = [
+  "UAE", "Ireland", "France", "Germany", "Singapore",
+  "India", "Sri Lanka", "Brazil", "Canada", "Mexico",
+];
+
+const LESSEE_SHORT: Record<string, string> = {
+  "Emirates":                "Emirates",
+  "Ryanair":                 "Ryanair",
+  "Singapore Airlines":      "Singapore AL.",
+  "Air France":              "Air France",
+  "Lufthansa":               "Lufthansa",
+  "IndiGo Airlines":         "IndiGo",
+  "SriLankan Airlines":      "SriLankan AL.",
+  "Azul Brazilian Airlines": "Azul Brazilian",
+  "Air Transat":             "Air Transat",
+  "Aeromexico":              "Aeromexico",
+};
+
+function HeatmapView() {
+  const cellMap = new Map<string, HeatmapCell>();
+  HEATMAP_CELLS.forEach((c) => cellMap.set(`${c.lessee}::${c.country}`, c));
+
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem", overflowX: "auto" }}>
+      <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
+        Lessee × Country — ECL Density
+      </div>
+
+      {/* Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `164px repeat(${HEATMAP_COUNTRIES.length}, minmax(68px, 1fr))`,
+          gap: "3px",
+          minWidth: "880px",
+        }}
+      >
+        {/* Header row */}
+        <div /> {/* top-left corner */}
+        {HEATMAP_COUNTRIES.map((country) => (
+          <div
+            key={country}
+            style={{ padding: "0.25rem 0.375rem", fontSize: "0.625rem", fontWeight: 600, color: "#475569", textAlign: "center", background: "#F4F5F7", borderRadius: "0.25rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+          >
+            {country}
+          </div>
+        ))}
+
+        {/* Data rows */}
+        {HEATMAP_LESSEES.map((lessee) => (
+          <Fragment key={lessee}>
+            {/* Row header */}
+            <div style={{ padding: "0.375rem 0.5rem", fontSize: "0.75rem", fontWeight: 600, color: "#0F172A", display: "flex", alignItems: "center" }}>
+              {LESSEE_SHORT[lessee] ?? lessee}
+            </div>
+            {/* Cells */}
+            {HEATMAP_COUNTRIES.map((country) => {
+              const cell = cellMap.get(`${lessee}::${country}`);
+              const eclPct = cell ? (cell.ecl / cell.exposure) * 100 : 0;
+              const bg = cell ? heatColour(eclPct) : "#F8FAFC";
+              return (
+                <div
+                  key={country}
+                  title={cell ? `${lessee} · ${country}\nExposure: ${fmtM(cell.exposure)}\nECL: ${fmtM(cell.ecl)} (${fmtPct(eclPct)} loss rate)` : `${lessee} · ${country}: no exposure`}
+                  style={{
+                    background: bg,
+                    borderRadius: "0.25rem",
+                    padding: "0.375rem 0.25rem",
+                    textAlign: "center",
+                    fontSize: "0.625rem",
+                    fontWeight: cell ? 700 : 400,
+                    color: cell ? "#0F172A" : "#CBD5E1",
+                    minHeight: "36px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {cell ? fmtM(cell.exposure) : "—"}
+                </div>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginTop: "1rem", paddingTop: "0.75rem", borderTop: "1px solid #F1F5F9", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.6875rem", color: "#64748B", fontWeight: 600 }}>ECL loss rate:</span>
+        {([
+          { label: "<2%",   colour: "#BBF7D0" },
+          { label: "2–5%",  colour: "#FEF3C7" },
+          { label: "5–10%", colour: "#FED7AA" },
+          { label: "≥10%",  colour: "#FECACA" },
+        ] as { label: string; colour: string }[]).map(({ label, colour }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <div style={{ width: "14px", height: "14px", background: colour, borderRadius: "0.2rem", flexShrink: 0 }} />
+            <span style={{ fontSize: "0.6875rem", color: "#475569" }}>{label}</span>
+          </div>
+        ))}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          <div style={{ width: "14px", height: "14px", background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.2rem", flexShrink: 0 }} />
+          <span style={{ fontSize: "0.6875rem", color: "#475569" }}>No exposure</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ConcentrationTab ─────────────────────────────────────────────────────────
+
+export function ConcentrationTab() {
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>("Lessee");
+  const [thresholds, setThresholds] = useState<ThresholdMap>({ ...DEFAULT_THRESHOLDS });
+
+  function handleThresholdChange(dim: DimKey, val: number) {
+    setThresholds((prev) => ({ ...prev, [dim]: val }));
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+      {/* KPI Strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>
+        <KpiCard label="Book Value"       value={fmtM(KPI.bookValue)} />
+        <KpiCard label="Encumbered Value" value={fmtM(KPI.encumberedValue)} subtitle={`${KPI.encumberedPct}% of book`} />
+        <KpiCard label="Total ECL"        value={fmtM(KPI.totalECL)} delta="+5.4% vs Q4" deltaType="negative" />
+        <KpiCard label="ECL Rate"         value={fmtPct(KPI.eclRate)} />
+        <KpiCard label="WA Lease Term"    value={`${KPI.waLeaseTerm} yrs`} />
+        <KpiCard label="WA Credit"        value={KPI.waCredit} />
+      </div>
+
+      {/* Sub-tab nav */}
+      <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex", gap: 0 }}>
+        {([...VALUE_DIMS, "Heatmap"] as SubTab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveSubTab(tab)}
+            style={{
+              padding: "0.625rem 1rem",
+              fontSize: "0.8125rem",
+              fontWeight: 500,
+              border: "none",
+              borderBottom: activeSubTab === tab ? "2px solid #002147" : "2px solid transparent",
+              background: "transparent",
+              color: activeSubTab === tab ? "#002147" : "#475569",
+              cursor: "pointer",
+              transition: "all 200ms ease",
+              marginBottom: "-1px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {activeSubTab === "Heatmap" ? (
+        <HeatmapView />
+      ) : (
+        <ConcentrationView
+          key={activeSubTab}
+          dimKey={activeSubTab}
+          data={CONCENTRATION_DATA[activeSubTab]}
+          threshold={thresholds[activeSubTab]}
+          onThresholdChange={(val) => handleThresholdChange(activeSubTab, val)}
+        />
+      )}
+    </div>
+  );
+}

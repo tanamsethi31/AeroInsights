@@ -9,7 +9,6 @@ import {
   type OverrideEntry,
   type OverrideMap,
 } from "../components/portfolio/AircraftValuationPanel";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { KpiCard } from "../components/ui/KpiCard";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
@@ -17,6 +16,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { Download, Filter, Search, ChevronDown } from "lucide-react";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { SDMRTab } from "../components/portfolio/SDMRTab";
+import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
 
 const leases = [
   { id: "LSE-2019-001", lessee: "IndiGo Airlines", aircraft: "A320neo", msn: "9218", start: "2019-03-01", end: "2028-03-01", rentUSD: "285,000", stage: "3", status: "Active" },
@@ -53,27 +53,6 @@ const lessees = [
   { name: "Aeromexico", country: "Mexico", rating: "CCC", stage: "3" as const, behaviorScore: 29, leases: 4, exposure: "$122M", paymentDays: 89.0 },
 ];
 
-const concentrationByLessee = [
-  { name: "Emirates", value: 14.5 },
-  { name: "Ryanair", value: 13.6 },
-  { name: "Singapore Airlines", value: 10.2 },
-  { name: "Air France", value: 9.8 },
-  { name: "Lufthansa", value: 6.8 },
-  { name: "Others", value: 45.1 },
-];
-
-const concentrationByCountry = [
-  { name: "UAE", pct: 14.5 },
-  { name: "Ireland", pct: 13.6 },
-  { name: "India", pct: 11.2 },
-  { name: "France", pct: 9.8 },
-  { name: "Mexico", pct: 8.4 },
-  { name: "Brazil", pct: 7.1 },
-  { name: "Germany", pct: 6.8 },
-  { name: "Other", pct: 28.6 },
-];
-
-const PIE_COLORS = ["#002147", "#475569", "#0F4C5C", "#6B7280", "#94A3B8", "#CBD5E1"];
 
 const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR"];
 
@@ -437,71 +416,7 @@ export default function Portfolio() {
       )}
 
       {/* Concentration Tab */}
-      {activeTab === "Concentration" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-          <Card title="Concentration by Lessee" subtitle="% of portfolio book value">
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie data={concentrationByLessee} cx="45%" cy="50%" outerRadius={100} dataKey="value" nameKey="name" label={({ name, value }) => `${name}: ${value}%`} labelLine={false}>
-                  {concentrationByLessee.map((_, idx) => (
-                    <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v: number) => [`${v}%`, "Share"]} contentStyle={{ fontSize: "0.8125rem", border: "1px solid #E2E8F0", borderRadius: "0.75rem" }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </Card>
-
-          <Card title="Concentration by Country" subtitle="% of portfolio book value">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={concentrationByCountry} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: "#475569" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#475569" }} axisLine={false} tickLine={false} width={60} />
-                <Tooltip formatter={(v: number) => [`${v}%`, "Concentration"]} contentStyle={{ fontSize: "0.8125rem", border: "1px solid #E2E8F0", borderRadius: "0.75rem" }} />
-                <Bar dataKey="pct" fill="#002147" radius={[0, 3, 3, 0]} name="%" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          <Card title="By Aircraft Type" subtitle="% of portfolio by fleet type">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={[
-                { type: "A320 Family", pct: 32.4 },
-                { type: "B737 Family", pct: 28.1 },
-                { type: "A350-900", pct: 18.6 },
-                { type: "B777-300ER", pct: 11.2 },
-                { type: "A330-300", pct: 6.8 },
-                { type: "Other", pct: 2.9 },
-              ]} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="type" tick={{ fontSize: 10, fill: "#475569" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#475569" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <Tooltip formatter={(v: number) => [`${v}%`, "Share"]} contentStyle={{ fontSize: "0.8125rem", border: "1px solid #E2E8F0", borderRadius: "0.75rem" }} />
-                <Bar dataKey="pct" fill="#0F4C5C" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          <Card title="By Vintage" subtitle="Aircraft manufacture year distribution">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={[
-                { year: "2015-16", count: 12 },
-                { year: "2017-18", count: 28 },
-                { year: "2019-20", count: 47 },
-                { year: "2021-22", count: 61 },
-                { year: "2023+", count: 25 },
-              ]} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#475569" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#475569" }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v: number) => [v, "Aircraft"]} contentStyle={{ fontSize: "0.8125rem", border: "1px solid #E2E8F0", borderRadius: "0.75rem" }} />
-                <Bar dataKey="count" fill="#475569" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </div>
-      )}
+      {activeTab === "Concentration" && <ConcentrationTab />}
 
       {/* SD / MR Tab */}
       {activeTab === "SD / MR" && <SDMRTab />}
