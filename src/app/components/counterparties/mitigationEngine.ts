@@ -41,7 +41,8 @@ export interface MitigatedECLRow {
   leaseId: string;
   aircraft: string;
   stage: "1" | "2" | "3";
-  ead: number;
+  baseEad: number;
+  mitigatedEad: number;
   baseEclLifetime: number;
   mitigatedEclLifetime: number;
   delta: number;      // mitigatedEclLifetime − baseEclLifetime (negative = relief)
@@ -130,8 +131,8 @@ export function computeMitigatedECLRows(
   const totalPdReductionPct  = selected.reduce((sum, m) => sum + m.pdReduction, 0);
 
   return eclRows.map(r => {
-    const mitigatedEad   = r.ead        * (1 - totalEadReductionPct / 100);
-    const mitigatedPdLT  = r.pdLifetime * (1 - totalPdReductionPct  / 100);
+    const mitigatedEad   = r.ead        * Math.max(0, 1 - totalEadReductionPct / 100);
+    const mitigatedPdLT  = r.pdLifetime * Math.max(0, 1 - totalPdReductionPct  / 100);
     const mitigatedLgd   = Math.max(0, r.lgd - totalLgdReduction);
     const mitigatedEclLT = (mitigatedEad * mitigatedPdLT * mitigatedLgd) / 10000;
     const delta    = mitigatedEclLT - r.eclLifetime;
@@ -140,7 +141,8 @@ export function computeMitigatedECLRows(
       leaseId: r.leaseId,
       aircraft: r.aircraft,
       stage: r.stage,
-      ead: r.ead,
+      baseEad: r.ead,
+      mitigatedEad: mitigatedEad,
       baseEclLifetime: r.eclLifetime,
       mitigatedEclLifetime: mitigatedEclLT,
       delta,
