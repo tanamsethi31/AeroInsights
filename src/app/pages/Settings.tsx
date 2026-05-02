@@ -3,7 +3,8 @@ import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortab
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check } from "lucide-react";
+import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, Bell } from "lucide-react";
+import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 
 const tabs = [
   { id: "tenant", label: "Tenant", icon: Building2 },
@@ -11,6 +12,7 @@ const tabs = [
   { id: "datasources", label: "Data Sources", icon: Database },
   { id: "model", label: "Model Params", icon: Sliders },
   { id: "audit", label: "Audit Log", icon: ClipboardList },
+  { id: "alerts", label: "Alerts", icon: Bell },
 ];
 
 const users = [
@@ -58,6 +60,13 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("tenant");
   const [saved, setSaved] = useState(false);
   const [weights, setWeights] = useState({ baseline: 60, adverse: 25, severe: 15 });
+  const [signalWeights, setSignalWeights] = useState({ ...DEFAULT_WEIGHTS });
+  const [thresholds, setThresholds] = useState({ ...DEFAULT_THRESHOLDS });
+  const [alertReadIds, setAlertReadIds] = useState<Set<string>>(new Set());
+
+  const weightSum = Object.values(signalWeights).reduce((a, b) => a + b, 0);
+  const watchlistEntries = getWatchlistSummary();
+  const alertEntries = watchlistEntries.filter(e => e.status !== "green");
   const { sorted: sortedUsers, sortState: userSortState, toggleSort: toggleUserSort } = useSortable(users, userAccessors);
 
   const handleSave = () => {
@@ -328,6 +337,142 @@ export default function Settings() {
                 </tbody>
               </table>
             </Card>
+          )}
+
+          {activeTab === "alerts" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+              {/* Signal Weight Configuration */}
+              <Card title="Signal Weight Configuration" subtitle="Adjust the relative weight of each early-warning signal (must sum to 100)">
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {(Object.keys(signalWeights) as SignalKey[]).map(key => {
+                    const labels: Record<SignalKey, string> = {
+                      paymentLateness: "Payment Lateness",
+                      scheduleQoQ: "Schedule Cancellations (QoQ)",
+                      ratingChange: "Rating Change",
+                      ctcWatchlist: "AWG CTC Watchlist",
+                      newsKeywordHits: "News Keyword Hits",
+                    };
+                    return (
+                      <div key={key}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                          <label style={{ fontSize: "0.8125rem", fontWeight: 500, color: "#475569" }}>{labels[key]}</label>
+                          <span style={{ fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "#0F172A" }}>{signalWeights[key]}</span>
+                        </div>
+                        <input
+                          type="range" min={0} max={100} step={1} value={signalWeights[key]}
+                          onChange={e => setSignalWeights(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                          style={{ width: "100%", accentColor: "#002147" }}
+                        />
+                      </div>
+                    );
+                  })}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem",
+                    background: weightSum === 100 ? "rgba(21,128,61,0.08)" : "rgba(180,83,9,0.1)",
+                    borderRadius: "0.375rem", fontSize: "0.8125rem",
+                    color: weightSum === 100 ? "#15803D" : "#B45309", fontWeight: 600,
+                  }}>
+                    {weightSum === 100 ? "✓" : "⚠"} Total weight: {weightSum} / 100
+                    {weightSum !== 100 && <span style={{ fontWeight: 400 }}>— adjust sliders to reach exactly 100</span>}
+                  </div>
+                  <button
+                    onClick={() => setSignalWeights({ ...DEFAULT_WEIGHTS })}
+                    style={{ alignSelf: "flex-start", fontSize: "0.8125rem", color: "#002147", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.375rem 0.875rem", cursor: "pointer" }}
+                  >
+                    Reset to defaults
+                  </button>
+                </div>
+              </Card>
+
+              {/* Threshold Configuration */}
+              <Card title="Threshold Configuration" subtitle="Score thresholds for Red and Amber status">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                    {[
+                      { label: "Red threshold (score ≥)", key: "red" as const, color: "#B91C1C" },
+                      { label: "Amber threshold (score ≥)", key: "amber" as const, color: "#B45309" },
+                    ].map(({ label, key, color }) => (
+                      <div key={key}>
+                        <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "0.25rem" }}>{label}</label>
+                        <input
+                          type="number" min={0} max={100}
+                          value={thresholds[key]}
+                          onChange={e => setThresholds(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                          style={{ width: "100%", padding: "0.5rem 0.75rem", border: `1px solid ${color}44`, borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", boxSizing: "border-box" as const, fontVariantNumeric: "tabular-nums" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>Preview with current thresholds</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                      {watchlistEntries.map(e => {
+                        const previewScore = computeScore(e.signals, signalWeights);
+                        const previewStatus = computeStatus(previewScore, thresholds);
+                        const c = previewStatus === "green" ? "#15803D" : previewStatus === "amber" ? "#B45309" : "#B91C1C";
+                        const bg = previewStatus === "green" ? "rgba(21,128,61,0.08)" : previewStatus === "amber" ? "rgba(180,83,9,0.08)" : "rgba(185,28,28,0.08)";
+                        return (
+                          <div key={e.lesseeId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.375rem 0.5rem", background: bg, borderRadius: "0.25rem" }}>
+                            <span style={{ fontSize: "0.8125rem", color: "#0F172A" }}>{e.lesseeName}</span>
+                            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: c }}>
+                              {previewStatus.charAt(0).toUpperCase() + previewStatus.slice(1)} ({previewScore.toFixed(0)})
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Alert Inbox */}
+              <Card
+                title="Alert Inbox"
+                subtitle="Active watchlist alerts requiring review"
+                headerRight={
+                  alertEntries.some(e => !alertReadIds.has(e.lesseeId)) ? (
+                    <button
+                      onClick={() => setAlertReadIds(new Set(alertEntries.map(e => e.lesseeId)))}
+                      style={{ fontSize: "0.75rem", color: "#002147", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.25rem 0.75rem", cursor: "pointer" }}
+                    >
+                      Mark all read
+                    </button>
+                  ) : undefined
+                }
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {alertEntries.length === 0 ? (
+                    <div style={{ padding: "1rem", textAlign: "center" as const, color: "#94A3B8", fontSize: "0.8125rem" }}>No active alerts</div>
+                  ) : alertEntries.map(e => {
+                    const isRead = alertReadIds.has(e.lesseeId);
+                    const c = e.status === "red" ? "#B91C1C" : "#B45309";
+                    const bg = isRead ? "#FFFFFF" : "#FFFBEB";
+                    return (
+                      <div key={e.lesseeId} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem", background: bg, border: "1px solid #E2E8F0", borderRadius: "0.5rem" }}>
+                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: c, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A" }}>{e.lesseeName}</div>
+                          <div style={{ fontSize: "0.75rem", color: "#475569" }}>{e.trigger} · {e.reason}</div>
+                          <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.125rem" }}>Last changed: {e.lastChanged}</div>
+                        </div>
+                        {!isRead && (
+                          <button
+                            onClick={() => setAlertReadIds(prev => new Set([...prev, e.lesseeId]))}
+                            style={{ fontSize: "0.75rem", color: "#64748B", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.25rem 0.625rem", cursor: "pointer", flexShrink: 0 }}
+                          >
+                            Mark read
+                          </button>
+                        )}
+                        {isRead && (
+                          <span style={{ fontSize: "0.75rem", color: "#94A3B8", flexShrink: 0 }}>Read</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            </div>
           )}
         </div>
       </div>
