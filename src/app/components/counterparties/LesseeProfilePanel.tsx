@@ -3,7 +3,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Cell,
   RadarChart, PolarGrid, PolarAngleAxis, Radar,
+  AreaChart, Area,
 } from "recharts";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
@@ -72,6 +74,40 @@ interface ScenarioRow {
   stageComment: string;
 }
 
+type SubScoreKey = "punctuality" | "restructuringCoop" | "govtInterference" | "litigationPropensity";
+
+interface EvidenceEvent {
+  date: string;
+  event: string;
+  outcome: string;
+  weight: number;
+}
+
+interface BehaviourEvidence {
+  punctuality: EvidenceEvent[];
+  restructuringCoop: EvidenceEvent[];
+  govtInterference: EvidenceEvent[];
+  litigationPropensity: EvidenceEvent[];
+}
+
+interface ScoreHistoryPoint {
+  month: string;
+  punctuality: number;
+  restructuringCoop: number;
+  govtInterference: number;
+  litigationPropensity: number;
+}
+
+interface OverrideEntry {
+  id: string;
+  timestamp: string;
+  user: string;
+  subScore: string;
+  oldValue: number;
+  newValue: number;
+  reason: string;
+}
+
 interface LesseeProfile {
   meta: LesseeMeta;
   leases: LesseeLeaseRow[];
@@ -79,6 +115,8 @@ interface LesseeProfile {
   monthlyDPD: MonthlyDPD[];
   events: PaymentEvent[];
   scenarios: ScenarioRow[];
+  behaviourEvidence: BehaviourEvidence;
+  scoreHistory: ScoreHistoryPoint[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -143,6 +181,46 @@ const PROFILE_DATA: Record<LesseeId, LesseeProfile> = {
       { name: "Mild Stress",   description: "GDP −1%, RPK −10%, fuel +15%",                              ecl12m: 14.98*M, eclLifetime: 29.11*M, vsBase12mPct:  33, stageComment: "Write-off risk rising" },
       { name: "Severe Stress", description: "GDP −3%, RPK −30%, fuel +40%, USD/INR −15%",                ecl12m: 27.75*M, eclLifetime: 53.94*M, vsBase12mPct: 146, stageComment: "Full write-off likely" },
     ],
+    behaviourEvidence: {
+      punctuality: [
+        { date: "2025-05-12", event: "On-time payment", outcome: "Apr 2025 rental received in full on due date", weight: 8 },
+        { date: "2025-08-14", event: "Late payment — 18 DPD", outcome: "Aug 2025 rental received 18 days past due", weight: -12 },
+        { date: "2025-11-20", event: "Late payment — 28 DPD", outcome: "Nov 2025 rental received 28 days past due; backstop monitoring activated", weight: -18 },
+        { date: "2026-01-15", event: "30+ DPD backstop breach", outcome: "SICR §B5.5.17 trigger activated; Stage 2 → Stage 3 migration", weight: -35 },
+        { date: "2026-03-14", event: "Partial payment received", outcome: "Mar 2026 rental partially settled; $45K shortfall outstanding", weight: -14 },
+      ],
+      restructuringCoop: [
+        { date: "2025-10-05", event: "Initial deferral request submitted", outcome: "Lessee submitted deferral request; documentation provided within 5 days", weight: 5 },
+        { date: "2025-11-18", event: "Restructuring meeting — partial cooperation", outcome: "Lessee attended meeting; declined to provide updated cash flow projections", weight: -8 },
+        { date: "2026-02-02", event: "Second meeting — seeking deferral", outcome: "New management team; cooperative tone but no formal agreement reached", weight: 4 },
+        { date: "2026-03-28", event: "Term sheet refused", outcome: "Lessee declined term sheet for payment holiday citing board approval delay", weight: -10 },
+      ],
+      govtInterference: [
+        { date: "2025-08-01", event: "India sovereign watchlist added", outcome: "AWG CTC score downgraded −4 pts; judicial enforcement risk elevated", weight: -12 },
+        { date: "2025-11-10", event: "DGCA fleet continuity intervention", outcome: "Indian DGCA contacted lessor regarding fleet continuity; political pressure noted", weight: -18 },
+        { date: "2026-01-15", event: "Sovereign watchlist — dual trigger active", outcome: "IMF quarterly India review flagged aviation sector; dual-trigger SICR classification", weight: -11 },
+      ],
+      litigationPropensity: [
+        { date: "2024-09-14", event: "Prior arbitration resolved", outcome: "2024 dispute over maintenance reserve drawdown settled in lessor's favour", weight: -8 },
+        { date: "2025-04-22", event: "Legal notice on lease amendment", outcome: "Lessee issued formal objection to lease amendment clause; withdrawn after negotiation", weight: -10 },
+        { date: "2026-01-28", event: "Threat of injunction re repossession", outcome: "Lessee counsel issued letter threatening injunction; not filed as of Q1 2026", weight: -22 },
+        { date: "2026-03-15", event: "§1110 cure letter contested", outcome: "Lessee's legal team disputed cure period calculation; still unresolved", weight: -15 },
+      ],
+    },
+    scoreHistory: [
+      { month: "May '25", punctuality: 62, restructuringCoop: 65, govtInterference: 35, litigationPropensity: 42 },
+      { month: "Jun '25", punctuality: 58, restructuringCoop: 63, govtInterference: 36, litigationPropensity: 44 },
+      { month: "Jul '25", punctuality: 55, restructuringCoop: 61, govtInterference: 37, litigationPropensity: 46 },
+      { month: "Aug '25", punctuality: 52, restructuringCoop: 59, govtInterference: 38, litigationPropensity: 48 },
+      { month: "Sep '25", punctuality: 50, restructuringCoop: 58, govtInterference: 39, litigationPropensity: 50 },
+      { month: "Oct '25", punctuality: 47, restructuringCoop: 57, govtInterference: 40, litigationPropensity: 52 },
+      { month: "Nov '25", punctuality: 44, restructuringCoop: 56, govtInterference: 40, litigationPropensity: 53 },
+      { month: "Dec '25", punctuality: 40, restructuringCoop: 55, govtInterference: 41, litigationPropensity: 54 },
+      { month: "Jan '26", punctuality: 36, restructuringCoop: 54, govtInterference: 41, litigationPropensity: 55 },
+      { month: "Feb '26", punctuality: 32, restructuringCoop: 53, govtInterference: 41, litigationPropensity: 55 },
+      { month: "Mar '26", punctuality: 30, restructuringCoop: 53, govtInterference: 41, litigationPropensity: 55 },
+      { month: "Apr '26", punctuality: 28, restructuringCoop: 52, govtInterference: 41, litigationPropensity: 55 },
+    ],
   },
 
   AEROMEX: {
@@ -179,6 +257,44 @@ const PROFILE_DATA: Record<LesseeId, LesseeProfile> = {
       { name: "Mild Stress",   description: "GDP −1%, RPK −10%; restructuring extended 6 months",     ecl12m: 22.10*M, eclLifetime: 43.01*M, vsBase12mPct:  26, stageComment: "Recovery timeline extended" },
       { name: "Severe Stress", description: "GDP −3%, RPK −30%; airline liquidation scenario",        ecl12m: 38.41*M, eclLifetime: 74.73*M, vsBase12mPct: 118, stageComment: "Full write-off; repo scenario" },
     ],
+    behaviourEvidence: {
+      punctuality: [
+        { date: "2025-06-10", event: "Late payment — 22 DPD", outcome: "Jun 2025 rental received 22 days past due", weight: -15 },
+        { date: "2025-09-18", event: "Late payment — 35 DPD", outcome: "Sep 2025 rental 35 DPD; SICR watch activated", weight: -22 },
+        { date: "2025-12-05", event: "Missed payment", outcome: "Dec 2025 rental not received; formal default notice issued", weight: -30 },
+        { date: "2026-01-08", event: "Chapter 11 filing — automatic stay", outcome: "§1110 clock running; all rent obligations stayed", weight: -40 },
+      ],
+      restructuringCoop: [
+        { date: "2025-11-12", event: "Pre-filing discussion — limited info", outcome: "Lessee counsel engaged; limited financial information provided", weight: -5 },
+        { date: "2026-01-08", event: "Ch.11 filed without advance notice", outcome: "Lessor not given pre-filing consultation; standard practice in contested filings", weight: -20 },
+        { date: "2026-02-14", event: "§1110 agreement framework proposed", outcome: "DIP counsel engaged; agreement framework proposed by lessee counsel", weight: 10 },
+        { date: "2026-03-20", event: "3 of 4 lease assumptions confirmed", outcome: "Three lease assumptions signed; one lease disputed pending committee approval", weight: 5 },
+      ],
+      govtInterference: [
+        { date: "2025-08-15", event: "Prior Concurso precedent assessed", outcome: "2010 Concurso Mercantil review: lessor recovered 100% after 18 months", weight: 8 },
+        { date: "2026-01-08", event: "US Ch.11 filed in SDNY", outcome: "Southern District of New York filing; §1110 framework applies — strong lessor protection", weight: 12 },
+        { date: "2026-02-01", event: "Mexican government employment comment", outcome: "SICT commented on fleet continuity; no legal intervention made", weight: -10 },
+      ],
+      litigationPropensity: [
+        { date: "2025-09-10", event: "Maintenance reserve dispute", outcome: "Lessee disputed $2.1M maintenance reserve drawdown; settled out of court in 30 days", weight: -8 },
+        { date: "2026-01-08", event: "Ch.11 adversary proceeding risk", outcome: "Filing creates §365 rejection risk for one lease; avoidance action capability noted", weight: -15 },
+        { date: "2026-03-05", event: "No adversary proceedings filed", outcome: "90-day preference period monitored; no avoidance actions filed to date", weight: 5 },
+      ],
+    },
+    scoreHistory: [
+      { month: "May '25", punctuality: 55, restructuringCoop: 55, govtInterference: 28, litigationPropensity: 20 },
+      { month: "Jun '25", punctuality: 50, restructuringCoop: 52, govtInterference: 30, litigationPropensity: 21 },
+      { month: "Jul '25", punctuality: 46, restructuringCoop: 50, govtInterference: 32, litigationPropensity: 22 },
+      { month: "Aug '25", punctuality: 42, restructuringCoop: 48, govtInterference: 33, litigationPropensity: 23 },
+      { month: "Sep '25", punctuality: 38, restructuringCoop: 45, govtInterference: 34, litigationPropensity: 24 },
+      { month: "Oct '25", punctuality: 33, restructuringCoop: 42, govtInterference: 35, litigationPropensity: 25 },
+      { month: "Nov '25", punctuality: 28, restructuringCoop: 40, govtInterference: 35, litigationPropensity: 25 },
+      { month: "Dec '25", punctuality: 24, restructuringCoop: 38, govtInterference: 35, litigationPropensity: 25 },
+      { month: "Jan '26", punctuality: 20, restructuringCoop: 38, govtInterference: 35, litigationPropensity: 25 },
+      { month: "Feb '26", punctuality: 19, restructuringCoop: 38, govtInterference: 35, litigationPropensity: 25 },
+      { month: "Mar '26", punctuality: 18, restructuringCoop: 38, govtInterference: 35, litigationPropensity: 25 },
+      { month: "Apr '26", punctuality: 18, restructuringCoop: 38, govtInterference: 35, litigationPropensity: 25 },
+    ],
   },
 
   SRILNKN: {
@@ -213,6 +329,43 @@ const PROFILE_DATA: Record<LesseeId, LesseeProfile> = {
       { name: "Base Case",     description: "Stage 2 monitoring; deferral risk moderate",             ecl12m:  5.94*M, eclLifetime: 15.42*M, vsBase12mPct:   0, stageComment: "Stage 2 maintained" },
       { name: "Mild Stress",   description: "GDP −1%, RPK −10%; sovereign risk elevated",             ecl12m:  8.02*M, eclLifetime: 20.81*M, vsBase12mPct:  35, stageComment: "Stage 2→3 risk on A330 leases" },
       { name: "Severe Stress", description: "GDP −3%, RPK −30%; sovereign default scenario",          ecl12m: 14.18*M, eclLifetime: 36.80*M, vsBase12mPct: 139, stageComment: "All leases Stage 3" },
+    ],
+    behaviourEvidence: {
+      punctuality: [
+        { date: "2025-06-01", event: "On-time payment", outcome: "Jun 2025 rental received on due date", weight: 6 },
+        { date: "2025-10-14", event: "Late payment — 8 DPD", outcome: "Oct 2025 rental 8 days late; attributed to bank processing delays", weight: -5 },
+        { date: "2026-01-22", event: "Late payment — 12 DPD", outcome: "Jan 2026 rental 12 days past due; country watchlist event active", weight: -15 },
+        { date: "2026-04-10", event: "Late payment — 12 DPD", outcome: "Apr 2026 rental 12 days past due; pattern emerging with month-end timing", weight: -8 },
+      ],
+      restructuringCoop: [
+        { date: "2025-07-20", event: "Lease amendment agreed without dispute", outcome: "Lessee accepted minor lease amendment in full", weight: 8 },
+        { date: "2025-12-05", event: "Proactive cash flow submission", outcome: "Lessee submitted quarterly cash flow projections proactively", weight: 10 },
+        { date: "2026-02-18", event: "Restructuring meeting — full attendance", outcome: "Full management team present; provided audited financials on request", weight: 7 },
+      ],
+      govtInterference: [
+        { date: "2025-05-01", event: "Government-owned carrier designation", outcome: "SriLankan Airlines confirmed as wholly government-owned; political interference risk elevated", weight: -20 },
+        { date: "2025-09-15", event: "IMF EFF compliance review flagged", outcome: "Sri Lanka IMF Extended Fund Facility review flagged aviation sector restructuring", weight: -10 },
+        { date: "2026-01-22", event: "Sovereign watchlist — SICR trigger", outcome: "AWG CTC country watchlist activated; dual-trigger SICR potential", weight: -18 },
+      ],
+      litigationPropensity: [
+        { date: "2024-11-08", event: "LCIA arbitration resolved", outcome: "2023 LCIA arbitration re maintenance reserves ($1.8M); settled after 14 months", weight: -20 },
+        { date: "2025-06-14", event: "Legal challenge to insurance clause", outcome: "SriLankan challenged hull insurance requirement; withdrew objection after negotiation", weight: -12 },
+        { date: "2025-11-22", event: "6-month clean period", outcome: "No new legal actions in 6-month review; positive compliance signal", weight: 8 },
+      ],
+    },
+    scoreHistory: [
+      { month: "May '25", punctuality: 72, restructuringCoop: 75, govtInterference: 38, litigationPropensity: 68 },
+      { month: "Jun '25", punctuality: 70, restructuringCoop: 74, govtInterference: 40, litigationPropensity: 70 },
+      { month: "Jul '25", punctuality: 68, restructuringCoop: 72, govtInterference: 42, litigationPropensity: 71 },
+      { month: "Aug '25", punctuality: 65, restructuringCoop: 72, govtInterference: 43, litigationPropensity: 72 },
+      { month: "Sep '25", punctuality: 63, restructuringCoop: 71, govtInterference: 44, litigationPropensity: 72 },
+      { month: "Oct '25", punctuality: 61, restructuringCoop: 70, govtInterference: 45, litigationPropensity: 73 },
+      { month: "Nov '25", punctuality: 59, restructuringCoop: 70, govtInterference: 46, litigationPropensity: 74 },
+      { month: "Dec '25", punctuality: 57, restructuringCoop: 70, govtInterference: 47, litigationPropensity: 75 },
+      { month: "Jan '26", punctuality: 56, restructuringCoop: 70, govtInterference: 47, litigationPropensity: 75 },
+      { month: "Feb '26", punctuality: 55, restructuringCoop: 70, govtInterference: 48, litigationPropensity: 75 },
+      { month: "Mar '26", punctuality: 55, restructuringCoop: 70, govtInterference: 48, litigationPropensity: 75 },
+      { month: "Apr '26", punctuality: 55, restructuringCoop: 70, govtInterference: 48, litigationPropensity: 75 },
     ],
   },
 
@@ -250,6 +403,42 @@ const PROFILE_DATA: Record<LesseeId, LesseeProfile> = {
       { name: "Mild Stress",   description: "GDP −1%, RPK −10%; BRL −10% vs USD",                 ecl12m:  5.84*M, eclLifetime: 15.41*M, vsBase12mPct:  38, stageComment: "All 5 leases Stage 2" },
       { name: "Severe Stress", description: "GDP −3%, RPK −30%, BRL −25% vs USD",                 ecl12m: 10.22*M, eclLifetime: 26.97*M, vsBase12mPct: 142, stageComment: "Stage 3 risk on oldest leases" },
     ],
+    behaviourEvidence: {
+      punctuality: [
+        { date: "2025-07-01", event: "On-time payment", outcome: "Jul 2025 rental received in full on due date", weight: 7 },
+        { date: "2025-10-01", event: "On-time payment", outcome: "Oct 2025 rental received in full on due date", weight: 7 },
+        { date: "2026-01-28", event: "Late payment — 6 DPD", outcome: "Jan 2026 rental 6 days past due; attributed to BRL/USD rate impact on cash conversion", weight: -6 },
+        { date: "2026-04-20", event: "Late payment — 6 DPD", outcome: "Apr 2026 rental 6 days past due; month-end FX settlement pattern emerging", weight: -6 },
+      ],
+      restructuringCoop: [
+        { date: "2025-08-15", event: "Proactive schedule discussion", outcome: "Lessee initiated discussion about schedule reductions; full fleet utilisation data provided", weight: 10 },
+        { date: "2026-01-15", event: "Agreed monthly reporting", outcome: "Lessee agreed to monthly reporting cadence; no formal disputes raised", weight: 8 },
+        { date: "2026-03-10", event: "Payment smoothing plan proposed", outcome: "Lessee proposed 90-day payment smoothing plan; under lessor review", weight: 5 },
+      ],
+      govtInterference: [
+        { date: "2025-09-01", event: "ANAC assessment — neutral", outcome: "Brazilian ANAC aviation authority assessment: no enforcement actions or adverse findings", weight: 5 },
+        { date: "2026-01-28", event: "BRL/USD pressure — no govt intervention", outcome: "Brazilian real depreciation +14% YoY; impacts rent-to-revenue ratio but no government action", weight: -8 },
+      ],
+      litigationPropensity: [
+        { date: "2025-05-14", event: "Lease amendment accepted", outcome: "Lessee accepted aircraft re-delivery condition amendment without dispute", weight: 8 },
+        { date: "2025-12-10", event: "Clean 6-month legal review", outcome: "6-month review: no active proceedings or threatened actions", weight: 10 },
+        { date: "2026-02-28", event: "Minor maintenance reserve dispute resolved", outcome: "$85K maintenance reserve shortfall resolved administratively within 10 days", weight: -4 },
+      ],
+    },
+    scoreHistory: [
+      { month: "May '25", punctuality: 82, restructuringCoop: 80, govtInterference: 58, litigationPropensity: 72 },
+      { month: "Jun '25", punctuality: 80, restructuringCoop: 80, govtInterference: 59, litigationPropensity: 73 },
+      { month: "Jul '25", punctuality: 78, restructuringCoop: 79, govtInterference: 60, litigationPropensity: 74 },
+      { month: "Aug '25", punctuality: 76, restructuringCoop: 79, govtInterference: 60, litigationPropensity: 74 },
+      { month: "Sep '25", punctuality: 74, restructuringCoop: 79, govtInterference: 61, litigationPropensity: 75 },
+      { month: "Oct '25", punctuality: 72, restructuringCoop: 78, govtInterference: 61, litigationPropensity: 75 },
+      { month: "Nov '25", punctuality: 72, restructuringCoop: 78, govtInterference: 62, litigationPropensity: 76 },
+      { month: "Dec '25", punctuality: 71, restructuringCoop: 78, govtInterference: 62, litigationPropensity: 76 },
+      { month: "Jan '26", punctuality: 70, restructuringCoop: 78, govtInterference: 62, litigationPropensity: 76 },
+      { month: "Feb '26", punctuality: 69, restructuringCoop: 78, govtInterference: 62, litigationPropensity: 76 },
+      { month: "Mar '26", punctuality: 68, restructuringCoop: 78, govtInterference: 62, litigationPropensity: 76 },
+      { month: "Apr '26", punctuality: 68, restructuringCoop: 78, govtInterference: 62, litigationPropensity: 76 },
+    ],
   },
 
   TRANSATCA: {
@@ -281,6 +470,42 @@ const PROFILE_DATA: Record<LesseeId, LesseeProfile> = {
       { name: "Base Case",     description: "Stage 2; restructuring negotiation ongoing",          ecl12m: 3.74*M, eclLifetime:  9.08*M, vsBase12mPct:   0, stageComment: "Stage 2; restructuring likely" },
       { name: "Mild Stress",   description: "GDP −1%, RPK −10%; deferral accepted",               ecl12m: 5.02*M, eclLifetime: 12.18*M, vsBase12mPct:  34, stageComment: "Deferral accepted; ECL rises" },
       { name: "Severe Stress", description: "GDP −3%, RPK −30%; airline enters CCAA",             ecl12m: 8.72*M, eclLifetime: 21.17*M, vsBase12mPct: 133, stageComment: "Stage 3; repo scenario" },
+    ],
+    behaviourEvidence: {
+      punctuality: [
+        { date: "2025-07-01", event: "On-time payment", outcome: "Jul 2025 rental received on due date", weight: 7 },
+        { date: "2026-01-19", event: "Late payment — 8 DPD", outcome: "Jan 2026 rental 8 days past due; payment holiday discussion ongoing", weight: -8 },
+        { date: "2026-04-22", event: "Late payment — 8 DPD", outcome: "Apr 2026 rental 8 days past due; consistent with cash-flow timing pattern", weight: -8 },
+      ],
+      restructuringCoop: [
+        { date: "2025-10-20", event: "Proactive restructuring approach", outcome: "Lessee proactively approached with restructuring proposal; full documentation provided", weight: 12 },
+        { date: "2025-12-15", event: "Counsel engaged — no adversarial stance", outcome: "Lessee retained restructuring counsel but maintained cooperative posture throughout", weight: 8 },
+        { date: "2026-02-28", event: "Initial term sheet accepted", outcome: "Lessee accepted initial term sheet for payment deferral; constructive engagement confirmed", weight: 15 },
+      ],
+      govtInterference: [
+        { date: "2025-05-01", event: "Canada CTC full accession — TOP remedy elected", outcome: "Canada elected TOP (Topping-Up) remedy under CTC; strong lessor repossession framework", weight: 20 },
+        { date: "2025-08-01", event: "Transport Canada review — neutral", outcome: "Transport Canada restructuring review: no adverse public interest determination", weight: 15 },
+        { date: "2026-01-05", event: "CCAA eligibility confirmed", outcome: "Air Transat has CCAA (Companies' Creditors Arrangement Act) eligibility; Canadian insolvency is creditor-friendly", weight: 12 },
+      ],
+      litigationPropensity: [
+        { date: "2025-06-10", event: "No prior litigation on record", outcome: "Historical review confirmed: no prior arbitration or litigation against this lessor", weight: 15 },
+        { date: "2026-01-19", event: "Financial difficulty indicator met — no legal threat", outcome: "IFRS 9 §B5.5.17 financial difficulty indicator met; no legal action threatened", weight: -5 },
+        { date: "2026-03-14", event: "Arbitration waiver agreed", outcome: "Lessee agreed to arbitration-only dispute resolution in restructuring term sheet", weight: 10 },
+      ],
+    },
+    scoreHistory: [
+      { month: "May '25", punctuality: 75, restructuringCoop: 68, govtInterference: 84, litigationPropensity: 43 },
+      { month: "Jun '25", punctuality: 74, restructuringCoop: 69, govtInterference: 85, litigationPropensity: 44 },
+      { month: "Jul '25", punctuality: 73, restructuringCoop: 70, govtInterference: 86, litigationPropensity: 44 },
+      { month: "Aug '25", punctuality: 72, restructuringCoop: 71, govtInterference: 87, litigationPropensity: 45 },
+      { month: "Sep '25", punctuality: 71, restructuringCoop: 72, govtInterference: 87, litigationPropensity: 46 },
+      { month: "Oct '25", punctuality: 70, restructuringCoop: 73, govtInterference: 88, litigationPropensity: 46 },
+      { month: "Nov '25", punctuality: 70, restructuringCoop: 74, govtInterference: 88, litigationPropensity: 47 },
+      { month: "Dec '25", punctuality: 68, restructuringCoop: 74, govtInterference: 88, litigationPropensity: 47 },
+      { month: "Jan '26", punctuality: 66, restructuringCoop: 75, govtInterference: 88, litigationPropensity: 47 },
+      { month: "Feb '26", punctuality: 64, restructuringCoop: 75, govtInterference: 88, litigationPropensity: 47 },
+      { month: "Mar '26", punctuality: 63, restructuringCoop: 75, govtInterference: 88, litigationPropensity: 47 },
+      { month: "Apr '26", punctuality: 62, restructuringCoop: 75, govtInterference: 88, litigationPropensity: 47 },
     ],
   },
 
@@ -323,6 +548,40 @@ const PROFILE_DATA: Record<LesseeId, LesseeProfile> = {
       { name: "Base Case",     description: "Strong counterparty; sovereign-backed",                    ecl12m: 0.62*M, eclLifetime: 2.81*M, vsBase12mPct:   0, stageComment: "Stage 1 maintained" },
       { name: "Mild Stress",   description: "GDP −1%, RPK −10%; UAE insulated",                        ecl12m: 0.94*M, eclLifetime: 4.26*M, vsBase12mPct:  52, stageComment: "Stage 1 maintained" },
       { name: "Severe Stress", description: "GDP −3%, RPK −30%, oil shock; UAE sovereign under stress", ecl12m: 1.88*M, eclLifetime: 8.51*M, vsBase12mPct: 203, stageComment: "SICR watch; Stage 2 possible" },
+    ],
+    behaviourEvidence: {
+      punctuality: [
+        { date: "2025-05-01", event: "On-time payment", outcome: "May 2025 rental received in full on due date", weight: 10 },
+        { date: "2025-08-01", event: "On-time payment", outcome: "Aug 2025 rental received in full on due date", weight: 10 },
+        { date: "2026-01-01", event: "On-time payment", outcome: "Jan 2026 rental received in full on due date", weight: 10 },
+        { date: "2026-04-28", event: "On-time payment — 8-year record", outcome: "Apr 2026 rental received on due date in full; 8-year unbroken payment record maintained", weight: 10 },
+      ],
+      restructuringCoop: [
+        { date: "2025-06-15", event: "Lease renewal agreed 18 months early", outcome: "Emirates proactively agreed 3-year lease extension 18 months before expiry; no negotiation required", weight: 15 },
+        { date: "2026-02-10", event: "Audited financials provided proactively", outcome: "Emirates provided Q3 2025 audited financials without lessor request", weight: 10 },
+      ],
+      govtInterference: [
+        { date: "2025-05-01", event: "ICD sovereign backing confirmed", outcome: "Investment Corporation of Dubai holds 55.6% stake in Emirates; strong sovereign guarantor", weight: 15 },
+        { date: "2026-04-01", event: "UAE fiscal consolidation — minor note", outcome: "Minor UAE fiscal policy adjustment noted; no impact on Emirates operating licence or fleet financing", weight: -3 },
+      ],
+      litigationPropensity: [
+        { date: "2025-05-01", event: "Zero litigation history confirmed", outcome: "Full historical review: zero arbitration or litigation actions by Emirates against any lessor", weight: 20 },
+        { date: "2026-01-01", event: "Annual legal review — clean", outcome: "Annual legal review confirmed: zero active or threatened proceedings", weight: 10 },
+      ],
+    },
+    scoreHistory: [
+      { month: "May '25", punctuality: 96, restructuringCoop: 93, govtInterference: 90, litigationPropensity: 88 },
+      { month: "Jun '25", punctuality: 97, restructuringCoop: 94, govtInterference: 91, litigationPropensity: 89 },
+      { month: "Jul '25", punctuality: 97, restructuringCoop: 94, govtInterference: 91, litigationPropensity: 89 },
+      { month: "Aug '25", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 90 },
+      { month: "Sep '25", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 90 },
+      { month: "Oct '25", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
+      { month: "Nov '25", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
+      { month: "Dec '25", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
+      { month: "Jan '26", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
+      { month: "Feb '26", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
+      { month: "Mar '26", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
+      { month: "Apr '26", punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
     ],
   },
 };
