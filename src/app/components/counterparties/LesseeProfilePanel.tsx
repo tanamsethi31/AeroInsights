@@ -662,7 +662,7 @@ function waPd(eclRows: LesseeECLRow[]): number {
 
 // ─── Tab sub-components ───────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios"] as const;
+const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios", "Behaviour"] as const;
 type TabKey = typeof TABS[number];
 
 // ── OverviewTab ───────────────────────────────────────────────────────────────
@@ -1020,11 +1020,274 @@ function ScenariosTab({ scenarios }: { scenarios: ScenarioRow[] }) {
   );
 }
 
+// ─── BehaviourTab ─────────────────────────────────────────────────────────────
+
+const SCORE_LABELS: Record<SubScoreKey, string> = {
+  punctuality: "Payment Punctuality",
+  restructuringCoop: "Restructuring Cooperation",
+  govtInterference: "Govt. Interference Risk",
+  litigationPropensity: "Litigation Propensity",
+};
+
+function BehaviourTab({ meta, behaviourEvidence, scoreHistory }: {
+  meta: LesseeMeta;
+  behaviourEvidence: BehaviourEvidence;
+  scoreHistory: ScoreHistoryPoint[];
+}) {
+  const [openSection, setOpenSection] = useState<SubScoreKey | null>("punctuality");
+  const [overrides, setOverrides] = useState<OverrideEntry[]>([]);
+  const [overrideForm, setOverrideForm] = useState<{ subScore: SubScoreKey; newValue: number; reason: string }>({
+    subScore: "punctuality",
+    newValue: 50,
+    reason: "",
+  });
+
+  // Apply active overrides to scores
+  const currentScores = { ...meta.scores };
+  for (const o of overrides) {
+    const key = (Object.keys(SCORE_LABELS) as SubScoreKey[]).find(
+      k => SCORE_LABELS[k] === o.subScore
+    );
+    if (key) currentScores[key] = o.newValue;
+  }
+
+  const scoreItems: Array<{ key: SubScoreKey; label: string; displayScore: number }> = [
+    { key: "punctuality",        label: "Payment Punctuality",       displayScore: currentScores.punctuality },
+    { key: "restructuringCoop",  label: "Restructuring Cooperation", displayScore: currentScores.restructuringCoop },
+    { key: "govtInterference",   label: "Govt. Interference Risk",   displayScore: 100 - currentScores.govtInterference },
+    { key: "litigationPropensity", label: "Litigation Propensity",   displayScore: 100 - currentScores.litigationPropensity },
+  ];
+
+  function scoreColor(s: number): string {
+    return s >= 70 ? "#15803D" : s >= 50 ? "#B45309" : "#B91C1C";
+  }
+  function scoreBg(s: number): string {
+    return s >= 70 ? "rgba(21,128,61,0.1)" : s >= 50 ? "rgba(180,83,9,0.1)" : "rgba(185,28,28,0.1)";
+  }
+
+  function handleOverrideSubmit() {
+    const item = scoreItems.find(s => s.key === overrideForm.subScore);
+    if (!item || !overrideForm.reason.trim()) return;
+    const entry: OverrideEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      user: "analyst@aeroinsights.com",
+      subScore: item.label,
+      oldValue: item.displayScore,
+      newValue: overrideForm.newValue,
+      reason: overrideForm.reason.trim(),
+    };
+    setOverrides(prev => [entry, ...prev]);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+      {/* OCPI Banner */}
+      <div style={{ background: "#002147", borderRadius: "0.5rem", padding: "0.75rem 1rem" }}>
+        <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#FFFFFF", marginBottom: "0.25rem" }}>
+          Observed Contractual Performance Indicator (OCPI) — IFRS 9 §B5.5.17 compliance scoring framework
+        </div>
+        <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>
+          All scores derived exclusively from observable contractual events. Cultural, national, or subjective proxies are excluded.
+        </div>
+      </div>
+
+      {/* 2×2 Sparkline Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+        {scoreItems.map(({ key, label, displayScore }) => {
+          const sparkData = scoreHistory.map(h => ({
+            month: h.month,
+            value: (key === "govtInterference" || key === "litigationPropensity")
+              ? 100 - h[key]
+              : h[key],
+          }));
+          const sc = scoreColor(displayScore);
+          return (
+            <div key={key} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.5rem", padding: "0.75rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", lineHeight: 1.3 }}>OCPI — {label}</div>
+                <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: sc, background: scoreBg(displayScore), borderRadius: "4px", padding: "0.125rem 0.375rem", flexShrink: 0 }}>
+                  {displayScore}
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={56}>
+                <AreaChart data={sparkData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+                  <defs>
+                    <linearGradient id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={sc} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={sc} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="value" stroke={sc} strokeWidth={1.5} fill={`url(#grad-${key})`} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Evidence Accordion */}
+      <Card title="OCPI Evidence Log" subtitle="Itemised contractual events underlying each sub-score">
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {scoreItems.map(({ key, label, displayScore }) => {
+            const isOpen = openSection === key;
+            const events = behaviourEvidence[key];
+            const sc = scoreColor(displayScore);
+            return (
+              <div key={key} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                <button
+                  onClick={() => setOpenSection(isOpen ? null : key)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.75rem 0",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A" }}>
+                      OCPI — {label}
+                    </span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: sc, background: scoreBg(displayScore), borderRadius: "4px", padding: "0.1rem 0.35rem" }}>
+                      {displayScore}
+                    </span>
+                  </div>
+                  {isOpen
+                    ? <ChevronUp size={14} color="#94A3B8" />
+                    : <ChevronDown size={14} color="#94A3B8" />}
+                </button>
+                {isOpen && (
+                  <div style={{ paddingBottom: "0.75rem", overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                      <thead>
+                        <tr style={{ background: "#F4F5F7" }}>
+                          {["Date", "Event", "Observed Outcome", "Weight"].map(h => (
+                            <th key={h} style={{ padding: "0.5rem 0.75rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {events.map((ev, i) => (
+                          <tr
+                            key={i}
+                            style={{ borderBottom: "1px solid #F1F5F9" }}
+                            onMouseEnter={e => ((e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA")}
+                            onMouseLeave={e => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}
+                          >
+                            <td style={{ padding: "0.5rem 0.75rem", color: "#475569", whiteSpace: "nowrap", fontSize: "0.75rem" }}>{ev.date}</td>
+                            <td style={{ padding: "0.5rem 0.75rem", fontWeight: 500, color: "#0F172A" }}>{ev.event}</td>
+                            <td style={{ padding: "0.5rem 0.75rem", color: "#475569", maxWidth: "260px" }}>{ev.outcome}</td>
+                            <td style={{ padding: "0.5rem 0.75rem", fontWeight: 600, color: ev.weight >= 0 ? "#15803D" : "#B91C1C", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                              {ev.weight >= 0 ? `+${ev.weight}` : ev.weight}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Override Panel */}
+      <Card title="Score Override — Governance & Audit Log" subtitle="Analyst overrides are immutably logged with reason and timestamp">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+          {/* Form */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "0.25rem" }}>Sub-Score</label>
+              <select
+                value={overrideForm.subScore}
+                onChange={e => setOverrideForm(p => ({ ...p, subScore: e.target.value as SubScoreKey }))}
+                style={{ width: "100%", padding: "0.5rem 0.75rem", border: "1px solid #E2E8F0", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+              >
+                {scoreItems.map(s => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "0.25rem" }}>New Value (0–100)</label>
+              <input
+                type="number" min={0} max={100}
+                value={overrideForm.newValue}
+                onChange={e => setOverrideForm(p => ({ ...p, newValue: Math.min(100, Math.max(0, Number(e.target.value))) }))}
+                style={{ width: "100%", padding: "0.5rem 0.75rem", border: "1px solid #E2E8F0", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", boxSizing: "border-box" as const }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: "0.25rem" }}>Reason (required)</label>
+              <textarea
+                value={overrideForm.reason}
+                onChange={e => setOverrideForm(p => ({ ...p, reason: e.target.value }))}
+                placeholder="Describe the basis for this override..."
+                rows={3}
+                style={{ width: "100%", padding: "0.5rem 0.75rem", border: "1px solid #E2E8F0", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", resize: "none" as const, boxSizing: "border-box" as const }}
+              />
+            </div>
+            <button
+              onClick={handleOverrideSubmit}
+              disabled={!overrideForm.reason.trim()}
+              style={{
+                background: overrideForm.reason.trim() ? "#002147" : "#94A3B8",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "9999px",
+                padding: "0.5rem 1rem",
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                cursor: overrideForm.reason.trim() ? "pointer" : "not-allowed",
+              }}
+            >
+              Submit Override
+            </button>
+          </div>
+          {/* Audit log */}
+          <div>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>
+              Audit Log ({overrides.length} {overrides.length === 1 ? "entry" : "entries"})
+            </div>
+            {overrides.length === 0 ? (
+              <div style={{ padding: "1rem", background: "#F8FAFC", borderRadius: "0.5rem", fontSize: "0.8125rem", color: "#94A3B8", textAlign: "center" as const }}>
+                No overrides recorded
+              </div>
+            ) : (
+              <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid #E2E8F0", borderRadius: "0.5rem" }}>
+                {overrides.map(o => (
+                  <div key={o.id} style={{ padding: "0.625rem 0.75rem", borderBottom: "1px solid #F1F5F9" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0F172A" }}>{o.subScore}</span>
+                      <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>{o.timestamp.slice(0, 10)}</span>
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#475569", marginBottom: "0.25rem" }}>
+                      {o.oldValue} → <strong style={{ color: "#0F172A" }}>{o.newValue}</strong> · {o.user}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#475569", fontStyle: "italic" as const }}>{o.reason}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ─── LesseeProfilePanel ───────────────────────────────────────────────────────
 
 export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
-  const { meta, leases, eclRows, monthlyDPD, events, scenarios } = PROFILE_DATA[lesseeId];
+  const { meta, leases, eclRows, monthlyDPD, events, scenarios, behaviourEvidence, scoreHistory } = PROFILE_DATA[lesseeId];
 
   useEffect(() => { setActiveTab("Overview"); }, [lesseeId]);
 
@@ -1073,6 +1336,7 @@ export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
         {activeTab === "ECL"       && <ECLTab        eclRows={eclRows} />}
         {activeTab === "Timeline"  && <TimelineTab   monthlyDPD={monthlyDPD} events={events} />}
         {activeTab === "Scenarios" && <ScenariosTab  scenarios={scenarios} />}
+        {activeTab === "Behaviour" && <BehaviourTab meta={meta} behaviourEvidence={behaviourEvidence} scoreHistory={scoreHistory} />}
       </div>
     </div>
   );
