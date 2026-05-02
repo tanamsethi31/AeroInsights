@@ -401,24 +401,420 @@ function waPd(eclRows: LesseeECLRow[]): number {
   return eclRows.reduce((sum, r) => sum + r.pd12m * r.ead, 0) / totalEAD;
 }
 
-// ─── LesseeProfilePanel (stub — full UI added in Task 2) ─────────────────────
+// ─── Tab sub-components ───────────────────────────────────────────────────────
 
-export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
-  void lesseeId;
+const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios"] as const;
+type TabKey = typeof TABS[number];
+
+// ── OverviewTab ───────────────────────────────────────────────────────────────
+
+function OverviewTab({ meta }: { meta: LesseeMeta }) {
+  const [showRestructuring, setShowRestructuring] = useState(false);
+  const radarData = [
+    { subject: "Punctuality",        score: meta.scores.punctuality },
+    { subject: "Restr. Coop.",       score: meta.scores.restructuringCoop },
+    { subject: "Govt. Independence", score: 100 - meta.scores.govtInterference },
+    { subject: "Low Litigation",     score: 100 - meta.scores.litigationPropensity },
+  ];
+
   return (
-    <div style={{ padding: "1rem", color: "#94A3B8", fontSize: "0.8125rem" }}>
-      Profile loading…
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* Analyst note */}
+      <div style={{ padding: "0.75rem", background: meta.stage === "3" ? "rgba(185,28,28,0.05)" : meta.stage === "2" ? "rgba(180,83,9,0.05)" : "rgba(21,128,61,0.05)", borderRadius: "0.75rem", borderLeft: `3px solid ${stageColour(meta.stage)}` }}>
+        <div style={{ fontSize: "0.8125rem", color: "#475569" }}>
+          <strong style={{ color: "#0F172A" }}>Analyst Note:</strong> {meta.notes}
+        </div>
+      </div>
+      {/* KPI cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+        <KpiCard
+          label="Behavior Score"
+          value={meta.behaviorScore.toString()}
+          subtitle="0 = worst · 100 = best"
+          delta={meta.behaviorScore >= 80 ? "Low risk" : meta.behaviorScore >= 60 ? "Medium risk" : "High risk"}
+          deltaType={meta.behaviorScore >= 80 ? "positive" : meta.behaviorScore >= 60 ? "neutral" : "negative"}
+        />
+        <KpiCard
+          label="Days Overdue"
+          value={meta.daysOverdue.toString()}
+          subtitle={`Last payment: ${meta.lastPayment}`}
+          delta={meta.daysOverdue === 0 ? "Current" : `${meta.daysOverdue} days late`}
+          deltaType={meta.daysOverdue > 30 ? "negative" : meta.daysOverdue > 0 ? "neutral" : "positive"}
+        />
+      </div>
+      {/* Radar + score bars */}
+      <Card title="Behavior Score Breakdown" subtitle="Observed contractual-performance indicator under stress">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", alignItems: "center" }}>
+          <ResponsiveContainer width="100%" height={200}>
+            <RadarChart data={radarData}>
+              <PolarGrid stroke="#E2E8F0" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#475569" }} />
+              <Radar name="Score" dataKey="score" stroke="#002147" fill="#002147" fillOpacity={0.15} />
+            </RadarChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {[
+              { label: "Payment Punctuality",       score: meta.scores.punctuality },
+              { label: "Restructuring Cooperation", score: meta.scores.restructuringCoop },
+              { label: "Govt. Interference Risk",   score: 100 - meta.scores.govtInterference },
+              { label: "Litigation Propensity",     score: 100 - meta.scores.litigationPropensity },
+            ].map((item) => (
+              <div key={item.label}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                  <span style={{ fontSize: "0.8125rem", color: "#475569" }}>{item.label}</span>
+                  <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: item.score >= 70 ? "#15803D" : item.score >= 50 ? "#B45309" : "#B91C1C" }}>{item.score}</span>
+                </div>
+                <div style={{ height: "5px", background: "#E2E8F0", borderRadius: "3px" }}>
+                  <div style={{ width: `${item.score}%`, height: "100%", background: item.score >= 70 ? "#15803D" : item.score >= 50 ? "#B45309" : "#B91C1C", borderRadius: "3px" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+      {/* Restructuring Simulator */}
+      <Card
+        title="Restructuring Simulator"
+        subtitle="Side-by-side comparison of 7 restructuring options"
+        headerRight={
+          <button
+            onClick={() => setShowRestructuring(!showRestructuring)}
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "9999px", padding: "0.5rem 1rem", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
+          >
+            {showRestructuring ? "Hide" : "Show"} Comparison
+          </button>
+        }
+      >
+        {showRestructuring ? (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
+              <thead>
+                <tr style={{ background: "#F4F5F7" }}>
+                  {["Option", "NPV to Lessor", "IRR", "ECL", "P95 Downside", "Time-to-Recovery", ""].map((h) => (
+                    <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {RESTRUCTURING_OPTIONS.map((opt, i) => {
+                  const isTermination = opt.name.includes("Termination");
+                  const isBest = opt.name === "Term Extension";
+                  return (
+                    <tr key={opt.name} style={{ borderBottom: "1px solid #E2E8F0", background: isBest ? "rgba(21,128,61,0.04)" : isTermination ? "rgba(185,28,28,0.04)" : i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: isBest ? 600 : 400, color: "#0F172A" }}>
+                        {isBest && <span style={{ fontSize: "0.625rem", color: "#15803D", fontWeight: 600, marginRight: "0.375rem", background: "rgba(21,128,61,0.1)", padding: "0.125rem 0.375rem", borderRadius: "0.5rem" }}>BEST</span>}
+                        {opt.name}
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{opt.npv}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{opt.irr}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: isTermination ? "#B91C1C" : "#0F172A" }}>{opt.ecl}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: isTermination ? "#B91C1C" : "#0F172A" }}>{opt.p95}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{opt.recovery}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        {!isTermination && (
+                          <button style={{ fontSize: "0.75rem", fontWeight: 500, color: "#002147", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.25rem 0.625rem", cursor: "pointer" }}>
+                            Draft Term Sheet
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ padding: "1rem", background: "#F4F5F7", borderRadius: "0.75rem", fontSize: "0.8125rem", color: "#475569" }}>
+            Click "Show Comparison" to compare NPV, IRR, ECL, and downside across 7 options for {meta.name}.
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
 
-// Suppress unused import warnings until Task 2
-void useState; void useEffect;
-void BarChart; void Bar; void XAxis; void YAxis; void CartesianGrid;
-void Tooltip; void ResponsiveContainer; void ReferenceLine; void Cell;
-void RadarChart; void PolarGrid; void PolarAngleAxis; void Radar;
-void KpiCard; void StatusPill; void Card;
-void RESTRUCTURING_OPTIONS; void PROFILE_DATA;
-void fmtM; void fmtPct; void fmtK;
-void dpdColour; void eventColour; void eventLabel; void scenarioBg;
-void stageColour; void waRemainingTerm; void waPd;
+// ── LeasesTab ─────────────────────────────────────────────────────────────────
+
+function LeasesTab({ leases }: { leases: LesseeLeaseRow[] }) {
+  const totalRent = leases.reduce((sum, l) => sum + l.monthlyRentUSD, 0);
+  const waRT = waRemainingTerm(leases);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
+        <KpiCard label="Active Leases"     value={leases.length.toString()} />
+        <KpiCard label="Total Rent / mo"   value={fmtM(totalRent)} />
+        <KpiCard label="WA Remaining Term" value={`${waRT.toFixed(1)} yrs`} subtitle="EAD-weighted" />
+      </div>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
+          <thead>
+            <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+              {["Lease ID", "Aircraft", "MSN", "Rent / mo", "EAD", "Lease End", "Stage"].map((h) => (
+                <th key={h} style={{ padding: "0.625rem 0.875rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {leases.map((l, i) => (
+              <tr key={l.id} style={{ borderBottom: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
+                <td style={{ padding: "0.5rem 0.875rem", fontFamily: "monospace", color: "#475569", fontSize: "0.75rem" }}>{l.id}</td>
+                <td style={{ padding: "0.5rem 0.875rem", fontWeight: 600, color: "#0F172A" }}>{l.aircraft}</td>
+                <td style={{ padding: "0.5rem 0.875rem", fontFamily: "monospace", color: "#475569" }}>{l.msn}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#0F172A" }}>{fmtK(l.monthlyRentUSD)}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#475569" }}>{fmtM(l.ead)}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#475569" }}>{l.leaseEnd}</td>
+                <td style={{ padding: "0.5rem 0.875rem" }}><StatusPill stage={l.stage} label={`S${l.stage}`} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── ECLTab ────────────────────────────────────────────────────────────────────
+
+function ECLTab({ eclRows }: { eclRows: LesseeECLRow[] }) {
+  const totalEAD    = eclRows.reduce((sum, r) => sum + r.ead, 0);
+  const totalEcl12m = eclRows.reduce((sum, r) => sum + r.ecl12m, 0);
+  const totalEclLT  = eclRows.reduce((sum, r) => sum + r.eclLifetime, 0);
+  const eclRate     = totalEAD > 0 ? (totalEclLT / totalEAD) * 100 : 0;
+  const chartHeight = Math.max(160, eclRows.length * 44);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
+        <KpiCard label="Total ECL 12m"      value={fmtM(totalEcl12m)} />
+        <KpiCard label="Total ECL Lifetime" value={fmtM(totalEclLT)} />
+        <KpiCard label="ECL Rate"           value={fmtPct(eclRate)} subtitle="ECL LT / EAD" />
+        <KpiCard label="WA PD 12m"          value={fmtPct(waPd(eclRows))} />
+      </div>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
+          <thead>
+            <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+              {["Lease", "Aircraft", "EAD", "PD 12m", "PD LT", "LGD", "ECL 12m", "ECL LT", "Stage"].map((h) => (
+                <th key={h} style={{ padding: "0.625rem 0.875rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {eclRows.map((r, i) => (
+              <tr key={r.leaseId} style={{ borderBottom: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
+                <td style={{ padding: "0.5rem 0.875rem", fontFamily: "monospace", color: "#475569", fontSize: "0.75rem" }}>{r.leaseId}</td>
+                <td style={{ padding: "0.5rem 0.875rem", fontWeight: 600, color: "#0F172A" }}>{r.aircraft}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#475569" }}>{fmtM(r.ead)}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#475569" }}>{fmtPct(r.pd12m)}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#475569" }}>{fmtPct(r.pdLifetime)}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#475569" }}>{fmtPct(r.lgd)}</td>
+                <td style={{ padding: "0.5rem 0.875rem", fontWeight: 600, color: (r.ecl12m / r.ead) > 0.05 ? "#B91C1C" : (r.ecl12m / r.ead) > 0.02 ? "#B45309" : "#0F172A" }}>{fmtM(r.ecl12m)}</td>
+                <td style={{ padding: "0.5rem 0.875rem", color: "#475569" }}>{fmtM(r.eclLifetime)}</td>
+                <td style={{ padding: "0.5rem 0.875rem" }}><StatusPill stage={r.stage} label={`S${r.stage}`} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>ECL 12m by Lease</div>
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <BarChart data={eclRows} layout="vertical" margin={{ left: 0, right: 52, top: 4, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+            <XAxis type="number" tick={{ fontSize: 10, fill: "#475569" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => fmtM(v)} />
+            <YAxis type="category" dataKey="leaseId" tick={{ fontSize: 10, fill: "#475569" }} axisLine={false} tickLine={false} width={120} />
+            <Tooltip
+              cursor={{ fill: "rgba(0,33,71,0.04)" }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const r = payload[0].payload as LesseeECLRow;
+                return (
+                  <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "0.625rem 0.875rem", fontSize: "0.8125rem" }}>
+                    <div style={{ fontWeight: 600, color: "#0F172A", marginBottom: "0.25rem" }}>{r.leaseId}</div>
+                    <div style={{ color: "#475569" }}>Aircraft: {r.aircraft}</div>
+                    <div style={{ color: "#475569" }}>ECL 12m: {fmtM(r.ecl12m)}</div>
+                    <div style={{ color: "#475569" }}>ECL LT: {fmtM(r.eclLifetime)}</div>
+                  </div>
+                );
+              }}
+            />
+            <Bar dataKey="ecl12m" radius={[0, 3, 3, 0]}>
+              {eclRows.map((r) => (
+                <Cell key={r.leaseId} fill={stageColour(r.stage)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// ── TimelineTab ───────────────────────────────────────────────────────────────
+
+function TimelineTab({ monthlyDPD, events }: { monthlyDPD: MonthlyDPD[]; events: PaymentEvent[] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>Payment Lateness — 12 Month DPD</div>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={monthlyDPD} margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+            <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#475569" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "#475569" }} axisLine={false} tickLine={false} label={{ value: "DPD", angle: -90, position: "insideLeft", fontSize: 9, fill: "#94A3B8" }} />
+            <Tooltip
+              cursor={{ fill: "rgba(0,33,71,0.04)" }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0].payload as MonthlyDPD;
+                return (
+                  <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "0.5rem 0.75rem", fontSize: "0.8125rem" }}>
+                    <div style={{ fontWeight: 600, color: "#0F172A" }}>{d.month}</div>
+                    <div style={{ color: dpdColour(d.daysOverdue) }}>{d.daysOverdue > 0 ? `${d.daysOverdue} DPD` : "On time"}</div>
+                  </div>
+                );
+              }}
+            />
+            <ReferenceLine y={30} stroke="#B91C1C" strokeDasharray="4 2" label={{ value: "30d trigger", position: "insideTopRight", fontSize: 9, fill: "#B91C1C" }} />
+            <Bar dataKey="daysOverdue" radius={[3, 3, 0, 0]}>
+              {monthlyDPD.map((d) => (
+                <Cell key={d.month} fill={dpdColour(d.daysOverdue)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+        <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #E2E8F0", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Credit Event Log
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+          <thead>
+            <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+              {["Date", "Type", "Description", "Impact"].map((h) => (
+                <th key={h} style={{ padding: "0.625rem 0.875rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((ev, i) => {
+              const isSevere = ev.type === "missed" || ev.type === "stage-change";
+              const isAmber  = ev.type === "late"   || ev.type === "trigger" || ev.type === "deferral";
+              const rowBg    = isSevere ? "rgba(185,28,28,0.03)" : isAmber ? "rgba(180,83,9,0.03)" : i % 2 === 0 ? "#FFFFFF" : "#F8FAFC";
+              return (
+                <tr key={`${ev.date}-${ev.type}-${i}`} style={{ borderBottom: "1px solid #F1F5F9", background: rowBg }}>
+                  <td style={{ padding: "0.5rem 0.875rem", fontFamily: "monospace", color: "#475569", fontSize: "0.75rem", whiteSpace: "nowrap" }}>{ev.date}</td>
+                  <td style={{ padding: "0.5rem 0.875rem", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.45rem", borderRadius: "0.25rem", background: `${eventColour(ev.type)}18`, color: eventColour(ev.type), border: `1px solid ${eventColour(ev.type)}30` }}>
+                      {eventLabel(ev.type)}
+                    </span>
+                  </td>
+                  <td style={{ padding: "0.5rem 0.875rem", color: "#0F172A" }}>{ev.description}</td>
+                  <td style={{ padding: "0.5rem 0.875rem", color: "#64748B", fontSize: "0.75rem" }}>{ev.impact}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── ScenariosTab ──────────────────────────────────────────────────────────────
+
+function ScenariosTab({ scenarios }: { scenarios: ScenarioRow[] }) {
+  const base = scenarios[0];
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+      <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #E2E8F0", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        Lessee ECL Sensitivity — 3 Macro Scenarios
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
+        <thead>
+          <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+            {["Scenario", "Macro Assumptions", "ECL 12m", "ECL Lifetime", "Δ vs Base", "Stage Impact"].map((h) => (
+              <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {scenarios.map((s) => (
+            <tr key={s.name} style={{ borderBottom: "1px solid #E2E8F0", background: scenarioBg(s.name) }}>
+              <td style={{ padding: "0.875rem 1rem", fontWeight: 700, color: s.name === "Severe Stress" ? "#B91C1C" : s.name === "Mild Stress" ? "#B45309" : "#0F172A" }}>{s.name}</td>
+              <td style={{ padding: "0.875rem 1rem", color: "#475569", fontStyle: "italic", fontSize: "0.75rem", maxWidth: "240px" }}>{s.description}</td>
+              <td style={{ padding: "0.875rem 1rem", fontWeight: 600, color: "#0F172A" }}>{fmtM(s.ecl12m)}</td>
+              <td style={{ padding: "0.875rem 1rem", color: "#475569" }}>{fmtM(s.eclLifetime)}</td>
+              <td style={{ padding: "0.875rem 1rem", fontWeight: 700, color: s.vsBase12mPct === 0 ? "#64748B" : s.vsBase12mPct > 100 ? "#B91C1C" : "#B45309" }}>
+                {s.vsBase12mPct === 0 ? "—" : `+${s.vsBase12mPct}%`}
+              </td>
+              <td style={{ padding: "0.875rem 1rem", fontSize: "0.75rem", color: s.name === "Severe Stress" ? "#B91C1C" : s.name === "Mild Stress" ? "#B45309" : "#475569" }}>{s.stageComment}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ padding: "0.625rem 1rem", background: "#F8FAFC", borderTop: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#94A3B8" }}>
+        Base: {base.description}
+      </div>
+    </div>
+  );
+}
+
+// ─── LesseeProfilePanel ───────────────────────────────────────────────────────
+
+export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
+  const [activeTab, setActiveTab] = useState<TabKey>("Overview");
+  const { meta, leases, eclRows, monthlyDPD, events, scenarios } = PROFILE_DATA[lesseeId];
+
+  useEffect(() => { setActiveTab("Overview"); }, [lesseeId]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {/* Profile header */}
+      <div style={{ background: "#002147", borderRadius: "1rem 1rem 0 0", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.25rem" }}>{meta.name}</div>
+          <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.7)" }}>
+            {meta.country} · {meta.rating} · {meta.leaseCount} leases · {fmtM(meta.exposure)} exposure
+          </div>
+        </div>
+        <StatusPill stage={meta.stage} label={`Stage ${meta.stage}`} />
+      </div>
+
+      {/* Tab nav */}
+      <div style={{ background: "#FFFFFF", borderLeft: "1px solid #E2E8F0", borderRight: "1px solid #E2E8F0", display: "flex", gap: 0, borderBottom: "1px solid #E2E8F0" }}>
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: "0.625rem 1.125rem",
+              fontSize: "0.8125rem",
+              fontWeight: 500,
+              border: "none",
+              borderBottom: activeTab === tab ? "2px solid #002147" : "2px solid transparent",
+              background: "transparent",
+              color: activeTab === tab ? "#002147" : "#475569",
+              cursor: "pointer",
+              transition: "all 200ms ease",
+              marginBottom: "-1px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderTop: "none", borderRadius: "0 0 1rem 1rem", padding: "1.25rem" }}>
+        {activeTab === "Overview"  && <OverviewTab  meta={meta} />}
+        {activeTab === "Leases"    && <LeasesTab    leases={leases} />}
+        {activeTab === "ECL"       && <ECLTab        eclRows={eclRows} />}
+        {activeTab === "Timeline"  && <TimelineTab   monthlyDPD={monthlyDPD} events={events} />}
+        {activeTab === "Scenarios" && <ScenariosTab  scenarios={scenarios} />}
+      </div>
+    </div>
+  );
+}
