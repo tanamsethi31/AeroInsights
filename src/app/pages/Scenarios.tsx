@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
+import { InsolvencyTab } from "../components/scenarios/InsolvencyTab";
 import { StatusPill } from "../components/ui/StatusPill";
 import {
   Play,
@@ -380,6 +381,10 @@ function generateDSL(
         monte_carlo_paths: paths,
         seed,
       },
+      // Optional: set to "chapter11", "india_ibc", "brazil_rj", "mexico_concurso", "indonesia_pkpu",
+      // or "generic_liquidation" to layer insolvency-specific recovery adjustments.
+      // See Insolvency Regimes tab.
+      bankruptcy_scenario_type: null,
     },
     null, 2
   );
@@ -636,7 +641,7 @@ export default function Scenarios() {
   // ── Result lookup ──
   const findRun = (id: string) => runs.find((r) => r.id === id);
 
-  const tabs = ["Library", "Custom Builder", "Run History"];
+  const tabs = ["Library", "Custom Builder", "Run History", "Insolvency Regimes"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1182,6 +1187,9 @@ export default function Scenarios() {
           </div>
         </Card>
       )}
+
+      {/* ══ INSOLVENCY REGIMES TAB ══════════════════════════════════════ */}
+      {activeTab === "Insolvency Regimes" && <InsolvencyTab />}
 
       <style>{`
         @keyframes progress-fill {
