@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { LesseeProfilePanel, type LesseeId } from "../components/counterparties/LesseeProfilePanel";
@@ -92,7 +93,17 @@ const lessees = [
 
 
 export default function Counterparties() {
+  const location = useLocation();
   const [selectedLessee, setSelectedLessee] = useState(lessees[0]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const id = params.get("lessee");
+    if (id) {
+      const found = lessees.find(l => l.id === id);
+      if (found) setSelectedLessee(found);
+    }
+  }, [location.search]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>

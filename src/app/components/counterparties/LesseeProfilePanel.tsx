@@ -6,6 +6,7 @@ import {
   AreaChart, Area,
 } from "recharts";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { WatchlistTab } from "./WatchlistTab";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
@@ -662,7 +663,7 @@ function waPd(eclRows: LesseeECLRow[]): number {
 
 // ─── Tab sub-components ───────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios", "Behaviour"] as const;
+const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios", "Behaviour", "Watchlist"] as const;
 type TabKey = typeof TABS[number];
 
 // ── OverviewTab ───────────────────────────────────────────────────────────────
@@ -1337,6 +1338,7 @@ export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
         {activeTab === "Timeline"  && <TimelineTab   monthlyDPD={monthlyDPD} events={events} />}
         {activeTab === "Scenarios" && <ScenariosTab  scenarios={scenarios} />}
         {activeTab === "Behaviour" && <BehaviourTab meta={meta} behaviourEvidence={behaviourEvidence} scoreHistory={scoreHistory} />}
+        {activeTab === "Watchlist" && <WatchlistTab lesseeId={lesseeId} />}
       </div>
     </div>
   );
