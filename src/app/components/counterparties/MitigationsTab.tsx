@@ -56,8 +56,8 @@ export function MitigationsTab({ eclRows }: { eclRows: ECLRowInput[] }) {
 
       {/* KPI summary bar */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-        <KpiCard label="Base ECL Lifetime"      value={fmtM(baseEclTotal)} />
-        <KpiCard label="Mitigated ECL Lifetime" value={fmtM(mitigatedEclTotal)} />
+        <KpiCard label="Base ECL LT"      value={fmtM(baseEclTotal)} />
+        <KpiCard label="Mitigated ECL LT" value={fmtM(mitigatedEclTotal)} />
         <KpiCard
           label="ECL Relief"
           value={selectedIds.size === 0 ? "—" : fmtM(relief)}
