@@ -1,5 +1,5 @@
 // src/app/components/counterparties/MitigationsTab.tsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import {
@@ -43,13 +43,26 @@ export function MitigationsTab({ eclRows }: { eclRows: ECLRowInput[] }) {
   const relief = baseEclTotal - mitigatedEclTotal;
   const reliefPct = baseEclTotal > 0 ? (relief / baseEclTotal) * 100 : 0;
 
-  // Standalone reliefs — each mitigation applied alone for comparison table
-  const standaloneReliefs = MITIGATION_OPTIONS.map(m => {
-    const rows = computeMitigatedECLRows(eclRows, [m.id]);
-    const mitigatedTotal = rows.reduce((s, r) => s + r.mitigatedEclLifetime, 0);
-    const r = baseEclTotal - mitigatedTotal;
-    return { ...m, relief: r, reliefPct: baseEclTotal > 0 ? (r / baseEclTotal) * 100 : 0 };
-  }).sort((a, b) => b.relief - a.relief);
+  // Standalone reliefs — memoized; only recompute when eclRows changes
+  const standaloneReliefs = useMemo(() =>
+    MITIGATION_OPTIONS.map(m => {
+      const rows = computeMitigatedECLRows(eclRows, [m.id]);
+      const mitigatedTotal = rows.reduce((s, r) => s + r.mitigatedEclLifetime, 0);
+      const reliefAmount = baseEclTotal - mitigatedTotal;
+      return { ...m, relief: reliefAmount, reliefPct: baseEclTotal > 0 ? (reliefAmount / baseEclTotal) * 100 : 0 };
+    }).sort((a, b) => b.relief - a.relief),
+  [eclRows, baseEclTotal]);
+
+  // Precomputed per-card preview relief — avoids 6 engine calls inside render
+  const previewReliefsMap = useMemo(() => {
+    const map = new Map<MitigationId, number>();
+    for (const m of MITIGATION_OPTIONS) {
+      const rows = computeMitigatedECLRows(eclRows, [m.id]);
+      const mitigatedTotal = rows.reduce((s, r) => s + r.mitigatedEclLifetime, 0);
+      map.set(m.id, baseEclTotal - mitigatedTotal);
+    }
+    return map;
+  }, [eclRows, baseEclTotal]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -77,8 +90,7 @@ export function MitigationsTab({ eclRows }: { eclRows: ECLRowInput[] }) {
           {MITIGATION_OPTIONS.map(m => {
             const isSelected = selectedIds.has(m.id);
             const catStyle = CATEGORY_STYLE[m.category];
-            const previewRows = computeMitigatedECLRows(eclRows, [m.id]);
-            const previewRelief = baseEclTotal - previewRows.reduce((s, r) => s + r.mitigatedEclLifetime, 0);
+            const previewRelief = previewReliefsMap.get(m.id) ?? 0;
             return (
               <div
                 key={m.id}
