@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
+import { getWatchlistSummary } from "../components/counterparties/watchlistEngine";
 import {
   AreaChart,
   Area,
@@ -16,7 +17,7 @@ import { KpiCard } from "../components/ui/KpiCard";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
-import { ArrowRight, Play, Download, RefreshCw, AlertCircle, Clock } from "lucide-react";
+import { ArrowRight, Play, Download, RefreshCw, AlertCircle } from "lucide-react";
 
 const eclTrendData = [
   { month: "Oct", ecl: 38.1 },
@@ -33,53 +34,6 @@ const stageDistData = [
   { stage: "Stage 3", count: 8, ecl: 17.2 },
 ];
 
-const watchlistItems = [
-  {
-    id: "W001",
-    lessee: "IndiGo Airlines",
-    country: "India",
-    status: "red" as const,
-    reason: "Payment 45 days overdue on 3 leases",
-    trigger: "Payment Lateness",
-    updatedAt: "2 hours ago",
-  },
-  {
-    id: "W002",
-    lessee: "Aeromexico",
-    country: "Mexico",
-    status: "red" as const,
-    reason: "Chapter 11 filing; §1110 cure window active",
-    trigger: "Bankruptcy Filing",
-    updatedAt: "1 day ago",
-  },
-  {
-    id: "W003",
-    lessee: "SriLankan Airlines",
-    country: "Sri Lanka",
-    status: "amber" as const,
-    reason: "S&P downgrade from BB- to B+; sovereign CDS +85bps",
-    trigger: "Rating Change",
-    updatedAt: "3 days ago",
-  },
-  {
-    id: "W004",
-    lessee: "Azul Brazilian Airlines",
-    country: "Brazil",
-    status: "amber" as const,
-    reason: "Schedule reduction 18% QoQ; liquidity ratio tightening",
-    trigger: "Schedule Cancellations",
-    updatedAt: "5 days ago",
-  },
-  {
-    id: "W005",
-    lessee: "Air Transat",
-    country: "Canada",
-    status: "amber" as const,
-    reason: "Restructuring negotiations initiated; deferral request received",
-    trigger: "Restructuring Signal",
-    updatedAt: "1 week ago",
-  },
-];
 
 const recentScenarios = [
   {
@@ -129,16 +83,12 @@ const recentScenarios = [
   },
 ];
 
-const watchlistAccessors = {
-  lessee: (w: typeof watchlistItems[0]) => w.lessee,
-  country: (w: typeof watchlistItems[0]) => w.country,
-  status: (w: typeof watchlistItems[0]) => w.status === "red" ? 0 : 1,
-  trigger: (w: typeof watchlistItems[0]) => w.trigger,
-};
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { sorted: sortedWatchlist, sortState: watchlistSortState, toggleSort: toggleWatchlistSort } = useSortable(watchlistItems, watchlistAccessors);
+  const watchlistEntries = getWatchlistSummary();
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const unreadCount = watchlistEntries.filter(e => e.status !== "green" && !readIds.has(e.lesseeId)).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -305,48 +255,54 @@ export default function Dashboard() {
         title="Watchlist Headlines"
         subtitle="Lessees requiring immediate attention"
         headerRight={
-          <button
-            onClick={() => navigate("/counterparties")}
-            className="flex items-center gap-1"
-            style={{
-              fontSize: "0.8125rem",
-              fontWeight: 500,
-              color: "#002147",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              transition: "opacity 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
-            }}
-            onMouseDown={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
-            }
-            onMouseUp={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-            }
-          >
-            View All <ArrowRight size={14} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {unreadCount > 0 && (
+              <span style={{ fontSize: "0.6875rem", fontWeight: 700, background: "#B91C1C", color: "#FFFFFF", borderRadius: "9999px", padding: "0.1rem 0.5rem", minWidth: "18px", textAlign: "center" }}>
+                {unreadCount} new
+              </span>
+            )}
+            {unreadCount > 0 && (
+              <button
+                onClick={() => setReadIds(new Set(watchlistEntries.filter(e => e.status !== "green").map(e => e.lesseeId)))}
+                style={{ fontSize: "0.75rem", color: "#94A3B8", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline" }}
+              >
+                Mark all read
+              </button>
+            )}
+            <button
+              onClick={() => navigate("/counterparties")}
+              className="flex items-center gap-1"
+              style={{
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                color: "#002147",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                transition: "opacity 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
+              }}
+              onMouseDown={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
+              }
+              onMouseUp={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
+              }
+            >
+              View All <ArrowRight size={14} />
+            </button>
+          </div>
         }
         noPadding
       >
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
           <thead>
             <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-              {([
-                { label: "Lessee", key: "lessee" },
-                { label: "Country", key: "country" },
-                { label: "Status", key: "status" },
-                { label: "Trigger", key: "trigger" },
-                { label: "Details", key: null },
-                { label: "Updated", key: null },
-                { label: "", key: null },
-              ] as { label: string; key: string | null }[]).map(({ label, key }) => (
+              {["Lessee", "Country", "Status", "Trigger", "Details", "Last Changed", ""].map(label => (
                 <th
                   key={label || "_action"}
-                  onClick={key ? () => toggleWatchlistSort(key) : undefined}
                   style={{
                     padding: "0.75rem 1rem",
                     textAlign: "left",
@@ -356,104 +312,106 @@ export default function Dashboard() {
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
                     whiteSpace: "nowrap",
-                    cursor: key ? "pointer" : "default",
-                    userSelect: "none",
                   }}
                 >
                   {label}
-                  {key && <span style={sortIconStyle(key, watchlistSortState)}>{sortIcon(key, watchlistSortState)}</span>}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {sortedWatchlist.map((item, i) => (
-              <tr
-                key={item.id}
-                style={{
-                  borderBottom: "1px solid #E2E8F0",
-                  background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7",
-                  transition: "background 150ms",
-                }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA")}
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLTableRowElement).style.background =
-                    i % 2 === 0 ? "#FFFFFF" : "#F4F5F7")
-                }
-              >
-                <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>
-                  {item.lessee}
-                </td>
-                <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{item.country}</td>
-                <td style={{ padding: "0.75rem 1rem" }}>
-                  <StatusPill
-                    stage={item.status}
-                    label={item.status === "red" ? "Red" : "Amber"}
-                  />
-                </td>
-                <td style={{ padding: "0.75rem 1rem" }}>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.25rem",
-                      fontSize: "0.75rem",
-                      color: item.status === "red" ? "#B91C1C" : "#B45309",
-                      background:
-                        item.status === "red" ? "rgba(185,28,28,0.08)" : "rgba(180,83,9,0.08)",
-                      padding: "0.2rem 0.5rem",
-                      borderRadius: "0.5rem",
-                    }}
-                  >
-                    <AlertCircle size={11} />
-                    {item.trigger}
-                  </span>
-                </td>
-                <td
+            {watchlistEntries.map((item, i) => {
+              const isUnread = item.status !== "green" && !readIds.has(item.lesseeId);
+              const triggerColor = item.status === "red" ? "#B91C1C" : item.status === "amber" ? "#B45309" : "#15803D";
+              const triggerBg = item.status === "red" ? "rgba(185,28,28,0.08)" : item.status === "amber" ? "rgba(180,83,9,0.08)" : "rgba(21,128,61,0.08)";
+              return (
+                <tr
+                  key={item.lesseeId}
                   style={{
-                    padding: "0.75rem 1rem",
-                    color: "#475569",
-                    maxWidth: "280px",
+                    borderBottom: "1px solid #E2E8F0",
+                    background: isUnread ? "#FFFBEB" : i % 2 === 0 ? "#FFFFFF" : "#F4F5F7",
+                    transition: "background 150ms",
                   }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA")}
+                  onMouseLeave={(e) =>
+                    ((e.currentTarget as HTMLTableRowElement).style.background =
+                      isUnread ? "#FFFBEB" : i % 2 === 0 ? "#FFFFFF" : "#F4F5F7")
+                  }
                 >
-                  {item.reason}
-                </td>
-                <td style={{ padding: "0.75rem 1rem", color: "#94A3B8" }}>
-                  <span className="flex items-center gap-1">
-                    <Clock size={12} /> {item.updatedAt}
-                  </span>
-                </td>
-                <td style={{ padding: "0.75rem 1rem" }}>
-                  <button
-                    onClick={() => navigate("/counterparties")}
+                  <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>
+                    {item.lesseeName}
+                  </td>
+                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{item.country}</td>
+                  <td style={{ padding: "0.75rem 1rem" }}>
+                    <StatusPill
+                      stage={item.status}
+                      label={item.status === "red" ? "Red" : item.status === "amber" ? "Amber" : "Green"}
+                    />
+                  </td>
+                  <td style={{ padding: "0.75rem 1rem" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                        fontSize: "0.75rem",
+                        color: triggerColor,
+                        background: triggerBg,
+                        padding: "0.2rem 0.5rem",
+                        borderRadius: "0.5rem",
+                      }}
+                    >
+                      <AlertCircle size={11} />
+                      {item.trigger}
+                    </span>
+                  </td>
+                  <td
                     style={{
-                      fontSize: "0.8125rem",
-                      fontWeight: 500,
-                      color: "#002147",
-                      background: "transparent",
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "9999px",
-                      padding: "0.375rem 0.75rem",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      transition:
-                        "border-color 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
+                      padding: "0.75rem 1rem",
+                      color: "#475569",
+                      maxWidth: "280px",
                     }}
-                    onMouseDown={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
-                    }
-                    onMouseUp={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-                    }
                   >
-                    View Profile
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    {item.reason}
+                  </td>
+                  <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", whiteSpace: "nowrap" }}>
+                    {item.lastChanged}
+                  </td>
+                  <td style={{ padding: "0.75rem 1rem" }}>
+                    <button
+                      onClick={() => {
+                        setReadIds(prev => new Set([...prev, item.lesseeId]));
+                        navigate(`/counterparties?lessee=${item.lesseeId}`);
+                      }}
+                      style={{
+                        fontSize: "0.8125rem",
+                        fontWeight: 500,
+                        color: "#002147",
+                        background: "transparent",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "9999px",
+                        padding: "0.375rem 0.75rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        transition:
+                          "border-color 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
+                      }}
+                      onMouseDown={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
+                      }
+                      onMouseUp={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
+                      }
+                    >
+                      View Profile
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </Card>
