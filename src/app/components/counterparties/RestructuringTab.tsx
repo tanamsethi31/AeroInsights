@@ -54,26 +54,23 @@ export function RestructuringTab({ rows }: Props) {
     [rows]
   );
 
-  const bestNPV = results.reduce((best, r) =>
-    r.npvToLessor > best.npvToLessor ? r : best, results[0]
-  );
-  const bestRelief = results.reduce((best, r) =>
-    r.eclRelief > best.eclRelief ? r : best, results[0]
-  );
-
-  const counterfactualLoss = results[0]?.counterfactualLoss ?? 0;
-
   // Map templateId → result for O(1) lookup in render
   const resultMap = useMemo(
     () => new Map<TemplateId, RestructuringResult>(results.map((r) => [r.templateId, r])),
     [results]
   );
 
-  // Per-metric best value (among the 7 templates, excluding Default)
-  function bestValue(metric: MetricDef): number {
-    const vals = results.map((r) => r[metric.key]);
-    return metric.higherIsBetter ? Math.max(...vals) : Math.min(...vals);
-  }
+  // Pre-compute best value per metric once — avoids O(N×M) recomputation in render loop
+  const bestValuesMap = useMemo(() => {
+    const map = new Map<MetricKey, number>();
+    for (const metric of METRIC_DEFS) {
+      if (results.length === 0) { map.set(metric.key, 0); continue; }
+      const vals = results.map((r) => r[metric.key]);
+      map.set(metric.key, metric.higherIsBetter ? Math.max(...vals) : Math.min(...vals));
+    }
+    return map;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results]);
 
   function handleHeaderClick(id: TemplateId) {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -83,9 +80,6 @@ export function RestructuringTab({ rows }: Props) {
     ? RESTRUCTURING_TEMPLATES.find((t) => t.id === expandedId)
     : null;
 
-  const bestNPVName = RESTRUCTURING_TEMPLATES.find((t) => t.id === bestNPV?.templateId)?.name;
-  const bestReliefName = RESTRUCTURING_TEMPLATES.find((t) => t.id === bestRelief?.templateId)?.name;
-
   // Guard: if no results (empty rows), show nothing
   if (results.length === 0) {
     return (
@@ -94,6 +88,18 @@ export function RestructuringTab({ rows }: Props) {
       </div>
     );
   }
+
+  // Safe to access results[0] and do reductions — results.length > 0 guaranteed here
+  const bestNPV = results.reduce((best, r) =>
+    r.npvToLessor > best.npvToLessor ? r : best, results[0]
+  );
+  const bestRelief = results.reduce((best, r) =>
+    r.eclRelief > best.eclRelief ? r : best, results[0]
+  );
+  const counterfactualLoss = results[0].counterfactualLoss; // results[0] is guaranteed by guard above
+
+  const bestNPVName = RESTRUCTURING_TEMPLATES.find((t) => t.id === bestNPV?.templateId)?.name;
+  const bestReliefName = RESTRUCTURING_TEMPLATES.find((t) => t.id === bestRelief?.templateId)?.name;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -126,6 +132,7 @@ export function RestructuringTab({ rows }: Props) {
           <thead>
             <tr style={{ borderBottom: "2px solid #E2E8F0", background: "#FFFFFF" }}>
               <th
+                scope="col"
                 style={{
                   textAlign: "left",
                   padding: "0.625rem 0.75rem",
@@ -142,7 +149,17 @@ export function RestructuringTab({ rows }: Props) {
               {RESTRUCTURING_TEMPLATES.map((tmpl) => (
                 <th
                   key={tmpl.id}
+                  scope="col"
+                  tabIndex={0}
+                  role="columnheader"
+                  aria-pressed={expandedId === tmpl.id}
                   onClick={() => handleHeaderClick(tmpl.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleHeaderClick(tmpl.id);
+                    }
+                  }}
                   title="Click to see template details"
                   style={{
                     padding: "0.625rem 0.75rem",
@@ -164,6 +181,7 @@ export function RestructuringTab({ rows }: Props) {
               ))}
               {/* Default (counterfactual) column header — not clickable */}
               <th
+                scope="col"
                 style={{
                   padding: "0.625rem 0.75rem",
                   textAlign: "right",
@@ -181,7 +199,7 @@ export function RestructuringTab({ rows }: Props) {
           </thead>
           <tbody>
             {METRIC_DEFS.map((metric, rowIdx) => {
-              const best = bestValue(metric);
+              const best = bestValuesMap.get(metric.key) ?? 0;
               return (
                 <tr
                   key={metric.key}
