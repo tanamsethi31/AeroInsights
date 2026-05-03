@@ -65,7 +65,8 @@ export interface RestructuringResult {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DISCOUNT_RATE_MONTHLY = 0.08 / 12;
-const REF_DATE = new Date("2026-05-03");
+/** Valuation reference date — uses today's date so remaining-months calculations stay current */
+const REF_DATE = new Date();
 
 export const RESTRUCTURING_TEMPLATES: RestructuringTemplate[] = [
   {
@@ -208,14 +209,19 @@ function computeNPV(rows: RestructuringInputRow[], tmpl: RestructuringTemplate):
 }
 
 function computeIRR(rows: RestructuringInputRow[], tmpl: RestructuringTemplate): number {
+  if (rows.length === 0) return 0;
   const totalEAD = rows.reduce((s, r) => s + r.ead, 0);
+  if (totalEAD === 0) return 0;
 
-  const maxMonths = Math.max(
-    ...rows.map((r) => monthsRemaining(r.leaseEnd) + tmpl.termExtMonths)
+  const maxMonths = rows.reduce(
+    (max, r) => Math.max(max, monthsRemaining(r.leaseEnd) + tmpl.termExtMonths),
+    0
   );
 
   // cashflows[0] = initial lessor outflow (EAD invested + write-down); [1..n] = monthly inflows
   const cashflows: number[] = new Array(maxMonths + 1).fill(0);
+  // Initial outflow = EAD invested + immediate write-down (e.g. 20% debt forgiveness adds to cost base)
+  // This gives IRR as return on total capital at risk, consistent with NPV deducting the write-down.
   cashflows[0] = -(totalEAD + totalEAD * (tmpl.eadWriteDownPct / 100));
 
   for (const r of rows) {
@@ -253,6 +259,8 @@ function computeP95(rows: RestructuringInputRow[], tmpl: RestructuringTemplate):
   return (
     rows.reduce((sum, r) => {
       const adjEAD = r.ead * (1 - tmpl.eadReductionPct / 100);
+      // Stress the base PD first (×1.5), then apply template relief on top of the stressed value.
+      // Rationale: P95 tests whether restructuring still helps even under adverse conditions.
       const stressedPD = Math.min(100, r.pdLifetime * 1.5);
       const adjPD = Math.max(0, stressedPD - tmpl.pdReductionPp);
       return sum + (adjEAD * adjPD * r.lgd) / 10_000;
@@ -270,6 +278,7 @@ function computeCounterfactual(rows: RestructuringInputRow[]): number {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function computeAllTemplates(rows: RestructuringInputRow[]): RestructuringResult[] {
+  if (rows.length === 0) return [];
   const eclBase = rows.reduce((s, r) => s + r.eclLifetime, 0) / 1e6;
   const counterfactualLoss = computeCounterfactual(rows);
 
