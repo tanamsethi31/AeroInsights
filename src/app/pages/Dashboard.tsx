@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSignalRefresh } from "../services/useSignalRefresh";
 import { useNavigate } from "react-router";
 import { getWatchlistSummary } from "../components/counterparties/watchlistEngine";
 import {
@@ -89,6 +90,17 @@ export default function Dashboard() {
   const watchlistEntries = getWatchlistSummary();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const unreadCount = watchlistEntries.filter(e => e.status !== "green" && !readIds.has(e.lesseeId)).length;
+
+  const { refreshAll: refreshAllSignals, refreshing, getLastRefreshed } = useSignalRefresh();
+
+  function timeAgo(date: Date): string {
+    const diffMins = Math.floor((Date.now() - date.getTime()) / 60000);
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -256,6 +268,27 @@ export default function Dashboard() {
         subtitle="Lessees requiring immediate attention"
         headerRight={
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <button
+              onClick={refreshAllSignals}
+              disabled={refreshing}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: "#002147",
+                background: "transparent",
+                border: "1px solid #E2E8F0",
+                borderRadius: "9999px",
+                padding: "0.375rem 0.75rem",
+                cursor: refreshing ? "not-allowed" : "pointer",
+                opacity: refreshing ? 0.65 : 1,
+              }}
+            >
+              <RefreshCw size={11} />
+              {refreshing ? "Refreshing…" : "Refresh All"}
+            </button>
             {unreadCount > 0 && (
               <span style={{ fontSize: "0.6875rem", fontWeight: 700, background: "#B91C1C", color: "#FFFFFF", borderRadius: "9999px", padding: "0.1rem 0.5rem", minWidth: "18px", textAlign: "center" }}>
                 {unreadCount} new
@@ -375,7 +408,15 @@ export default function Dashboard() {
                     {item.reason}
                   </td>
                   <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", whiteSpace: "nowrap" }}>
-                    {item.lastChanged}
+                    <div>{item.lastChanged}</div>
+                    {(() => {
+                      const lr = getLastRefreshed(item.lesseeId);
+                      return lr ? (
+                        <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.125rem" }}>
+                          ⬤ Signals: {timeAgo(lr)}
+                        </div>
+                      ) : null;
+                    })()}
                   </td>
                   <td style={{ padding: "0.75rem 1rem" }}>
                     <button
