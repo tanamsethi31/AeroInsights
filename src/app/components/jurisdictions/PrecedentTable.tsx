@@ -14,22 +14,20 @@ export function PrecedentTable({ precedents, jurisdictions }: PrecedentTableProp
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [countryFilter, setCountryFilter] = useState("All");
 
-  const precedentCountries = useMemo(() => {
-    const codes = Array.from(new Set(precedents.map((p) => p.country)));
-    return codes
-      .map((c) => jurisdictions.find((j) => j.code === c)?.country ?? c)
-      .sort();
-  }, [precedents, jurisdictions]);
+  // Store country codes in state; derive display names only for labels.
+  // This avoids the fragile code→name→code roundtrip and prevents silent
+  // collisions if two codes ever resolve to the same display name.
+  const precedentCountryCodes = useMemo(
+    () => Array.from(new Set(precedents.map((p) => p.country))).sort(),
+    [precedents]
+  );
 
   const filteredPrecedents = useMemo(
     () =>
       countryFilter === "All"
         ? precedents
-        : precedents.filter((p) => {
-            const jur = jurisdictions.find((j) => j.country === countryFilter);
-            return jur ? p.country === jur.code : false;
-          }),
-    [precedents, jurisdictions, countryFilter]
+        : precedents.filter((p) => p.country === countryFilter),
+    [precedents, countryFilter]
   );
 
   const precedentAccessors = useMemo(
@@ -74,9 +72,9 @@ export function PrecedentTable({ precedents, jurisdictions }: PrecedentTableProp
           }}
         >
           <option value="All">All countries</option>
-          {precedentCountries.map((c) => (
-            <option key={c} value={c}>
-              {c}
+          {precedentCountryCodes.map((code) => (
+            <option key={code} value={code}>
+              {jurisdictions.find((j) => j.code === code)?.country ?? code}
             </option>
           ))}
         </select>
@@ -180,10 +178,18 @@ export function PrecedentTable({ precedents, jurisdictions }: PrecedentTableProp
                         {p.source}
                       </span>
                       {p.sourceUrl && (
-                        <ExternalLink
-                          size={11}
-                          style={{ marginLeft: 4, color: "#002147", verticalAlign: "middle" }}
-                        />
+                        <a
+                          href={p.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ lineHeight: 0 }}
+                        >
+                          <ExternalLink
+                            size={11}
+                            style={{ marginLeft: 4, color: "#002147", verticalAlign: "middle" }}
+                          />
+                        </a>
                       )}
                     </td>
                   </tr>
