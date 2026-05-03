@@ -8,6 +8,8 @@ import {
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { WatchlistTab } from "./WatchlistTab";
 import { MitigationsTab } from "./MitigationsTab";
+import { RestructuringTab } from "./RestructuringTab";
+import type { RestructuringInputRow } from "./restructuringEngine";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
@@ -664,7 +666,7 @@ function waPd(eclRows: LesseeECLRow[]): number {
 
 // ─── Tab sub-components ───────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios", "Behaviour", "Watchlist", "Mitigations"] as const;
+const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios", "Behaviour", "Watchlist", "Mitigations", "Restructuring"] as const;
 type TabKey = typeof TABS[number];
 
 // ── OverviewTab ───────────────────────────────────────────────────────────────
@@ -1339,8 +1341,26 @@ export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
         {activeTab === "Timeline"  && <TimelineTab   monthlyDPD={monthlyDPD} events={events} />}
         {activeTab === "Scenarios" && <ScenariosTab  scenarios={scenarios} />}
         {activeTab === "Behaviour" && <BehaviourTab meta={meta} behaviourEvidence={behaviourEvidence} scoreHistory={scoreHistory} />}
-        {activeTab === "Watchlist" && <WatchlistTab lesseeId={lesseeId} />}
-        {activeTab === "Mitigations" && <MitigationsTab eclRows={eclRows} />}
+        {activeTab === "Watchlist"     && <WatchlistTab lesseeId={lesseeId} />}
+        {activeTab === "Mitigations"   && <MitigationsTab eclRows={eclRows} />}
+        {activeTab === "Restructuring" && (
+          <RestructuringTab
+            rows={eclRows.map((ecl): RestructuringInputRow => {
+              const lease = leases.find((l) => l.id === ecl.leaseId)!;
+              return {
+                leaseId:        ecl.leaseId,
+                aircraft:       ecl.aircraft,
+                monthlyRentUSD: lease.monthlyRentUSD,
+                leaseEnd:       lease.leaseEnd,
+                ead:            ecl.ead,
+                pdLifetime:     ecl.pdLifetime,
+                lgd:            ecl.lgd,
+                eclLifetime:    ecl.eclLifetime,
+                stage:          ecl.stage as "1" | "2" | "3",
+              };
+            })}
+          />
+        )}
       </div>
     </div>
   );
