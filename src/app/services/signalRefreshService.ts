@@ -75,9 +75,11 @@ const LESSEE_RISK_BANDS: Record<
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
 function getISOWeek(d: Date): string {
-  const jan1 = new Date(d.getFullYear(), 0, 1);
-  const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
-  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 function getISOMonth(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -110,7 +112,7 @@ function hashSeed(seed: string): number {
     h ^= seed.charCodeAt(i);
     h = (h * 16777619) >>> 0;
   }
-  return h / 0xffffffff;
+  return h / 0x100000000;
 }
 
 function deterministicValue(
@@ -143,6 +145,7 @@ function levenshtein(a: string, b: string): number {
 
 function checkOFAC(lesseeName: string): boolean {
   const name = lesseeName.toUpperCase().trim();
+  if (name.length === 0) return false;
   return OFAC_ENTITY_NAMES.some(entity => {
     if (entity.includes(name) || name.includes(entity)) return true;
     return levenshtein(name, entity) <= 2;
@@ -243,6 +246,7 @@ function maybeGenerateAuditEntry(
   weights: Record<string, number>
 ): StoredAuditEntry | null {
   if (previousStatus !== null && previousStatus === newStatus) return null;
+  if (signals.length === 0) return null;
   const topSignal = signals.reduce((best, s) =>
     s.value * (weights[s.key] ?? 0) > best.value * (weights[best.key] ?? 0) ? s : best
   );
@@ -262,8 +266,11 @@ export function getStoredState(): StoredSignalState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as StoredSignalState;
-    return parsed.version === 1 ? parsed : null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.version !== 1 || typeof parsed.lessees !== "object" || parsed.lessees === null) {
+      return null;
+    }
+    return parsed as StoredSignalState;
   } catch {
     return null;
   }
@@ -311,17 +318,44 @@ export function refreshLessee(
   return entry;
 }
 
-/** Recompute signals for all 6 lessees and persist. Returns full updated state. */
+/** Recompute signals for all 6 lessees and persist in a single localStorage write. Returns full updated state. */
 export function refreshAll(
   weights: Record<string, number> = DEFAULT_WEIGHTS,
   thresholds: { red: number; amber: number } = DEFAULT_THRESHOLDS
 ): StoredSignalState {
-  let state = getStoredState() ?? { version: 1 as const, lessees: {} };
+  const stored  = getStoredState() ?? { version: 1 as const, lessees: {} };
+  const lessees = { ...stored.lessees };
   for (const id of Object.keys(LESSEE_NAMES)) {
-    const entry = refreshLessee(id, weights, thresholds);
-    state = { ...state, lessees: { ...state.lessees, [id]: entry } };
+    const previous = stored.lessees[id] ?? null;
+    const signals  = computeSignals(id, LESSEE_NAMES[id] ?? id);
+    const scoreRaw = signals.reduce(
+      (sum, s) => sum + (s.value * (weights[s.key] ?? 0)) / 100,
+      0
+    );
+    const score  = Math.round(scoreRaw);
+    const status: "Red" | "Amber" | "Green" =
+      score >= thresholds.red ? "Red" : score >= thresholds.amber ? "Amber" : "Green";
+    const auditEntry = maybeGenerateAuditEntry(
+      previous?.status ?? null,
+      score,
+      status,
+      signals,
+      weights
+    );
+    lessees[id] = {
+      computedAt: new Date().toISOString(),
+      score,
+      status,
+      signals,
+      auditLog: [
+        ...(previous?.auditLog ?? []),
+        ...(auditEntry ? [auditEntry] : []),
+      ],
+    };
   }
-  return state;
+  const next: StoredSignalState = { version: 1, lessees };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  return next;
 }
 
 /** Return Date of last refresh for a lessee, or null if never refreshed. */
