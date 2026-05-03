@@ -386,10 +386,10 @@ export const precedents: Precedent[] = [
     ctcInvoked: false,
   },
   {
-    id: "PREC-004", year: 2023, lessor: "SMBC Aviation", airline: "Regional Express", country: "US",
+    id: "PREC-004", year: 2023, lessor: "SMBC Aviation", airline: "Regional Express", country: "AU",
     aircraft: 3, timeline: "3 months", outcome: "Returned", source: "public",
     sourceUrl: "https://www.smbc-ac.com/news-events/press-releases",
-    notes: "Regional Express suspended operations and entered administration in Australia in 2024; SMBC Aviation's US-domiciled lease entities recovered 3 aircraft via consent surrender within 3 months.",
+    notes: "Regional Express suspended Australian operations July 2024 and entered voluntary administration; SMBC Aviation recovered 3 aircraft via consent surrender within 3 months under the Australian Corporations Act.",
     ctcInvoked: false,
   },
   // ── Ireland ─────────────────────────────────────────────────────────────────
