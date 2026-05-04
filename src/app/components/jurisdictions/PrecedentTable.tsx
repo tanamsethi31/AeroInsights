@@ -242,7 +242,8 @@ export function PrecedentTable({ precedents, jurisdictions }: PrecedentTableProp
                               style={{
                                 fontSize: "0.8125rem",
                                 color: "#002147",
-                                textDecoration: "none",
+                                textDecoration: "underline",
+                                textUnderlineOffset: "2px",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "0.25rem",
