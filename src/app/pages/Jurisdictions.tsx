@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Search } from "lucide-react";
 import { jurisdictions, precedents } from "../components/jurisdictions/jurisdictionData";
 import { JurisdictionDetail } from "../components/jurisdictions/JurisdictionDetail";
-import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
+import { PrecedentTable } from "../components/jurisdictions/PrecedentTable";
 
 const tabs = ["Profiles", "Repossession Model", "Precedent Database"];
 
@@ -14,7 +14,6 @@ export default function Jurisdictions() {
   const [selectedCode, setSelectedCode] = useState(jurisdictions[0].code);
   const [activeTab, setActiveTab] = useState("Profiles");
   const [search, setSearch] = useState("");
-  const [countryFilter, setCountryFilter] = useState("All");
 
   const selected = jurisdictions.find((j) => j.code === selectedCode) ?? jurisdictions[0];
 
@@ -27,34 +26,6 @@ export default function Jurisdictions() {
   );
 
   const chartData = jurisdictions.filter((j) => j.repossP50 < 100);
-
-  const precedentCountries = useMemo(() => {
-    const codes = Array.from(new Set(precedents.map((p) => p.country)));
-    return codes
-      .map((c) => jurisdictions.find((j) => j.code === c)?.country ?? c)
-      .sort();
-  }, []);
-
-  const filteredPrecedents = useMemo(
-    () =>
-      countryFilter === "All"
-        ? precedents
-        : precedents.filter((p) => {
-            const jur = jurisdictions.find((j) => j.country === countryFilter);
-            return jur ? p.country === jur.code : false;
-          }),
-    [countryFilter]
-  );
-
-  const precedentAccessors = useMemo(() => ({
-    year: (p: typeof precedents[0]) => p.year,
-    lessor: (p: typeof precedents[0]) => p.lessor,
-    airline: (p: typeof precedents[0]) => p.airline,
-    aircraft: (p: typeof precedents[0]) => p.aircraft,
-    outcome: (p: typeof precedents[0]) => p.outcome,
-  }), []);
-
-  const { sorted: sortedPrecedents, sortState: precedentSortState, toggleSort: togglePrecedentSort } = useSortable(filteredPrecedents, precedentAccessors);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -228,94 +199,7 @@ export default function Jurisdictions() {
 
       {/* ── Precedent Database ── */}
       {activeTab === "Precedent Database" && (
-        <Card
-          title={`Repossession Precedent Database (${filteredPrecedents.length})`}
-          subtitle="Public and AWG-sourced cases"
-          noPadding
-          headerRight={
-            <select
-              value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-              style={{
-                fontSize: "0.8125rem",
-                color: "#475569",
-                border: "1px solid #E2E8F0",
-                borderRadius: "0.5rem",
-                padding: "0.375rem 0.625rem",
-                background: "#FFFFFF",
-                cursor: "pointer",
-                outline: "none",
-              }}
-            >
-              <option value="All">All countries</option>
-              {precedentCountries.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          }
-        >
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
-              <thead>
-                <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-                  {([
-                    { label: "Case ID", key: null },
-                    { label: "Year", key: "year" },
-                    { label: "Lessor", key: "lessor" },
-                    { label: "Airline", key: "airline" },
-                    { label: "Country", key: null },
-                    { label: "Aircraft", key: "aircraft" },
-                    { label: "Timeline", key: null },
-                    { label: "Outcome", key: "outcome" },
-                    { label: "Source", key: null },
-                  ] as { label: string; key: string | null }[]).map(({ label, key }) => (
-                    <th
-                      key={label}
-                      onClick={key ? () => togglePrecedentSort(key) : undefined}
-                      style={{ padding: "0.625rem 1rem", textAlign: "left", fontWeight: 600, color: "#64748B", fontSize: "0.6875rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap", cursor: key ? "pointer" : "default", userSelect: "none" }}
-                    >
-                      {label}
-                      {key && <span style={sortIconStyle(key, precedentSortState)}>{sortIcon(key, precedentSortState)}</span>}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedPrecedents.map((p, i) => {
-                  const jur = jurisdictions.find((j) => j.code === p.country);
-                  return (
-                    <tr
-                      key={p.id}
-                      style={{ borderBottom: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}
-                    >
-                      <td style={{ padding: "0.625rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#94A3B8" }}>{p.id}</td>
-                      <td style={{ padding: "0.625rem 1rem", color: "#475569" }}>{p.year}</td>
-                      <td style={{ padding: "0.625rem 1rem", fontWeight: 600, color: "#0F172A" }}>{p.lessor}</td>
-                      <td style={{ padding: "0.625rem 1rem", color: "#475569" }}>{p.airline}</td>
-                      <td style={{ padding: "0.625rem 1rem" }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                          <span>{jur?.flag ?? ""}</span>
-                          <span style={{ color: "#475569" }}>{jur?.country ?? p.country}</span>
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.625rem 1rem", color: "#0F172A", fontVariantNumeric: "tabular-nums" }}>{p.aircraft}</td>
-                      <td style={{ padding: "0.625rem 1rem", color: "#475569" }}>{p.timeline}</td>
-                      <td style={{ padding: "0.625rem 1rem" }}>
-                        <StatusPill
-                          stage={p.outcome === "Returned" ? "green" : p.outcome === "Detained" ? "red" : "amber"}
-                          label={p.outcome}
-                        />
-                      </td>
-                      <td style={{ padding: "0.625rem 1rem", fontSize: "0.75rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                        {p.source}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <PrecedentTable precedents={precedents} jurisdictions={jurisdictions} />
       )}
     </div>
   );
