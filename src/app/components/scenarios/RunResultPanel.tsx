@@ -44,6 +44,16 @@ const SHIMMER_CSS = `
 }
 `;
 
+// Inject the shimmer animation once per page load
+let _shimmerInjected = false;
+function injectShimmerCSS() {
+  if (_shimmerInjected) return;
+  _shimmerInjected = true;
+  const el = document.createElement("style");
+  el.textContent = SHIMMER_CSS;
+  document.head.appendChild(el);
+}
+
 // ─── NarrativeSummaryCard ─────────────────────────────────────────────────────
 
 interface NarrativeSummaryCardProps {
@@ -51,13 +61,14 @@ interface NarrativeSummaryCardProps {
 }
 
 function NarrativeSummaryCard({ narrative }: NarrativeSummaryCardProps) {
+  injectShimmerCSS();
   const [copied, setCopied] = useState(false);
 
   // null means validation failed or API error — render nothing
   if (narrative === null) return null;
 
   const handleCopy = () => {
-    if (typeof narrative === "string") {
+    if (narrative !== "loading") {
       navigator.clipboard.writeText(narrative).catch(() => undefined);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
@@ -66,7 +77,6 @@ function NarrativeSummaryCard({ narrative }: NarrativeSummaryCardProps) {
 
   return (
     <>
-      <style>{SHIMMER_CSS}</style>
       <div
         style={{
           background: narrative === "loading" ? "#FFFFFF" : "#F8FAFC",
