@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
+
+const PATH_TAB: Record<string, string> = {
+  "/settings/firm":         "tenant",
+  "/settings/users":        "users",
+  "/settings/data-sources": "datasources",
+  "/settings/ecl":          "model",
+};
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, Bell } from "lucide-react";
+import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, Bell, Mail, X, Upload } from "lucide-react";
+import { ImportWizard } from "../components/import/ImportWizard";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 
 const tabs = [
@@ -57,12 +66,45 @@ const userAccessors = {
 };
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState("tenant");
+  const { pathname } = useLocation();
+  const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "tenant");
+  useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "tenant"); }, [pathname]);
   const [saved, setSaved] = useState(false);
+  const [showImportWizard, setShowImportWizard] = useState(false);
   const [weights, setWeights] = useState({ baseline: 60, adverse: 25, severe: 15 });
   const [signalWeights, setSignalWeights] = useState({ ...DEFAULT_WEIGHTS });
   const [thresholds, setThresholds] = useState({ ...DEFAULT_THRESHOLDS });
   const [alertReadIds, setAlertReadIds] = useState<Set<string>>(new Set());
+
+  // ── Email notification recipients ──
+  type AlertTrigger = "red" | "red-amber";
+  type EmailRecipient = { id: string; name: string; email: string; trigger: AlertTrigger };
+  const [emailRecipients, setEmailRecipients] = useState<EmailRecipient[]>([
+    { id: "er-1", name: "John Williams",  email: "john@aerinsights.com",  trigger: "red-amber" },
+    { id: "er-2", name: "Alex Johnson",   email: "alex@aerinsights.com",  trigger: "red" },
+  ]);
+  const [newRecipEmail, setNewRecipEmail] = useState("");
+  const [newRecipName,  setNewRecipName]  = useState("");
+  const [newRecipTrig,  setNewRecipTrig]  = useState<AlertTrigger>("red-amber");
+  const [recipSaved,    setRecipSaved]    = useState(false);
+  const recipIdRef = useRef(100);
+
+  function addRecipient() {
+    if (!newRecipEmail.trim() || !newRecipName.trim()) return;
+    setEmailRecipients(prev => [
+      ...prev,
+      { id: `er-${++recipIdRef.current}`, name: newRecipName.trim(), email: newRecipEmail.trim(), trigger: newRecipTrig },
+    ]);
+    setNewRecipEmail("");
+    setNewRecipName("");
+    setNewRecipTrig("red-amber");
+    setRecipSaved(true);
+    setTimeout(() => setRecipSaved(false), 2000);
+  }
+
+  function removeRecipient(id: string) {
+    setEmailRecipients(prev => prev.filter(r => r.id !== id));
+  }
 
   const weightSum = Object.values(signalWeights).reduce((a, b) => a + b, 0);
   const watchlistEntries = getWatchlistSummary();
@@ -222,7 +264,38 @@ export default function Settings() {
 
           {/* Data Sources */}
           {activeTab === "datasources" && (
-            <Card title="Data Sources" subtitle="CSV/XLSX upload, API connections, refresh cadence">
+            <>
+            {showImportWizard && (
+              <ImportWizard onClose={() => setShowImportWizard(false)} />
+            )}
+            <Card
+              title="Data Sources"
+              subtitle="CSV/XLSX upload, API connections, refresh cadence"
+              headerRight={
+                <button
+                  onClick={() => setShowImportWizard(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem 1rem",
+                    background: "#002147",
+                    border: "none",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.8125rem",
+                    fontWeight: 600,
+                    color: "#FFFFFF",
+                    cursor: "pointer",
+                    transition: "background 150ms ease-out",
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#001a35")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#002147")}
+                >
+                  <Upload size={13} />
+                  Import New Portfolio
+                </button>
+              }
+            >
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {dataSources.map(ds => (
                   <div key={ds.id} style={{ border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -241,6 +314,7 @@ export default function Settings() {
                 ))}
               </div>
             </Card>
+            </>
           )}
 
           {/* Model Params */}
@@ -341,6 +415,192 @@ export default function Settings() {
 
           {activeTab === "alerts" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+              {/* Email Notification Rules */}
+              <Card
+                title="Email Notification Rules"
+                subtitle="Recipients automatically emailed when a lessee crosses a configured threshold"
+              >
+                {/* Recipient table */}
+                {emailRecipients.length > 0 && (
+                  <div style={{ overflowX: "auto", marginBottom: "1.25rem" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                      <thead>
+                        <tr style={{ background: "#F4F5F7" }}>
+                          {["Name", "Email Address", "Alert Trigger", ""].map(h => (
+                            <th
+                              key={h}
+                              style={{
+                                padding: "0.5rem 0.75rem", textAlign: "left",
+                                fontSize: "0.6875rem", fontWeight: 600,
+                                color: "#64748B", textTransform: "uppercase",
+                                letterSpacing: "0.04em", whiteSpace: "nowrap",
+                              }}
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emailRecipients.map((r, i) => (
+                          <tr
+                            key={r.id}
+                            style={{
+                              borderBottom: "1px solid #F1F5F9",
+                              background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC",
+                            }}
+                          >
+                            <td style={{ padding: "0.625rem 0.75rem", fontWeight: 600, color: "#0F172A" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <div
+                                  style={{
+                                    width: "24px", height: "24px", borderRadius: "50%",
+                                    background: "#002147", display: "flex", alignItems: "center",
+                                    justifyContent: "center", fontSize: "0.5625rem",
+                                    fontWeight: 600, color: "#FFFFFF", flexShrink: 0,
+                                  }}
+                                >
+                                  {r.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                                </div>
+                                {r.name}
+                              </div>
+                            </td>
+                            <td style={{ padding: "0.625rem 0.75rem", color: "#475569" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                                <Mail size={11} style={{ color: "#94A3B8", flexShrink: 0 }} />
+                                {r.email}
+                              </div>
+                            </td>
+                            <td style={{ padding: "0.625rem 0.75rem" }}>
+                              <div style={{ display: "flex", gap: "0.375rem" }}>
+                                {(["red", "red-amber"] as AlertTrigger[]).map(t => (
+                                  <button
+                                    key={t}
+                                    onClick={() =>
+                                      setEmailRecipients(prev =>
+                                        prev.map(rec => rec.id === r.id ? { ...rec, trigger: t } : rec)
+                                      )
+                                    }
+                                    style={{
+                                      fontSize: "0.6875rem", fontWeight: 600,
+                                      padding: "0.2rem 0.5rem", borderRadius: "9999px",
+                                      border: r.trigger === t ? "none" : "1px solid #E2E8F0",
+                                      cursor: "pointer",
+                                      background: r.trigger === t
+                                        ? (t === "red" ? "rgba(185,28,28,0.1)" : "rgba(180,83,9,0.1)")
+                                        : "#FFFFFF",
+                                      color: r.trigger === t
+                                        ? (t === "red" ? "#B91C1C" : "#B45309")
+                                        : "#94A3B8",
+                                      transition: "all 150ms ease",
+                                    }}
+                                  >
+                                    {t === "red" ? "Red only" : "Amber & Red"}
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                            <td style={{ padding: "0.625rem 0.75rem", textAlign: "right" }}>
+                              <button
+                                onClick={() => removeRecipient(r.id)}
+                                style={{
+                                  color: "#B91C1C", background: "transparent",
+                                  border: "1px solid #E2E8F0", borderRadius: "0.375rem",
+                                  padding: "0.2rem 0.4rem", cursor: "pointer",
+                                  display: "flex", alignItems: "center",
+                                }}
+                              >
+                                <X size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Add recipient row */}
+                <div
+                  style={{
+                    display: "flex", gap: "0.625rem", alignItems: "flex-end",
+                    padding: "0.75rem", background: "#F8FAFC",
+                    border: "1px solid #E2E8F0", borderRadius: "0.625rem",
+                  }}
+                >
+                  <div style={{ flex: "0 0 160px" }}>
+                    <label style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", display: "block", marginBottom: "0.3rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Name
+                    </label>
+                    <input
+                      value={newRecipName}
+                      onChange={e => setNewRecipName(e.target.value)}
+                      placeholder="Jane Smith"
+                      style={{
+                        width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem",
+                        padding: "0.4rem 0.625rem", fontSize: "0.8125rem", color: "#0F172A",
+                        fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const,
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: "1 1 200px" }}>
+                    <label style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", display: "block", marginBottom: "0.3rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Email address
+                    </label>
+                    <input
+                      type="email"
+                      value={newRecipEmail}
+                      onChange={e => setNewRecipEmail(e.target.value)}
+                      placeholder="jane@aerinsights.com"
+                      onKeyDown={e => e.key === "Enter" && addRecipient()}
+                      style={{
+                        width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem",
+                        padding: "0.4rem 0.625rem", fontSize: "0.8125rem", color: "#0F172A",
+                        fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", display: "block", marginBottom: "0.3rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Trigger
+                    </label>
+                    <select
+                      value={newRecipTrig}
+                      onChange={e => setNewRecipTrig(e.target.value as AlertTrigger)}
+                      style={{
+                        border: "1px solid #E2E8F0", borderRadius: "0.375rem",
+                        padding: "0.4rem 0.625rem", fontSize: "0.8125rem", color: "#0F172A",
+                        background: "#FFFFFF", outline: "none", cursor: "pointer",
+                      }}
+                    >
+                      <option value="red-amber">Amber &amp; Red</option>
+                      <option value="red">Red only</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={addRecipient}
+                    disabled={!newRecipEmail.trim() || !newRecipName.trim()}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.375rem",
+                      background: recipSaved ? "#15803D" : (!newRecipEmail.trim() || !newRecipName.trim()) ? "#94A3B8" : "#002147",
+                      color: "#FFFFFF", border: "none", borderRadius: "0.375rem",
+                      padding: "0.4rem 0.875rem", fontSize: "0.8125rem", fontWeight: 500,
+                      cursor: (!newRecipEmail.trim() || !newRecipName.trim()) ? "not-allowed" : "pointer",
+                      whiteSpace: "nowrap", transition: "background 200ms ease",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {recipSaved ? <><Check size={13} /> Added</> : <><Plus size={13} /> Add</>}
+                  </button>
+                </div>
+
+                {/* Info note */}
+                <div style={{ marginTop: "0.875rem", fontSize: "0.75rem", color: "#94A3B8", display: "flex", alignItems: "flex-start", gap: "0.375rem" }}>
+                  <Mail size={12} style={{ flexShrink: 0, marginTop: "0.1rem" }} />
+                  Emails are sent within 15 minutes of a watchlist status change. Each email includes the lessee name, new status, triggering signal, and evidence snapshot.
+                </div>
+              </Card>
 
               {/* Signal Weight Configuration */}
               <Card title="Signal Weight Configuration" subtitle="Adjust the relative weight of each early-warning signal (must sum to 100)">
