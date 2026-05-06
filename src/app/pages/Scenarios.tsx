@@ -700,16 +700,14 @@ export default function Scenarios() {
   const requestedRunIds = useRef<Set<string>>(new Set());
 
   const handleRequestNarrative = useCallback(
-    async (runId: string) => {
-      if (requestedRunIds.current.has(runId)) return;
-      requestedRunIds.current.add(runId);
-      const run = runs.find((r) => r.id === runId);
-      if (!run) return;
-      setNarrativeCache((prev) => new Map(prev).set(runId, "loading"));
+    async (run: ScenarioRunResult) => {
+      if (requestedRunIds.current.has(run.id)) return;
+      requestedRunIds.current.add(run.id);
+      setNarrativeCache((prev) => new Map(prev).set(run.id, "loading"));
       const result = await generateNarrative(run);
-      setNarrativeCache((prev) => new Map(prev).set(runId, result));
+      setNarrativeCache((prev) => new Map(prev).set(run.id, result));
     },
-    [runs]
+    [] // run object passed directly — no runs array lookup needed
   );
 
   const tabs = isExecutiveMode
@@ -918,11 +916,11 @@ export default function Scenarios() {
                 {cs.phase === "done" && result && (
                   <div style={{ borderTop: "1px solid #E2E8F0", padding: "0 1.25rem 1.25rem" }}>
                     <RunResultPanel
-                    run={result}
-                    compact
-                    narrative={getNarrative(result.id)}
-                    onRequestNarrative={handleRequestNarrative}
-                  />
+                      run={result}
+                      compact
+                      narrative={getNarrative(result.id)}
+                      onRequestNarrative={handleRequestNarrative}
+                    />
                   </div>
                 )}
               </div>
