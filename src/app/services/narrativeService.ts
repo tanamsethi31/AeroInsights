@@ -1,3 +1,12 @@
+/**
+ * narrativeService — Azure OpenAI narrative generation for scenario runs.
+ *
+ * Builds a fully-injected prompt from ScenarioRunResult data, POSTs to the
+ * Azure OpenAI Chat Completions endpoint, and validates three numeric anchors
+ * in the response before returning. Returns null on any error, missing env
+ * vars, or validation failure — the caller (Scenarios.tsx) hides the summary
+ * card when null is received.
+ */
 import type { ScenarioRunResult } from "../components/scenarios/RunResultPanel";
 
 const BASE_ECL = 47.2;
@@ -10,6 +19,9 @@ export async function generateNarrative(run: ScenarioRunResult): Promise<string 
   if (!endpoint || !apiKey || apiKey === "PLACEHOLDER" || endpoint === "PLACEHOLDER") {
     return null;
   }
+
+  // Guard against malformed run data that would throw inside the prompt template
+  if (!run.shapley.length || run.topLessees.length < 2) return null;
 
   const eclPct      = ((run.ecl / 2840) * 100).toFixed(2);
   const changePct   = (((run.ecl - BASE_ECL) / BASE_ECL) * 100).toFixed(1);
