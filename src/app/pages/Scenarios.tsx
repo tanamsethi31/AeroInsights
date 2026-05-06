@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router";
 import { useViewMode } from "../contexts/ViewModeContext";
-
-const PATH_TAB: Record<string, string> = {
-  "/scenarios/library": "Library",
-  "/scenarios/run":     "Custom Builder",
-  "/scenarios/history": "Run History",
-};
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { InsolvencyTab } from "../components/scenarios/InsolvencyTab";
@@ -28,6 +22,12 @@ import {
 } from "../components/scenarios/RunResultPanel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+const PATH_TAB: Record<string, string> = {
+  "/scenarios/library": "Library",
+  "/scenarios/run":     "Custom Builder",
+  "/scenarios/history": "Run History",
+};
 
 type RunMode = "deterministic" | "montecarlo";
 
@@ -150,8 +150,10 @@ const STAGE3_LESSEES = [
 function computeTopLessees(s3: number, seed: number): ScenarioRunResult["topLessees"] {
   const n = STAGE3_LESSEES.length;
   const idx1 = Math.floor(seededRand(seed, 20) * n);
+  // idx2 starts one step past idx1 then adds 0..n-2, so it can never equal idx1
   const idx2 = (idx1 + 1 + Math.floor(seededRand(seed, 21) * (n - 1))) % n;
   return [
+    // Top lessee bears 45% of Stage 3 ECL; second lessee bears 28% (per narrative spec)
     { ...STAGE3_LESSEES[idx1], ecl: parseFloat((s3 * 0.45).toFixed(1)) },
     { ...STAGE3_LESSEES[idx2], ecl: parseFloat((s3 * 0.28).toFixed(1)) },
   ];
