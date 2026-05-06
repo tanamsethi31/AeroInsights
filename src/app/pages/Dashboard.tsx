@@ -18,7 +18,11 @@ import { KpiCard } from "../components/ui/KpiCard";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
-import { ArrowRight, Play, Download, RefreshCw, AlertCircle } from "lucide-react";
+import { ExportSnapshotModal } from "../components/ui/ExportSnapshotModal";
+import { Fade } from "../components/ui/Fade";
+import { useViewMode } from "../contexts/ViewModeContext";
+import { ArrowRight, Play, Download, RefreshCw, AlertCircle, CheckCircle2, Circle, ChevronRight, X as XIcon } from "lucide-react";
+import { useOnboarding } from "../contexts/OnboardingContext";
 
 const eclTrendData = [
   { month: "Oct", ecl: 38.1 },
@@ -90,6 +94,11 @@ export default function Dashboard() {
   const watchlistEntries = getWatchlistSummary();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const unreadCount = watchlistEntries.filter(e => e.status !== "green" && !readIds.has(e.lesseeId)).length;
+  const [showExport, setShowExport] = useState(false);
+  const { isExecutiveMode } = useViewMode();
+  const { isNewTenant, checklist, checklistDismissed, toggleItem, dismissChecklist } = useOnboarding();
+  const showChecklist = isNewTenant && !checklistDismissed;
+  const completedCount = checklist.filter((i) => i.completed).length;
 
   const { refreshAll: refreshAllSignals, refreshing, getLastRefreshed } = useSignalRefresh();
 
@@ -103,11 +112,50 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <>
+      {showExport && (
+        <ExportSnapshotModal onClose={() => setShowExport(false)} />
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <PageHeader
         title="Portfolio Dashboard"
         subtitle="As of 29 Apr 2026 — Baseline scenario (60/25/15 weights)"
       >
+        {/* Export Snapshot — secondary ghost button */}
+        <button
+          onClick={() => setShowExport(true)}
+          className="flex items-center gap-2"
+          style={{
+            background: "transparent",
+            color: "#002147",
+            border: "1.5px solid #002147",
+            borderRadius: "9999px",
+            padding: "0.563rem 1.125rem",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            transition:
+              "background-color 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#EFF6FF")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent")
+          }
+          onMouseDown={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
+          }
+          onMouseUp={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
+          }
+        >
+          <Download size={14} />
+          Export Snapshot
+        </button>
+
+        {/* Run New Scenario — primary filled button */}
         <button
           onClick={() => navigate("/scenarios")}
           className="flex items-center gap-2"
@@ -120,7 +168,6 @@ export default function Dashboard() {
             fontSize: "0.875rem",
             fontWeight: 500,
             cursor: "pointer",
-            /* Specific properties — no transition:all */
             transition:
               "background-color 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
           }}
@@ -141,6 +188,115 @@ export default function Dashboard() {
           Run New Scenario
         </button>
       </PageHeader>
+
+      {/* Onboarding checklist — only shown to new tenants after first import */}
+      {showChecklist && (
+        <div
+          style={{
+            background: "#FFFFFF",
+            border: "1px solid #E2E8F0",
+            borderRadius: "0.75rem",
+            overflow: "hidden",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "1rem 1.25rem",
+              borderBottom: "1px solid #E2E8F0",
+              background: "#F8FAFC",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  background: completedCount === checklist.length ? "#DCFCE7" : "#EFF6FF",
+                  borderRadius: "0.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <CheckCircle2 size={16} style={{ color: completedCount === checklist.length ? "#16A34A" : "#002147" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0F172A" }}>
+                  Getting started — {completedCount} of {checklist.length} done
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+                  Complete these steps to get the most from Aerinsights
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              {/* Progress bar */}
+              <div style={{ width: "80px", height: "6px", background: "#E2E8F0", borderRadius: "9999px", overflow: "hidden" }}>
+                <div
+                  style={{
+                    height: "100%",
+                    background: "#002147",
+                    borderRadius: "9999px",
+                    width: `${(completedCount / checklist.length) * 100}%`,
+                    transition: "width 400ms cubic-bezier(0.23,1,0.32,1)",
+                  }}
+                />
+              </div>
+              <button
+                onClick={dismissChecklist}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", display: "flex", padding: "0.25rem", borderRadius: "0.375rem" }}
+                title="Dismiss checklist"
+              >
+                <XIcon size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Checklist items */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+            {checklist.map((item, i) => (
+              <button
+                key={item.id}
+                onClick={() => { toggleItem(item.id); navigate(item.link); }}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "0.75rem",
+                  padding: "1rem 1.25rem",
+                  borderBottom: i < checklist.length - 2 ? "1px solid #F1F5F9" : "none",
+                  borderRight: i % 2 === 0 ? "1px solid #F1F5F9" : "none",
+                  background: item.completed ? "#FAFFFE" : "#FFFFFF",
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background 150ms ease-out",
+                }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#F8FAFC")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = item.completed ? "#FAFFFE" : "#FFFFFF")}
+              >
+                {item.completed ? (
+                  <CheckCircle2 size={18} style={{ color: "#16A34A", flexShrink: 0, marginTop: "1px" }} />
+                ) : (
+                  <Circle size={18} style={{ color: "#CBD5E1", flexShrink: 0, marginTop: "1px" }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: item.completed ? "#64748B" : "#0F172A", textDecoration: item.completed ? "line-through" : "none" }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.125rem", lineHeight: 1.4 }}>
+                    {item.description}
+                  </div>
+                </div>
+                <ChevronRight size={14} style={{ color: "#CBD5E1", flexShrink: 0, marginTop: "2px" }} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* KPI Strip */}
       <div
@@ -184,7 +340,8 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts row */}
+      {/* Charts row — hidden in Executive Mode */}
+      <Fade show={!isExecutiveMode} id="dashboard-charts">
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
         <Card title="ECL Trend — Last 6 Months" subtitle="Baseline scenario, portfolio-level">
           <ResponsiveContainer width="100%" height={200}>
@@ -261,6 +418,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </Card>
       </div>
+      </Fade>
 
       {/* Watchlist Headlines */}
       <Card
@@ -457,7 +615,8 @@ export default function Dashboard() {
         </table>
       </Card>
 
-      {/* Last 5 Scenario Runs */}
+      {/* Last 5 Scenario Runs — hidden in Executive Mode */}
+      <Fade show={!isExecutiveMode} id="dashboard-scenarios">
       <Card
         title="Recent Scenario Runs"
         subtitle="Last 5 reproducible runs — click to load exact inputs"
@@ -632,6 +791,8 @@ export default function Dashboard() {
           </tbody>
         </table>
       </Card>
+      </Fade>
     </div>
+    </>
   );
 }
