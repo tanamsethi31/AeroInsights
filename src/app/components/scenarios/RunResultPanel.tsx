@@ -167,7 +167,7 @@ export function RunResultPanel({ run, onClose, compact = false, narrative, onReq
   // Trigger narrative generation on first mount for this run
   useEffect(() => {
     onRequestNarrative?.(run);
-  }, [run, onRequestNarrative]);
+  }, [run.id, onRequestNarrative]);
 
   const p5 = run.p5;
   const p95 = run.p95;

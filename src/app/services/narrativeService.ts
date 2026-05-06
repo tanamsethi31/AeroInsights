@@ -73,7 +73,7 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
     // 3-anchor validation: each anchor must appear verbatim in the response
     const anchor1 = run.ecl.toFixed(1);                          // e.g. "61.2"
     const anchor2 = driver1.contribution.toFixed(0) + "pp";      // e.g. "46pp"
-    const anchor3 = run.s3LeaseCount.toString();                  // e.g. "4"
+    const anchor3 = ` ${run.s3LeaseCount} `;                      // e.g. " 4 " — prevents trivial substring match
 
     if (!text.includes(anchor1) || !text.includes(anchor2) || !text.includes(anchor3)) {
       return null;
