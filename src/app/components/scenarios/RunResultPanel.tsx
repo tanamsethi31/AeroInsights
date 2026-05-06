@@ -1,4 +1,5 @@
-import { X, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Info, Copy, Check } from "lucide-react";
 
 export interface ShapleyDriver {
   driver: string;
@@ -28,14 +29,135 @@ export interface ScenarioRunResult {
   s3LeaseCount: number;
 }
 
+// ─── Shimmer animation (injected once) ───────────────────────────────────────
+
+const SHIMMER_CSS = `
+@keyframes narrative-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.narrative-shimmer {
+  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+  background-size: 1200px 100%;
+  animation: narrative-shimmer 1.4s linear infinite;
+  border-radius: 4px;
+}
+`;
+
+// ─── NarrativeSummaryCard ─────────────────────────────────────────────────────
+
+interface NarrativeSummaryCardProps {
+  narrative: string | null | "loading";
+}
+
+function NarrativeSummaryCard({ narrative }: NarrativeSummaryCardProps) {
+  const [copied, setCopied] = useState(false);
+
+  // null means validation failed or API error — render nothing
+  if (narrative === null) return null;
+
+  const handleCopy = () => {
+    if (typeof narrative === "string") {
+      navigator.clipboard.writeText(narrative).catch(() => undefined);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
+
+  return (
+    <>
+      <style>{SHIMMER_CSS}</style>
+      <div
+        style={{
+          background: narrative === "loading" ? "#FFFFFF" : "#F8FAFC",
+          border: "1px solid #E2E8F0",
+          borderLeft: narrative === "loading" ? "1px solid #E2E8F0" : "3px solid #002147",
+          borderRadius: "0.75rem",
+          padding: "1.25rem",
+          marginBottom: "1rem",
+        }}
+      >
+        {narrative === "loading" ? (
+          <>
+            {/* Header shimmer */}
+            <div
+              className="narrative-shimmer"
+              style={{ width: "40%", height: "12px", marginBottom: "0.875rem" }}
+            />
+            {/* Body line shimmers */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div className="narrative-shimmer" style={{ width: "95%", height: "10px" }} />
+              <div className="narrative-shimmer" style={{ width: "90%", height: "10px" }} />
+              <div className="narrative-shimmer" style={{ width: "75%", height: "10px" }} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Header row */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "0.625rem",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.6875rem",
+                  fontWeight: 600,
+                  color: "#002147",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                ✦ Run Summary
+              </span>
+              <button
+                onClick={handleCopy}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  background: "transparent",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "0.375rem",
+                  padding: "0.25rem 0.625rem",
+                  fontSize: "0.75rem",
+                  color: "#64748B",
+                  cursor: "pointer",
+                }}
+              >
+                {copied ? <Check size={12} color="#15803D" /> : <Copy size={12} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            {/* Narrative text */}
+            <p style={{ margin: 0, fontSize: "0.9375rem", color: "#334155", lineHeight: 1.7 }}>
+              {narrative}
+            </p>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
 interface Props {
   run: ScenarioRunResult;
   onClose?: () => void;
   compact?: boolean;
+  narrative?: string | null | "loading";
+  onRequestNarrative?: (runId: string) => void;
 }
 
-export function RunResultPanel({ run, onClose, compact = false }: Props) {
+export function RunResultPanel({ run, onClose, compact = false, narrative, onRequestNarrative }: Props) {
   const totalECL = run.s1 + run.s2 + run.s3;
+
+  // Trigger narrative generation on first mount for this run
+  useEffect(() => {
+    onRequestNarrative?.(run.id);
+  }, [run.id, onRequestNarrative]);
 
   const p5 = run.p5;
   const p95 = run.p95;
@@ -52,6 +174,11 @@ export function RunResultPanel({ run, onClose, compact = false }: Props) {
         padding: compact ? "1rem" : "1.25rem",
       }}
     >
+      {/* ── Narrative Summary Card ────────────────────────────── */}
+      {narrative !== undefined && (
+        <NarrativeSummaryCard narrative={narrative} />
+      )}
+
       {/* ── Header ─────────────────────────────────────────────── */}
       <div
         style={{
