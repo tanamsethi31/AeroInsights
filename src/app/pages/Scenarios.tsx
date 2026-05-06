@@ -1,4 +1,12 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router";
+import { useViewMode } from "../contexts/ViewModeContext";
+
+const PATH_TAB: Record<string, string> = {
+  "/scenarios/library": "Library",
+  "/scenarios/run":     "Custom Builder",
+  "/scenarios/history": "Run History",
+};
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { InsolvencyTab } from "../components/scenarios/InsolvencyTab";
@@ -129,6 +137,30 @@ function hashFromSeed(seed: number): string {
     .join("");
 }
 
+// ─── Narrative Helpers ────────────────────────────────────────────────────────
+
+const STAGE3_LESSEES = [
+  { name: "IndiGo Airlines",         jurisdiction: "India (IBC)" },
+  { name: "Aeromexico",              jurisdiction: "Mexico (Concurso Mercantil)" },
+  { name: "SriLankan Airlines",      jurisdiction: "Sri Lanka (Liquidation)" },
+  { name: "Azul Brazilian Airlines", jurisdiction: "Brazil (Recuperação Judicial)" },
+  { name: "Air Transat",             jurisdiction: "Canada (CCAA)" },
+] as const;
+
+function computeTopLessees(s3: number, seed: number): ScenarioRunResult["topLessees"] {
+  const n = STAGE3_LESSEES.length;
+  const idx1 = Math.floor(seededRand(seed, 20) * n);
+  const idx2 = (idx1 + 1 + Math.floor(seededRand(seed, 21) * (n - 1))) % n;
+  return [
+    { ...STAGE3_LESSEES[idx1], ecl: parseFloat((s3 * 0.45).toFixed(1)) },
+    { ...STAGE3_LESSEES[idx2], ecl: parseFloat((s3 * 0.28).toFixed(1)) },
+  ];
+}
+
+function computeS3LeaseCount(s3: number): number {
+  return Math.max(1, Math.round(s3 / 8.2));
+}
+
 let runCounter = 848;
 function nextRunId(): string {
   return `RUN-2024-0${runCounter++}`;
@@ -180,6 +212,8 @@ function buildRun(
     shapley,
     keyFinding: keyFindings.join(" "),
     scenarioHash: hashFromSeed(seed).slice(0, 12),
+    topLessees: computeTopLessees(stages.s3, seed),
+    s3LeaseCount: computeS3LeaseCount(stages.s3),
   };
 }
 
@@ -327,6 +361,8 @@ function buildTemplateRun(
     s1: stages.s1, s2: stages.s2, s3: stages.s3,
     shapley: tpl.shapley, keyFinding: tpl.keyFinding,
     scenarioHash: hashFromSeed(seed).slice(0, 12),
+    topLessees: computeTopLessees(stages.s3, seed),
+    s3LeaseCount: computeS3LeaseCount(stages.s3),
   };
 }
 
@@ -354,6 +390,8 @@ const INITIAL_RUNS: ScenarioRunResult[] = [
     ],
     keyFinding: "Single-lessee default scenario. ECL elevated by $14.0M vs baseline. P95 tail $112.7M. IndiGo §1110-equivalent cure window 30 days under IBC.",
     scenarioHash: hashFromSeed(77).slice(0, 12),
+    topLessees: computeTopLessees(31.3, 77),
+    s3LeaseCount: computeS3LeaseCount(31.3),
   },
 ];
 
@@ -436,7 +474,6 @@ const TAB_STYLE = (active: boolean): React.CSSProperties => ({
   color: active ? "#002147" : "#475569",
   cursor: "pointer",
   marginBottom: "-1px",
-  transition: "color 150ms",
 });
 
 const BTN_PRIMARY: React.CSSProperties = {
@@ -545,8 +582,18 @@ function ModeToggle({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+const EXEC_SCENARIO_TABS = ["Library"];
+
 export default function Scenarios() {
-  const [activeTab, setActiveTab] = useState("Library");
+  const { pathname } = useLocation();
+  const { isExecutiveMode } = useViewMode();
+  const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
+  useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Library"); }, [pathname]);
+  useEffect(() => {
+    if (isExecutiveMode && !EXEC_SCENARIO_TABS.includes(activeTab)) {
+      setActiveTab("Library");
+    }
+  }, [isExecutiveMode, activeTab]);
   const [runs, setRuns] = useState<ScenarioRunResult[]>(INITIAL_RUNS);
 
   // ── Library card state machine ──
@@ -585,6 +632,8 @@ export default function Scenarios() {
         shapley: tpl.shapley,
         keyFinding: tpl.keyFinding,
         scenarioHash: hashFromSeed(seed).slice(0, 12),
+        topLessees: computeTopLessees(stages.s3, seed),
+        s3LeaseCount: computeS3LeaseCount(stages.s3),
       };
       setRuns((prev) => [newRun, ...prev]);
       setCardPhase(tpl.id, { phase: "done", resultId: newRun.id });
@@ -641,7 +690,9 @@ export default function Scenarios() {
   // ── Result lookup ──
   const findRun = (id: string) => runs.find((r) => r.id === id);
 
-  const tabs = ["Library", "Custom Builder", "Run History", "Insolvency Regimes"];
+  const tabs = isExecutiveMode
+    ? EXEC_SCENARIO_TABS
+    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -662,7 +713,7 @@ export default function Scenarios() {
       {/* ── Tabs ��─ */}
       <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex" }}>
         {tabs.map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={TAB_STYLE(activeTab === tab)}>
+          <button key={tab} className="tab-btn" onClick={() => setActiveTab(tab)} style={TAB_STYLE(activeTab === tab)}>
             {tab}
             {tab === "Run History" && (
               <span

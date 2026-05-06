@@ -24,6 +24,8 @@ export interface ScenarioRunResult {
   shapley: ShapleyDriver[];
   keyFinding: string;
   scenarioHash: string;
+  topLessees: Array<{ name: string; ecl: number; jurisdiction: string }>;
+  s3LeaseCount: number;
 }
 
 interface Props {
