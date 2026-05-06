@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { Card } from "../components/ui/Card";
@@ -20,6 +20,7 @@ import {
   RunResultPanel,
   type ScenarioRunResult,
 } from "../components/scenarios/RunResultPanel";
+import { generateNarrative } from "../services/narrativeService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -692,11 +693,35 @@ export default function Scenarios() {
   // ── Result lookup ──
   const findRun = (id: string) => runs.find((r) => r.id === id);
 
+  // ── Narrative cache ──
+  const [narrativeCache, setNarrativeCache] = useState<Map<string, string | null | "loading">>(
+    new Map()
+  );
+  const requestedRunIds = useRef<Set<string>>(new Set());
+
+  const handleRequestNarrative = useCallback(
+    async (runId: string) => {
+      if (requestedRunIds.current.has(runId)) return;
+      requestedRunIds.current.add(runId);
+      const run = runs.find((r) => r.id === runId);
+      if (!run) return;
+      setNarrativeCache((prev) => new Map(prev).set(runId, "loading"));
+      const result = await generateNarrative(run);
+      setNarrativeCache((prev) => new Map(prev).set(runId, result));
+    },
+    [runs]
+  );
+
   const tabs = isExecutiveMode
     ? EXEC_SCENARIO_TABS
     : ["Library", "Custom Builder", "Run History", "Insolvency Regimes"];
 
   // ─────────────────────────────────────────────────────────────────────────────
+
+  function getNarrative(runId: string): string | null | "loading" {
+    if (!narrativeCache.has(runId)) return "loading";
+    return narrativeCache.get(runId) as string | null | "loading";
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -892,7 +917,12 @@ export default function Scenarios() {
                 {/* Result inline */}
                 {cs.phase === "done" && result && (
                   <div style={{ borderTop: "1px solid #E2E8F0", padding: "0 1.25rem 1.25rem" }}>
-                    <RunResultPanel run={result} compact />
+                    <RunResultPanel
+                    run={result}
+                    compact
+                    narrative={getNarrative(result.id)}
+                    onRequestNarrative={handleRequestNarrative}
+                  />
                   </div>
                 )}
               </div>
@@ -1030,6 +1060,8 @@ export default function Scenarios() {
                 <RunResultPanel
                   run={findRun(customResultId)!}
                   onClose={() => setCustomResultId(null)}
+                  narrative={getNarrative(customResultId)}
+                  onRequestNarrative={handleRequestNarrative}
                 />
               </div>
             )}
@@ -1228,7 +1260,11 @@ export default function Scenarios() {
                         <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
                           <td />
                           <td colSpan={9} style={{ padding: "0 1rem 1rem" }}>
-                            <RunResultPanel run={run} />
+                            <RunResultPanel
+                              run={run}
+                              narrative={getNarrative(run.id)}
+                              onRequestNarrative={handleRequestNarrative}
+                            />
                           </td>
                         </tr>
                       )}
