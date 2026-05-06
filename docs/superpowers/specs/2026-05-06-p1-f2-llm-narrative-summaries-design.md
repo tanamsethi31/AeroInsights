@@ -38,6 +38,7 @@ s3LeaseCount: number;   // integer count of Stage 3 leases (for IAS 36 sentence)
 - `topLessees`: pick the top 2 Stage-3 counterparties from the existing counterparty list (IndiGo, Aeromexico, SriLankan, Azul, Air Transat). Allocate deterministically: lessee 1 receives 45% of `s3` ECL, lessee 2 receives 28%. Jurisdiction strings sourced from the jurisdiction data already in the codebase.
 - `s3LeaseCount`: `Math.max(1, Math.round(result.s3 / 8.2))` — 8.2 is the approximate mean per-lease Stage 3 ECL across the portfolio. Seeded so identical inputs produce identical counts.
 - Both fields are added to every run — template runs and custom runs alike.
+- `topLessees` always contains exactly 2 entries. If the scenario's S3 ECL is small, the two lowest-exposure Stage-3 lessees are still included (ECL values can be < $1M); the template sentence remains grammatically valid regardless of magnitude.
 
 ---
 
@@ -77,8 +78,8 @@ RUN DATA:
 - Stage 3 ECL: ${run.s3}M
 - Top lessee 1: {run.topLessees[0].name}, ${run.topLessees[0].ecl}M, {run.topLessees[0].jurisdiction}
 - Top lessee 2: {run.topLessees[1].name}, ${run.topLessees[1].ecl}M, {run.topLessees[1].jurisdiction}
-- Shapley driver 1: {run.shapley[0].driver}, +{run.shapley[0].contribution}pp
-- Shapley driver 2: {run.shapley[1].driver}, +{run.shapley[1].contribution}pp
+- Shapley driver 1: {run.shapley[0].driver}, +{run.shapley[0].contribution.toFixed(0)}pp
+- Shapley driver 2: {run.shapley[1].driver}, +{run.shapley[1].contribution.toFixed(0)}pp
 - Aircraft below carrying value: {run.s3LeaseCount}
 
 OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
@@ -94,7 +95,7 @@ After the model responds, extract three anchor values and verify each appears ve
 | Anchor | Check |
 |---|---|
 | Portfolio ECL | `run.ecl.toFixed(1)` is a substring of the response |
-| Top Shapley contribution | `run.shapley[0].contribution.toFixed(0)` is a substring |
+| Top Shapley contribution | `run.shapley[0].contribution.toFixed(0) + "pp"` is a substring |
 | Stage 3 lease count | `run.s3LeaseCount.toString()` is a substring |
 
 If any anchor check fails → return `null`. The card is hidden. No error is surfaced to the user.
