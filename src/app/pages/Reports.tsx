@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router";
 import { Card } from "../components/ui/Card";
@@ -9,7 +10,16 @@ const PATH_TAB: Record<string, string> = {
 };
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Download, FileText, Table, FileJson, File, Mail, Clock, CheckCircle, Calendar } from "lucide-react";
+import { Download, FileText, Table, FileJson, File, Mail, Clock, CheckCircle, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe } from "lucide-react";
+
+const REPORT_ICON_MAP: Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>> = {
+  search:       Search,
+  board:        ClipboardList,
+  portfolio:    BarChart3,
+  ecl:          Scale,
+  watchlist:    AlertTriangle,
+  jurisdiction: Globe,
+};
 
 const reportTemplates = [
   {
@@ -20,7 +30,7 @@ const reportTemplates = [
     lastGenerated: "29 Apr 2026, 09:20",
     size: "4.2 MB",
     category: "Audit",
-    icon: "🔍",
+    iconKey: "search",
   },
   {
     id: "RPT-002",
@@ -30,7 +40,7 @@ const reportTemplates = [
     lastGenerated: "29 Apr 2026, 09:25",
     size: "2.8 MB",
     category: "Board",
-    icon: "📋",
+    iconKey: "board",
   },
   {
     id: "RPT-003",
@@ -40,7 +50,7 @@ const reportTemplates = [
     lastGenerated: "28 Apr 2026, 17:00",
     size: "1.1 MB",
     category: "Portfolio",
-    icon: "📊",
+    iconKey: "portfolio",
   },
   {
     id: "RPT-004",
@@ -50,7 +60,7 @@ const reportTemplates = [
     lastGenerated: "29 Apr 2026, 09:22",
     size: "3.4 MB",
     category: "Audit",
-    icon: "⚖️",
+    iconKey: "ecl",
   },
   {
     id: "RPT-005",
@@ -60,7 +70,7 @@ const reportTemplates = [
     lastGenerated: "29 Apr 2026, 09:15",
     size: "0.8 MB",
     category: "Risk",
-    icon: "⚠️",
+    iconKey: "watchlist",
   },
   {
     id: "RPT-006",
@@ -70,7 +80,7 @@ const reportTemplates = [
     lastGenerated: "25 Apr 2026, 14:00",
     size: "1.6 MB",
     category: "Jurisdiction",
-    icon: "🌍",
+    iconKey: "jurisdiction",
   },
 ];
 
@@ -144,7 +154,14 @@ export default function Reports() {
             {filtered.map(report => (
               <div key={report.id} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "1rem", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                  <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>{report.icon}</div>
+                  <div style={{
+                  width: "40px", height: "40px", borderRadius: "10px",
+                  background: "rgba(0,33,71,0.07)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  {React.createElement(REPORT_ICON_MAP[report.iconKey] ?? BarChart3, { size: 20, style: { color: "#002147" } })}
+                </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#0F172A" }}>{report.name}</div>
                     <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.125rem" }}>{report.category} · {report.size}</div>

@@ -1,5 +1,7 @@
+import * as React from "react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
+import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
   MACRO_SIGNALS,
@@ -72,11 +74,18 @@ function dirColor(d: SignalDirection, invert = false) {
   return d === "up" ? T.red : d === "down" ? T.green : T.muted;
 }
 
-function catIcon(c: SignalCategory) {
-  const m: Record<SignalCategory, string> = {
-    fuel: "⛽", gdp: "🌏", rates: "📊", fx: "💱", aviation: "✈",
-  };
-  return m[c];
+const CAT_ICON_MAP: Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>> = {
+  fuel:     Fuel,
+  gdp:      Globe,
+  rates:    BarChart3,
+  fx:       ArrowLeftRight,
+  aviation: Plane,
+};
+
+function CatIcon({ category, size = 14 }: { category: string; size?: number }) {
+  const Icon = CAT_ICON_MAP[category];
+  if (!Icon) return null;
+  return <Icon size={size} />;
 }
 function catLabel(c: SignalCategory) {
   const m: Record<SignalCategory, string> = {
@@ -249,7 +258,7 @@ function SignalCard({ sig }: { sig: MacroSignal }) {
               marginBottom: "0.25rem",
             }}
           >
-            <span style={{ fontSize: "0.9rem" }}>{catIcon(sig.category)}</span>
+            <CatIcon category={sig.category} size={15} />
             <span
               style={{
                 fontSize: "0.7rem",
@@ -559,7 +568,7 @@ function MacroSignalsView() {
           <FilterChip
             key={f.id}
             active={catFilter === f.id}
-            label={f.id === "all" ? `All (${MACRO_SIGNALS.length})` : `${catIcon(f.id as SignalCategory)} ${f.label}`}
+            label={f.id === "all" ? `All (${MACRO_SIGNALS.length})` : f.label}
             count={f.id !== "all" ? counts[f.id as SignalCategory] : undefined}
             onClick={() => setCatFilter(f.id)}
           />
