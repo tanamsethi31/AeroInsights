@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router";
 import { useViewMode } from "../contexts/ViewModeContext";
+import { useAgent } from "../contexts/AgentContext";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { InsolvencyTab } from "../components/scenarios/InsolvencyTab";
@@ -559,6 +560,7 @@ const EXEC_SCENARIO_TABS = ["Library"];
 export default function Scenarios() {
   const { pathname } = useLocation();
   const { isExecutiveMode } = useViewMode();
+  const { pendingInputs, setPendingInputs } = useAgent();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Library"); }, [pathname]);
   useEffect(() => {
@@ -637,6 +639,14 @@ export default function Scenarios() {
     setDslText(generateDSL(next, customName, customMode, customPaths, customSeed));
     setDslErrors([]);
   };
+
+  // Read agent-injected inputs when Custom Builder tab becomes active
+  useEffect(() => {
+    if (activeTab === "Custom Builder" && pendingInputs) {
+      updateFormInputs(pendingInputs as Partial<ScenarioInputs>);
+      setPendingInputs(null);
+    }
+  }, [activeTab, pendingInputs, setPendingInputs]);
 
   const handleDslChange = (text: string) => {
     setDslText(text);
