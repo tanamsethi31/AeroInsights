@@ -7,6 +7,12 @@ export default function Login() {
   // Destination preserved by RequireAuth; fall back to dashboard root.
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? "/";
 
+  const redirect = (extra: Record<string, string> = {}) =>
+    loginWithRedirect({
+      appState: { returnTo },
+      authorizationParams: { prompt: "login", ...extra },
+    });
+
   return (
     <div
       style={{
@@ -78,15 +84,9 @@ export default function Login() {
           </div>
         </div>
 
+        {/* Primary: sign in */}
         <button
-          onClick={() =>
-            loginWithRedirect({
-              appState: { returnTo },
-              // Always show the login form — prevents Auth0 silently
-              // re-using a cached session, so users can switch accounts.
-              authorizationParams: { prompt: "login" },
-            })
-          }
+          onClick={() => redirect()}
           disabled={isLoading}
           style={{
             width: "100%",
@@ -102,15 +102,87 @@ export default function Login() {
             transition: "background 0.15s",
           }}
           onMouseEnter={(e) => {
-            if (!isLoading)
-              (e.currentTarget as HTMLButtonElement).style.background = "#001830";
+            if (!isLoading) (e.currentTarget as HTMLButtonElement).style.background = "#001830";
           }}
           onMouseLeave={(e) => {
-            if (!isLoading)
-              (e.currentTarget as HTMLButtonElement).style.background = "#002147";
+            if (!isLoading) (e.currentTarget as HTMLButtonElement).style.background = "#002147";
           }}
         >
           {isLoading ? "Loading…" : "Sign in"}
+        </button>
+
+        {/* Divider */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            margin: "1.25rem 0",
+          }}
+        >
+          <div style={{ flex: 1, height: "1px", background: "#E2E8F0" }} />
+          <span style={{ fontSize: "0.75rem", color: "#94A3B8", fontWeight: 500 }}>or</span>
+          <div style={{ flex: 1, height: "1px", background: "#E2E8F0" }} />
+        </div>
+
+        {/* Secondary: create account */}
+        <button
+          onClick={() => redirect({ screen_hint: "signup" })}
+          disabled={isLoading}
+          style={{
+            width: "100%",
+            padding: "0.75rem 1.5rem",
+            background: "transparent",
+            color: "#002147",
+            border: "1.5px solid #CBD5E1",
+            borderRadius: "0.5rem",
+            fontSize: "0.9375rem",
+            fontWeight: 600,
+            cursor: isLoading ? "not-allowed" : "pointer",
+            letterSpacing: "0.01em",
+            transition: "border-color 0.15s, background 0.15s",
+            marginBottom: "1rem",
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "#002147";
+              (e.currentTarget as HTMLButtonElement).style.background = "#F8FAFC";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading) {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "#CBD5E1";
+              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+            }
+          }}
+        >
+          Create account
+        </button>
+
+        {/* Tertiary: passwordless email OTP */}
+        <button
+          onClick={() => redirect({ connection: "email" })}
+          disabled={isLoading}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            fontSize: "0.8125rem",
+            color: "#475569",
+            cursor: isLoading ? "not-allowed" : "pointer",
+            textDecoration: "underline",
+            textDecorationColor: "#CBD5E1",
+            textUnderlineOffset: "3px",
+            transition: "color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) (e.currentTarget as HTMLButtonElement).style.color = "#002147";
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading) (e.currentTarget as HTMLButtonElement).style.color = "#475569";
+          }}
+        >
+          Sign in with email code instead
         </button>
 
         <p
