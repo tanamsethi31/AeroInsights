@@ -131,7 +131,7 @@ export function Header() {
         <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
 
         {/* Search bar */}
-        <div ref={searchRef} style={{ position: "relative" }} className="hidden md:block">
+        <div ref={searchRef} style={{ position: "relative", marginRight: "8px" }} className="hidden md:block">
           <div
             className="flex items-center gap-2 px-3 transition-all duration-200"
             style={{
@@ -247,7 +247,7 @@ export function Header() {
         <AgentButton />
 
         {/* Currency selector */}
-        <div ref={currencyRef} style={{ position: "relative" }}>
+        <div ref={currencyRef} style={{ position: "relative", marginLeft: "8px" }}>
           <button
             onClick={() => setCurrencyMenuOpen((v) => !v)}
             style={{

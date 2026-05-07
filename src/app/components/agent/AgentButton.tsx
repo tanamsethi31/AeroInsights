@@ -40,19 +40,20 @@ export function AgentButton() {
           disabled
           aria-label="Intelligence agent not configured"
           style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
+            height: "34px",
+            padding: "0 12px",
+            borderRadius: "9999px",
             background: "#94A3B8",
             border: "none",
             cursor: "not-allowed",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            gap: "5px",
             flexShrink: 0,
           }}
         >
-          <Zap size={16} color="#FFFFFF" />
+          <Zap size={14} color="#FFFFFF" />
+          <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.02em" }}>AI</span>
         </button>
       </div>
     );
@@ -67,15 +68,15 @@ export function AgentButton() {
         aria-label="Open Aeroinsights Intelligence"
         aria-expanded={isOpen}
         style={{
-          width: "40px",
-          height: "40px",
-          borderRadius: "50%",
+          height: "34px",
+          padding: "0 12px",
+          borderRadius: "9999px",
           background: "#002147",
           border: "none",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          gap: "5px",
           flexShrink: 0,
           transition: "box-shadow 200ms ease-out",
           boxShadow: isOpen
@@ -84,7 +85,8 @@ export function AgentButton() {
           animation: hovered && !isOpen ? "agentPulse 2s ease-out infinite" : "none",
         }}
       >
-        <Zap size={16} color="#FFFFFF" />
+        <Zap size={14} color="#FFFFFF" />
+        <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.02em" }}>AI</span>
       </button>
 
       {/* Notification dot — shown when hasNewSignal is true and panel is closed */}
