@@ -35,13 +35,15 @@ function parseTable(lines: string[]): { headers: string[]; rows: string[][] } {
   const rows = lines
     .slice(2)
     .filter((l) => isTableLine(l))
-    .map((l) =>
-      l
+    .map((l) => {
+      const cells = l
         .trim()
         .slice(1, -1)
         .split("|")
-        .map((c) => c.trim())
-    );
+        .map((c) => c.trim());
+      while (cells.length < headers.length) cells.push("");
+      return cells;
+    });
   return { headers, rows };
 }
 

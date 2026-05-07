@@ -184,10 +184,13 @@ export function AgentPanel() {
     let accText = "";
 
     try {
-      const history = [...messages, { role: "user" as const, content }].map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      }));
+      const history = [...messages]
+        .filter((m) => m.content.trim() !== "" && !m.isStreaming)
+        .concat({ role: "user" as const, content } as (typeof messages)[number])
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
 
       for await (const event of streamAgentResponse(
         history,

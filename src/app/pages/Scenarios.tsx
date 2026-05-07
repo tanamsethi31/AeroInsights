@@ -643,10 +643,14 @@ export default function Scenarios() {
   // Read agent-injected inputs when Custom Builder tab becomes active
   useEffect(() => {
     if (activeTab === "Custom Builder" && pendingInputs) {
-      updateFormInputs(pendingInputs as Partial<ScenarioInputs>);
+      const partial = pendingInputs as Partial<ScenarioInputs>;
+      const next = { ...formInputs, ...partial };
+      setFormInputs(next);
+      setDslText(generateDSL(next, customName, customMode, customPaths, customSeed));
+      setDslErrors([]);
       setPendingInputs(null);
     }
-  }, [activeTab, pendingInputs, setPendingInputs]);
+  }, [activeTab, pendingInputs, setPendingInputs, formInputs, customName, customMode, customPaths, customSeed]);
 
   const handleDslChange = (text: string) => {
     setDslText(text);

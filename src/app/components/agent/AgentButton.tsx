@@ -21,11 +21,10 @@ function injectPulseStyle() {
   styleInjected = true;
 }
 
-const configured = isConfigured();
-
 export function AgentButton() {
   const { isOpen, setIsOpen, hasNewSignal } = useAgent();
   const [hovered, setHovered] = React.useState(false);
+  const configured = React.useMemo(() => isConfigured(), []);
 
   React.useEffect(() => {
     injectPulseStyle();

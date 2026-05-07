@@ -232,6 +232,7 @@ async function* fetchStream(
         const path = args.path as string;
         const params = args.params as Record<string, number> | undefined;
         yield { type: "action", path, params };
+        yield { type: "tool_done" };
         toolResultMsgs.push({
           role: "tool",
           content: JSON.stringify({ status: "pending_user_confirmation", path, params }),
