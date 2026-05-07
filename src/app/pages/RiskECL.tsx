@@ -1,5 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
+import { useLocation } from "react-router";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
+import { useViewMode } from "../contexts/ViewModeContext";
+import { Fade } from "../components/ui/Fade";
+
+const PATH_TAB: Record<string, string> = {
+  "/risk-ecl/summary":   "ECL Overview",
+  "/risk-ecl/migration": "Stage Migration",
+  "/risk-ecl/waterfall": "Sensitivity",
+};
 import {
   BarChart,
   Bar,
@@ -290,6 +300,21 @@ const tabs = [
   "IAS 36 Impairment",
 ];
 
+// Tabs surfaced to C-Suite in Executive Mode — keep only the headline views
+const EXEC_TABS = ["ECL Overview", "IAS 36 Impairment"];
+
+// ─── IAS 36 summary (mirrors DEFAULT_AIRCRAFT in IAS36Tab, kept in sync) ─────
+// 3 aircraft where carrying value exceeds max(FVLCD, VIU)
+const IAS36_ALERT = {
+  count: 3,
+  totalImpairment: 11.7, // $M: A320neo 1.1 + B737-800 4.7 + A330-300 5.9
+  aircraft: [
+    { msn: "9218",  type: "A320neo",  lessee: "IndiGo Airlines",    impairment: 1.1 },
+    { msn: "41234", type: "B737-800", lessee: "Aeromexico",          impairment: 4.7 },
+    { msn: "1728",  type: "A330-300", lessee: "SriLankan Airlines",  impairment: 5.9 },
+  ],
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (n: number) => `$${n.toFixed(1)}M`;
@@ -321,7 +346,16 @@ function computeWeightedECL(
 // ─── Page Component ───────────────────────────────────────────────────────────
 
 export default function RiskECL() {
-  const [activeTab, setActiveTab] = useState("ECL Overview");
+  const { pathname } = useLocation();
+  const { isExecutiveMode } = useViewMode();
+  const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "ECL Overview");
+  useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "ECL Overview"); }, [pathname]);
+  // When executive mode turns on, fall back to a tab that's visible in exec mode
+  useEffect(() => {
+    if (isExecutiveMode && !EXEC_TABS.includes(activeTab)) {
+      setActiveTab("ECL Overview");
+    }
+  }, [isExecutiveMode, activeTab]);
   const [drilldownLease, setDrilldownLease] = useState<LeaseRow | null>(null);
   const [weights, setWeights] = useState({ base: 60, adverse: 25, upside: 15 });
   const [weightEdit, setWeightEdit] = useState({
@@ -386,11 +420,17 @@ export default function RiskECL() {
 
   const OverviewTab = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* Scenario Weight Controller */}
+      {/* Scenario Weight Controller — title simplified in Executive Mode */}
       <Card
-        title="Scenario Probability Weights"
-        subtitle="IFRS 9 ITG — probability-weighted ECL across ≥3 scenarios. Weights must sum to 100%."
+        title={isExecutiveMode ? "ECL Summary" : "Scenario Probability Weights"}
+        subtitle={
+          isExecutiveMode
+            ? "Probability-weighted expected credit loss across scenarios"
+            : "IFRS 9 ITG — probability-weighted ECL across ≥3 scenarios. Weights must sum to 100%."
+        }
       >
+        {/* Weight sliders — analyst only */}
+        <Fade show={!isExecutiveMode} id="ecl-weight-controls">
         <div
           style={{
             display: "grid",
@@ -549,10 +589,11 @@ export default function RiskECL() {
             </div>
           </div>
         </div>
+        </Fade>
 
-        {/* Probability-Weighted ECL Summary Table */}
+        {/* Probability-Weighted ECL Summary Table — always visible */}
         {weightsValid && (
-          <div style={{ marginTop: "1.25rem" }}>
+          <div style={{ marginTop: isExecutiveMode ? 0 : "1.25rem" }}>
             <div
               style={{
                 fontSize: "0.75rem",
@@ -713,7 +754,8 @@ export default function RiskECL() {
         )}
       </Card>
 
-      {/* Charts row */}
+      {/* Charts row — analyst only */}
+      <Fade show={!isExecutiveMode} id="ecl-charts-row">
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
         <Card
           title="ECL by Stage — Quarterly Trend"
@@ -865,6 +907,7 @@ export default function RiskECL() {
           </div>
         </Card>
       </div>
+      </Fade>
     </div>
   );
 
@@ -898,6 +941,7 @@ export default function RiskECL() {
                 { label: "ECL 12m", key: "ecl12m" },
                 { label: "ECL Lifetime", key: "eclLifetime" },
                 { label: "Stage", key: "stage" },
+                { label: "MR Impact", key: null },
                 { label: "", key: null },
               ] as { label: string; key: string | null }[]).map(({ label, key }) => (
                 <th
@@ -998,6 +1042,31 @@ export default function RiskECL() {
                 </td>
                 <td style={{ padding: "0.75rem 1rem" }}>
                   <StatusPill stage={row.stage} label={`Stage ${row.stage}`} />
+                </td>
+                <td style={{ padding: "0.75rem 1rem" }}>
+                  {(() => {
+                    const adeq = MR_ADEQUACY[row.id];
+                    if (!adeq || adeq.eolShortfall <= 0) {
+                      return <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>—</span>;
+                    }
+                    const shortfallM = (adeq.eolShortfall / 1_000_000).toFixed(2);
+                    return (
+                      <span
+                        title={`MR shortfall of $${shortfallM}M at EOL reduces LGD offset by ${adeq.eolShortfallPct.toFixed(1)}%. Navigate to Portfolio > Aircraft > Maintenance Forecast for full breakdown.`}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                          fontSize: "0.6875rem", fontWeight: 600,
+                          color: mrFlagColor(adeq.flag),
+                          background: adeq.flag === "red" ? "rgba(185,28,28,0.07)" : "rgba(180,83,9,0.07)",
+                          border: `1px solid ${adeq.flag === "red" ? "rgba(185,28,28,0.2)" : "rgba(180,83,9,0.2)"}`,
+                          borderRadius: "0.375rem", padding: "0.2rem 0.5rem",
+                          cursor: "help",
+                        }}
+                      >
+                        ▲ −${shortfallM}M LGD
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td style={{ padding: "0.75rem 1rem" }}>
                   <button
@@ -1718,13 +1787,89 @@ export default function RiskECL() {
           delta="+$1.1M vs prior"
           deltaType="negative"
         />
+        <button
+          onClick={() => setActiveTab("IAS 36 Impairment")}
+          style={{ all: "unset", cursor: "pointer", display: "block" }}
+        >
+          <KpiCard
+            label="IAS 36 Impairment"
+            value="3 Aircraft"
+            subtitle="Carrying Value > Recoverable"
+            delta="Review Required"
+            deltaType="negative"
+          />
+        </button>
       </div>
 
-      {/* Tabs */}
+      {/* IAS 36 Alert Banner */}
+      {IAS36_ALERT.count > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "1rem",
+            padding: "0.875rem 1.25rem",
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            borderRadius: "0.625rem",
+          }}
+        >
+          <AlertTriangle size={16} style={{ color: "#DC2626", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#991B1B" }}>
+              {IAS36_ALERT.count} aircraft require IAS 36 impairment review
+            </span>
+            <span style={{ fontSize: "0.875rem", color: "#B91C1C" }}>
+              {" "}— carrying value exceeds recoverable amount. Total exposure:{" "}
+              <strong>${IAS36_ALERT.totalImpairment.toFixed(1)}M</strong> at period close.
+            </span>
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.25rem", flexWrap: "wrap" }}>
+              {IAS36_ALERT.aircraft.map((a) => (
+                <span
+                  key={a.msn}
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#DC2626",
+                    background: "#FEE2E2",
+                    padding: "0.125rem 0.5rem",
+                    borderRadius: "9999px",
+                    fontWeight: 500,
+                  }}
+                >
+                  {a.type} MSN {a.msn} · ${a.impairment.toFixed(1)}M
+                </span>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab("IAS 36 Impairment")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              background: "#DC2626",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "9999px",
+              padding: "0.5rem 1rem",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            Run Impairment Test
+          </button>
+        </div>
+      )}
+
+      {/* Tabs — filtered in Executive Mode to headline views only */}
       <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex" }}>
-        {tabs.map((tab) => (
+        {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => (
           <button
             key={tab}
+            className="tab-btn"
             onClick={() => setActiveTab(tab)}
             style={{
               padding: "0.75rem 1.25rem",

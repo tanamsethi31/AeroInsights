@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+  <title>Aeroinsights Custom Functions Runtime</title>
+
+  <!--
+    Office.js must be loaded from the Microsoft CDN — never from npm.
+    This file acts as the fallback FunctionFile runtime for environments
+    that don't support the shared runtime manifest configuration.
+    When shared runtime IS active (lifetime="long" in manifest), Office uses
+    the task pane URL instead of this file for custom function execution.
+  -->
+  <script
+    src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"
+    type="text/javascript">
+  </script>
+</head>
+<body>
+  <!--
+    functions.js is a plain (non-module) script served from the public/ directory.
+    Vite does NOT bundle plain <script src="..."> tags — it copies the file verbatim.
+    This is intentional: Office custom functions require a single self-contained JS file
+    with no ES module imports or dynamic chunks.
+  -->
+  <script src="/functions/functions.js" type="text/javascript"></script>
+</body>
+</html>

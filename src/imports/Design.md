@@ -1,6 +1,6 @@
-# Aerinsights — Complete Design System & Implementation Guide
+# Aeroinsights — Complete Design System & Implementation Guide
 
-**Product Name:** Aerinsights — Aviation Lessor Decision Platform  
+**Product Name:** Aeroinsights — Aviation Lessor Decision Platform  
 **Version:** 1.0 (MVP)  
 **Last Updated:** March 2026  
 **Design Inspiration:** Knowvio (Layout) + SkyLift (Aesthetic) + PRD §6 (Institutional Restraint)  
@@ -373,7 +373,7 @@ font-variant-numeric: tabular-nums;
 
 ```
 ┌──────────────────────────┐
-│ 📊 Aerinsights           │
+│ 📊 Aeroinsights           │
 │    Decision Platform     │
 └──────────────────────────┘
 ```
@@ -384,14 +384,14 @@ font-variant-numeric: tabular-nums;
 - **Border Bottom:** 1px solid `#1E293B`
 - **Display:** Logo icon (32×32px) + Brand name (vertical stack)
 - **Logo Icon:** Oxford Blue background `#002147`
-- **Brand Name (Main):** "Aerinsights" (1rem, weight 600, white)
+- **Brand Name (Main):** "Aeroinsights" (1rem, weight 600, white)
 - **Brand Name (Sub):** "Decision Platform" (0.75rem, weight 400, light slate)
 
 ```html
 <div class="sidebar-logo">
   <div class="logo-icon">📊</div>
   <div class="logo-text">
-    <div class="logo-main">Aerinsights</div>
+    <div class="logo-main">Aeroinsights</div>
     <div class="logo-sub">Decision Platform</div>
   </div>
 </div>
@@ -1925,7 +1925,7 @@ Concentration Policy Thresholds
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | March 2026 | Initial design system for Aerinsights MVP with all 12 features |
+| 1.0 | March 2026 | Initial design system for Aeroinsights MVP with all 12 features |
 
 ---
 
@@ -1943,4 +1943,4 @@ Concentration Policy Thresholds
 - **Accessibility:** [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
 - **Charts:** Recharts or Chart.js with custom color palette
 - **Icons:** Emoji or Lucide React
-- **PRD Reference:** PRD_Aerinsights_v0.3.md §6 (Design Principles)
+- **PRD Reference:** PRD_Aeroinsights_v0.3.md §6 (Design Principles)

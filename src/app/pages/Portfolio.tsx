@@ -1,4 +1,13 @@
-import { useState, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
+import { useLocation } from "react-router";
+import { useViewMode } from "../contexts/ViewModeContext";
+
+const PATH_TAB: Record<string, string> = {
+  "/portfolio/register":     "Leases",
+  "/portfolio/analytics":    "Concentration",
+  "/portfolio/aircraft-mix": "Aircraft",
+  "/portfolio/performance":  "Performance vs. Plan",
+};
 import {
   AircraftValuationPanel,
   valuationData,
@@ -13,10 +22,13 @@ import { KpiCard } from "../components/ui/KpiCard";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
-import { Download, Filter, Search, ChevronDown } from "lucide-react";
+import { Download, Filter, Search, ChevronDown, Plus } from "lucide-react";
+import { AddAircraftModal } from "../components/portfolios/AddAircraftModal";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { SDMRTab } from "../components/portfolio/SDMRTab";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
+import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForecastTab";
+import { PerformanceVsPlan } from "../components/portfolio/PerformanceVsPlan";
 
 const leases = [
   { id: "LSE-2019-001", lessee: "IndiGo Airlines", aircraft: "A320neo", msn: "9218", start: "2019-03-01", end: "2028-03-01", rentUSD: "285,000", stage: "3", status: "Active" },
@@ -54,7 +66,8 @@ const lessees = [
 ];
 
 
-const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR"];
+const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR", "Performance vs. Plan"];
+const EXEC_TABS = ["Leases", "Aircraft"];
 
 const leaseAccessors = {
   lessee: (l: typeof leases[0]) => l.lessee,
@@ -77,10 +90,20 @@ const lesseeAccessors = {
 };
 
 export default function Portfolio() {
-  const [activeTab, setActiveTab] = useState("Leases");
+  const { pathname } = useLocation();
+  const { isExecutiveMode } = useViewMode();
+  const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Leases");
+  useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Leases"); }, [pathname]);
+  useEffect(() => {
+    if (isExecutiveMode && !EXEC_TABS.includes(activeTab)) {
+      setActiveTab("Leases");
+    }
+  }, [isExecutiveMode, activeTab]);
   const [stageFilter, setStageFilter] = useState("All");
   const [aircraftExpanded, setAircraftExpanded] = useState<Set<string>>(new Set());
+  const [aircraftSubTab, setAircraftSubTab] = useState<Record<string, "Valuation" | "Maintenance">>({});
   const [aircraftOverrides, setAircraftOverrides] = useState<OverrideMap>({});
+  const [showAddAircraft, setShowAddAircraft] = useState(false);
 
   function toggleAircraftExpand(msn: string) {
     setAircraftExpanded((prev) => {
@@ -131,11 +154,17 @@ export default function Portfolio() {
   const { sorted: sortedLessees, sortState: lesseeSortState, toggleSort: toggleLesseeSort } = useSortable(lessees, lesseeAccessors);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <>
+      {showAddAircraft && (
+        <AddAircraftModal onClose={() => setShowAddAircraft(false)} />
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <PageHeader
         title="Portfolio"
         subtitle="173 leases · 48 lessees · 12 aircraft types"
       >
+        {/* Export — secondary ghost button */}
         <button
           style={{
             display: "flex",
@@ -149,9 +178,50 @@ export default function Portfolio() {
             fontSize: "0.875rem",
             fontWeight: 500,
             cursor: "pointer",
+            transition: "background 150ms cubic-bezier(0.23,1,0.32,1)",
           }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.background = "#E2E8F0")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.background = "#F4F5F7")
+          }
         >
           <Download size={14} /> Export
+        </button>
+
+        {/* Add Aircraft — primary filled button */}
+        <button
+          onClick={() => setShowAddAircraft(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            background: "#002147",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: "9999px",
+            padding: "0.625rem 1.25rem",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            transition:
+              "background-color 150ms cubic-bezier(0.23,1,0.32,1), transform 150ms cubic-bezier(0.23,1,0.32,1)",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#001a35")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.backgroundColor = "#002147")
+          }
+          onMouseDown={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
+          }
+          onMouseUp={(e) =>
+            ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
+          }
+        >
+          <Plus size={14} /> Add Aircraft
         </button>
       </PageHeader>
 
@@ -165,9 +235,10 @@ export default function Portfolio() {
 
       {/* Tabs */}
       <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex", gap: "0" }}>
-        {tabs.map((tab) => (
+        {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => (
           <button
             key={tab}
+            className="tab-btn"
             onClick={() => setActiveTab(tab)}
             style={{
               padding: "0.75rem 1.25rem",
@@ -178,7 +249,6 @@ export default function Portfolio() {
               background: "transparent",
               color: activeTab === tab ? "#002147" : "#475569",
               cursor: "pointer",
-              transition: "all 200ms ease",
               marginBottom: "-1px",
             }}
           >
@@ -340,12 +410,41 @@ export default function Portfolio() {
                       {isOpen && (
                         <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
                           <td colSpan={11} style={{ padding: 0, background: "#FAFAFA" }}>
-                            <AircraftValuationPanel
-                              msn={a.msn}
-                              overrides={aircraftOverrides}
-                              onOverride={handleOverride}
-                              onRevertOverride={handleRevertOverride}
-                            />
+                            {/* Sub-tab switcher */}
+                            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #E2E8F0", paddingLeft: "1rem", background: "#F4F5F7" }}>
+                              {(["Valuation", "Maintenance Forecast"] as const).map((st) => {
+                                const key = st === "Maintenance Forecast" ? "Maintenance" : "Valuation";
+                                const active = (aircraftSubTab[a.msn] ?? "Valuation") === key;
+                                return (
+                                  <button
+                                    key={st}
+                                    onClick={(e) => { e.stopPropagation(); setAircraftSubTab((prev) => ({ ...prev, [a.msn]: key as "Valuation" | "Maintenance" })); }}
+                                    style={{
+                                      padding: "0.5rem 1rem", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
+                                      border: "none", borderBottom: active ? "2px solid #002147" : "2px solid transparent",
+                                      background: "transparent", color: active ? "#002147" : "#64748B", marginBottom: "-1px",
+                                    }}
+                                  >
+                                    {st}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {/* Panel */}
+                            {(aircraftSubTab[a.msn] ?? "Valuation") === "Valuation" ? (
+                              <AircraftValuationPanel
+                                msn={a.msn}
+                                overrides={aircraftOverrides}
+                                onOverride={handleOverride}
+                                onRevertOverride={handleRevertOverride}
+                              />
+                            ) : (
+                              <MaintenanceForecastTab
+                                msn={a.msn}
+                                aircraftType={a.type}
+                                vintage={a.vintage}
+                              />
+                            )}
                           </td>
                         </tr>
                       )}
@@ -420,6 +519,10 @@ export default function Portfolio() {
 
       {/* SD / MR Tab */}
       {activeTab === "SD / MR" && <SDMRTab />}
+
+      {/* Performance vs. Plan Tab */}
+      {activeTab === "Performance vs. Plan" && <PerformanceVsPlan />}
     </div>
+    </>
   );
 }

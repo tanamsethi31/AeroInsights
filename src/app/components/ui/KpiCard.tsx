@@ -6,8 +6,6 @@ interface KpiCardProps {
   delta?: string;
   deltaType?: "positive" | "negative" | "neutral";
   subtitle?: string;
-  /** For stagger-enter: CSS animation-delay in ms */
-  staggerIndex?: number;
 }
 
 export function KpiCard({
@@ -16,7 +14,6 @@ export function KpiCard({
   delta,
   deltaType = "neutral",
   subtitle,
-  staggerIndex = 0,
 }: KpiCardProps) {
   const deltaColor =
     deltaType === "positive"
@@ -34,24 +31,19 @@ export function KpiCard({
 
   return (
     <div
-      className="stagger-item"
-      style={
-        {
-          background: "#FFFFFF",
-          borderRadius: "var(--radius-lg)",
-          padding: "1.25rem 1.5rem",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          border: "1px solid #E2E8F0",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.375rem",
-          /* Specific properties only — no transition:all */
-          transition:
-            "box-shadow 160ms var(--ease-out-strong), border-color 160ms var(--ease-out-strong)",
-          cursor: "default",
-          "--stagger-delay": `${staggerIndex * 55}ms`,
-        } as React.CSSProperties
-      }
+      style={{
+        background: "#FFFFFF",
+        borderRadius: "var(--radius-lg)",
+        padding: "1.25rem 1.5rem",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+        border: "1px solid #E2E8F0",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.375rem",
+        transition:
+          "box-shadow 160ms var(--ease-out-strong), border-color 160ms var(--ease-out-strong)",
+        cursor: "default",
+      }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";

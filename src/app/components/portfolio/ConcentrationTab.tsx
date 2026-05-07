@@ -4,10 +4,13 @@ import {
   ResponsiveContainer, ReferenceLine, Cell,
 } from "recharts";
 import { KpiCard } from "../ui/KpiCard";
+import {
+  type DimKey,
+  DEFAULT_POLICY_RULES,
+  PEAK_CONCENTRATIONS,
+} from "../../data/concentrationPolicy";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-export type DimKey = "Lessee" | "Country" | "Region" | "Type" | "Vintage" | "Currency";
 
 interface ConcentrationRow {
   name: string;
@@ -159,7 +162,7 @@ function heatColour(eclPct: number): string {
 // ─── Sub-tab definitions ─────────────────────────────────────────────────────
 
 const VALUE_DIMS: DimKey[] = ["Lessee", "Country", "Region", "Type", "Vintage", "Currency"];
-type SubTab = DimKey | "Heatmap";
+type SubTab = DimKey | "Heatmap" | "Covenant Headroom";
 
 // ─── ConcentrationView ────────────────────────────────────────────────────────
 
@@ -434,15 +437,189 @@ function HeatmapView() {
   );
 }
 
+// ─── CovenantHeadroomView ─────────────────────────────────────────────────────
+
+function CovenantHeadroomView({ thresholds }: { thresholds: ThresholdMap }) {
+  const rows = DEFAULT_POLICY_RULES.map((rule) => {
+    const peak = PEAK_CONCENTRATIONS[rule.dimension];
+    const limitPct = thresholds[rule.dimension];
+    const headroomPp = limitPct - peak.pct;
+    const headroomBps = Math.round(headroomPp * 100);
+    const status: "disabled" | "none" | "amber" | "red" = !rule.enabled
+      ? "disabled"
+      : breachLevel(peak.pct, limitPct);
+    return { rule, peak, limitPct, headroomPp, headroomBps, status };
+  });
+
+  const enabledBreaches = rows.filter(
+    (r) => r.status === "amber" || r.status === "red",
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+      {/* Summary header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "1rem",
+        padding: "0.875rem 1.25rem",
+        background: enabledBreaches.length > 0 ? "rgba(180,83,9,0.06)" : "rgba(21,128,61,0.06)",
+        border: `1px solid ${enabledBreaches.length > 0 ? "rgba(180,83,9,0.2)" : "rgba(21,128,61,0.2)"}`,
+        borderRadius: "0.75rem",
+      }}>
+        <div style={{
+          width: "36px", height: "36px", borderRadius: "50%",
+          background: enabledBreaches.length > 0 ? "rgba(180,83,9,0.12)" : "rgba(21,128,61,0.12)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0, fontSize: "1.125rem",
+        }}>
+          {enabledBreaches.length > 0 ? "⚠" : "✓"}
+        </div>
+        <div>
+          <div style={{ fontSize: "0.875rem", fontWeight: 600, color: enabledBreaches.length > 0 ? "#B45309" : "#15803D" }}>
+            {enabledBreaches.length > 0
+              ? `${enabledBreaches.length} active policy breach${enabledBreaches.length > 1 ? "es" : ""}`
+              : "All active policy limits met"}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "0.125rem" }}>
+            As of 29 Apr 2026 · {DEFAULT_POLICY_RULES.filter((r) => r.enabled).length} active rules monitored
+          </div>
+        </div>
+      </div>
+
+      {/* Headroom table */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+          <thead>
+            <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+              {["Rule", "Policy Limit", "Dominant Holder", "Current Level", "Headroom", "Headroom (bps)", "Status"].map((h) => (
+                <th key={h} style={{
+                  padding: "0.625rem 0.875rem", textAlign: "left",
+                  fontSize: "0.6875rem", fontWeight: 600, color: "#64748B",
+                  textTransform: "uppercase", letterSpacing: "0.04em",
+                  whiteSpace: "nowrap",
+                }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ rule, peak, limitPct, headroomPp, headroomBps, status }, i) => {
+              const isDisabled = status === "disabled";
+              const isBreached = status === "amber" || status === "red";
+              const headroomColor = isDisabled ? "#CBD5E1"
+                : status === "red" ? "#B91C1C"
+                : status === "amber" ? "#B45309"
+                : "#15803D";
+              return (
+                <tr
+                  key={rule.id}
+                  style={{
+                    borderBottom: "1px solid #F1F5F9",
+                    background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC",
+                    opacity: isDisabled ? 0.55 : 1,
+                  }}
+                >
+                  {/* Rule label */}
+                  <td style={{ padding: "0.625rem 0.875rem", maxWidth: "280px" }}>
+                    <div style={{ fontSize: "0.8125rem", fontWeight: isBreached ? 600 : 400, color: "#0F172A" }}>
+                      {rule.label}
+                    </div>
+                    {isDisabled && (
+                      <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.125rem" }}>
+                        Policy disabled
+                      </div>
+                    )}
+                  </td>
+                  {/* Policy limit */}
+                  <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums", color: "#475569", fontWeight: 600 }}>
+                    {fmtPct(limitPct)}
+                  </td>
+                  {/* Dominant holder */}
+                  <td style={{ padding: "0.625rem 0.875rem", color: "#0F172A" }}>
+                    {peak.name}
+                  </td>
+                  {/* Current level */}
+                  <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ color: headroomColor, fontWeight: isBreached ? 700 : 500 }}>
+                      {fmtPct(peak.pct)}
+                    </span>
+                  </td>
+                  {/* Headroom (pp) */}
+                  <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ color: headroomColor, fontWeight: 600 }}>
+                      {headroomPp >= 0 ? "+" : ""}{headroomPp.toFixed(1)}pp
+                    </span>
+                  </td>
+                  {/* Headroom (bps) */}
+                  <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ color: headroomColor, fontWeight: 600 }}>
+                      {headroomBps >= 0 ? "+" : ""}{headroomBps.toLocaleString()} bps
+                    </span>
+                  </td>
+                  {/* Status pill */}
+                  <td style={{ padding: "0.625rem 0.875rem" }}>
+                    {isDisabled ? (
+                      <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", padding: "0.2rem 0.5rem", background: "#F1F5F9", borderRadius: "9999px" }}>
+                        Disabled
+                      </span>
+                    ) : status === "red" ? (
+                      <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B91C1C", padding: "0.2rem 0.5rem", background: "rgba(185,28,28,0.1)", border: "1px solid rgba(185,28,28,0.2)", borderRadius: "9999px" }}>
+                        ● Red Breach
+                      </span>
+                    ) : status === "amber" ? (
+                      <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B45309", padding: "0.2rem 0.5rem", background: "rgba(180,83,9,0.1)", border: "1px solid rgba(180,83,9,0.2)", borderRadius: "9999px" }}>
+                        ▲ Amber Breach
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#15803D", padding: "0.2rem 0.5rem", background: "rgba(21,128,61,0.1)", border: "1px solid rgba(21,128,61,0.2)", borderRadius: "9999px" }}>
+                        ✓ Compliant
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Board reporting note */}
+      <div style={{
+        fontSize: "0.75rem", color: "#94A3B8",
+        padding: "0.75rem 1rem", background: "#F8FAFC",
+        border: "1px solid #E2E8F0", borderRadius: "0.75rem",
+      }}>
+        <strong style={{ color: "#475569" }}>Board reporting note:</strong> Covenant headroom is
+        reported to the Risk Committee quarterly. A breach does not trigger automatic remediation
+        but requires a Board-level waiver or portfolio rebalancing plan within 90 days. Limits are
+        set by credit policy §4.2 and reviewed annually. Policy rules are configurable in{" "}
+        <strong style={{ color: "#475569" }}>Settings → Model Params → Concentration Policy Rules</strong>.
+      </div>
+    </div>
+  );
+}
+
 // ─── ConcentrationTab ─────────────────────────────────────────────────────────
 
 export function ConcentrationTab() {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>("Lessee");
   const [thresholds, setThresholds] = useState<ThresholdMap>({ ...DEFAULT_THRESHOLDS });
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
   function handleThresholdChange(dim: DimKey, val: number) {
     setThresholds((prev) => ({ ...prev, [dim]: val }));
   }
+
+  // Compute active, undismissed policy breaches for the alert banner
+  const activeBreaches = DEFAULT_POLICY_RULES
+    .filter((r) => r.enabled && !dismissedAlerts.has(r.id))
+    .map((r) => {
+      const peak = PEAK_CONCENTRATIONS[r.dimension];
+      const level = breachLevel(peak.pct, thresholds[r.dimension]);
+      return { rule: r, peak, level };
+    })
+    .filter((b) => b.level !== "none");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -457,9 +634,56 @@ export function ConcentrationTab() {
         <KpiCard label="WA Credit"        value={KPI.waCredit} />
       </div>
 
+      {/* Policy breach alert banners */}
+      {activeBreaches.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {activeBreaches.map(({ rule, peak, level }) => {
+            const color  = level === "red" ? "#B91C1C" : "#B45309";
+            const bg     = level === "red" ? "rgba(185,28,28,0.06)" : "rgba(180,83,9,0.06)";
+            const border = level === "red" ? "rgba(185,28,28,0.25)" : "rgba(180,83,9,0.25)";
+            const overage = (peak.pct - thresholds[rule.dimension]).toFixed(1);
+            return (
+              <div
+                key={rule.id}
+                style={{
+                  display: "flex", alignItems: "center", gap: "0.75rem",
+                  padding: "0.75rem 1rem",
+                  background: bg, border: `1px solid ${border}`,
+                  borderRadius: "0.75rem",
+                }}
+              >
+                <span style={{ fontSize: "1rem", flexShrink: 0 }}>⚠</span>
+                <span style={{ flex: 1, fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
+                  <strong style={{ color }}>{peak.name}</strong>{" "}
+                  {rule.dimension.toLowerCase()} concentration has risen to{" "}
+                  <strong style={{ color }}>{peak.pct}%</strong> — above your{" "}
+                  {thresholds[rule.dimension]}% policy limit (+{overage}pp).{" "}
+                  <span style={{ color: "#475569" }}>
+                    Review required before next board meeting.
+                  </span>
+                </span>
+                <button
+                  onClick={() =>
+                    setDismissedAlerts((prev) => new Set([...prev, rule.id]))
+                  }
+                  style={{
+                    background: "transparent", border: "none", cursor: "pointer",
+                    color: "#94A3B8", fontSize: "1.125rem", lineHeight: 1,
+                    padding: "0.125rem 0.25rem", flexShrink: 0,
+                  }}
+                  title="Dismiss"
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Sub-tab nav */}
       <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex", gap: 0 }}>
-        {([...VALUE_DIMS, "Heatmap"] as SubTab[]).map((tab) => (
+        {([...VALUE_DIMS, "Heatmap", "Covenant Headroom"] as SubTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveSubTab(tab)}
@@ -478,6 +702,15 @@ export function ConcentrationTab() {
             }}
           >
             {tab}
+            {/* Red dot on Covenant Headroom when breaches exist */}
+            {tab === "Covenant Headroom" && activeBreaches.length > 0 && (
+              <span style={{
+                display: "inline-block", width: "6px", height: "6px",
+                background: "#B91C1C", borderRadius: "50%",
+                marginLeft: "0.375rem", verticalAlign: "middle",
+                position: "relative", top: "-1px",
+              }} />
+            )}
           </button>
         ))}
       </div>
@@ -485,6 +718,8 @@ export function ConcentrationTab() {
       {/* Content */}
       {activeSubTab === "Heatmap" ? (
         <HeatmapView />
+      ) : activeSubTab === "Covenant Headroom" ? (
+        <CovenantHeadroomView thresholds={thresholds} />
       ) : (
         <ConcentrationView
           key={activeSubTab}

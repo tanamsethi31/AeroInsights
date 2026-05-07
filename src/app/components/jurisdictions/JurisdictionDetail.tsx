@@ -1,8 +1,14 @@
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ShieldCheck, ShieldAlert, Shield } from "lucide-react";
 import { Card } from "../ui/Card";
 import { StatusPill } from "../ui/StatusPill";
 import type { Jurisdiction, Precedent } from "./jurisdictionData";
+import {
+  JURISDICTION_SANCTIONS,
+  sanctionsSeverityColor,
+  sanctionsSeverityBg,
+  sanctionsSeverityLabel,
+} from "../../data/sanctionsData";
 
 const PRECEDENT_PREVIEW = 5;
 
@@ -224,6 +230,59 @@ export function JurisdictionDetail({ jurisdiction: j, precedents }: Props) {
           {j.narrative}
         </p>
       </Card>
+
+      {/* Sanctions */}
+      {(() => {
+        const sp = JURISDICTION_SANCTIONS[j.code];
+        if (!sp) return null;
+        const color  = sanctionsSeverityColor(sp.severity);
+        const bg     = sanctionsSeverityBg(sp.severity);
+        const label  = sanctionsSeverityLabel(sp.severity);
+        const Icon   = sp.severity === "none" ? ShieldCheck : sp.severity === "secondary" ? Shield : ShieldAlert;
+        return (
+          <Card title="Sanctions Profile">
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+              {/* Icon */}
+              <div style={{ width: "44px", height: "44px", borderRadius: "0.75rem", background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={22} style={{ color }} />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                {/* Status header */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
+                  <span style={{ fontSize: "0.9375rem", fontWeight: 700, color }}>{label}</span>
+                  {sp.severity !== "none" && sp.lists.length > 0 && (
+                    <div style={{ display: "flex", gap: "0.25rem" }}>
+                      {sp.lists.map((l) => (
+                        <span key={l} style={{
+                          fontSize: "0.6875rem", fontWeight: 700, padding: "0.1rem 0.45rem",
+                          borderRadius: "9999px", background: `${color}18`, color, border: `1px solid ${color}30`,
+                        }}>
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes */}
+                {sp.notes ? (
+                  <p style={{ fontSize: "0.8125rem", color: "#475569", lineHeight: 1.6, margin: 0 }}>{sp.notes}</p>
+                ) : (
+                  <p style={{ fontSize: "0.8125rem", color: "#94A3B8", margin: 0 }}>No sanctions designations recorded. Standard screening applies.</p>
+                )}
+
+                {/* Last updated */}
+                {sp.lastUpdated && (
+                  <div style={{ marginTop: "0.625rem", fontSize: "0.75rem", color: "#94A3B8" }}>
+                    Profile updated: {sp.lastUpdated} · Feeds: OFAC SDN · EU Consolidated · UKOFSI · UN SCSL
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Precedents */}
       <Card title={`Repossession Precedents (${filteredPrecedents.length})`} noPadding>

@@ -1,19 +1,28 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Search } from "lucide-react";
+import { useViewMode } from "../contexts/ViewModeContext";
 import { jurisdictions, precedents } from "../components/jurisdictions/jurisdictionData";
 import { JurisdictionDetail } from "../components/jurisdictions/JurisdictionDetail";
 import { PrecedentTable } from "../components/jurisdictions/PrecedentTable";
 
-const tabs = ["Profiles", "Repossession Model", "Precedent Database"];
+const ALL_TABS = ["Profiles", "Repossession Model", "Precedent Database"];
+const EXEC_TABS = ["Profiles"];
 
 export default function Jurisdictions() {
+  const { isExecutiveMode } = useViewMode();
   const [selectedCode, setSelectedCode] = useState(jurisdictions[0].code);
   const [activeTab, setActiveTab] = useState("Profiles");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (isExecutiveMode && !EXEC_TABS.includes(activeTab)) {
+      setActiveTab("Profiles");
+    }
+  }, [isExecutiveMode, activeTab]);
 
   const selected = jurisdictions.find((j) => j.code === selectedCode) ?? jurisdictions[0];
 
@@ -36,7 +45,7 @@ export default function Jurisdictions() {
 
       {/* Tabs */}
       <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex" }}>
-        {tabs.map((tab) => (
+        {(isExecutiveMode ? EXEC_TABS : ALL_TABS).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}

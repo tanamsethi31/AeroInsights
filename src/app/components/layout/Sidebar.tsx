@@ -11,10 +11,6 @@ import {
   Settings,
   BarChart3,
   ChevronRight,
-  EllipsisVertical,
-  LogOut,
-  CircleUser,
-  Bell,
   Layers,
   TrendingUp,
   PlaneTakeoff,
@@ -31,12 +27,23 @@ import {
   Users,
   DatabaseZap,
   SlidersHorizontal,
+  LogOut,
+  Briefcase,
+  Banknote,
+  FileSearch,
+  Layers2,
+  TrendingDown,
+  FileSpreadsheet,
+  Zap,
+  Activity,
 } from "lucide-react";
+
+import { useViewMode } from "../../contexts/ViewModeContext";
+import { WATCHLIST_DATA } from "../counterparties/watchlistEngine";
 
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -47,21 +54,12 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
-  useSidebar,
+  SidebarFooter,
 } from "../ui/sidebar";
 import {
   Collapsible,
   CollapsibleContent,
 } from "../ui/collapsible";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
 
 // ─── Nav data ─────────────────────────────────────────────────────────────────
 
@@ -89,9 +87,9 @@ const navGroups: NavGroup[] = [
         url: "/portfolio",
         icon: BookOpen,
         items: [
-          { title: "Lease Register", url: "/portfolio", icon: Layers },
-          { title: "Analytics", url: "/portfolio", icon: TrendingUp },
-          { title: "Aircraft Mix", url: "/portfolio", icon: PlaneTakeoff },
+          { title: "Leases",        url: "/portfolio/register",     icon: Layers       },
+          { title: "Concentration", url: "/portfolio/analytics",    icon: TrendingUp   },
+          { title: "Aircraft",      url: "/portfolio/aircraft-mix", icon: PlaneTakeoff },
         ],
       },
       {
@@ -99,9 +97,19 @@ const navGroups: NavGroup[] = [
         url: "/scenarios",
         icon: Target,
         items: [
-          { title: "Library", url: "/scenarios", icon: Library },
-          { title: "Run Config", url: "/scenarios", icon: Play },
-          { title: "Run History", url: "/scenarios", icon: History },
+          { title: "Library",         url: "/scenarios/library", icon: Library },
+          { title: "Custom Builder",  url: "/scenarios/run",     icon: Play    },
+          { title: "Run History",     url: "/scenarios/history", icon: History },
+        ],
+      },
+      {
+        title: "Deals",
+        url: "/deals",
+        icon: Banknote,
+        items: [
+          { title: "Lease Generator", url: "/deals/generator",  icon: FileSearch  },
+          { title: "Rack & Stack",    url: "/deals/rack-stack", icon: Layers2     },
+          { title: "Exit NPV",        url: "/deals/exit-npv",   icon: TrendingDown },
         ],
       },
       {
@@ -109,9 +117,9 @@ const navGroups: NavGroup[] = [
         url: "/risk-ecl",
         icon: AlertTriangle,
         items: [
-          { title: "ECL Summary", url: "/risk-ecl", icon: BarChart2 },
-          { title: "Migration Matrix", url: "/risk-ecl", icon: ArrowLeftRight },
-          { title: "Waterfall", url: "/risk-ecl", icon: Droplets },
+          { title: "ECL Overview",    url: "/risk-ecl/summary",   icon: BarChart2      },
+          { title: "Stage Migration", url: "/risk-ecl/migration", icon: ArrowLeftRight },
+          { title: "Sensitivity",     url: "/risk-ecl/waterfall", icon: Droplets       },
         ],
       },
     ],
@@ -119,8 +127,19 @@ const navGroups: NavGroup[] = [
   {
     label: "Intelligence",
     items: [
+      {
+        title: "Aero Intelligence",
+        url: "/intelligence",
+        icon: Zap,
+        items: [
+          { title: "Macro Signals",      url: "/intelligence/signals",      icon: TrendingUp },
+          { title: "Lessee Radar",       url: "/intelligence/lessee-radar", icon: Activity   },
+          { title: "Deal Feed",          url: "/intelligence/deal-feed",    icon: FileSearch  },
+          { title: "Jurisdiction Watch", url: "/intelligence/jx-watch",    icon: Globe       },
+        ],
+      },
       { title: "Counterparties", url: "/counterparties", icon: Handshake },
-      { title: "Jurisdictions", url: "/jurisdictions", icon: Globe },
+      { title: "Jurisdictions",  url: "/jurisdictions",  icon: Globe     },
     ],
   },
   {
@@ -131,9 +150,9 @@ const navGroups: NavGroup[] = [
         url: "/reports",
         icon: FileText,
         items: [
-          { title: "Templates", url: "/reports", icon: LayoutTemplate },
-          { title: "Scheduled", url: "/reports", icon: CalendarClock },
-          { title: "Export Log", url: "/reports", icon: Download },
+          { title: "Report Templates",  url: "/reports/templates",  icon: LayoutTemplate },
+          { title: "Scheduled Reports", url: "/reports/scheduled",  icon: CalendarClock  },
+          { title: "Export History",    url: "/reports/export-log", icon: Download       },
         ],
       },
       {
@@ -141,10 +160,11 @@ const navGroups: NavGroup[] = [
         url: "/settings",
         icon: Settings,
         items: [
-          { title: "Firm Profile", url: "/settings", icon: Building2 },
-          { title: "Users & Access", url: "/settings", icon: Users },
-          { title: "Data Sources", url: "/settings", icon: DatabaseZap },
-          { title: "ECL Parameters", url: "/settings", icon: SlidersHorizontal },
+          { title: "Tenant",        url: "/settings/firm",         icon: Building2         },
+          { title: "Users & RBAC",  url: "/settings/users",        icon: Users             },
+          { title: "Data Sources",  url: "/settings/data-sources", icon: DatabaseZap       },
+          { title: "Model Params",  url: "/settings/ecl",          icon: SlidersHorizontal },
+          { title: "Excel Add-in", url: "/settings/excel",        icon: FileSpreadsheet   },
         ],
       },
     ],
@@ -212,7 +232,7 @@ function NavGroupItem({ item }: { item: NavItem & { items: SubItem[] } }) {
 
 // ─── Flat nav item ─────────────────────────────────────────────────────────────
 
-function NavFlatItem({ item }: { item: NavItem }) {
+function NavFlatItem({ item, badge }: { item: NavItem; badge?: number }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isActive =
@@ -231,91 +251,30 @@ function NavFlatItem({ item }: { item: NavItem }) {
       >
         <item.icon />
         <span>{item.title}</span>
+        {badge != null && badge > 0 && (
+          <span
+            style={{
+              marginLeft: "auto",
+              background: "#B91C1C",
+              color: "#FFFFFF",
+              borderRadius: "9999px",
+              fontSize: "0.625rem",
+              fontWeight: 700,
+              padding: "0 0.3rem",
+              minWidth: "16px",
+              height: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              lineHeight: 1,
+            }}
+          >
+            {badge}
+          </span>
+        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
-  );
-}
-
-// ─── User footer ───────────────────────────────────────────────────────────────
-
-function NavUser() {
-  const { isMobile } = useSidebar();
-  const navigate = useNavigate();
-
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
-            >
-              <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                style={{ background: "#002147", color: "#FFFFFF" }}
-              >
-                AJ
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium text-sidebar-accent-foreground">
-                  Alex Johnson
-                </span>
-                <span className="truncate text-xs" style={{ color: "#64748B" }}>
-                  alex@aerinsights.com
-                </span>
-              </div>
-              <EllipsisVertical className="ml-auto size-4 text-sidebar-foreground" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5">
-                <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                  style={{ background: "#002147", color: "#FFFFFF" }}
-                >
-                  AJ
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Alex Johnson</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    alex@aerinsights.com
-                  </span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => navigate("/settings")}
-              >
-                <CircleUser className="mr-2 size-4" />
-                Profile Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => navigate("/settings")}
-              >
-                <Bell className="mr-2 size-4" />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
-              <LogOut className="mr-2 size-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
   );
 }
 
@@ -323,6 +282,13 @@ function NavUser() {
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate();
+  const { isExecutiveMode, setIsExecutiveMode } = useViewMode();
+
+  /** Count of non-green lessees — shown as badge on the Counterparties nav item */
+  const alertCount = React.useMemo(
+    () => Object.values(WATCHLIST_DATA).filter(e => e.status !== "green").length,
+    []
+  );
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -343,7 +309,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold text-sidebar-accent-foreground">
-                  Aerinsights
+                  Aeroinsights
                 </span>
                 <span
                   className="truncate text-xs"
@@ -370,7 +336,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                     item={item as NavItem & { items: SubItem[] }}
                   />
                 ) : (
-                  <NavFlatItem key={item.title} item={item} />
+                  <NavFlatItem
+                    key={item.title}
+                    item={item}
+                    badge={item.title === "Counterparties" ? alertCount : undefined}
+                  />
                 )
               )}
             </SidebarMenu>
@@ -378,9 +348,66 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         ))}
       </SidebarContent>
 
-      {/* Footer */}
+      {/* Footer / Controls */}
       <SidebarFooter>
-        <NavUser />
+        <SidebarMenu>
+          {/* Executive Mode toggle */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => setIsExecutiveMode(!isExecutiveMode)}
+              className="cursor-pointer"
+              tooltip="Executive Mode"
+            >
+              <Briefcase size={18} />
+              <span>Executive Mode</span>
+              {/* Toggle pill */}
+              <div
+                style={{
+                  marginLeft: "auto",
+                  width: "36px",
+                  height: "20px",
+                  borderRadius: "10px",
+                  background: isExecutiveMode ? "#16A34A" : "#94A3B8",
+                  position: "relative",
+                  flexShrink: 0,
+                  transition: "background 200ms cubic-bezier(0.23,1,0.32,1)",
+                  pointerEvents: "none",
+                  boxShadow: isExecutiveMode
+                    ? "0 0 0 2px rgba(22,163,74,0.25)"
+                    : "none",
+                }}
+              >
+                <div
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    borderRadius: "50%",
+                    background: "#FFFFFF",
+                    position: "absolute",
+                    top: "2px",
+                    left: isExecutiveMode ? "18px" : "2px",
+                    transition: "left 200ms cubic-bezier(0.23,1,0.32,1)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.30)",
+                  }}
+                />
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => {
+                // TODO: Implement actual sign out logic
+                navigate("/login");
+              }}
+              className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+              tooltip="Sign Out"
+            >
+              <LogOut size={18} />
+              <span>Sign Out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
 
       <SidebarRail />

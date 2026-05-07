@@ -27,6 +27,7 @@ export interface ScenarioRunResult {
   scenarioHash: string;
   topLessees: Array<{ name: string; ecl: number; jurisdiction: string }>;
   s3LeaseCount: number;
+  parentId?: string;   // set when this run is branched from another run
 }
 
 // ─── Shimmer animation (injected once) ───────────────────────────────────────

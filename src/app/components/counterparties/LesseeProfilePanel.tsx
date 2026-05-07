@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useViewMode } from "../../contexts/ViewModeContext";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Cell,
@@ -7,6 +8,7 @@ import {
 } from "recharts";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { WatchlistTab } from "./WatchlistTab";
+import { WATCHLIST_DATA } from "./watchlistEngine";
 import { MitigationsTab } from "./MitigationsTab";
 import { RestructuringTab } from "./RestructuringTab";
 import type { RestructuringInputRow } from "./restructuringEngine";
@@ -668,6 +670,7 @@ function waPd(eclRows: LesseeECLRow[]): number {
 
 const TABS = ["Overview", "Leases", "ECL", "Timeline", "Scenarios", "Behaviour", "Watchlist", "Mitigations", "Restructuring"] as const;
 type TabKey = typeof TABS[number];
+const EXEC_PANEL_TABS: TabKey[] = ["Overview", "Leases"];
 
 // ── OverviewTab ───────────────────────────────────────────────────────────────
 
@@ -1290,10 +1293,30 @@ function BehaviourTab({ meta, behaviourEvidence, scoreHistory }: {
 // ─── LesseeProfilePanel ───────────────────────────────────────────────────────
 
 export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
+  const { isExecutiveMode } = useViewMode();
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const { meta, leases, eclRows, monthlyDPD, events, scenarios, behaviourEvidence, scoreHistory } = PROFILE_DATA[lesseeId];
 
+  // Merge watchlist audit events into the Timeline credit-event log
+  const mergedEvents: PaymentEvent[] = useMemo(() => {
+    const watchlistAudit = WATCHLIST_DATA[lesseeId]?.auditLog ?? [];
+    const signalEvents: PaymentEvent[] = watchlistAudit
+      .filter(a => a.fromStatus !== null) // skip initial "green" classifications
+      .map(a => ({
+        date:        a.timestamp.slice(0, 10),
+        type:        (a.toStatus === "red" ? "stage-change" : "trigger") as EventType,
+        description: `Watchlist signal: ${a.triggeredBy} (risk score ${a.score.toFixed(1)})`,
+        impact:      `Status → ${a.toStatus.charAt(0).toUpperCase() + a.toStatus.slice(1)}`,
+      }));
+    return [...events, ...signalEvents].sort((a, b) => b.date.localeCompare(a.date));
+  }, [lesseeId, events]);
+
   useEffect(() => { setActiveTab("Overview"); }, [lesseeId]);
+  useEffect(() => {
+    if (isExecutiveMode && !EXEC_PANEL_TABS.includes(activeTab)) {
+      setActiveTab("Overview");
+    }
+  }, [isExecutiveMode, activeTab]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
@@ -1309,13 +1332,13 @@ export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
       </div>
 
       {/* Tab nav */}
-      <div style={{ background: "#FFFFFF", borderLeft: "1px solid #E2E8F0", borderRight: "1px solid #E2E8F0", display: "flex", gap: 0, borderBottom: "1px solid #E2E8F0" }}>
-        {TABS.map((tab) => (
+      <div style={{ background: "#FFFFFF", borderLeft: "1px solid #E2E8F0", borderRight: "1px solid #E2E8F0", display: "flex", gap: 0, borderBottom: "1px solid #E2E8F0", overflowX: "auto" }}>
+        {(isExecutiveMode ? EXEC_PANEL_TABS : TABS).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: "0.625rem 1.125rem",
+              padding: "0.625rem 0.875rem",
               fontSize: "0.8125rem",
               fontWeight: 500,
               border: "none",
@@ -1338,13 +1361,15 @@ export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
         {activeTab === "Overview"  && <OverviewTab  meta={meta} />}
         {activeTab === "Leases"    && <LeasesTab    leases={leases} />}
         {activeTab === "ECL"       && <ECLTab        eclRows={eclRows} />}
-        {activeTab === "Timeline"  && <TimelineTab   monthlyDPD={monthlyDPD} events={events} />}
+        {activeTab === "Timeline"  && <TimelineTab   monthlyDPD={monthlyDPD} events={mergedEvents} />}
         {activeTab === "Scenarios" && <ScenariosTab  scenarios={scenarios} />}
         {activeTab === "Behaviour" && <BehaviourTab meta={meta} behaviourEvidence={behaviourEvidence} scoreHistory={scoreHistory} />}
         {activeTab === "Watchlist"     && <WatchlistTab lesseeId={lesseeId} />}
         {activeTab === "Mitigations"   && <MitigationsTab eclRows={eclRows} />}
         {activeTab === "Restructuring" && (
           <RestructuringTab
+            country={meta.country}
+            lesseeName={meta.name}
             rows={eclRows.map((ecl): RestructuringInputRow => {
               const lease = leases.find((l) => l.id === ecl.leaseId)!;
               return {

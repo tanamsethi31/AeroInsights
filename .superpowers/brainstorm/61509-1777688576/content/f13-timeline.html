@@ -1,0 +1,78 @@
+<h2>F13 — What goes in the Timeline tab?</h2>
+<p class="subtitle">The other tabs are clear (Leases = lease table, ECL = ECL breakdown, Scenarios = sensitivity). Timeline is the design question.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="events-log" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Event log — table of credit events</h3>
+      <p>A chronological table of significant events: payments (on-time, late, missed), rating changes, stage transitions, SICR triggers, deferrals, watchlist additions. Each row has a date, event type (colour-coded), description, and impact.</p>
+      <div style="margin-top:0.75rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:0.5rem;overflow:hidden;font-size:0.7rem">
+        <div style="display:grid;grid-template-columns:80px 90px 1fr;background:#F4F5F7;padding:0.3rem 0.5rem;font-weight:600;color:#64748B;text-transform:uppercase;font-size:0.6rem">
+          <span>Date</span><span>Event</span><span>Detail</span>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 90px 1fr;padding:0.3rem 0.5rem;border-top:1px solid #E2E8F0">
+          <span style="color:#64748B">2026-03-14</span>
+          <span style="color:#B91C1C;font-weight:600">Late Payment</span>
+          <span style="color:#475569">45 DPD · $285k rent · LSE-2019-001</span>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 90px 1fr;padding:0.3rem 0.5rem;border-top:1px solid #E2E8F0;background:#FAFAFA">
+          <span style="color:#64748B">2026-02-01</span>
+          <span style="color:#B45309;font-weight:600">Stage → 3</span>
+          <span style="color:#475569">SICR backstop: 30+ DPD triggered</span>
+        </div>
+        <div style="display:grid;grid-template-columns:80px 90px 1fr;padding:0.3rem 0.5rem;border-top:1px solid #E2E8F0">
+          <span style="color:#64748B">2025-12-10</span>
+          <span style="color:#B45309;font-weight:600">Rating ↓</span>
+          <span style="color:#475569">S&P: BBB- → BB-</span>
+        </div>
+      </div>
+      <p style="margin-top:0.5rem;font-size:0.8rem;color:#64748B">✓ Audit-trail friendly. Easy to read. Covers multiple event types.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="chart-trend" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Payment-lateness chart over 12 months</h3>
+      <p>A bar/area chart showing days-overdue per month (or days paid early as negative). Key events annotated on the chart (rating change, stage transition). Gives an immediate visual read on trajectory.</p>
+      <div style="margin-top:0.75rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem">
+        <div style="height:60px;display:flex;align-items:flex-end;gap:4px">
+          <div style="flex:1;background:#15803D;height:4px;border-radius:2px 2px 0 0"></div>
+          <div style="flex:1;background:#15803D;height:6px;border-radius:2px 2px 0 0"></div>
+          <div style="flex:1;background:#B45309;height:18px;border-radius:2px 2px 0 0"></div>
+          <div style="flex:1;background:#B45309;height:22px;border-radius:2px 2px 0 0"></div>
+          <div style="flex:1;background:#B91C1C;height:36px;border-radius:2px 2px 0 0"></div>
+          <div style="flex:1;background:#B91C1C;height:52px;border-radius:2px 2px 0 0"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.6rem;color:#94A3B8;margin-top:2px">
+          <span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span>
+        </div>
+        <div style="font-size:0.65rem;color:#B45309;margin-top:0.375rem">▲ Stage 3 transition · Feb 2026</div>
+      </div>
+      <p style="margin-top:0.5rem;font-size:0.8rem;color:#64748B">✓ Instant visual read on deterioration. ✗ Less detail per event.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="both" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Chart at top + event log below</h3>
+      <p>Best of both: a compact 12-month days-overdue sparkline with annotated stage/rating events at the top, then the full event log table below. The chart provides trajectory at a glance; the log provides auditability.</p>
+      <div style="margin-top:0.75rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.6rem;font-size:0.7rem">
+        <div style="height:36px;display:flex;align-items:flex-end;gap:3px;margin-bottom:0.375rem">
+          <div style="flex:1;background:#15803D;height:3px;border-radius:1px 1px 0 0"></div>
+          <div style="flex:1;background:#15803D;height:4px;border-radius:1px 1px 0 0"></div>
+          <div style="flex:1;background:#B45309;height:12px;border-radius:1px 1px 0 0"></div>
+          <div style="flex:1;background:#B45309;height:16px;border-radius:1px 1px 0 0"></div>
+          <div style="flex:1;background:#B91C1C;height:24px;border-radius:1px 1px 0 0"></div>
+          <div style="flex:1;background:#B91C1C;height:34px;border-radius:1px 1px 0 0"></div>
+        </div>
+        <div style="border-top:1px solid #E2E8F0;padding-top:0.375rem;color:#64748B">Event log below ↓ (Late Payment · Stage → 3 · Rating ↓ · ...)</div>
+      </div>
+      <p style="margin-top:0.5rem;font-size:0.8rem;color:#64748B">✓ Most complete view. Slightly taller tab content — fine given available space.</p>
+    </div>
+  </div>
+
+</div>

@@ -1,5 +1,5 @@
 # Product Requirements Document
-## Aerinsights — Aviation Lessor Decision Platform
+## Aeroinsights — Aviation Lessor Decision Platform
 
 > A decision-support analytics webapp for small-to-medium Irish aircraft lessors covering scenario modelling, IFRS-9 expected credit loss, jurisdictional repossession analysis, and lease-restructuring simulation.
 
@@ -9,7 +9,7 @@
 
 | Field | Value |
 |---|---|
-| Product name | Aerinsights |
+| Product name | Aeroinsights |
 | Document version | v0.3 (pricing minimum revised; AppFlow companion document drafted) |
 | Status | DRAFT — pending sample gate (§15.1) |
 | Date | 29 April 2026 |
@@ -25,7 +25,7 @@
 
 ### 1. Executive Summary
 
-Aerinsights is a SaaS analytics platform for Irish-domiciled small-to-medium aircraft lessors (10–150 aircraft fleets). It answers four questions that no incumbent vendor (Ishka, IBA, Cirium, Avitas, ICF) integrates today:
+Aeroinsights is a SaaS analytics platform for Irish-domiciled small-to-medium aircraft lessors (10–150 aircraft fleets). It answers four questions that no incumbent vendor (Ishka, IBA, Cirium, Avitas, ICF) integrates today:
 
 1. **What is my expected loss under stress?** — IFRS 9 ECL with multi-scenario probability weighting and IAS 36 recoverable-amount impairment, exportable as an auditor-defensible evidence pack.
 2. **What happens if I have to take the aircraft back?** — Jurisdiction-specific repossession timelines and costs, fed by the AWG Cape Town Compliance Index and a curated precedent database.
@@ -34,7 +34,7 @@ Aerinsights is a SaaS analytics platform for Irish-domiciled small-to-medium air
 
 **MVP scope.** 12 features delivered in 6–7 months by a 5-FTE team (~€600k–€900k to pilot-ready). Free/open data feeds at MVP; clean adapter layer for Cirium/IBA/Avitas at Phase 2. Synthetic demo dataset at MVP — not a constraint, a deliberate choice that lets us ship before paid data contracts close.
 
-**Strategic positioning.** "Ishka tells you what *is*. Aerinsights tells you what *could happen*, what it *costs*, and how to *defend the number to your auditor.*"
+**Strategic positioning.** "Ishka tells you what *is*. Aeroinsights tells you what *could happen*, what it *costs*, and how to *defend the number to your auditor.*"
 
 **Pricing model.** Tiered enterprise pricing: a base platform fee covering 3 seats plus per-additional-seat overage. No free tier; selective 30-day trials offered to qualified prospects. Specific price points to be determined from pilot data — internal target band: base platform €25–50k/yr (includes 3 seats), additional seats €4–8k/yr each.
 
@@ -183,7 +183,7 @@ Reference: `Fleet_Analytics_Research_Report_v1.md` §3 backlog rows F01–F16. T
 
 #### 6.1 Visual language [BINDING — locked at v0.2]
 
-The two design references (Knowvio, SkyLift) share useful DNA but differ in tone. Aerinsights extracts the common DNA and anchors in **institutional restraint**:
+The two design references (Knowvio, SkyLift) share useful DNA but differ in tone. Aeroinsights extracts the common DNA and anchors in **institutional restraint**:
 
 **Colour system (locked).**
 - **Primary accent: Oxford Blue `#002147`** — used for primary actions, active navigation, key data emphasis.
@@ -433,7 +433,7 @@ A `DataLicensingRegister.md` companion document shall enumerate every external d
 | EU GDPR | Personal data of lessee employees | DPIA before pilot; EU-only hosting | PrivacyImpactAssessment.md |
 | Irish Companies Act | Records retention 7 years | Audit log retention enforced | AuditTrailSpec.md |
 | Section 110 (Ireland) | Tenant context only — we don't advise | No product impact; marketing alignment | n/a |
-| Central Bank of Ireland (CBI) | Aerinsights itself is *not* a CBI-regulated entity (no regulated financial services provided). Some bank-owned pilot tenants *are* CBI-regulated and will subject Aerinsights to their third-party-risk-management process under the CBI outsourcing framework. | Confirm with Irish counsel in Phase 0; prepare standard third-party assurance pack | SecurityProgram.md + DataLicensingRegister.md |
+| Central Bank of Ireland (CBI) | Aeroinsights itself is *not* a CBI-regulated entity (no regulated financial services provided). Some bank-owned pilot tenants *are* CBI-regulated and will subject Aeroinsights to their third-party-risk-management process under the CBI outsourcing framework. | Confirm with Irish counsel in Phase 0; prepare standard third-party assurance pack | SecurityProgram.md + DataLicensingRegister.md |
 | OFAC / EU / UK / UN sanctions | Sanctions screening (F17 — Phase 2) | Phase 2 | – |
 | EASA airworthiness data | Indirect — feeds technical data | Consume via Cirium adapter Phase 2 | – |
 | SOC 2 | Customer security expectation | Type II at +18m post-GA | SecurityProgram.md |
@@ -546,15 +546,15 @@ In addition to gate criteria above:
 
 | Ref | Decision | Resolution | Rationale |
 |---|---|---|---|
-| D1 | Product name | **Aerinsights** | Stakeholder selection. |
+| D1 | Product name | **Aeroinsights** | Stakeholder selection. |
 | D2 | Visual accent | **Oxford Blue `#002147` on white** | Stakeholder selection; institutional, defensible against gimmick concerns; full token system locked in §6.1. |
 | D3 | Pricing model | **Tiered enterprise: base platform fee covers 3 seats + per-additional-seat overage. No free tier — selective 30-day trial for qualified prospects.** | Free tier was rejected: it produces support cost, GDPR overhead, and brand confusion without producing customers in a B2B aviation finance context. Trial achieves the same "let them try" outcome cleanly. 3-seat minimum reflects SME lessor reality (typical deep users: Risk + Accounting + Asset Mgmt). Specific price points TBD from pilot data. |
-| D4 | Cirium adapter strategy | **MVP: customer-supplied flat-file. GA: pursue reseller agreement.** | At MVP, Aerinsights has zero leverage with Cirium; reseller terms would be punitive or refused. Customers who already license Cirium can drop exports into our adapter. By GA, with proven volume, the reseller conversation is winnable. Smaller data-licensing surface during the GDPR-sensitive early period. |
+| D4 | Cirium adapter strategy | **MVP: customer-supplied flat-file. GA: pursue reseller agreement.** | At MVP, Aeroinsights has zero leverage with Cirium; reseller terms would be punitive or refused. Customers who already license Cirium can drop exports into our adapter. By GA, with proven volume, the reseller conversation is winnable. Smaller data-licensing surface during the GDPR-sensitive early period. |
 | D5 | Big Four target validator | **KPMG (primary target); PwC backup.** | KPMG audits AerCap, SMBC AC, and the deepest Irish-lessor portfolio. PwC is the strong second. Formal paid engagement deferred to pilot phase. |
-| D6 | CBI regulatory scope | **Aerinsights is NOT a CBI-regulated entity. Some bank-owned pilot tenants ARE — they will subject Aerinsights to their third-party-risk-management process.** | Not a blocker; sales-cycle reality. Prepare standard third-party assurance pack in Phase 0. Confirm formally with Irish counsel. |
+| D6 | CBI regulatory scope | **Aeroinsights is NOT a CBI-regulated entity. Some bank-owned pilot tenants ARE — they will subject Aeroinsights to their third-party-risk-management process.** | Not a blocker; sales-cycle reality. Prepare standard third-party assurance pack in Phase 0. Confirm formally with Irish counsel. |
 | D7 | Behaviour-scorer framing | **Proceed with non-discriminatory framing per FR-F05-004 — "observed contractual-performance indicator under stress."** | Avoids discrimination claims. Country-level proxies must be empirical (observed restructuring outcomes, government-interference precedents), never cultural stereotypes. |
 | D8 | LLM provider | **Azure OpenAI Service (EU — West Europe).** Microsoft sub-processor accepted; pilot tenants notified at onboarding. Anthropic Claude EU as fallback. | Stakeholder selection. EU-region compliance with GDPR. |
-| D9 | AWG CTC Index licensing | **Pursue at standard enterprise/commercial tier, not member tier.** | Aerinsights is a B2B SaaS product, not a member-eligible operator. Standard licensing terms apply. |
+| D9 | AWG CTC Index licensing | **Pursue at standard enterprise/commercial tier, not member tier.** | Aeroinsights is a B2B SaaS product, not a member-eligible operator. Standard licensing terms apply. |
 | D10 | Methodology open-source | **Methodology released under Apache-2.0 once stable (target: alongside GA).** Outputs and product remain proprietary. | Stakeholder selection. Accelerates auditor and regulator trust. Code under proprietary licence; methodology paper, model cards, and reference algorithms under Apache-2.0. |
 | D11 | Phase 2 geographic priority | **Deferred — to revisit pre-GA based on pilot demand signals.** | Stakeholder direction. |
 | D12 | Mobile read-only Phase 3 | **Deferred — to revisit post-GA.** | Stakeholder direction. |
@@ -581,7 +581,7 @@ In addition to gate criteria above:
 | Version | Date | Author | Change |
 |---|---|---|---|
 | v0.1 | 2026-04-28 | Claude (drafted for PM) | Initial draft. |
-| v0.2 | 2026-04-29 | Claude (post-stakeholder review) | Product named **Aerinsights**. Visual system locked (Oxford Blue `#002147`, full token spec). Pricing model finalised: tiered enterprise (base + per-seat overage), no free tier — selective trials only. Cirium adapter strategy locked (customer-supplied flat-file at MVP, reseller pursued at GA). KPMG named primary Big-Four target. CBI regulatory posture clarified. Azure OpenAI EU locked as LLM provider. Apache-2.0 methodology release committed. Q1–Q12 reorganised into Decisions Log (D1–D12) and Remaining Open Questions (OQ1–OQ10). |
+| v0.2 | 2026-04-29 | Claude (post-stakeholder review) | Product named **Aeroinsights**. Visual system locked (Oxford Blue `#002147`, full token spec). Pricing model finalised: tiered enterprise (base + per-seat overage), no free tier — selective trials only. Cirium adapter strategy locked (customer-supplied flat-file at MVP, reseller pursued at GA). KPMG named primary Big-Four target. CBI regulatory posture clarified. Azure OpenAI EU locked as LLM provider. Apache-2.0 methodology release committed. Q1–Q12 reorganised into Decisions Log (D1–D12) and Remaining Open Questions (OQ1–OQ10). |
 | v0.3 | 2026-04-29 | Claude (post-pricing revision) | Pricing minimum revised from 5-seat to 3-seat to reflect SME lessor team-size reality. Internal target band adjusted (base €25–50k). AppFlow.md companion document drafted. |
 
 ---
@@ -593,7 +593,7 @@ In addition to gate criteria above:
 - **ABS** — Asset-Backed Securitisation.
 - **AWG** — Aviation Working Group (industry body publishing the Cape Town Compliance Index).
 - **Alt-A** — Alternative A under the Cape Town Aircraft Protocol; provides a 60-day cure-or-return regime in insolvency for ratifying states.
-- **AWB** — Air Waybill (cargo concept; not relevant to Aerinsights but appears in design reference image).
+- **AWB** — Air Waybill (cargo concept; not relevant to Aeroinsights but appears in design reference image).
 - **CDS** — Credit Default Swap.
 - **CECL** — Current Expected Credit Loss (US GAAP, ASC 326).
 - **CTC** — Cape Town Convention.

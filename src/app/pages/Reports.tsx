@@ -1,5 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router";
 import { Card } from "../components/ui/Card";
+
+const PATH_TAB: Record<string, string> = {
+  "/reports/templates":  "Report Templates",
+  "/reports/scheduled":  "Scheduled Reports",
+  "/reports/export-log": "Export History",
+};
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Download, FileText, Table, FileJson, File, Mail, Clock, CheckCircle, Calendar } from "lucide-react";
@@ -92,7 +99,9 @@ const formatIcons: Record<string, React.ReactNode> = {
 const tabs = ["Report Templates", "Scheduled Reports", "Export History"];
 
 export default function Reports() {
-  const [activeTab, setActiveTab] = useState("Report Templates");
+  const { pathname } = useLocation();
+  const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Report Templates");
+  useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Report Templates"); }, [pathname]);
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [generating, setGenerating] = useState<string | null>(null);
 
@@ -114,7 +123,7 @@ export default function Reports() {
       {/* Tabs */}
       <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex" }}>
         {tabs.map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "2px solid #002147" : "2px solid transparent", background: "transparent", color: activeTab === tab ? "#002147" : "#475569", cursor: "pointer", marginBottom: "-1px" }}>
+          <button key={tab} className="tab-btn" onClick={() => setActiveTab(tab)} style={{ padding: "0.75rem 1.25rem", fontSize: "0.875rem", fontWeight: 500, border: "none", borderBottom: activeTab === tab ? "2px solid #002147" : "2px solid transparent", background: "transparent", color: activeTab === tab ? "#002147" : "#475569", cursor: "pointer", marginBottom: "-1px" }}>
             {tab}
           </button>
         ))}

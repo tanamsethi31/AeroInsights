@@ -193,33 +193,48 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* ─── Stagger-enter animation ───────────────────────────────────────────────── */
+/* ─── Dropdown enter animation ──────────────────────────────────────────────── */
 
-@keyframes fade-slide-up {
-  from {
+/*
+ * Applied to header search results and user menu dropdowns.
+ * @starting-style animates only the ENTER — exit is instant (element removed from DOM).
+ * Single isolated element, ≤ 150ms. No exit flash visible in practice.
+ */
+.header-dropdown {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 150ms var(--ease-out-strong),
+    transform 150ms var(--ease-out-strong);
+
+  @starting-style {
     opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(-4px) scale(0.97);
   }
 }
 
-.stagger-item {
-  animation: fade-slide-up 260ms var(--ease-out-strong) both;
-  animation-delay: var(--stagger-delay, 0ms);
+/* ─── Tab button transitions ─────────────────────────────────────────────────── */
+
+/*
+ * Pure CSS transition on color and border-color only.
+ * Avoids transition:all which re-paints on every pointer move.
+ */
+.tab-btn {
+  transition:
+    color 150ms var(--ease-out-strong),
+    border-color 150ms var(--ease-out-strong);
+}
+
+/* ─── Spinner keyframe (used by export modal Loader2 icon) ─────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 /* ─── prefers-reduced-motion ────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stagger-item {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-
   *,
   *::before,
   *::after {

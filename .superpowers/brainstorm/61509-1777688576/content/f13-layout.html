@@ -1,0 +1,60 @@
+<h2>F13 — Where does the new content live?</h2>
+<p class="subtitle">Three ways to add Lease Breakdown, ECL Attribution, Payment History, and Scenario Sensitivity</p>
+
+<div class="options">
+
+  <div class="option" data-choice="tabs" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Tabs in the profile panel</h3>
+      <p>The right-hand detail area gets a tab strip: <strong>Overview | Leases | ECL | Timeline | Scenarios</strong>. The existing radar + KPI cards become the "Overview" tab. New content fills the other tabs.</p>
+      <div style="margin-top:0.75rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem;font-size:0.75rem">
+        <div style="display:flex;gap:0;border-bottom:1px solid #E2E8F0;margin-bottom:0.5rem">
+          <span style="padding:0.25rem 0.75rem;border-bottom:2px solid #002147;color:#002147;font-weight:600;font-size:0.7rem">Overview</span>
+          <span style="padding:0.25rem 0.75rem;color:#94A3B8;font-size:0.7rem">Leases</span>
+          <span style="padding:0.25rem 0.75rem;color:#94A3B8;font-size:0.7rem">ECL</span>
+          <span style="padding:0.25rem 0.75rem;color:#94A3B8;font-size:0.7rem">Timeline</span>
+          <span style="padding:0.25rem 0.75rem;color:#94A3B8;font-size:0.7rem">Scenarios</span>
+        </div>
+        <div style="color:#64748B">Existing radar + restructuring stay here as Overview</div>
+      </div>
+      <p style="margin-top:0.5rem;font-size:0.8rem;color:#64748B">✓ Clean — no scrolling. Consistent with Portfolio pattern.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="scroll" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Scroll-down sections below existing cards</h3>
+      <p>Keep the current layout intact. After the Restructuring Simulator, add new collapsible sections: <strong>Lease Breakdown</strong>, <strong>ECL by Lease</strong>, <strong>Payment History</strong>, <strong>Scenario Sensitivity</strong>. Each can expand/collapse.</p>
+      <div style="margin-top:0.75rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem;font-size:0.75rem">
+        <div style="border-bottom:1px solid #E2E8F0;padding:0.25rem 0;color:#475569">▸ Behavior Score · Days Overdue [KPI cards]</div>
+        <div style="border-bottom:1px solid #E2E8F0;padding:0.25rem 0;color:#475569">▸ Radar chart + Restructuring Simulator</div>
+        <div style="border-bottom:1px solid #E2E8F0;padding:0.25rem 0;color:#002147;font-weight:600">▸ Lease Breakdown ↓ [new]</div>
+        <div style="border-bottom:1px solid #E2E8F0;padding:0.25rem 0;color:#002147;font-weight:600">▸ ECL Attribution ↓ [new]</div>
+        <div style="padding:0.25rem 0;color:#002147;font-weight:600">▸ Payment Timeline ↓ [new]</div>
+      </div>
+      <p style="margin-top:0.5rem;font-size:0.8rem;color:#64748B">✓ No migration needed. ✗ Long scroll — content gets buried.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="fullpage" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Full-page deep-dive (separate view)</h3>
+      <p>Clicking a lessee navigates to a dedicated full-width profile page. The sidebar list disappears; the deep-dive takes the whole canvas with a richer layout — header banner, 4-KPI strip, tabs, timeline, and a larger chart area.</p>
+      <div style="margin-top:0.75rem;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem;font-size:0.75rem">
+        <div style="background:#002147;color:white;padding:0.375rem 0.5rem;border-radius:0.25rem;margin-bottom:0.375rem;font-size:0.7rem">IndiGo Airlines — BB- — Stage 3 · $184M exposure [header banner]</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3px;margin-bottom:0.375rem">
+          <div style="background:#E2E8F0;height:24px;border-radius:3px"></div>
+          <div style="background:#E2E8F0;height:24px;border-radius:3px"></div>
+          <div style="background:#E2E8F0;height:24px;border-radius:3px"></div>
+          <div style="background:#E2E8F0;height:24px;border-radius:3px"></div>
+        </div>
+        <div style="color:#64748B">Leases | ECL | Timeline | Scenarios tabs below</div>
+      </div>
+      <p style="margin-top:0.5rem;font-size:0.8rem;color:#64748B">✓ Most real estate. ✗ Requires routing change or modal — higher complexity.</p>
+    </div>
+  </div>
+
+</div>

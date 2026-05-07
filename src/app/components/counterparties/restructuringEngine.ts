@@ -60,6 +60,11 @@ export interface RestructuringResult {
   p95Downside: number;
   /** Expected loss on immediate default = totalEAD × weighted-avg LGD / 100, in $M */
   counterfactualLoss: number;
+  /**
+   * Estimated months until cumulative restructured cash flows recover total adjusted EAD.
+   * Accounts for holiday period and any EAD write-down; simple payback (undiscounted).
+   */
+  timeToRecovery: number;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -268,6 +273,18 @@ function computeP95(rows: RestructuringInputRow[], tmpl: RestructuringTemplate):
   );
 }
 
+/**
+ * Simple undiscounted payback period:
+ * holiday months + (adjusted EAD) / (avg monthly inflow after holiday).
+ * Capped at 120 months to prevent ∞ on zero-rent templates.
+ */
+function computeTimeToRecovery(rows: RestructuringInputRow[], tmpl: RestructuringTemplate): number {
+  const adjEAD        = rows.reduce((s, r) => s + r.ead * (1 - tmpl.eadWriteDownPct / 100), 0);
+  const monthlyInflow = rows.reduce((s, r) => s + r.monthlyRentUSD * tmpl.rentMultiplier, 0);
+  if (monthlyInflow <= 0) return 120;
+  return Math.min(120, Math.round(tmpl.holidayMonths + adjEAD / monthlyInflow));
+}
+
 function computeCounterfactual(rows: RestructuringInputRow[]): number {
   const totalEAD = rows.reduce((s, r) => s + r.ead, 0);
   if (totalEAD === 0) return 0;
@@ -293,6 +310,7 @@ export function computeAllTemplates(rows: RestructuringInputRow[]): Restructurin
       eclRelief: eclBase - eclRestructured,
       p95Downside: computeP95(rows, tmpl),
       counterfactualLoss,
+      timeToRecovery: computeTimeToRecovery(rows, tmpl),
     };
   });
 }

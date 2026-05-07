@@ -1,0 +1,424 @@
+/**
+ * exportService.ts
+ * Generates PDF (jsPDF + autotable) and XLSX (SheetJS) exports for the
+ * ExportSnapshotModal.  All data is self-contained static mock data that
+ * mirrors the values shown in the live pages.
+ */
+
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+
+// ─── Static data ───────────────────────────────────────────────────────────────
+
+const ECL_ROWS = [
+  { id: "LSE-2019-001", lessee: "IndiGo Airlines",        aircraft: "A320neo",    ead: 24.2, pd12m: 12.4, lgd: 54, ecl12m: 1.62, eclLT: 2.36,  stage: "3" },
+  { id: "LSE-2020-014", lessee: "Aeromexico",             aircraft: "B737-800",   ead: 32.1, pd12m: 28.7, lgd: 61, ecl12m: 5.64, eclLT: 8.07,  stage: "3" },
+  { id: "LSE-2021-022", lessee: "Emirates",               aircraft: "B777-300ER", ead: 88.4, pd12m: 0.3,  lgd: 28, ecl12m: 0.07, eclLT: 0.27,  stage: "1" },
+  { id: "LSE-2020-031", lessee: "SriLankan Airlines",     aircraft: "A330-300",   ead: 34.2, pd12m: 4.2,  lgd: 48, ecl12m: 0.69, eclLT: 1.61,  stage: "2" },
+  { id: "LSE-2022-009", lessee: "Ryanair",                aircraft: "B737 MAX 8", ead: 44.7, pd12m: 0.5,  lgd: 22, ecl12m: 0.05, eclLT: 0.18,  stage: "1" },
+  { id: "LSE-2018-047", lessee: "Air France",             aircraft: "A350-900",   ead: 68.3, pd12m: 0.8,  lgd: 31, ecl12m: 0.17, eclLT: 0.51,  stage: "1" },
+  { id: "LSE-2021-055", lessee: "Azul Brazilian Airlines",aircraft: "A320neo",    ead: 28.9, pd12m: 3.8,  lgd: 46, ecl12m: 0.51, eclLT: 1.12,  stage: "2" },
+  { id: "LSE-2019-063", lessee: "Air Transat",            aircraft: "A321neo",    ead: 22.1, pd12m: 5.1,  lgd: 44, ecl12m: 0.50, eclLT: 1.09,  stage: "2" },
+  { id: "LSE-2023-002", lessee: "Singapore Airlines",     aircraft: "A350-900",   ead: 92.0, pd12m: 0.2,  lgd: 26, ecl12m: 0.05, eclLT: 0.19,  stage: "1" },
+  { id: "LSE-2022-018", lessee: "Lufthansa",              aircraft: "A220-300",   ead: 36.6, pd12m: 0.6,  lgd: 30, ecl12m: 0.07, eclLT: 0.22,  stage: "1" },
+];
+
+const LESSEES = [
+  { name: "Emirates",               country: "UAE",        rating: "A-",   stage: "1", behavior: 94, leases: 8,  exposure: "$412M", daysLate: 0.2  },
+  { name: "Ryanair",                country: "Ireland",    rating: "BBB+", stage: "1", behavior: 91, leases: 14, exposure: "$386M", daysLate: 0.5  },
+  { name: "Singapore Airlines",     country: "Singapore",  rating: "A",    stage: "1", behavior: 97, leases: 6,  exposure: "$290M", daysLate: 0.1  },
+  { name: "Air France",             country: "France",     rating: "BB+",  stage: "1", behavior: 86, leases: 9,  exposure: "$278M", daysLate: 1.2  },
+  { name: "Lufthansa",              country: "Germany",    rating: "BBB-", stage: "1", behavior: 88, leases: 7,  exposure: "$194M", daysLate: 0.8  },
+  { name: "Azul Brazilian Airlines",country: "Brazil",     rating: "B+",   stage: "2", behavior: 71, leases: 5,  exposure: "$142M", daysLate: 6.4  },
+  { name: "Air Transat",            country: "Canada",     rating: "B",    stage: "2", behavior: 68, leases: 3,  exposure: "$96M",  daysLate: 8.1  },
+  { name: "SriLankan Airlines",     country: "Sri Lanka",  rating: "B+",   stage: "2", behavior: 62, leases: 4,  exposure: "$118M", daysLate: 12.3 },
+  { name: "IndiGo Airlines",        country: "India",      rating: "BB-",  stage: "3", behavior: 44, leases: 6,  exposure: "$184M", daysLate: 45.0 },
+  { name: "Aeromexico",             country: "Mexico",     rating: "CCC",  stage: "3", behavior: 29, leases: 4,  exposure: "$122M", daysLate: 89.0 },
+];
+
+const AIRCRAFT = [
+  { msn: "9218",  type: "A320neo",    reg: "VT-IYC", vintage: 2019, nbv: "$24.2M", mv: "$26.1M", mvAdj: "$25.4M", lessee: "IndiGo Airlines"     },
+  { msn: "41234", type: "B737-800",   reg: "XA-AMX", vintage: 2020, nbv: "$32.1M", mv: "$28.8M", mvAdj: "$28.0M", lessee: "Aeromexico"           },
+  { msn: "62047", type: "B777-300ER", reg: "A6-ECE", vintage: 2021, nbv: "$88.4M", mv: "$91.2M", mvAdj: "$90.5M", lessee: "Emirates"             },
+  { msn: "1728",  type: "A330-300",   reg: "4R-ALB", vintage: 2015, nbv: "$34.2M", mv: "$29.1M", mvAdj: "$28.3M", lessee: "SriLankan Airlines"   },
+  { msn: "67892", type: "B737 MAX 8", reg: "EI-HXP", vintage: 2022, nbv: "$44.7M", mv: "$47.3M", mvAdj: "$46.8M", lessee: "Ryanair"              },
+  { msn: "0378",  type: "A350-900",   reg: "F-HTYR", vintage: 2018, nbv: "$68.3M", mv: "$72.8M", mvAdj: "$71.4M", lessee: "Air France"           },
+];
+
+const LEASES = [
+  { id: "LSE-2019-001", lessee: "IndiGo Airlines",        aircraft: "A320neo",    msn: "9218",  start: "2019-03-01", end: "2028-03-01", rent: "$285,000",   stage: "3" },
+  { id: "LSE-2020-014", lessee: "Aeromexico",             aircraft: "B737-800",   msn: "41234", start: "2020-06-15", end: "2027-06-15", rent: "$310,000",   stage: "3" },
+  { id: "LSE-2021-022", lessee: "Emirates",               aircraft: "B777-300ER", msn: "62047", start: "2021-01-10", end: "2030-01-10", rent: "$1,240,000", stage: "1" },
+  { id: "LSE-2020-031", lessee: "SriLankan Airlines",     aircraft: "A330-300",   msn: "1728",  start: "2020-09-01", end: "2026-09-01", rent: "$480,000",   stage: "2" },
+  { id: "LSE-2022-009", lessee: "Ryanair",                aircraft: "B737 MAX 8", msn: "67892", start: "2022-04-15", end: "2032-04-15", rent: "$340,000",   stage: "1" },
+  { id: "LSE-2018-047", lessee: "Air France",             aircraft: "A350-900",   msn: "0378",  start: "2018-07-20", end: "2028-07-20", rent: "$960,000",   stage: "1" },
+  { id: "LSE-2021-055", lessee: "Azul Brazilian Airlines",aircraft: "A320neo",    msn: "10442", start: "2021-11-01", end: "2029-11-01", rent: "$295,000",   stage: "2" },
+  { id: "LSE-2019-063", lessee: "Air Transat",            aircraft: "A321neo",    msn: "8841",  start: "2019-05-01", end: "2027-05-01", rent: "$275,000",   stage: "2" },
+  { id: "LSE-2023-002", lessee: "Singapore Airlines",     aircraft: "A350-900",   msn: "0521",  start: "2023-02-01", end: "2033-02-01", rent: "$1,050,000", stage: "1" },
+  { id: "LSE-2022-018", lessee: "Lufthansa",              aircraft: "A220-300",   msn: "55124", start: "2022-08-01", end: "2032-08-01", rent: "$220,000",   stage: "1" },
+];
+
+const ECL_TREND = [
+  { quarter: "Q1 '25", s1: 7.1, s2: 18.4, s3: 14.2, total: 39.7 },
+  { quarter: "Q2 '25", s1: 7.4, s2: 19.1, s3: 15.4, total: 41.9 },
+  { quarter: "Q3 '25", s1: 7.8, s2: 19.8, s3: 15.1, total: 42.7 },
+  { quarter: "Q4 '25", s1: 8.1, s2: 20.4, s3: 16.3, total: 44.8 },
+  { quarter: "Q1 '26", s1: 8.4, s2: 21.6, s3: 17.2, total: 47.2 },
+];
+
+const SCENARIOS = [
+  { scenario: "Base (60%)",    ecl12m: "$44.1M", eclLT: "$80.4M",  coverage: "1.52%" },
+  { scenario: "Adverse (25%)", ecl12m: "$63.4M", eclLT: "$116.8M", coverage: "2.18%" },
+  { scenario: "Upside (15%)",  ecl12m: "$29.8M", eclLT: "$54.2M",  coverage: "1.03%" },
+  { scenario: "Weighted",      ecl12m: "$47.2M", eclLT: "$87.4M",  coverage: "1.62%" },
+];
+
+const JURISDICTIONS = [
+  { country: "USA",       ctc: "Yes", score: 96, repoP50: 3,   successProb: "98%", sanctions: "None" },
+  { country: "UK",        ctc: "Yes", score: 94, repoP50: 4,   successProb: "96%", sanctions: "None" },
+  { country: "Germany",   ctc: "Yes", score: 91, repoP50: 5,   successProb: "95%", sanctions: "None" },
+  { country: "Singapore", ctc: "Yes", score: 93, repoP50: 3,   successProb: "97%", sanctions: "None" },
+  { country: "UAE",       ctc: "Yes", score: 89, repoP50: 5,   successProb: "92%", sanctions: "None" },
+  { country: "Ireland",   ctc: "Yes", score: 92, repoP50: 4,   successProb: "94%", sanctions: "None" },
+  { country: "France",    ctc: "Yes", score: 88, repoP50: 6,   successProb: "91%", sanctions: "None" },
+  { country: "India",     ctc: "No",  score: 58, repoP50: 22,  successProb: "64%", sanctions: "None" },
+  { country: "Brazil",    ctc: "No",  score: 52, repoP50: 28,  successProb: "58%", sanctions: "None" },
+  { country: "Mexico",    ctc: "No",  score: 61, repoP50: 18,  successProb: "67%", sanctions: "None" },
+  { country: "Sri Lanka", ctc: "No",  score: 41, repoP50: 36,  successProb: "44%", sanctions: "None" },
+  { country: "Russia",    ctc: "No",  score: 14, repoP50: 999, successProb: "5%",  sanctions: "Full" },
+];
+
+// ─── Module data builder ───────────────────────────────────────────────────────
+
+type ModuleRender = {
+  title: string;
+  subtitle: string;
+  headers: string[];
+  rows: (string | number)[][];
+};
+
+function $m(n: number) { return `$${n.toFixed(1)}M`; }
+function pct(n: number) { return `${n.toFixed(2)}%`; }
+
+function getModuleData(id: string): ModuleRender | null {
+  switch (id) {
+
+    case "ecl_summary":
+      return {
+        title: "ECL Summary",
+        subtitle: "Portfolio-level expected credit loss — reporting date Q1 2026",
+        headers: ["Scenario", "12-Month ECL", "Lifetime ECL", "Coverage Ratio"],
+        rows: SCENARIOS.map(s => [s.scenario, s.ecl12m, s.eclLT, s.coverage]),
+      };
+
+    case "stage_dist": {
+      const s1 = ECL_ROWS.filter(r => r.stage === "1");
+      const s2 = ECL_ROWS.filter(r => r.stage === "2");
+      const s3 = ECL_ROWS.filter(r => r.stage === "3");
+      const sum = (arr: typeof ECL_ROWS, k: "ead" | "ecl12m" | "eclLT") =>
+        arr.reduce((a, r) => a + r[k], 0);
+      const cov = (stage: typeof ECL_ROWS) =>
+        pct((sum(stage, "ecl12m") / sum(stage, "ead")) * 100);
+      return {
+        title: "Stage Distribution",
+        subtitle: "Lease count, EAD and ECL by IFRS 9 stage",
+        headers: ["Stage", "Leases", "EAD ($M)", "ECL 12m ($M)", "ECL Lifetime ($M)", "Coverage"],
+        rows: [
+          ["Stage 1", s1.length, $m(sum(s1,"ead")), $m(sum(s1,"ecl12m")), $m(sum(s1,"eclLT")), cov(s1)],
+          ["Stage 2", s2.length, $m(sum(s2,"ead")), $m(sum(s2,"ecl12m")), $m(sum(s2,"eclLT")), cov(s2)],
+          ["Stage 3", s3.length, $m(sum(s3,"ead")), $m(sum(s3,"ecl12m")), $m(sum(s3,"eclLT")), cov(s3)],
+          ["Total",   ECL_ROWS.length, $m(sum(ECL_ROWS,"ead")), $m(sum(ECL_ROWS,"ecl12m")), $m(sum(ECL_ROWS,"eclLT")), pct((sum(ECL_ROWS,"ecl12m")/sum(ECL_ROWS,"ead"))*100)],
+        ],
+      };
+    }
+
+    case "ecl_trend":
+      return {
+        title: "ECL Trend (6 Months)",
+        subtitle: "Quarterly portfolio ECL by IFRS 9 stage ($M)",
+        headers: ["Quarter", "Stage 1 ($M)", "Stage 2 ($M)", "Stage 3 ($M)", "Total ($M)"],
+        rows: ECL_TREND.map(r => [r.quarter, r.s1, r.s2, r.s3, r.total]),
+      };
+
+    case "stage_migration":
+      return {
+        title: "Stage Migration Table",
+        subtitle: "Lease count transitions between prior and current reporting period",
+        headers: ["From \\ To", "Stage 1", "Stage 2", "Stage 3", "Total Out"],
+        rows: [
+          ["Stage 1",  87, 3, 0, 90],
+          ["Stage 2",   1, 18, 2, 21],
+          ["Stage 3",   0,  0, 9,  9],
+          ["New",       4,  0, 0,  4],
+          ["Total In", 92, 21, 11, 124],
+        ],
+      };
+
+    case "book_value":
+      return {
+        title: "Portfolio Book Value",
+        subtitle: "Aircraft net book value vs appraised market value",
+        headers: ["MSN", "Type", "Reg", "Vintage", "NBV", "Market Value", "MV Adj", "Lessee"],
+        rows: AIRCRAFT.map(a => [a.msn, a.type, a.reg, a.vintage, a.nbv, a.mv, a.mvAdj, a.lessee]),
+      };
+
+    case "aircraft_mix": {
+      const counts: Record<string, number> = {};
+      AIRCRAFT.forEach(a => { counts[a.type] = (counts[a.type] ?? 0) + 1; });
+      const total = AIRCRAFT.length;
+      return {
+        title: "Aircraft Mix",
+        subtitle: "Fleet composition by aircraft type",
+        headers: ["Aircraft Type", "Count", "% of Fleet"],
+        rows: Object.entries(counts).map(([type, n]) => [type, n, pct((n / total) * 100)]),
+      };
+    }
+
+    case "watchlist_headlines": {
+      const at_risk = LESSEES.filter(l => l.stage === "3");
+      return {
+        title: "Watchlist Headlines",
+        subtitle: "Lessees classified Stage 3 (credit-impaired) — immediate attention required",
+        headers: ["Lessee", "Country", "Rating", "Exposure", "Avg Days Late", "Behaviour Score"],
+        rows: at_risk.map(l => [l.name, l.country, l.rating, l.exposure, `${l.daysLate}d`, l.behavior]),
+      };
+    }
+
+    case "watchlist_full":
+      return {
+        title: "Watchlist — Full Detail",
+        subtitle: "All counterparties ranked by stage and behaviour score",
+        headers: ["Lessee", "Country", "Rating", "Stage", "Behaviour", "Leases", "Exposure", "Avg Days Late"],
+        rows: [...LESSEES]
+          .sort((a, b) => parseInt(b.stage) - parseInt(a.stage) || a.behavior - b.behavior)
+          .map(l => [l.name, l.country, l.rating, `Stage ${l.stage}`, l.behavior, l.leases, l.exposure, `${l.daysLate}d`]),
+      };
+
+    case "jurisdiction":
+      return {
+        title: "Jurisdiction Exposure",
+        subtitle: "CTC treaty status, enforceability score and repossession timeline by country",
+        headers: ["Country", "CTC Party", "Score /100", "P50 Repo (mo)", "Success Prob", "Sanctions"],
+        rows: JURISDICTIONS.map(j => [
+          j.country, j.ctc, j.score,
+          j.repoP50 >= 999 ? "N/A" : j.repoP50,
+          j.successProb, j.sanctions,
+        ]),
+      };
+
+    case "insolvency": {
+      const s3 = ECL_ROWS.filter(r => r.stage === "3");
+      return {
+        title: "Insolvency Risk Flags",
+        subtitle: "Stage 3 leases — SICR trigger events and impairment metrics",
+        headers: ["Lease ID", "Lessee", "Aircraft", "EAD ($M)", "PD 12m (%)", "LGD (%)", "ECL 12m ($M)", "ECL LT ($M)"],
+        rows: s3.map(r => [r.id, r.lessee, r.aircraft, r.ead, r.pd12m, `${r.lgd}%`, r.ecl12m, r.eclLT]),
+      };
+    }
+
+    case "scenario_comparison":
+      return {
+        title: "Scenario Comparison",
+        subtitle: "Portfolio ECL under Base, Adverse and Upside macro-economic scenarios",
+        headers: ["Scenario", "Weight", "12-Month ECL", "Lifetime ECL", "Coverage Ratio"],
+        rows: [
+          ["Base",    "60%", "$44.1M", "$80.4M",  "1.52%"],
+          ["Adverse", "25%", "$63.4M", "$116.8M", "2.18%"],
+          ["Upside",  "15%", "$29.8M", "$54.2M",  "1.03%"],
+          ["Weighted","—",   "$47.2M", "$87.4M",  "1.62%"],
+        ],
+      };
+
+    default:
+      return null;
+  }
+}
+
+// ─── Colour palette (shared between PDF helpers) ───────────────────────────────
+
+const C = {
+  navy:      [0,   33,  71 ] as [number, number, number],
+  navyLight: [235, 242, 255] as [number, number, number],
+  dark:      [15,  23,  42 ] as [number, number, number],
+  muted:     [100, 116, 139] as [number, number, number],
+  slate50:   [248, 250, 252] as [number, number, number],
+  border:    [226, 232, 240] as [number, number, number],
+  white:     [255, 255, 255] as [number, number, number],
+  slate400:  [148, 163, 184] as [number, number, number],
+};
+
+// ─── PDF Export ────────────────────────────────────────────────────────────────
+
+export function generatePDF(moduleIds: string[], presetLabel: string): void {
+  const doc  = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const W    = doc.internal.pageSize.getWidth();
+  const H    = doc.internal.pageSize.getHeight();
+  const LM   = 14;   // left margin
+  const CW   = W - LM * 2; // content width
+
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
+
+  // ── Page header helper (drawn per-page at the end) ─────────────────────────
+  function drawPageBanner(pageNum: number, totalPages: number) {
+    // Top navy bar
+    doc.setFillColor(...C.navy);
+    doc.rect(0, 0, W, 22, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...C.white);
+    doc.text("Aeroinsights", LM, 11);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.slate400);
+    doc.text("Decision Platform  ·  Export Snapshot", LM, 17);
+
+    doc.setTextColor(...C.white);
+    doc.setFontSize(7);
+    doc.text(`${presetLabel}  ·  ${dateStr}`, W - LM, 11, { align: "right" });
+    doc.text("CONFIDENTIAL", W - LM, 17, { align: "right" });
+
+    // Bottom footer line
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.25);
+    doc.line(LM, H - 11, W - LM, H - 11);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.muted);
+    doc.text(
+      "Aeroinsights Decision Platform  ·  Confidential  ·  Not for distribution",
+      LM, H - 7
+    );
+    doc.text(`${pageNum} / ${totalPages}`, W - LM, H - 7, { align: "right" });
+  }
+
+  // ── Content ───────────────────────────────────────────────────────────────
+  let y = 28; // start below the banner
+
+  for (const moduleId of moduleIds) {
+    const data = getModuleData(moduleId);
+    if (!data) continue;
+
+    // Section header bar
+    if (y > H - 45) { doc.addPage(); y = 28; }
+
+    doc.setFillColor(...C.navyLight);
+    doc.rect(LM, y, CW, 7.5, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...C.navy);
+    doc.text(data.title, LM + 3, y + 5.2);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.muted);
+    doc.text(data.subtitle, W - LM - 3, y + 5.2, { align: "right" });
+    y += 9.5;
+
+    autoTable(doc, {
+      startY: y,
+      head: [data.headers],
+      body: data.rows as (string | number)[][],
+      theme: "plain",
+      styles: {
+        fontSize: 7.5,
+        cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+        textColor: C.dark,
+        lineColor: C.border,
+        lineWidth: 0.1,
+      },
+      headStyles: {
+        fillColor: C.navy,
+        textColor: C.white,
+        fontStyle: "bold",
+        fontSize: 7,
+        cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      },
+      alternateRowStyles: { fillColor: C.slate50 },
+      margin: { left: LM, right: LM, top: 28, bottom: 16 },
+    });
+
+    y = ((doc as any).lastAutoTable?.finalY ?? y) + 10;
+  }
+
+  // ── Draw banners + footers on every page ──────────────────────────────────
+  const total = doc.getNumberOfPages();
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p);
+    drawPageBanner(p, total);
+  }
+
+  const slug = presetLabel.toLowerCase().replace(/\s+/g, "-");
+  const date = new Date().toISOString().slice(0, 10);
+  doc.save(`aerinsights-${slug}-${date}.pdf`);
+}
+
+// ─── XLSX Export ───────────────────────────────────────────────────────────────
+
+export function generateXLSX(moduleIds: string[], presetLabel: string): void {
+  const wb = XLSX.utils.book_new();
+
+  // Meta sheet first
+  const metaWs = XLSX.utils.aoa_to_sheet([
+    ["Aeroinsights Decision Platform — Export Snapshot"],
+    ["Preset",  presetLabel],
+    ["Generated", new Date().toLocaleString("en-GB")],
+    ["Classification", "Confidential"],
+    [],
+    ["Modules included", moduleIds.join(", ")],
+  ]);
+  metaWs["!cols"] = [{ wch: 22 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(wb, metaWs, "Info");
+
+  // One sheet per module
+  for (const moduleId of moduleIds) {
+    const data = getModuleData(moduleId);
+    if (!data) continue;
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      // Subtitle row (row 1)
+      [data.subtitle],
+      // Blank row
+      [],
+      // Header row
+      data.headers,
+      // Data rows
+      ...data.rows,
+    ]);
+
+    // Set column widths from content
+    ws["!cols"] = data.headers.map((h, i) => {
+      const maxLen = Math.max(
+        h.length,
+        ...data.rows.map(r => String(r[i] ?? "").length)
+      );
+      return { wch: Math.min(maxLen + 4, 32) };
+    });
+
+    // Sheet name: max 31 chars, no invalid characters
+    const sheetName = data.title.replace(/[/\\?*[\]:]/g, "").slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  }
+
+  const slug = presetLabel.toLowerCase().replace(/\s+/g, "-");
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `aerinsights-${slug}-${date}.xlsx`);
+}
+
+// ─── Convenience: generate the lease register as standalone XLSX ───────────────
+// (used by the Portfolio page "Download" button if wired up later)
+export function generateLeaseRegisterXLSX(): void {
+  const wb   = XLSX.utils.book_new();
+  const headers = ["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Monthly Rent", "Stage"];
+  const rows    = LEASES.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `Stage ${l.stage}`]);
+  const ws      = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws["!cols"]   = headers.map((h, i) => ({
+    wch: Math.min(Math.max(h.length, ...rows.map(r => String(r[i]).length)) + 3, 30),
+  }));
+  XLSX.utils.book_append_sheet(wb, ws, "Lease Register");
+  XLSX.writeFile(wb, `aerinsights-lease-register-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}

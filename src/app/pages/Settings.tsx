@@ -7,21 +7,30 @@ const PATH_TAB: Record<string, string> = {
   "/settings/users":        "users",
   "/settings/data-sources": "datasources",
   "/settings/ecl":          "model",
+  "/settings/excel":        "excel",
 };
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, Bell, Mail, X, Upload } from "lucide-react";
+import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, Bell, Mail, X, Upload, FileSpreadsheet, Download, Copy, CheckCheck, ChevronDown, ChevronRight as ChevronRt, ShieldCheck, RefreshCw } from "lucide-react";
+import { SANCTIONS_FEEDS, type FeedStatus } from "../data/sanctionsData";
+import {
+  type DimKey,
+  type PolicyRule,
+  DEFAULT_POLICY_RULES,
+  PEAK_CONCENTRATIONS,
+} from "../data/concentrationPolicy";
 import { ImportWizard } from "../components/import/ImportWizard";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 
 const tabs = [
-  { id: "tenant", label: "Tenant", icon: Building2 },
-  { id: "users", label: "Users & RBAC", icon: Users },
-  { id: "datasources", label: "Data Sources", icon: Database },
-  { id: "model", label: "Model Params", icon: Sliders },
-  { id: "audit", label: "Audit Log", icon: ClipboardList },
-  { id: "alerts", label: "Alerts", icon: Bell },
+  { id: "tenant",     label: "Tenant",        icon: Building2      },
+  { id: "users",      label: "Users & RBAC",  icon: Users          },
+  { id: "datasources",label: "Data Sources",  icon: Database       },
+  { id: "model",      label: "Model Params",  icon: Sliders        },
+  { id: "audit",      label: "Audit Log",     icon: ClipboardList  },
+  { id: "alerts",     label: "Alerts",        icon: Bell           },
+  { id: "excel",      label: "Excel Add-in",  icon: FileSpreadsheet },
 ];
 
 const users = [
@@ -105,6 +114,13 @@ export default function Settings() {
   function removeRecipient(id: string) {
     setEmailRecipients(prev => prev.filter(r => r.id !== id));
   }
+
+  // ── Concentration Policy Rules ──
+  const [policyRules, setPolicyRules] = useState<PolicyRule[]>([...DEFAULT_POLICY_RULES]);
+  const [newRuleDim,   setNewRuleDim]   = useState<DimKey>("Lessee");
+  const [newRuleLabel, setNewRuleLabel] = useState("");
+  const [newRuleLimit, setNewRuleLimit] = useState<number>(20);
+  const policyRuleIdRef = useRef(200);
 
   const weightSum = Object.values(signalWeights).reduce((a, b) => a + b, 0);
   const watchlistEntries = getWatchlistSummary();
@@ -314,6 +330,75 @@ export default function Settings() {
                 ))}
               </div>
             </Card>
+            {/* ── Sanctions Feeds ─────────────────────────────────────────── */}
+            <Card
+              title="Sanctions Feeds"
+              subtitle="Four free public feeds — screened against every lessee, counterparty and aircraft daily"
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {SANCTIONS_FEEDS.map((feed) => {
+                  const statusColor: Record<FeedStatus, string> = {
+                    ok: "#15803D", stale: "#B45309", error: "#B91C1C",
+                  };
+                  const statusBg: Record<FeedStatus, string> = {
+                    ok: "rgba(21,128,61,0.08)", stale: "rgba(180,83,9,0.08)", error: "rgba(185,28,28,0.08)",
+                  };
+                  const statusLabel: Record<FeedStatus, string> = {
+                    ok: "Live", stale: "Stale", error: "Error",
+                  };
+                  return (
+                    <div key={feed.id} style={{ border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                      {/* Icon */}
+                      <div style={{
+                        width: "40px", height: "40px", flexShrink: 0,
+                        background: statusBg[feed.status],
+                        borderRadius: "0.75rem",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <ShieldCheck size={18} style={{ color: statusColor[feed.status] }} />
+                      </div>
+                      {/* Text */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem" }}>
+                          <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0F172A" }}>{feed.name}</span>
+                          <span style={{
+                            fontSize: "0.6875rem", fontWeight: 700,
+                            color: statusColor[feed.status],
+                            background: statusBg[feed.status],
+                            borderRadius: "9999px", padding: "0.1rem 0.45rem",
+                          }}>
+                            {statusLabel[feed.status]}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+                          {feed.authority} · {feed.records.toLocaleString()} records · {feed.cadence} · Last sync: {feed.lastSync}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "0.2rem" }}>{feed.description}</div>
+                      </div>
+                      {/* Actions */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.375rem", flexShrink: 0 }}>
+                        <a
+                          href={feed.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: "0.75rem", color: "#002147", textDecoration: "none", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Source ↗
+                        </a>
+                        <button style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.8125rem", fontWeight: 500, color: "#002147", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.375rem 0.75rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+                          <RefreshCw size={12} /> Force Sync
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Policy note */}
+              <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "rgba(0,33,71,0.04)", borderRadius: "0.75rem", fontSize: "0.75rem", color: "#475569", borderLeft: "3px solid #002147" }}>
+                <strong style={{ color: "#002147" }}>Screening policy:</strong> All four feeds are cross-referenced against every lessee name, IATA code, operator certificate number, aircraft registration (ICAO 24-bit address) and beneficial owner on record. Alerts are generated on exact match or ≥90% fuzzy match. Results appear in Counterparties → Sanctions badge and Fleet Tracker.
+              </div>
+            </Card>
             </>
           )}
 
@@ -374,6 +459,273 @@ export default function Settings() {
                   <button onClick={handleSave} style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: saved ? "#15803D" : "#002147", color: "#FFFFFF", border: "none", borderRadius: "9999px", padding: "0.625rem 1.25rem", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", transition: "all 200ms" }}>
                     {saved ? <><Check size={14} /> Saved!</> : <><Save size={14} /> Save Parameters</>}
                   </button>
+                </div>
+              </Card>
+
+              {/* ── Concentration Policy Rules ───────────────────────────── */}
+              <Card
+                title="Concentration Policy Rules"
+                subtitle="Board-level limits enforced against live portfolio concentration data"
+              >
+                {/* Active breach summary */}
+                {(() => {
+                  const breaches = policyRules
+                    .filter((r) => r.enabled)
+                    .map((r) => ({
+                      rule: r,
+                      peak: PEAK_CONCENTRATIONS[r.dimension],
+                      overage: PEAK_CONCENTRATIONS[r.dimension].pct - r.limitPct,
+                    }))
+                    .filter((b) => b.overage > 0);
+
+                  return breaches.length > 0 ? (
+                    <div style={{
+                      marginBottom: "1rem", padding: "0.875rem 1rem",
+                      background: "rgba(180,83,9,0.06)", border: "1px solid rgba(180,83,9,0.25)",
+                      borderRadius: "0.75rem",
+                    }}>
+                      <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#B45309", marginBottom: "0.375rem" }}>
+                        ⚠ {breaches.length} active breach{breaches.length > 1 ? "es" : ""}
+                        {" — "}
+                        {breaches.map((b) =>
+                          `${b.peak.name} (${b.rule.dimension}, +${b.overage.toFixed(1)}pp)`
+                        ).join(" · ")}
+                      </div>
+                      <div style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                        Detected as of 29 Apr 2026 · Covenant Headroom view: Portfolio → Concentration → Covenant Headroom
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      marginBottom: "1rem", padding: "0.75rem 1rem",
+                      background: "rgba(21,128,61,0.06)", border: "1px solid rgba(21,128,61,0.2)",
+                      borderRadius: "0.75rem", fontSize: "0.8125rem", color: "#15803D", fontWeight: 500,
+                    }}>
+                      ✓ All enabled policy limits currently met.
+                    </div>
+                  );
+                })()}
+
+                {/* Rules table */}
+                <div style={{ border: "1px solid #E2E8F0", borderRadius: "0.75rem", overflow: "hidden", marginBottom: "1rem" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                    <thead>
+                      <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+                        {["On", "Rule / Description", "Limit %", "Current Level", "Status", ""].map((h) => (
+                          <th key={h} style={{
+                            padding: "0.625rem 0.875rem", textAlign: "left",
+                            fontSize: "0.6875rem", fontWeight: 600, color: "#64748B",
+                            textTransform: "uppercase", letterSpacing: "0.04em",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {policyRules.map((rule, i) => {
+                        const peak = PEAK_CONCENTRATIONS[rule.dimension];
+                        const overage = peak.pct - rule.limitPct;
+                        const isBreached = rule.enabled && overage > 0;
+                        const bLevel = isBreached && overage > rule.limitPct * 0.5 ? "red" : isBreached ? "amber" : "none";
+                        return (
+                          <tr
+                            key={rule.id}
+                            style={{
+                              borderBottom: "1px solid #F1F5F9",
+                              background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC",
+                              opacity: rule.enabled ? 1 : 0.6,
+                            }}
+                          >
+                            {/* Toggle */}
+                            <td style={{ padding: "0.625rem 0.875rem", width: "52px" }}>
+                              <button
+                                onClick={() =>
+                                  setPolicyRules((prev) =>
+                                    prev.map((r) => r.id === rule.id ? { ...r, enabled: !r.enabled } : r)
+                                  )
+                                }
+                                style={{
+                                  width: "36px", height: "20px",
+                                  background: rule.enabled ? "#002147" : "#CBD5E1",
+                                  border: "none", borderRadius: "10px",
+                                  position: "relative", cursor: "pointer",
+                                  transition: "background 200ms ease",
+                                }}
+                              >
+                                <span style={{
+                                  position: "absolute", top: "2px",
+                                  left: rule.enabled ? "18px" : "2px",
+                                  width: "16px", height: "16px",
+                                  background: "#FFFFFF", borderRadius: "50%",
+                                  transition: "left 200ms ease",
+                                  display: "block",
+                                }} />
+                              </button>
+                            </td>
+                            {/* Label + Description */}
+                            <td style={{ padding: "0.625rem 0.875rem", minWidth: "240px" }}>
+                              <div style={{ fontWeight: 500, color: "#0F172A" }}>{rule.label}</div>
+                              {rule.description && (
+                                <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.1rem" }}>
+                                  {rule.description}
+                                </div>
+                              )}
+                            </td>
+                            {/* Limit % */}
+                            <td style={{ padding: "0.625rem 0.875rem", width: "110px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={100}
+                                  value={rule.limitPct}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (!isNaN(val) && val > 0 && val <= 100) {
+                                      setPolicyRules((prev) =>
+                                        prev.map((r) => r.id === rule.id ? { ...r, limitPct: val } : r)
+                                      );
+                                    }
+                                  }}
+                                  style={{
+                                    width: "52px", border: "1px solid #E2E8F0", borderRadius: "0.375rem",
+                                    padding: "0.25rem 0.375rem", fontSize: "0.8125rem", color: "#0F172A",
+                                    textAlign: "right", fontFamily: "monospace", outline: "none",
+                                  }}
+                                />
+                                <span style={{ fontSize: "0.8125rem", color: "#94A3B8" }}>%</span>
+                              </div>
+                            </td>
+                            {/* Current level */}
+                            <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums" }}>
+                              <span style={{
+                                fontWeight: isBreached ? 700 : 400,
+                                color: bLevel === "red" ? "#B91C1C" : bLevel === "amber" ? "#B45309" : "#475569",
+                              }}>
+                                {peak.pct}% <span style={{ color: "#94A3B8", fontWeight: 400, fontSize: "0.6875rem" }}>({peak.name})</span>
+                              </span>
+                            </td>
+                            {/* Status */}
+                            <td style={{ padding: "0.625rem 0.875rem", width: "160px" }}>
+                              {!rule.enabled ? (
+                                <span style={{ fontSize: "0.6875rem", color: "#94A3B8", fontWeight: 500 }}>Disabled</span>
+                              ) : bLevel === "red" ? (
+                                <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B91C1C" }}>
+                                  ● Red Breach (+{overage.toFixed(1)}pp)
+                                </span>
+                              ) : bLevel === "amber" ? (
+                                <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B45309" }}>
+                                  ▲ Amber Breach (+{overage.toFixed(1)}pp)
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: "0.6875rem", fontWeight: 500, color: "#15803D" }}>✓ Compliant</span>
+                              )}
+                            </td>
+                            {/* Delete */}
+                            <td style={{ padding: "0.625rem 0.875rem", width: "44px" }}>
+                              <button
+                                onClick={() =>
+                                  setPolicyRules((prev) => prev.filter((r) => r.id !== rule.id))
+                                }
+                                style={{
+                                  background: "transparent", border: "1px solid #E2E8F0",
+                                  borderRadius: "0.375rem", padding: "0.25rem 0.4rem",
+                                  cursor: "pointer", color: "#B91C1C",
+                                  display: "flex", alignItems: "center",
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Add rule form */}
+                <div style={{
+                  display: "flex", gap: "0.625rem", alignItems: "flex-end",
+                  padding: "0.75rem", background: "#F8FAFC",
+                  border: "1px solid #E2E8F0", borderRadius: "0.625rem",
+                }}>
+                  <div style={{ flex: "0 0 120px" }}>
+                    <label style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", display: "block", marginBottom: "0.3rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Dimension
+                    </label>
+                    <select
+                      value={newRuleDim}
+                      onChange={(e) => setNewRuleDim(e.target.value as DimKey)}
+                      style={{ width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.4rem 0.5rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF", outline: "none", cursor: "pointer" }}
+                    >
+                      {(["Lessee", "Country", "Region", "Type", "Vintage", "Currency"] as DimKey[]).map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ flex: "1 1 200px" }}>
+                    <label style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", display: "block", marginBottom: "0.3rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Rule label
+                    </label>
+                    <input
+                      value={newRuleLabel}
+                      onChange={(e) => setNewRuleLabel(e.target.value)}
+                      placeholder={`No single ${newRuleDim.toLowerCase()} > X% of book`}
+                      style={{ width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.4rem 0.625rem", fontSize: "0.8125rem", color: "#0F172A", fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
+                    />
+                  </div>
+                  <div style={{ flex: "0 0 80px" }}>
+                    <label style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", display: "block", marginBottom: "0.3rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      Limit %
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={newRuleLimit}
+                      onChange={(e) => setNewRuleLimit(Number(e.target.value))}
+                      style={{ width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.4rem 0.5rem", fontSize: "0.8125rem", color: "#0F172A", fontFamily: "monospace", outline: "none", textAlign: "right" as const }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!newRuleLabel.trim()) return;
+                      setPolicyRules((prev) => [
+                        ...prev,
+                        {
+                          id: `pr-custom-${++policyRuleIdRef.current}`,
+                          dimension: newRuleDim,
+                          label: newRuleLabel.trim(),
+                          limitPct: newRuleLimit,
+                          enabled: true,
+                          description: "",
+                        },
+                      ]);
+                      setNewRuleLabel("");
+                      setNewRuleLimit(20);
+                    }}
+                    disabled={!newRuleLabel.trim()}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.375rem",
+                      background: !newRuleLabel.trim() ? "#94A3B8" : "#002147",
+                      color: "#FFFFFF", border: "none", borderRadius: "0.375rem",
+                      padding: "0.4rem 0.875rem", fontSize: "0.8125rem", fontWeight: 500,
+                      cursor: !newRuleLabel.trim() ? "not-allowed" : "pointer",
+                      whiteSpace: "nowrap" as const, flexShrink: 0,
+                    }}
+                  >
+                    <Plus size={13} /> Add Rule
+                  </button>
+                </div>
+
+                {/* Footer note */}
+                <div style={{ marginTop: "0.875rem", fontSize: "0.75rem", color: "#94A3B8" }}>
+                  Policy limits are checked against live portfolio concentration. Breaches surface in{" "}
+                  <strong style={{ color: "#64748B" }}>Portfolio → Concentration → Covenant Headroom</strong>{" "}
+                  and trigger automated email alerts per the Alerts configuration.
                 </div>
               </Card>
             </div>
@@ -734,8 +1086,283 @@ export default function Settings() {
               </Card>
             </div>
           )}
+          {activeTab === "excel" && <ExcelAddinTab />}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Excel Add-in Settings Tab ───────────────────────────────────────────── */
+
+const ADDIN_FUNCTIONS = [
+  { id: "AER.ECL",              params: "leaseId, scenario, asOfDate", group: "ECL & Risk",       description: "Expected Credit Loss in $M for a lease under a scenario"             },
+  { id: "AER.PORTFOLIO_ECL",    params: "scenario, asOfDate",          group: "ECL & Risk",       description: "Total portfolio ECL in $M"                                           },
+  { id: "AER.STAGE",            params: "leaseId, asOfDate",           group: "ECL & Risk",       description: "IFRS 9 stage (1, 2, or 3) for a lease"                              },
+  { id: "AER.LGD",              params: "leaseId",                     group: "ECL & Risk",       description: "Loss Given Default (decimal), net of SD and MR offsets"             },
+  { id: "AER.PD",               params: 'leaseId, "12m"|"lifetime"',   group: "ECL & Risk",       description: "Probability of Default for a lease"                                  },
+  { id: "AER.EAD",              params: "leaseId",                     group: "ECL & Risk",       description: "Exposure at Default in $M"                                           },
+  { id: "AER.MR_BALANCE",       params: "leaseId, asOfDate",           group: "Maintenance & SD", description: "Maintenance reserve balance in $M"                                  },
+  { id: "AER.SD_POSTED",        params: "leaseId",                     group: "Maintenance & SD", description: "Security deposit posted in $M"                                      },
+  { id: "AER.MR_SHORTFALL",     params: "leaseId",                     group: "Maintenance & SD", description: "Projected MR shortfall at EOL in $M (negative = surplus)"          },
+  { id: "AER.REPO_P50",         params: "jurisdictionCode",            group: "Jurisdictions",    description: "P50 repossession timeline in months (ISO country code)"             },
+  { id: "AER.REPO_P90",         params: "jurisdictionCode",            group: "Jurisdictions",    description: "P90 repossession timeline in months"                                },
+  { id: "AER.REPO_COST",        params: "jurisdictionCode",            group: "Jurisdictions",    description: "Repossession cost as % of aircraft value (decimal)"                 },
+  { id: "AER.CTC_SCORE",        params: "jurisdictionCode",            group: "Jurisdictions",    description: "Cape Town Convention compliance score 0–100"                        },
+  { id: "AER.BEHAVIOR_SCORE",   params: "lesseeId",                    group: "Counterparty",     description: "OCPI behavior score 0–100 (0 = worst contractual performance)"      },
+  { id: "AER.WATCHLIST_STATUS", params: "lesseeId",                    group: "Counterparty",     description: 'Watchlist status: "GREEN", "AMBER", or "RED"'                      },
+  { id: "AER.LESSEE_STAGE",     params: "lesseeId",                    group: "Counterparty",     description: "Worst IFRS 9 stage across all leases for a lessee"                  },
+  { id: "AER.LESSEE_ECL",       params: "lesseeId, scenario",          group: "Counterparty",     description: "Total ECL in $M across all leases for a lessee"                    },
+  { id: "AER.MARKET_VALUE",     params: "msn",                         group: "Portfolio",        description: "Half-life market value in $M by aircraft MSN"                       },
+  { id: "AER.ENCUMBERED_VALUE", params: "msn",                         group: "Portfolio",        description: "Lease-encumbered value (LEV) in $M by MSN"                         },
+  { id: "AER.KPI",              params: "metricName, asOfDate",        group: "Portfolio",        description: "Named portfolio KPI: portfolio_ecl | book_value | ecl_rate | …"    },
+] as const;
+
+const FN_GROUPS = ["ECL & Risk", "Maintenance & SD", "Jurisdictions", "Counterparty", "Portfolio"] as const;
+
+const INSTALL_STEPS = [
+  {
+    platform: "Mac — Excel Desktop",
+    steps: [
+      "Quit Excel if it is open.",
+      'Create the add-in folder if it does not exist:\nmkdir -p ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef',
+      "Download manifest.xml using the button above and copy it into that folder.",
+      'Open Excel → Insert → Add-ins → My Add-ins → Shared Folder → select "Aeroinsights Decision Platform".',
+      "The Aeroinsights button appears in the Home ribbon. Click it to open the task pane.",
+    ],
+  },
+  {
+    platform: "Windows — Excel Desktop",
+    steps: [
+      "Create a local shared folder, e.g. C:\\AeroinsightsAddin, and copy manifest.xml into it.",
+      "In Excel: File → Options → Trust Center → Trust Center Settings → Trusted Add-in Catalogs.",
+      'Add the folder path as a catalog URL. Check "Show in Menu". Click OK and restart Excel.',
+      'Insert → My Add-ins → Shared Folder → "Aeroinsights Decision Platform".',
+    ],
+  },
+  {
+    platform: "Excel Online",
+    steps: [
+      "Open any workbook in Excel Online.",
+      "Insert → Add-ins → Upload My Add-in.",
+      "Browse to the downloaded manifest.xml and click Upload.",
+      "The Aeroinsights button appears in the ribbon immediately.",
+    ],
+  },
+];
+
+function ExcelAddinTab() {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [openPlatform, setOpenPlatform] = useState<string | null>("Mac — Excel Desktop");
+
+  const copyFormula = (fn: typeof ADDIN_FUNCTIONS[number]) => {
+    const example = `=AER.ECL("LSE-2019-001","Baseline","2026-04-29")`.replace(
+      /^=AER\.ECL.*/,
+      `=${fn.id}(${fn.params})`
+    );
+    navigator.clipboard.writeText(example).then(() => {
+      setCopiedId(fn.id);
+      setTimeout(() => setCopiedId(null), 1500);
+    });
+  };
+
+  const downloadManifest = () => {
+    // In production, link to https://addin.aerinsights.com/manifest.xml
+    // In development, trigger browser navigation to the dev server
+    window.open("https://addin.aerinsights.com/manifest.xml", "_blank");
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+      {/* Hero card */}
+      <Card title="Excel Add-in" subtitle="Pull live Aeroinsights data directly into Excel cells using 20 custom AER.* functions">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+          {[
+            { n: "20", label: "Custom functions" },
+            { n: "4",  label: "Function groups"  },
+            { n: "360°", label: "Portfolio coverage"},
+          ].map(k => (
+            <div key={k.label} style={{
+              background: "#F8FAFC", border: "1px solid #E2E8F0",
+              borderRadius: "0.5rem", padding: "1rem", textAlign: "center",
+            }}>
+              <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#002147" }}>{k.n}</div>
+              <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "0.125rem" }}>{k.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          background: "#EFF6FF", border: "1px solid #BFDBFE",
+          borderRadius: "0.5rem", padding: "1rem 1.25rem",
+          marginBottom: "1.25rem",
+        }}>
+          <p style={{ fontSize: "0.8125rem", color: "#1D4ED8", lineHeight: 1.6, margin: 0 }}>
+            <strong>How it works:</strong> After installing the add-in in Excel, sign in using the task pane.
+            Your session token is stored locally and used to authenticate every{" "}
+            <code style={{ fontFamily: "monospace", background: "rgba(29,78,216,0.1)", padding: "0 4px", borderRadius: 3 }}>
+              AER.*
+            </code>{" "}
+            function call. Data flows directly from the Aeroinsights API to your Excel cells — no copy-paste, no exports.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <button
+            onClick={downloadManifest}
+            style={{
+              display: "flex", alignItems: "center", gap: "0.5rem",
+              background: "#002147", color: "#FFFFFF",
+              border: "none", borderRadius: "0.5rem",
+              padding: "0.625rem 1.25rem", fontSize: "0.8125rem",
+              fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            <Download size={15}/> Download manifest.xml
+          </button>
+          <a
+            href="https://app.aerinsights.com/docs/excel-addin"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: "flex", alignItems: "center", gap: "0.5rem",
+              background: "transparent", color: "#002147",
+              border: "1px solid #CBD5E1", borderRadius: "0.5rem",
+              padding: "0.625rem 1.25rem", fontSize: "0.8125rem",
+              fontWeight: 600, cursor: "pointer", textDecoration: "none",
+            }}
+          >
+            Full documentation ↗
+          </a>
+        </div>
+      </Card>
+
+      {/* Installation guide */}
+      <Card title="Installation" subtitle="Sideload the manifest into Excel Desktop (Mac or Windows) or Excel Online">
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {INSTALL_STEPS.map(({ platform, steps }) => {
+            const isOpen = openPlatform === platform;
+            return (
+              <div key={platform} style={{ border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
+                <button
+                  onClick={() => setOpenPlatform(isOpen ? null : platform)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center",
+                    justifyContent: "space-between", padding: "0.75rem 1rem",
+                    background: isOpen ? "#F8FAFC" : "#FFFFFF",
+                    border: "none", cursor: "pointer", textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0F172A" }}>
+                    {platform}
+                  </span>
+                  {isOpen
+                    ? <ChevronDown size={15} style={{ color: "#94A3B8", flexShrink: 0 }}/>
+                    : <ChevronRt  size={15} style={{ color: "#94A3B8", flexShrink: 0 }}/>
+                  }
+                </button>
+                {isOpen && (
+                  <div style={{ padding: "0 1rem 1rem", borderTop: "1px solid #E2E8F0" }}>
+                    <ol style={{ paddingLeft: "1.25rem", margin: 0, display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                      {steps.map((step, i) => (
+                        <li key={i} style={{ fontSize: "0.8125rem", color: "#475569", lineHeight: 1.6, marginTop: i === 0 ? "0.875rem" : 0 }}>
+                          {step.split("\n").map((line, j) =>
+                            j === 0 ? <span key={j}>{line}</span>
+                            : <code key={j} style={{ display: "block", marginTop: "0.375rem", fontFamily: "monospace", fontSize: "0.75rem", background: "#F1F5F9", padding: "0.375rem 0.625rem", borderRadius: "0.25rem", color: "#002147" }}>{line}</code>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Function reference */}
+      <Card title="Available Functions" subtitle="All 20 AER.* custom functions — click any row to copy the formula skeleton">
+        {FN_GROUPS.map(group => {
+          const fns = ADDIN_FUNCTIONS.filter(f => f.group === group);
+          return (
+            <div key={group} style={{ marginBottom: "1rem" }}>
+              <div style={{
+                fontSize: "0.6875rem", fontWeight: 700, letterSpacing: "0.06em",
+                color: "#64748B", textTransform: "uppercase",
+                padding: "0.375rem 0", marginBottom: "0.375rem",
+                borderBottom: "1px solid #E2E8F0",
+              }}>
+                {group}
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                <tbody>
+                  {fns.map(fn => (
+                    <tr
+                      key={fn.id}
+                      onClick={() => copyFormula(fn)}
+                      style={{
+                        borderBottom: "1px solid #F1F5F9",
+                        cursor: "pointer",
+                        transition: "background 100ms ease-out",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#F8FAFC")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <td style={{ padding: "0.5rem 0.5rem 0.5rem 0", whiteSpace: "nowrap", width: "200px" }}>
+                        <span style={{
+                          fontFamily: "monospace", fontSize: "0.8125rem",
+                          fontWeight: 700, color: "#002147",
+                        }}>
+                          {fn.id}
+                        </span>
+                      </td>
+                      <td style={{ padding: "0.5rem 0.75rem", color: "#94A3B8", fontFamily: "monospace", fontSize: "0.75rem", whiteSpace: "nowrap" }}>
+                        ({fn.params})
+                      </td>
+                      <td style={{ padding: "0.5rem 0", color: "#475569", lineHeight: 1.4 }}>
+                        {fn.description}
+                      </td>
+                      <td style={{ padding: "0.5rem 0 0.5rem 0.75rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                        {copiedId === fn.id
+                          ? <span style={{ fontSize: "0.75rem", color: "#16A34A", display: "flex", alignItems: "center", gap: 4 }}><CheckCheck size={13}/> Copied</span>
+                          : <Copy size={13} style={{ color: "#CBD5E1" }}/>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
+      </Card>
+
+      {/* Requirements */}
+      <Card title="Requirements" subtitle="What you need before installing">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+          {[
+            { label: "Microsoft 365",        detail: "Excel Desktop (Mac or Windows) or Excel Online" },
+            { label: "HTTPS dev server",      detail: "npm run dev in packages/excel-addin/ for local testing" },
+            { label: "Auth0 SPA app",         detail: "A separate Auth0 client configured for addin.aerinsights.com" },
+            { label: "CORS origin",           detail: "addin.aerinsights.com must be in backend CORS_ORIGINS" },
+          ].map(req => (
+            <div key={req.label} style={{
+              background: "#F8FAFC", border: "1px solid #E2E8F0",
+              borderRadius: "0.5rem", padding: "0.875rem 1rem",
+            }}>
+              <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A", marginBottom: "0.25rem" }}>
+                {req.label}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#64748B", lineHeight: 1.5 }}>
+                {req.detail}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
     </div>
   );
 }

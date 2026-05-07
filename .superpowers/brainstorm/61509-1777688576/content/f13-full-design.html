@@ -1,0 +1,131 @@
+<h2>F13 — Full Design: Lessee Deep-Dive</h2>
+<p class="subtitle">Sprint 8 · Counterparties page enrichment · 5-tab profile panel</p>
+
+<div class="section">
+  <h3>Architecture</h3>
+  <p>New isolated component <code>LesseeProfilePanel.tsx</code> absorbs all right-column content. <code>Counterparties.tsx</code> reduces to: sidebar lessee list + <code>&lt;LesseeProfilePanel lesseeId={selectedLessee.id} /&gt;</code>. All synthetic data, types, and helpers live inside the new file — same isolation pattern as <code>ConcentrationTab.tsx</code>.</p>
+</div>
+
+<div class="section">
+  <h3>5-Tab Structure</h3>
+  <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:0.75rem;overflow:hidden;margin:0.75rem 0">
+
+    <!-- Profile Header (always visible, above tabs) -->
+    <div style="background:#002147;color:white;padding:0.875rem 1.25rem;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:0.9rem;font-weight:600">IndiGo Airlines</div>
+        <div style="font-size:0.7rem;opacity:0.75">India · BB- · 6 leases · $184M exposure</div>
+      </div>
+      <div style="background:rgba(185,28,28,0.6);padding:0.2rem 0.6rem;border-radius:0.75rem;font-size:0.7rem;font-weight:600">Stage 3</div>
+    </div>
+
+    <!-- Tab Nav -->
+    <div style="display:flex;border-bottom:1px solid #E2E8F0;background:white">
+      <span style="padding:0.5rem 1rem;border-bottom:2px solid #002147;color:#002147;font-weight:600;font-size:0.75rem">Overview</span>
+      <span style="padding:0.5rem 1rem;color:#64748B;font-size:0.75rem">Leases</span>
+      <span style="padding:0.5rem 1rem;color:#64748B;font-size:0.75rem">ECL</span>
+      <span style="padding:0.5rem 1rem;color:#64748B;font-size:0.75rem">Timeline</span>
+      <span style="padding:0.5rem 1rem;color:#64748B;font-size:0.75rem">Scenarios</span>
+    </div>
+
+    <div style="padding:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+
+      <!-- Overview tab content -->
+      <div style="background:white;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem">
+        <div style="font-size:0.65rem;font-weight:600;color:#64748B;text-transform:uppercase;margin-bottom:0.4rem">Overview Tab</div>
+        <div style="font-size:0.75rem;color:#475569;line-height:1.5">
+          Analyst note banner<br>
+          KPI cards: Behavior Score · Days Overdue<br>
+          Radar chart + score bars<br>
+          Restructuring Simulator (7 options)
+        </div>
+      </div>
+
+      <!-- Leases tab content -->
+      <div style="background:white;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem">
+        <div style="font-size:0.65rem;font-weight:600;color:#64748B;text-transform:uppercase;margin-bottom:0.4rem">Leases Tab</div>
+        <div style="font-size:0.75rem;color:#475569;line-height:1.5">
+          KPI strip: # leases · total rent/mo · WA rem. term<br>
+          Table: Lease ID · Aircraft · MSN · Rent · EAD · End date · Stage
+        </div>
+      </div>
+
+      <!-- ECL tab content -->
+      <div style="background:white;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem">
+        <div style="font-size:0.65rem;font-weight:600;color:#64748B;text-transform:uppercase;margin-bottom:0.4rem">ECL Tab</div>
+        <div style="font-size:0.75rem;color:#475569;line-height:1.5">
+          KPI strip: Total ECL 12m · ECL Lifetime · ECL Rate · WA PD<br>
+          Table: Lease · EAD · PD 12m · PD LT · LGD · ECL 12m · ECL LT<br>
+          Horizontal bar chart: ECL by lease
+        </div>
+      </div>
+
+      <!-- Timeline tab content -->
+      <div style="background:white;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem">
+        <div style="font-size:0.65rem;font-weight:600;color:#64748B;text-transform:uppercase;margin-bottom:0.4rem">Timeline Tab</div>
+        <div style="font-size:0.75rem;color:#475569;line-height:1.5">
+          12-month DPD bar chart (green/amber/red) with annotated events<br>
+          Event log: Date · Type · Description · Impact<br>
+          Types: payment · late · missed · rating-change · stage-change · trigger · deferral
+        </div>
+      </div>
+
+      <!-- Scenarios tab content - full width -->
+      <div style="background:white;border:1px solid #E2E8F0;border-radius:0.5rem;padding:0.75rem;grid-column:1/-1">
+        <div style="font-size:0.65rem;font-weight:600;color:#64748B;text-transform:uppercase;margin-bottom:0.4rem">Scenarios Tab</div>
+        <div style="font-size:0.75rem;color:#475569;line-height:1.5">
+          3 rows: Base Case · Mild Stress (GDP −1%, RPK −10%) · Severe Stress (GDP −3%, RPK −30%, fuel +40%) — per-lessee ECL 12m · ECL Lifetime · Δ vs Base · Stage impact comment
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 70px 70px 70px 1fr;gap:4px;margin-top:0.5rem">
+          <div style="background:#F4F5F7;padding:0.2rem 0.4rem;font-size:0.6rem;font-weight:600;color:#64748B;border-radius:3px">Scenario</div>
+          <div style="background:#F4F5F7;padding:0.2rem 0.4rem;font-size:0.6rem;font-weight:600;color:#64748B;border-radius:3px;text-align:right">ECL 12m</div>
+          <div style="background:#F4F5F7;padding:0.2rem 0.4rem;font-size:0.6rem;font-weight:600;color:#64748B;border-radius:3px;text-align:right">ECL LT</div>
+          <div style="background:#F4F5F7;padding:0.2rem 0.4rem;font-size:0.6rem;font-weight:600;color:#64748B;border-radius:3px;text-align:right">Δ Base</div>
+          <div style="background:#F4F5F7;padding:0.2rem 0.4rem;font-size:0.6rem;font-weight:600;color:#64748B;border-radius:3px">Stage Impact</div>
+
+          <div style="background:white;border:1px solid #E2E8F0;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px">Base Case</div>
+          <div style="background:white;border:1px solid #E2E8F0;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right">$2.36M</div>
+          <div style="background:white;border:1px solid #E2E8F0;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right">$4.62M</div>
+          <div style="background:white;border:1px solid #E2E8F0;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right;color:#64748B">—</div>
+          <div style="background:white;border:1px solid #E2E8F0;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;color:#475569">Current stage maintained</div>
+
+          <div style="background:#FEF3C7;border:1px solid #FCD34D;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px">Mild Stress</div>
+          <div style="background:#FEF3C7;border:1px solid #FCD34D;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right">$3.14M</div>
+          <div style="background:#FEF3C7;border:1px solid #FCD34D;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right">$6.21M</div>
+          <div style="background:#FEF3C7;border:1px solid #FCD34D;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right;color:#B45309">+33%</div>
+          <div style="background:#FEF3C7;border:1px solid #FCD34D;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;color:#B45309">2 leases S2→S3 risk</div>
+
+          <div style="background:#FEE2E2;border:1px solid #FECACA;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px">Severe Stress</div>
+          <div style="background:#FEE2E2;border:1px solid #FECACA;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right">$5.81M</div>
+          <div style="background:#FEE2E2;border:1px solid #FECACA;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right">$11.40M</div>
+          <div style="background:#FEE2E2;border:1px solid #FECACA;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;text-align:right;color:#B91C1C">+146%</div>
+          <div style="background:#FEE2E2;border:1px solid #FECACA;padding:0.2rem 0.4rem;font-size:0.6rem;border-radius:3px;color:#B91C1C">Write-off risk elevated</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>File Changes</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+    <tr style="background:#F4F5F7">
+      <th style="padding:0.4rem 0.75rem;text-align:left;color:#64748B;font-size:0.7rem;text-transform:uppercase">File</th>
+      <th style="padding:0.4rem 0.75rem;text-align:left;color:#64748B;font-size:0.7rem;text-transform:uppercase">Change</th>
+    </tr>
+    <tr style="border-bottom:1px solid #E2E8F0">
+      <td style="padding:0.4rem 0.75rem;font-family:monospace;color:#002147">src/app/components/counterparties/LesseeProfilePanel.tsx</td>
+      <td style="padding:0.4rem 0.75rem;color:#475569"><strong>New</strong> — all types, 6-lessee synthetic datasets, helpers, 5-tab UI (~600 lines)</td>
+    </tr>
+    <tr>
+      <td style="padding:0.4rem 0.75rem;font-family:monospace;color:#002147">src/app/pages/Counterparties.tsx</td>
+      <td style="padding:0.4rem 0.75rem;color:#475569"><strong>Modify</strong> — import LesseeProfilePanel, remove inline chart/restructuring code, replace right column with &lt;LesseeProfilePanel /&gt;</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:0.75rem;padding:1rem">
+  <h3 style="color:#15803D;margin:0 0 0.5rem">✓ Does this design look right?</h3>
+  <p style="color:#166534;font-size:0.8rem;margin:0">Reply in terminal to approve or request changes before spec is written.</p>
+</div>

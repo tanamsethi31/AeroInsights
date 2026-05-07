@@ -2,10 +2,11 @@ import { useState, Fragment } from "react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
+import { MR_ADEQUACY, mrFlagColor, mrFlagBg, mrFlagBorder, type MRAdeqFlag } from "../../data/maintenanceHeuristics";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface SDRecord {
+export interface SDRecord {
   type: "Cash" | "LC";
   amount: number;
   currency: string;
@@ -13,7 +14,7 @@ interface SDRecord {
   governingLaw: string;
 }
 
-interface MRComponent {
+export interface MRComponent {
   component: "Airframe HSI" | "Engine PR" | "LLPs" | "Landing Gear" | "APU";
   rateBasis: "$/FH" | "$/cycle";
   rateAmount: number;
@@ -26,7 +27,7 @@ interface MRComponent {
   remainingUnits: number;
 }
 
-interface LeaseSDMR {
+export interface LeaseSDMR {
   leaseId: string;
   lessee: string;
   aircraft: string;
@@ -39,7 +40,7 @@ interface LeaseSDMR {
 
 // ─── Synthetic Dataset ────────────────────────────────────────────────────────
 
-const sdmrData: LeaseSDMR[] = [
+export const sdmrData: LeaseSDMR[] = [
   {
     leaseId: "LSE-2019-001",
     lessee: "IndiGo Airlines",
@@ -427,8 +428,34 @@ export function SDMRTab() {
     return s + (l.baseLGD - adjustedLGD(l)) * w;
   }, 0);
 
+  // ── Portfolio MR adequacy summary ──────────────────────────────────────────
+  const shortfallLeases = sdmrData.filter((l) => {
+    const a = MR_ADEQUACY[l.leaseId];
+    return a && a.eolShortfall > 0;
+  });
+  const totalShortfall = shortfallLeases.reduce((s, l) => s + (MR_ADEQUACY[l.leaseId]?.eolShortfall ?? 0), 0);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+      {/* MR Adequacy Portfolio Alert */}
+      {shortfallLeases.length > 0 && (
+        <div style={{
+          display: "flex", alignItems: "flex-start", gap: "0.875rem",
+          background: "rgba(180,83,9,0.06)", border: "1px solid rgba(180,83,9,0.2)",
+          borderLeft: "3px solid #B45309", borderRadius: "0.625rem", padding: "0.875rem 1.25rem",
+        }}>
+          <span style={{ fontSize: "1rem", marginTop: "0.05rem" }}>⚠</span>
+          <div>
+            <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#92400E", marginBottom: "0.125rem" }}>
+              {shortfallLeases.length} lease{shortfallLeases.length > 1 ? "s have" : " has"} projected MR shortfall at EOL — Total exposure: {fmtUSD(totalShortfall)}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#B45309" }}>
+              {shortfallLeases.map((l) => `${l.lessee} (${fmtUSD(MR_ADEQUACY[l.leaseId]?.eolShortfall ?? 0)} shortfall)`).join(" · ")}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
@@ -443,7 +470,7 @@ export function SDMRTab() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
             <thead>
               <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-                {["Lease ID", "Lessee", "Aircraft", "SD Type", "SD Amount", "MR Balance", "Return Condition", "EOL Compensation", "LGD Offset", "Expand"].map((h) => (
+                {["Lease ID", "Lessee", "Aircraft", "SD Type", "SD Amount", "MR Balance", "MR Adequacy", "Return Condition", "EOL Compensation", "LGD Offset", "Expand"].map((h) => (
                   <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
                     {h}
                   </th>
@@ -478,6 +505,24 @@ export function SDMRTab() {
                       </td>
                       <td style={{ padding: "0.75rem 1rem", fontWeight: 500, color: "#0F172A" }}>{fmtUSD(lease.sd.amount)}</td>
                       <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{fmtUSD(totalMRBalance(lease))}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        {(() => {
+                          const adeq = MR_ADEQUACY[lease.leaseId];
+                          if (!adeq) return <span style={{ color: "#94A3B8", fontSize: "0.75rem" }}>—</span>;
+                          const flag = adeq.flag as MRAdeqFlag;
+                          return (
+                            <span style={{
+                              display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                              fontSize: "0.6875rem", fontWeight: 700,
+                              background: mrFlagBg(flag), color: mrFlagColor(flag),
+                              border: `1px solid ${mrFlagBorder(flag)}`,
+                              borderRadius: "0.375rem", padding: "0.2rem 0.5rem",
+                            }}>
+                              {flag === "green" ? "●" : flag === "amber" ? "◆" : "▲"} {adeq.label}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td style={{ padding: "0.75rem 1rem" }} onClick={(e) => { e.stopPropagation(); toggleCondition(lease.leaseId); }}>
                         <button style={{
                           display: "inline-flex", alignItems: "center", gap: "0.25rem",
@@ -503,7 +548,7 @@ export function SDMRTab() {
                     </tr>
                     {isOpen && (
                       <tr key={`${lease.leaseId}-detail`} style={{ borderBottom: "1px solid #E2E8F0" }}>
-                        <td colSpan={10} style={{ padding: "0", background: "#FAFAFA" }}>
+                        <td colSpan={11} style={{ padding: "0", background: "#FAFAFA" }}>
                           <ExpandedPanel lease={lease} condition={conditions[lease.leaseId]} />
                         </td>
                       </tr>

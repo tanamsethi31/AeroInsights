@@ -23,6 +23,7 @@ import { Fade } from "../components/ui/Fade";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { ArrowRight, Play, Download, RefreshCw, AlertCircle, CheckCircle2, Circle, ChevronRight, X as XIcon } from "lucide-react";
 import { useOnboarding } from "../contexts/OnboardingContext";
+import { DASHBOARD_SIGNAL_TILES, type SignalSeverity } from "../data/intelligenceData";
 
 const eclTrendData = [
   { month: "Oct", ecl: 38.1 },
@@ -229,7 +230,7 @@ export default function Dashboard() {
                   Getting started — {completedCount} of {checklist.length} done
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-                  Complete these steps to get the most from Aerinsights
+                  Complete these steps to get the most from Aeroinsights
                 </div>
               </div>
             </div>
@@ -338,6 +339,141 @@ export default function Dashboard() {
           subtitle="Last run: 09:14 today"
           staggerIndex={3}
         />
+      </div>
+
+      {/* Market Signals strip */}
+      <div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "0.625rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span
+              style={{
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "#475569",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              Market Signals
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                fontSize: "0.7rem",
+                color: "#15803D",
+                background: "rgba(21,128,61,0.07)",
+                borderRadius: "9999px",
+                padding: "0.1rem 0.5rem",
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: "5px",
+                  height: "5px",
+                  borderRadius: "50%",
+                  background: "#15803D",
+                  flexShrink: 0,
+                }}
+              />
+              Live
+            </span>
+          </div>
+          <button
+            onClick={() => navigate("/intelligence")}
+            style={{
+              fontSize: "0.75rem",
+              color: "#002147",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.2rem",
+            }}
+          >
+            View all signals →
+          </button>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: "0.75rem",
+          }}
+        >
+          {DASHBOARD_SIGNAL_TILES.map((tile) => {
+            const sevColor =
+              (tile.severity as SignalSeverity) === "high"   ? "#B91C1C" :
+              (tile.severity as SignalSeverity) === "medium" ? "#B45309" : "#15803D";
+            const sevBg =
+              (tile.severity as SignalSeverity) === "high"   ? "rgba(185,28,28,0.06)" :
+              (tile.severity as SignalSeverity) === "medium" ? "rgba(180,83,9,0.06)"  : "rgba(21,128,61,0.06)";
+            const dirArrow =
+              tile.direction === "up" ? "▲" : tile.direction === "down" ? "▼" : "—";
+
+            return (
+              <button
+                key={tile.id}
+                onClick={() => navigate(tile.href)}
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid #E2E8F0",
+                  borderTop: `3px solid ${sevColor}`,
+                  borderRadius: "0.625rem",
+                  padding: "0.75rem 0.875rem",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  transition: "box-shadow 140ms ease-out, transform 140ms ease-out",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.10)";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "none";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.35rem" }}>
+                  <span style={{ fontSize: "1rem" }}>{tile.icon}</span>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#475569" }}>{tile.label}</span>
+                </div>
+                <div
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 800,
+                    color: sevColor,
+                    lineHeight: 1.1,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {dirArrow} {tile.value}
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "#475569",
+                    marginTop: "0.25rem",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {tile.subtext}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Charts row — hidden in Executive Mode */}
