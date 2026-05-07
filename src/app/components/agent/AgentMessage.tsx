@@ -47,6 +47,31 @@ function parseTable(lines: string[]): { headers: string[]; rows: string[][] } {
   return { headers, rows };
 }
 
+// ─── Inline markdown parser ─────────────────────────────────────────────────────
+// Handles: **bold**, *italic*, `code`
+
+function parseInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  if (parts.length === 1) return text;
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**"))
+          return <strong key={i} style={{ fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+        if (part.startsWith("*") && part.endsWith("*"))
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        if (part.startsWith("`") && part.endsWith("`"))
+          return (
+            <code key={i} style={{ background: "#F1F5F9", borderRadius: "3px", padding: "1px 4px", fontSize: "0.8125rem", fontFamily: "monospace" }}>
+              {part.slice(1, -1)}
+            </code>
+          );
+        return <React.Fragment key={i}>{part}</React.Fragment>;
+      })}
+    </>
+  );
+}
+
 // ─── Navigation link parser ─────────────────────────────────────────────────────
 // Syntax: [[Label|/path]]
 
@@ -74,7 +99,7 @@ function parseNavLinks(
         </span>
       );
     }
-    return <span key={i}>{part}</span>;
+    return <React.Fragment key={i}>{parseInline(part)}</React.Fragment>;
   });
 }
 
@@ -142,6 +167,28 @@ function RenderContent({ content }: { content: string }) {
     // Blank line
     if (!line.trim()) {
       nodes.push(<div key={`blank-${i}`} style={{ height: "6px" }} />);
+      i++;
+      continue;
+    }
+
+    // Headings: ## H2 and ### H3
+    if (/^#{1,3}\s/.test(line.trim())) {
+      const level = (line.trim().match(/^(#+)\s/) ?? [])[1]?.length ?? 2;
+      const text = line.trim().replace(/^#+\s/, "");
+      nodes.push(
+        <div
+          key={`h-${i}`}
+          style={{
+            fontWeight: 600,
+            fontSize: level === 1 ? "1rem" : level === 2 ? "0.9375rem" : "0.875rem",
+            color: "#0F172A",
+            margin: "10px 0 3px 0",
+            lineHeight: 1.4,
+          }}
+        >
+          {parseInline(text)}
+        </div>
+      );
       i++;
       continue;
     }
