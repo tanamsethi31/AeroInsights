@@ -143,7 +143,7 @@ export function RackAndStack() {
   };
 
   function rankBadge(npv: number) {
-    if (npv === bestNPV) return { label: "★ Best NPV", bg: "#15803D", color: "#FFFFFF" };
+    if (npv === bestNPV) return { label: "Best NPV", bg: "#15803D", color: "#FFFFFF" };
     if (npv >= bestNPV * 0.90) return { label: "Good", bg: "rgba(21,128,61,0.1)", color: "#15803D" };
     if (npv >= bestNPV * 0.70) return { label: "Neutral", bg: "rgba(180,83,9,0.1)", color: "#B45309" };
     return { label: "Low", bg: "rgba(185,28,28,0.1)", color: "#B91C1C" };
@@ -323,7 +323,7 @@ export function RackAndStack() {
             })}
         </div>
         <div style={{ marginTop: "0.75rem", fontSize: "0.6875rem", color: "#94A3B8" }}>
-          ★ Green = best option · All NPVs relative to aircraft current market value as cost basis
+          Green = best option · All NPVs relative to aircraft current market value as cost basis
         </div>
       </div>
     </div>

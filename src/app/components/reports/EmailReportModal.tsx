@@ -1,6 +1,6 @@
 // src/app/components/reports/EmailReportModal.tsx
 import * as React from "react";
-import { X, Send, Plus, Trash2 } from "lucide-react";
+import { X, Send, Plus, Trash2, CheckCircle2 } from "lucide-react";
 
 interface EmailReportModalProps {
   onClose: () => void;
@@ -153,7 +153,7 @@ export function EmailReportModal({ onClose }: EmailReportModalProps) {
               gap: "12px",
             }}
           >
-            <div style={{ fontSize: "2rem" }}>✅</div>
+            <CheckCircle2 size={40} style={{ color: "#15803D" }} />
             <div style={{ fontWeight: 600, fontSize: "1rem", color: "#0F172A" }}>
               Email client opened
             </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
+import { Check, X, Circle, Plane } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
@@ -291,15 +292,15 @@ export default function Counterparties() {
         return (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.875rem" }}>
             {[
-              { label: "Sanctions Alerts", value: alerts, color: alerts > 0 ? "#B91C1C" : "#15803D", bg: alerts > 0 ? "rgba(185,28,28,0.06)" : "rgba(21,128,61,0.06)", border: alerts > 0 ? "rgba(185,28,28,0.2)" : "rgba(21,128,61,0.2)", icon: alerts > 0 ? "✕" : "✓" },
-              { label: "Under Monitoring", value: monitor, color: monitor > 0 ? "#B45309" : "#94A3B8", bg: monitor > 0 ? "rgba(180,83,9,0.06)" : "#F8FAFC", border: monitor > 0 ? "rgba(180,83,9,0.2)" : "#E2E8F0", icon: "◉" },
-              { label: "Sanctions Clear", value: clear, color: "#15803D", bg: "rgba(21,128,61,0.06)", border: "rgba(21,128,61,0.2)", icon: "✓" },
-              { label: "Fleet Exposure Flags", value: fleetAlerts, color: fleetAlerts > 0 ? "#B45309" : "#15803D", bg: fleetAlerts > 0 ? "rgba(180,83,9,0.06)" : "rgba(21,128,61,0.06)", border: fleetAlerts > 0 ? "rgba(180,83,9,0.2)" : "rgba(21,128,61,0.2)", icon: "✈" },
-            ].map(({ label, value, color, bg, border, icon }) => (
+              { label: "Sanctions Alerts", value: alerts, color: alerts > 0 ? "#B91C1C" : "#15803D", bg: alerts > 0 ? "rgba(185,28,28,0.06)" : "rgba(21,128,61,0.06)", border: alerts > 0 ? "rgba(185,28,28,0.2)" : "rgba(21,128,61,0.2)", Icon: alerts > 0 ? X : Check },
+              { label: "Under Monitoring", value: monitor, color: monitor > 0 ? "#B45309" : "#94A3B8", bg: monitor > 0 ? "rgba(180,83,9,0.06)" : "#F8FAFC", border: monitor > 0 ? "rgba(180,83,9,0.2)" : "#E2E8F0", Icon: Circle },
+              { label: "Sanctions Clear", value: clear, color: "#15803D", bg: "rgba(21,128,61,0.06)", border: "rgba(21,128,61,0.2)", Icon: Check },
+              { label: "Fleet Exposure Flags", value: fleetAlerts, color: fleetAlerts > 0 ? "#B45309" : "#15803D", bg: fleetAlerts > 0 ? "rgba(180,83,9,0.06)" : "rgba(21,128,61,0.06)", border: fleetAlerts > 0 ? "rgba(180,83,9,0.2)" : "rgba(21,128,61,0.2)", Icon: Plane },
+            ].map(({ label, value, color, bg, border, Icon }) => (
               <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: "0.75rem", padding: "0.875rem 1.125rem" }}>
                 <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>{label}</div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums", display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                  <span style={{ fontSize: "1rem" }}>{icon}</span>{value}
+                  <Icon size={16} style={{ color }} />{value}
                 </div>
                 <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.2rem" }}>screened {new Date().toLocaleDateString("en-GB")}</div>
               </div>
@@ -367,7 +368,11 @@ export default function Counterparties() {
                         borderRadius: "9999px",
                         padding: "0.1rem 0.45rem",
                       }}>
-                        {sc.status === "clear" ? "✓" : sc.status === "monitoring" ? "◉" : "✕"}{" "}
+                        {sc.status === "clear"
+                          ? <Check size={13} style={{ display: "inline", verticalAlign: "middle", color: "#15803D" }} />
+                          : sc.status === "monitoring"
+                            ? <Circle size={13} style={{ display: "inline", verticalAlign: "middle", color: "#B45309" }} />
+                            : <X size={13} style={{ display: "inline", verticalAlign: "middle", color: "#B91C1C" }} />}{" "}
                         {lesseeSanctionsLabel(sc.status)}
                       </div>
                     );

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Save, Info } from "lucide-react";
+import { Save, Info, CheckCircle2 } from "lucide-react";
 import {
   MARKET_RENT_USD,
   AIRCRAFT_BASE_VALUE,
@@ -289,7 +289,9 @@ export function LeaseGenerator() {
             cursor: "pointer", transition: "background 200ms",
           }}>
             <Save size={14} />
-            {saved ? "Saved to Restructuring Simulator ✓" : "Save as Restructuring Option"}
+            {saved
+              ? <><CheckCircle2 size={14} style={{ marginRight: "4px" }} /> Saved to Restructuring Simulator</>
+              : "Save as Restructuring Option"}
           </button>
         </div>
       </div>

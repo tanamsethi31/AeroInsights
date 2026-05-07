@@ -1049,7 +1049,17 @@ function Step5({
                   transition: "all 300ms ease-out",
                 }}
               >
-                {i < eclPhaseIndex ? "✓" : i === eclPhaseIndex ? "●" : "○"} Phase {i + 1}
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: "16px", height: "16px", borderRadius: "50%",
+                  background: i < eclPhaseIndex ? "#15803D" : i === eclPhaseIndex ? "#002147" : "transparent",
+                  border: i >= eclPhaseIndex ? "1.5px solid currentColor" : "none",
+                  color: i < eclPhaseIndex ? "#fff" : "inherit",
+                  fontSize: "9px", fontWeight: 700, marginRight: "6px", flexShrink: 0,
+                }}>
+                  {i < eclPhaseIndex ? "✓" : i + 1}
+                </span>
+                Phase {i + 1}
               </span>
             ))}
           </div>

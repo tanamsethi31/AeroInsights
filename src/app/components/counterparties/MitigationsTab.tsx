@@ -1,5 +1,6 @@
 // src/app/components/counterparties/MitigationsTab.tsx
 import { useState, useMemo } from "react";
+import { Star } from "lucide-react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import {
@@ -300,7 +301,7 @@ export function MitigationsTab({ eclRows }: { eclRows: ECLRowInput[] }) {
                   return (
                     <tr key={m.id} style={{ borderBottom: "1px solid #F1F5F9", background: i === 0 ? "#F0FDF4" : i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
                       <td style={{ padding: "0.5rem 0.75rem", fontWeight: 700, color: i === 0 ? "#15803D" : "#94A3B8", fontSize: "0.75rem" }}>
-                        {i === 0 ? "★" : i + 1}
+                        {i === 0 ? <Star size={12} style={{ color: "#F59E0B", fill: "#F59E0B" }} /> : i + 1}
                       </td>
                       <td style={{ padding: "0.5rem 0.75rem", fontWeight: 600, color: "#0F172A" }}>{m.name}</td>
                       <td style={{ padding: "0.5rem 0.75rem" }}>
