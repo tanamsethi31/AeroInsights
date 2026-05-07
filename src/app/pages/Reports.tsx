@@ -10,7 +10,8 @@ const PATH_TAB: Record<string, string> = {
 };
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Download, FileText, Table, FileJson, File, Mail, Clock, CheckCircle, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe } from "lucide-react";
+import { Download, FileText, Table, FileJson, File, Mail, Clock, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe } from "lucide-react";
+import { ReportFormatModal } from "../components/reports/ReportFormatModal";
 
 const REPORT_ICON_MAP: Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>> = {
   search:       Search,
@@ -113,15 +114,10 @@ export default function Reports() {
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Report Templates");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Report Templates"); }, [pathname]);
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [generating, setGenerating] = useState<string | null>(null);
+  const [formatModal, setFormatModal] = React.useState<{ id: string; name: string } | null>(null);
 
   const categories = ["All", "Audit", "Board", "Portfolio", "Risk", "Jurisdiction"];
   const filtered = categoryFilter === "All" ? reportTemplates : reportTemplates.filter(r => r.category === categoryFilter);
-
-  const handleGenerate = (id: string) => {
-    setGenerating(id);
-    setTimeout(() => setGenerating(null), 2000);
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -184,27 +180,15 @@ export default function Reports() {
                     <Clock size={12} /> {report.lastGenerated}
                   </span>
                   <button
-                    onClick={() => handleGenerate(report.id)}
-                    disabled={generating === report.id}
+                    onClick={() => setFormatModal({ id: report.id, name: report.name })}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.375rem",
-                      background: generating === report.id ? "#94A3B8" : "#002147",
-                      color: "#FFFFFF",
-                      border: "none",
-                      borderRadius: "9999px",
-                      padding: "0.5rem 0.875rem",
-                      fontSize: "0.8125rem",
-                      fontWeight: 500,
-                      cursor: generating === report.id ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", gap: "0.375rem",
+                      background: "#002147", color: "#FFFFFF", border: "none",
+                      borderRadius: "9999px", padding: "0.5rem 0.875rem",
+                      fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
                     }}
                   >
-                    {generating === report.id ? (
-                      <><CheckCircle size={13} /> Generated!</>
-                    ) : (
-                      <><Download size={13} /> Generate</>
-                    )}
+                    <Download size={13} /> Generate
                   </button>
                 </div>
               </div>
@@ -287,6 +271,14 @@ export default function Reports() {
             </tbody>
           </table>
         </Card>
+      )}
+
+      {formatModal && (
+        <ReportFormatModal
+          reportId={formatModal.id}
+          reportName={formatModal.name}
+          onClose={() => setFormatModal(null)}
+        />
       )}
     </div>
   );
