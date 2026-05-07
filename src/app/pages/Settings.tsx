@@ -12,7 +12,7 @@ const PATH_TAB: Record<string, string> = {
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, Bell, Mail, X, Upload, FileSpreadsheet, Download, Copy, CheckCheck, ChevronDown, ChevronRight as ChevronRt, ShieldCheck, RefreshCw } from "lucide-react";
+import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, AlertTriangle, Bell, Mail, X, Upload, FileSpreadsheet, Download, Copy, CheckCheck, ChevronDown, ChevronRight as ChevronRt, ShieldCheck, RefreshCw } from "lucide-react";
 import { SANCTIONS_FEEDS, type FeedStatus } from "../data/sanctionsData";
 import {
   type DimKey,
@@ -431,7 +431,9 @@ export default function Settings() {
                 </div>
                 <div style={{ marginTop: "1rem", padding: "0.75rem", background: weights.baseline + weights.adverse + weights.severe === 100 ? "rgba(21,128,61,0.05)" : "rgba(185,28,28,0.05)", borderRadius: "0.75rem", fontSize: "0.8125rem" }}>
                   <span style={{ color: weights.baseline + weights.adverse + weights.severe === 100 ? "#15803D" : "#B91C1C", fontWeight: 600 }}>
-                    Total: {weights.baseline + weights.adverse + weights.severe}% {weights.baseline + weights.adverse + weights.severe === 100 ? "✓" : "(must equal 100%)"}
+                    Total: {weights.baseline + weights.adverse + weights.severe}% {weights.baseline + weights.adverse + weights.severe === 100
+                      ? <><Check size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: "2px", color: "#15803D" }} /> 100%</>
+                      : "(must equal 100%)"}
                   </span>
                 </div>
               </Card>
@@ -485,7 +487,8 @@ export default function Settings() {
                       borderRadius: "0.75rem",
                     }}>
                       <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#B45309", marginBottom: "0.375rem" }}>
-                        ⚠ {breaches.length} active breach{breaches.length > 1 ? "es" : ""}
+                        <AlertTriangle size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px", color: "#B45309" }} />
+                        {breaches.length} active breach{breaches.length > 1 ? "es" : ""}
                         {" — "}
                         {breaches.map((b) =>
                           `${b.peak.name} (${b.rule.dimension}, +${b.overage.toFixed(1)}pp)`
@@ -501,7 +504,8 @@ export default function Settings() {
                       background: "rgba(21,128,61,0.06)", border: "1px solid rgba(21,128,61,0.2)",
                       borderRadius: "0.75rem", fontSize: "0.8125rem", color: "#15803D", fontWeight: 500,
                     }}>
-                      ✓ All enabled policy limits currently met.
+                      <Check size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px", color: "#15803D" }} />
+                      All enabled policy limits currently met.
                     </div>
                   );
                 })()}
@@ -985,7 +989,10 @@ export default function Settings() {
                     borderRadius: "0.375rem", fontSize: "0.8125rem",
                     color: weightSum === 100 ? "#15803D" : "#B45309", fontWeight: 600,
                   }}>
-                    {weightSum === 100 ? "✓" : "⚠"} Total weight: {weightSum} / 100
+                    {weightSum === 100
+                      ? <Check size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />
+                      : <AlertTriangle size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />}
+                    Total weight: {weightSum} / 100
                     {weightSum !== 100 && <span style={{ fontWeight: 400 }}>— adjust sliders to reach exactly 100</span>}
                   </div>
                   <button
