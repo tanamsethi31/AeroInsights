@@ -1,4 +1,5 @@
 import { useState, Fragment } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
@@ -445,7 +446,7 @@ export function SDMRTab() {
           background: "rgba(180,83,9,0.06)", border: "1px solid rgba(180,83,9,0.2)",
           borderLeft: "3px solid #B45309", borderRadius: "0.625rem", padding: "0.875rem 1.25rem",
         }}>
-          <span style={{ fontSize: "1rem", marginTop: "0.05rem" }}>⚠</span>
+          <AlertTriangle size={16} style={{ color: "#92400E", flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#92400E", marginBottom: "0.125rem" }}>
               {shortfallLeases.length} lease{shortfallLeases.length > 1 ? "s have" : " has"} projected MR shortfall at EOL — Total exposure: {fmtUSD(totalShortfall)}

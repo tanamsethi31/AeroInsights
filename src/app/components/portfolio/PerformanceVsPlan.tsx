@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { AlertTriangle, Calendar } from "lucide-react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
@@ -216,7 +217,7 @@ export function PerformanceVsPlan() {
             borderLeft: "3px solid #B91C1C", borderRadius: "0.625rem",
             padding: "0.875rem 1.25rem",
           }}>
-            <span style={{ fontSize: "1rem", marginTop: "0.05rem" }}>⚠</span>
+            <AlertTriangle size={16} style={{ color: "#991B1B", flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#991B1B", marginBottom: "0.2rem" }}>
                 {atRisk.length} lease{atRisk.length > 1 ? "s" : ""} with significant underperformance vs. plan
@@ -514,7 +515,7 @@ export function PerformanceVsPlan() {
             alignItems: "center",
             gap: "0.5rem",
           }}>
-            <span style={{ fontSize: "0.875rem" }}>📅</span>
+            <Calendar size={15} style={{ color: "#92400E", flexShrink: 0 }} />
             <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "#92400E" }}>
               Lease End Date Deviations
             </span>

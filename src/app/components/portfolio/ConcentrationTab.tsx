@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from "react";
+import { AlertTriangle, Check } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Cell,
@@ -472,7 +473,9 @@ function CovenantHeadroomView({ thresholds }: { thresholds: ThresholdMap }) {
           display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0, fontSize: "1.125rem",
         }}>
-          {enabledBreaches.length > 0 ? "⚠" : "✓"}
+          {enabledBreaches.length > 0
+            ? <AlertTriangle size={18} style={{ color: "#B45309" }} />
+            : <Check size={18} style={{ color: "#15803D" }} />}
         </div>
         <div>
           <div style={{ fontSize: "0.875rem", fontWeight: 600, color: enabledBreaches.length > 0 ? "#B45309" : "#15803D" }}>
@@ -652,7 +655,7 @@ export function ConcentrationTab() {
                   borderRadius: "0.75rem",
                 }}
               >
-                <span style={{ fontSize: "1rem", flexShrink: 0 }}>⚠</span>
+                <AlertTriangle size={16} style={{ color: "#B45309", flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
                   <strong style={{ color }}>{peak.name}</strong>{" "}
                   {rule.dimension.toLowerCase()} concentration has risen to{" "}

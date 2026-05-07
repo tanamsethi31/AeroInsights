@@ -14,7 +14,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, AlertTriangle } from "lucide-react";
 
 // ─── Lookup tables ─────────────────────────────────────────────────────────────
 
@@ -328,7 +328,10 @@ export function LeasePricingTab() {
               ) : (
                 <div style={{ fontSize: "1rem", color: "#94A3B8" }}>
                   {rentKpm !== null && rentKpm <= 0
-                    ? "⚠ Doesn't pencil — IRR target too high for these inputs"
+                    ? <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <AlertTriangle size={13} style={{ color: "#B91C1C", flexShrink: 0 }} />
+                        Doesn&apos;t pencil — IRR target too high for these inputs
+                      </span>
                     : "Enter valid inputs to compute rent"}
                 </div>
               )}

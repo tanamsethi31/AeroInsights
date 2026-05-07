@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Card } from "../ui/Card";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -323,7 +324,7 @@ export function InsolvencyTab() {
 
           {/* Key risk */}
           <div style={{ background: "rgba(180,83,9,0.08)", border: "1px solid rgba(180,83,9,0.2)", borderRadius: "0.375rem", padding: "0.625rem 0.875rem", marginBottom: "0.75rem", display: "flex", gap: "0.5rem" }}>
-            <span style={{ fontSize: "0.875rem", flexShrink: 0 }}>⚠️</span>
+            <AlertTriangle size={15} style={{ color: "#92400E", flexShrink: 0 }} />
             <span style={{ fontSize: "0.8125rem", color: "#92400E" }}><strong>Key risk:</strong> {regime.keyRisk}</span>
           </div>
 
