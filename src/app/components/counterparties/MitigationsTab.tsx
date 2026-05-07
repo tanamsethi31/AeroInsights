@@ -260,7 +260,9 @@ export function MitigationsTab({ eclRows }: { eclRows: ECLRowInput[] }) {
           borderRadius: "0.75rem", padding: "1rem 1.25rem",
           display: "flex", alignItems: "flex-start", gap: "0.875rem",
         }}>
-          <div style={{ fontSize: "1.25rem", lineHeight: 1 }}>✦</div>
+          <div style={{ fontSize: "1.25rem", lineHeight: 1 }}>
+            <i className="bi bi-diamond-fill" style={{ color: "#002147", fontSize: "1rem" }} />
+          </div>
           <div>
             <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#15803D", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
               Most Cost-Effective Mitigation

@@ -122,7 +122,7 @@ function NarrativeSummaryCard({ narrative }: NarrativeSummaryCardProps) {
                   letterSpacing: "0.06em",
                 }}
               >
-                ✦ Run Summary
+                <i className="bi bi-play-circle-fill" style={{ marginRight: "6px", color: "#002147" }} />Run Summary
               </span>
               <button
                 onClick={handleCopy}

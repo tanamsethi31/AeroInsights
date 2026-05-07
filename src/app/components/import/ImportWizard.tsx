@@ -1057,7 +1057,7 @@ function Step5({
                   color: i < eclPhaseIndex ? "#fff" : "inherit",
                   fontSize: "9px", fontWeight: 700, marginRight: "6px", flexShrink: 0,
                 }}>
-                  {i < eclPhaseIndex ? "✓" : i + 1}
+                  {i < eclPhaseIndex ? <i className="bi bi-check" style={{ fontSize: "9px", fontWeight: 700 }} /> : i + 1}
                 </span>
                 Phase {i + 1}
               </span>

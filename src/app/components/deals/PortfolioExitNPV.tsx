@@ -443,7 +443,9 @@ export function PortfolioExitNPV() {
             background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px",
             padding: "60px 40px", textAlign: "center",
           }}>
-            <div style={{ fontSize: "32px", marginBottom: "12px" }}>📋</div>
+            <div style={{ fontSize: "32px", marginBottom: "12px" }}>
+              <i className="bi bi-clipboard" style={{ color: "#94A3B8" }} />
+            </div>
             <div style={{ fontSize: "14px", fontWeight: 600, color: "#475569" }}>No leases selected</div>
             <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "4px" }}>Select one or more leases from the left panel to compute exit NPV</div>
           </div>

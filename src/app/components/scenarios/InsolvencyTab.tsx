@@ -106,7 +106,7 @@ const REGIMES: Regime[] = [
     id: "generic_liquidation",
     name: "Generic Civil-Law Liquidation",
     jurisdiction: "Various",
-    flag: "🌐",
+    flag: "bi-globe",
     stayDuration: "Immediate stay on appointment of liquidator; no cure mechanism",
     cureWindow: "None — full liquidation process; lessor files as a creditor",
     executoryContracts: "All executory contracts terminated; lessor ranks with unsecured creditors if no retention-of-title registration",
@@ -238,7 +238,11 @@ export function InsolvencyTab() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", width: "100%" }}>
-                <span style={{ fontSize: "1.125rem", lineHeight: 1 }}>{r.flag}</span>
+                <span style={{ fontSize: "1.125rem", lineHeight: 1 }}>
+                  {r.flag.startsWith("bi-")
+                    ? <i className={`bi ${r.flag}`} />
+                    : r.flag}
+                </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A", lineHeight: 1.3 }}>{r.name}</div>
                   <div style={{ fontSize: "0.6875rem", color: "#64748B" }}>{r.jurisdiction}</div>
@@ -262,7 +266,7 @@ export function InsolvencyTab() {
 
         {/* Section A: Regime Detail Card */}
         <Card
-          title={`${regime.flag} ${regime.name}`}
+          title={`${regime.flag.startsWith("bi-") ? "" : regime.flag + " "}${regime.name}`}
           subtitle={regime.jurisdiction}
           headerRight={
             <span style={{
@@ -378,7 +382,7 @@ export function InsolvencyTab() {
                   style={{ width: "100%", padding: "0.5rem 0.75rem", border: "1px solid #E2E8F0", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
                 >
                   {REGIMES.map(r => (
-                    <option key={r.id} value={r.id}>{r.flag} {r.name}</option>
+                    <option key={r.id} value={r.id}>{r.flag.startsWith("bi-") ? "" : r.flag + " "}{r.name}</option>
                   ))}
                 </select>
               </div>
@@ -567,7 +571,9 @@ function TreeRow({ indent, label, value, outcome, color }: {
   color: string;
 }) {
   const paddingLeft = indent === 0 ? 0 : indent === 1 ? 16 : 32;
-  const prefix = indent === 0 ? "●" : indent === 1 ? "├─" : "└─";
+  const prefix = indent === 0
+    ? <i className="bi bi-circle-fill" style={{ color: "#002147", fontSize: "0.55rem" }} />
+    : indent === 1 ? "├─" : "└─";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", paddingLeft }}>
       <span style={{ fontSize: "0.75rem", color: "#94A3B8", flexShrink: 0, fontFamily: "monospace" }}>{prefix}</span>
