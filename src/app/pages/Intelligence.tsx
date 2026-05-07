@@ -1012,7 +1012,7 @@ function DealCard({ item }: { item: DealItem }) {
               fontWeight: 500,
             }}
           >
-            📁 {item.portfolioTag}
+            <i className="bi bi-folder" style={{ marginRight: "4px" }} />{item.portfolioTag}
           </div>
         )}
 

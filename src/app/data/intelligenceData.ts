@@ -696,7 +696,7 @@ export const JURISDICTION_EVENTS: JurisdictionEvent[] = [
 
 export interface DashboardSignalTile {
   id: string;
-  icon: string;           // emoji
+  icon: string;           // bootstrap icon class
   label: string;
   value: string;
   subtext: string;
@@ -708,7 +708,7 @@ export interface DashboardSignalTile {
 export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   {
     id: "dst-01",
-    icon: "⛽",
+    icon: "bi-fuel-pump",
     label: "Jet-A1 Fuel",
     value: "+27.3% YTD",
     subtext: "$1.12/litre · All 10 lessees · ECL +$4.2M",
@@ -718,7 +718,7 @@ export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   },
   {
     id: "dst-02",
-    icon: "🌏",
+    icon: "bi-globe",
     label: "India GDP Revised",
     value: "−0.6pp",
     subtext: "5.8% vs 6.4% IMF Oct · IndiGo $184M · ECL +$2.1M",
@@ -728,7 +728,7 @@ export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   },
   {
     id: "dst-03",
-    icon: "💱",
+    icon: "bi-currency-exchange",
     label: "INR/USD",
     value: "INR −2.1%",
     subtext: "₹84.32 · IndiGo lease ratio compressed",
@@ -738,7 +738,7 @@ export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   },
   {
     id: "dst-04",
-    icon: "✈",
+    icon: "bi-airplane",
     label: "EU Aviation RPK",
     value: "+4.8% YoY",
     subtext: "Eurocontrol Mar 2026 · Ryanair, Air France, Lufthansa",
@@ -748,7 +748,7 @@ export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   },
   {
     id: "dst-05",
-    icon: "📋",
+    icon: "bi-clipboard",
     label: "Deal Feed",
     value: "4 events",
     subtext: "2 negative · 2 positive · IndiGo · Aeromexico · SriLankan",

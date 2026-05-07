@@ -446,7 +446,7 @@ export default function Dashboard() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.35rem" }}>
-                  <span style={{ fontSize: "1rem" }}>{tile.icon}</span>
+                  <i className={`bi ${tile.icon}`} style={{ fontSize: "1rem" }} />
                   <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#475569" }}>{tile.label}</span>
                 </div>
                 <div
