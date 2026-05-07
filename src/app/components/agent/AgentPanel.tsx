@@ -2,13 +2,19 @@
 import * as React from "react";
 import { useLocation } from "react-router";
 import { Zap, X, Minus, Send, ChevronDown } from "lucide-react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useAgent } from "../../contexts/AgentContext";
 import { streamAgentResponse } from "../../services/agentService";
 import { AgentMessage, type ActionCard } from "./AgentMessage";
 import { AgentSuggestions } from "./AgentSuggestions";
 
-const USAGE_LIMIT = 200;
-const USAGE_WARN = 160;
+// Configurable via Vercel env var VITE_AI_DAILY_LIMIT (default 20).
+// Change in Vercel dashboard → Settings → Environment Variables, then redeploy.
+const USAGE_LIMIT = Math.max(
+  1,
+  parseInt((import.meta.env.VITE_AI_DAILY_LIMIT as string | undefined) ?? "20", 10),
+);
+const USAGE_WARN = Math.max(1, Math.floor(USAGE_LIMIT * 0.8));
 
 // ─── Pending action tracker ─────────────────────────────────────────────────────
 
@@ -129,6 +135,7 @@ function ActionsMenu({ onSelect }: { onSelect: (text: string) => void }) {
 
 export function AgentPanel() {
   const location = useLocation();
+  const { getAccessTokenSilently } = useAuth0();
   const {
     isOpen,
     setIsOpen,
@@ -183,6 +190,14 @@ export function AgentPanel() {
     abortRef.current = new AbortController();
     let accText = "";
 
+    // Get the Auth0 token to pass to the server proxy for validation.
+    let token: string | undefined;
+    try {
+      token = await getAccessTokenSilently();
+    } catch {
+      // Non-fatal: proxy will still work on localhost without a token.
+    }
+
     try {
       const history = [...messages]
         .filter((m) => m.content.trim() !== "" && !m.isStreaming)
@@ -195,7 +210,8 @@ export function AgentPanel() {
       for await (const event of streamAgentResponse(
         history,
         pageContext,
-        abortRef.current.signal
+        abortRef.current.signal,
+        token,
       )) {
         switch (event.type) {
           case "token":
@@ -489,7 +505,7 @@ export function AgentPanel() {
               {nearLimit && " — nearing limit"}
             </span>
             <span
-              title="Query limit resets at midnight UTC. Prototype enforcement is client-side only."
+              title={`Daily limit: ${USAGE_LIMIT} queries. Resets at midnight UTC. Configured via VITE_AI_DAILY_LIMIT.`}
               style={{ fontSize: "0.75rem", color: "#CBD5E1", cursor: "help" }}
             >
               ⓘ

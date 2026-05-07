@@ -70,44 +70,62 @@ function buildSystemPrompt(pageContext: string): string {
   ].join("\n");
 }
 
-// ─── Azure OpenAI config ────────────────────────────────────────────────────────
+// ─── Endpoint resolution ────────────────────────────────────────────────────────
+//
+// Production: all requests go through /api/ai/chat (Vercel Edge Function).
+// The API key lives server-side and never reaches the browser.
+//
+// Local dev fallback: if VITE_AZURE_OPENAI_ENDPOINT + VITE_AZURE_OPENAI_KEY are
+// set in .env.local, requests go directly to Azure so you can run `npm run dev`
+// without needing `vercel dev`.  Never commit those values.
 
-function getEndpoint(): string | null {
-  return (import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined) ?? null;
-}
-
-function getApiKey(): string | null {
-  return (import.meta.env.VITE_AZURE_OPENAI_KEY as string | undefined) ?? null;
-}
-
-function getDeployment(): string | null {
-  return (
+function getLocalEndpoint(): string | null {
+  const ep  = (import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined) ?? null;
+  const key = (import.meta.env.VITE_AZURE_OPENAI_KEY     as string | undefined) ?? null;
+  const dep = (
     (import.meta.env.VITE_AZURE_OPENAI_AGENT_DEPLOYMENT as string | undefined) ??
-    (import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT as string | undefined) ??
+    (import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT        as string | undefined) ??
     null
   );
+  if (ep && key && dep) {
+    return `${ep}/openai/deployments/${dep}/chat/completions?api-version=2024-02-01`;
+  }
+  return null;
 }
 
+/** Always true in production; false only if local dev vars are also missing. */
 export function isConfigured(): boolean {
-  return !!(getEndpoint() && getApiKey() && getDeployment());
+  // In production the proxy is always reachable; server returns 503 if unconfigured.
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") return true;
+  return getLocalEndpoint() !== null;
 }
 
 // ─── Core streaming fetch ───────────────────────────────────────────────────────
 
 async function* fetchStream(
   messages: ApiMessage[],
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  token?: string,
 ): AsyncGenerator<AgentEvent> {
-  const endpoint = getEndpoint()!;
-  const apiKey = getApiKey()!;
-  const deployment = getDeployment()!;
-  const url = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=2024-02-01`;
+  // Prefer the server-side proxy; fall back to direct Azure for local dev.
+  const localUrl = getLocalEndpoint();
+  const url      = localUrl ?? "/api/ai/chat";
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (localUrl) {
+    // Local dev: authenticate directly with Azure key
+    const apiKey = (import.meta.env.VITE_AZURE_OPENAI_KEY as string | undefined) ?? "";
+    headers["api-key"] = apiKey;
+  } else {
+    // Production proxy: forward the Auth0 bearer token for server-side validation
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
 
   let res: Response;
   try {
     res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": apiKey },
+      headers,
       body: JSON.stringify({
         messages,
         tools: AGENT_TOOL_DEFINITIONS,
@@ -265,12 +283,14 @@ async function* fetchStream(
 export async function* streamAgentResponse(
   conversationMessages: Array<{ role: "user" | "assistant"; content: string }>,
   pageContext: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /** Auth0 access token — forwarded to the server proxy for validation. */
+  token?: string,
 ): AsyncGenerator<AgentEvent> {
   if (!isConfigured()) {
     yield {
       type: "error",
-      msg: "Agent not configured. Set VITE_AZURE_OPENAI_ENDPOINT, VITE_AZURE_OPENAI_KEY, and VITE_AZURE_OPENAI_AGENT_DEPLOYMENT in your .env file.",
+      msg: "Agent not configured. Set VITE_AZURE_OPENAI_ENDPOINT, VITE_AZURE_OPENAI_KEY, and VITE_AZURE_OPENAI_AGENT_DEPLOYMENT in your .env.local file.",
     };
     return;
   }
@@ -285,5 +305,5 @@ export async function* streamAgentResponse(
     ...conversationMessages.map((m) => ({ role: m.role, content: m.content })),
   ];
 
-  yield* fetchStream(apiMessages, signal);
+  yield* fetchStream(apiMessages, signal, token);
 }
