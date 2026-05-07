@@ -450,3 +450,52 @@ class SICRConfig(TimestampMixin, Base):
     upgrade_notches: Mapped[int] = mapped_column(Integer, default=2)
     country_watchlist_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     insolvency_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+# ── Alert Rule ────────────────────────────────────────────────────────────────
+
+class AlertRuleType(str, enum.Enum):
+    stage_migration = "stage_migration"
+    watchlist_elevation = "watchlist_elevation"
+    ecl_threshold = "ecl_threshold"
+    signal_severity = "signal_severity"
+    jurisdiction_risk = "jurisdiction_risk"
+    fuel_stress = "fuel_stress"
+    composite_signal = "composite_signal"
+
+
+class AlertSeverity(str, enum.Enum):
+    red = "red"
+    amber = "amber"
+    green = "green"
+
+
+class AlertRule(TimestampMixin, Base):
+    __tablename__ = "alert_rules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    rule_type: Mapped[AlertRuleType] = mapped_column(Enum(AlertRuleType), nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    threshold_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    label: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+
+    alerts: Mapped[list["Alert"]] = relationship(back_populates="rule", cascade="all, delete-orphan")
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    rule_id: Mapped[str] = mapped_column(String(36), ForeignKey("alert_rules.id"), nullable=False, index=True)
+    severity: Mapped[AlertSeverity] = mapped_column(Enum(AlertSeverity), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    entity_type: Mapped[Optional[str]] = mapped_column(String(50))
+    entity_id: Mapped[Optional[str]] = mapped_column(String(36))
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    rule: Mapped[AlertRule] = relationship(back_populates="alerts")

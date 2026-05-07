@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     audit_log,
     health,
     excel,
+    alerts,
 )
 
 api_router = APIRouter()
@@ -39,3 +40,4 @@ api_router.include_router(valuations.router, prefix="/aircraft/{aircraft_id}/val
 api_router.include_router(imports.router, prefix="/import", tags=["import"])
 api_router.include_router(audit_log.router, prefix="/audit-log", tags=["audit"])
 api_router.include_router(excel.router,     prefix="/excel",     tags=["excel-addin"])
+api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])

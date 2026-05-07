@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import * as React from "react";
 import { AgentButton } from "../agent/AgentButton";
 import { Bell, Search, Mail, ChevronDown, LogOut, CircleUser, LayoutDashboard, FileText, Plane } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -6,6 +7,10 @@ import { useNavigate } from "react-router";
 import { SidebarTrigger } from "../ui/sidebar";
 import { Separator } from "../ui/separator";
 import { search, type SearchResult } from "../../data/searchIndex";
+import { AlertsPanel } from "../alerts/AlertsPanel";
+import { AlertRulesConfig } from "../alerts/AlertRulesConfig";
+import { EmailReportModal } from "../reports/EmailReportModal";
+import { getUnreadCount } from "../../services/alertService";
 
 const CATEGORY_ICON: Record<SearchResult["category"], React.ReactNode> = {
   Page:     <LayoutDashboard size={13} style={{ color: "#94A3B8" }} />,
@@ -25,20 +30,28 @@ export function Header() {
   const menuRef   = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLInputElement>(null);
+  const bellRef   = useRef<HTMLDivElement>(null);
+
+  const [alertsOpen, setAlertsOpen] = React.useState(false);
+  const [rulesOpen, setRulesOpen]   = React.useState(false);
+  const [emailOpen, setEmailOpen]   = React.useState(false);
+  const [unreadCount, setUnreadCount] = React.useState(getUnreadCount);
 
   const { user, logout } = useAuth0();
   const navigate = useNavigate();
 
-  // ── Close user menu on outside click ──────────────────────────────────────
+  // ── Close menus on outside click ──────────────────────────────────────────
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
-      // Close search dropdown if clicking outside the search box
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setResults([]);
         setActiveIdx(-1);
+      }
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setAlertsOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -228,33 +241,62 @@ export function Header() {
         {/* Right side */}
         <div className="ml-auto flex items-center gap-1">
 
-          {/* Notifications */}
-          <button
-            className="relative flex items-center justify-center rounded-md transition-colors"
-            style={{ width: "34px", height: "34px", color: "#475569", background: "transparent", border: "none", cursor: "pointer" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#F1F5F9")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-            <span
-              className="absolute top-1 right-1 flex items-center justify-center"
-              style={{ width: "14px", height: "14px", background: "#B91C1C", borderRadius: "50%", fontSize: "0.5rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}
+          {/* Notifications / Alerts */}
+          <div ref={bellRef} style={{ position: "relative" }}>
+            <button
+              className="relative flex items-center justify-center rounded-md transition-colors"
+              style={{
+                width: "34px",
+                height: "34px",
+                color: alertsOpen ? "#002147" : "#475569",
+                background: alertsOpen ? "#F1F5F9" : "transparent",
+                border: "none",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => { if (!alertsOpen) (e.currentTarget as HTMLButtonElement).style.background = "#F1F5F9"; }}
+              onMouseLeave={(e) => { if (!alertsOpen) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              onClick={() => setAlertsOpen((v) => !v)}
+              aria-label="Notifications"
             >
-              3
-            </span>
-          </button>
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span
+                  className="absolute top-1 right-1 flex items-center justify-center"
+                  style={{ width: "14px", height: "14px", background: "#B91C1C", borderRadius: "50%", fontSize: "0.5rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1 }}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+            {alertsOpen && (
+              <AlertsPanel
+                onClose={() => setAlertsOpen(false)}
+                onOpenRules={() => { setAlertsOpen(false); setRulesOpen(true); }}
+                onUnreadChange={setUnreadCount}
+              />
+            )}
+          </div>
 
-          {/* Messages */}
-          <button
-            className="flex items-center justify-center rounded-md transition-colors"
-            style={{ width: "34px", height: "34px", color: "#475569", background: "transparent", border: "none", cursor: "pointer" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#F1F5F9")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
-            aria-label="Messages"
-          >
-            <Mail size={18} />
-          </button>
+          {/* Email Report Distribution */}
+          <div style={{ position: "relative" }}>
+            <button
+              className="flex items-center justify-center rounded-md transition-colors"
+              style={{
+                width: "34px",
+                height: "34px",
+                color: emailOpen ? "#002147" : "#475569",
+                background: emailOpen ? "#F1F5F9" : "transparent",
+                border: "none",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => { if (!emailOpen) (e.currentTarget as HTMLButtonElement).style.background = "#F1F5F9"; }}
+              onMouseLeave={(e) => { if (!emailOpen) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              onClick={() => setEmailOpen((v) => !v)}
+              aria-label="Distribute Report"
+            >
+              <Mail size={18} />
+            </button>
+          </div>
 
           <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-5" />
 
@@ -323,6 +365,10 @@ export function Header() {
           </div>
         </div>
       </div>
+
+      {/* Modals rendered inside header so they're scoped to the layout */}
+      {rulesOpen && <AlertRulesConfig onClose={() => setRulesOpen(false)} />}
+      {emailOpen && <EmailReportModal onClose={() => setEmailOpen(false)} />}
     </header>
   );
 }
