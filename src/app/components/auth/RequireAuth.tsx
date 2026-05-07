@@ -5,6 +5,12 @@ import { Outlet, useNavigate, useLocation } from "react-router";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
   ?? "http://localhost:8000/api/v1";
 
+// Comma-separated email allowlist from env var.
+// If not set, no app-level restriction is enforced (rely on Auth0 Action).
+const ALLOWED_EMAILS: string[] = (import.meta.env.VITE_ALLOWED_EMAILS as string | undefined)
+  ? (import.meta.env.VITE_ALLOWED_EMAILS as string).split(",").map((e) => e.trim().toLowerCase())
+  : [];
+
 /**
  * Route guard that:
  *  1. Redirects unauthenticated users to /login
@@ -75,6 +81,67 @@ export function RequireAuth() {
   }
 
   if (!isAuthenticated) return null;
+
+  // Secondary email allowlist check (primary guard is the Auth0 Action).
+  // Only active when VITE_ALLOWED_EMAILS is set.
+  if (
+    ALLOWED_EMAILS.length > 0 &&
+    user?.email &&
+    !ALLOWED_EMAILS.includes(user.email.toLowerCase())
+  ) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #001830 0%, #002147 60%, #003175 100%)",
+          gap: "1rem",
+        }}
+      >
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: "1rem",
+            padding: "2.5rem 2.75rem",
+            maxWidth: "400px",
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+          }}
+        >
+          <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>
+            <i className="bi bi-shield-lock" style={{ color: "#B91C1C" }} />
+          </div>
+          <div style={{ fontWeight: 700, fontSize: "1.125rem", color: "#0F172A", marginBottom: "0.5rem" }}>
+            Access Restricted
+          </div>
+          <div style={{ fontSize: "0.875rem", color: "#64748B", lineHeight: 1.6 }}>
+            <strong style={{ color: "#0F172A" }}>{user.email}</strong> is not authorised
+            to access this platform. Contact the administrator to request access.
+          </div>
+          <button
+            onClick={() => { window.location.href = "/login"; }}
+            style={{
+              marginTop: "1.5rem",
+              padding: "0.625rem 1.5rem",
+              background: "#002147",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "0.5rem",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return <Outlet />;
 }
