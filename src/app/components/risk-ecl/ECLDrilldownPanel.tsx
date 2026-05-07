@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { X, TrendingUp, DollarSign, BookOpen, AlertTriangle } from "lucide-react";
 import { StatusPill } from "../ui/StatusPill";
+import { useCurrency } from "../../contexts/CurrencyContext";
 
 // ─── Shared Types ─────────────────────────────────────────────────────────────
 
@@ -40,7 +41,6 @@ interface Props {
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
-const fmt = (n: number) => `$${n.toFixed(2)}M`;
 const pct = (n: number) => `${n.toFixed(1)}%`;
 const stageColor = (s: "1" | "2" | "3") =>
   s === "3" ? "#B91C1C" : s === "2" ? "#B45309" : "#15803D";
@@ -48,6 +48,8 @@ const stageColor = (s: "1" | "2" | "3") =>
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
+  const { fmt } = useCurrency();
+
   if (!lease) return null;
 
   const maxPD = Math.max(...lease.pdTerm.map((p) => p.pd), 0.1);
@@ -148,7 +150,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
               {lease.lessee}
             </div>
             <div style={{ fontSize: "0.8125rem", color: "#475569", marginTop: "0.1rem" }}>
-              {lease.aircraft} &nbsp;·&nbsp; EAD ${lease.eadNum.toFixed(1)}M &nbsp;·&nbsp; LGD{" "}
+              {lease.aircraft} &nbsp;·&nbsp; EAD {fmt(lease.eadNum * 1_000_000, { compact: true })} &nbsp;·&nbsp; LGD{" "}
               {lease.lgd.toFixed(0)}%
             </div>
           </div>
@@ -285,7 +287,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                 ECL = PD × LGD × EAD
               </span>
               <span>
-                12m ECL ≈ {pct(lease.pd12m)} × {pct(lease.lgd)} × ${lease.eadNum.toFixed(1)}M
+                12m ECL ≈ {pct(lease.pd12m)} × {pct(lease.lgd)} × {fmt(lease.eadNum * 1_000_000, { compact: true })}
               </span>
             </div>
           </div>
@@ -353,10 +355,10 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                       {weights[s.key]}%
                     </td>
                     <td style={{ padding: "0.5rem 0.375rem", textAlign: "right", color: "#0F172A" }}>
-                      {fmt(lease.scenarioECL[s.key].ecl12m)}
+                      {fmt(lease.scenarioECL[s.key].ecl12m * 1_000_000, { compact: true })}
                     </td>
                     <td style={{ padding: "0.5rem 0.375rem", textAlign: "right", color: "#0F172A" }}>
-                      {fmt(lease.scenarioECL[s.key].eclLifetime)}
+                      {fmt(lease.scenarioECL[s.key].eclLifetime * 1_000_000, { compact: true })}
                     </td>
                   </tr>
                 ))}
@@ -393,7 +395,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                       color: "#002147",
                     }}
                   >
-                    {fmt(wEcl12m)}
+                    {fmt(wEcl12m * 1_000_000, { compact: true })}
                   </td>
                   <td
                     style={{
@@ -403,7 +405,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                       color: "#002147",
                     }}
                   >
-                    {fmt(wEclLt)}
+                    {fmt(wEclLt * 1_000_000, { compact: true })}
                   </td>
                 </tr>
               </tbody>
@@ -440,7 +442,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                     <span
                       style={{ color: "#B91C1C", fontVariantNumeric: "tabular-nums" }}
                     >
-                      {fmt(absMovement)}
+                      {fmt(absMovement * 1_000_000, { compact: true })}
                     </span>
                   </div>
                   <div
@@ -452,7 +454,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                   >
                     <span>&nbsp;&nbsp;&nbsp;&nbsp;Cr&nbsp;&nbsp;ECL Allowance</span>
                     <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {fmt(absMovement)}
+                      {fmt(absMovement * 1_000_000, { compact: true })}
                     </span>
                   </div>
                 </>
@@ -469,7 +471,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                     <span
                       style={{ color: "#15803D", fontVariantNumeric: "tabular-nums" }}
                     >
-                      {fmt(absMovement)}
+                      {fmt(absMovement * 1_000_000, { compact: true })}
                     </span>
                   </div>
                   <div
@@ -481,7 +483,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
                   >
                     <span>&nbsp;&nbsp;&nbsp;&nbsp;Cr&nbsp;&nbsp;ECL Recovery / Write-back</span>
                     <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {fmt(absMovement)}
+                      {fmt(absMovement * 1_000_000, { compact: true })}
                     </span>
                   </div>
                 </>
@@ -532,7 +534,7 @@ export function ECLDrilldownPanel({ lease, weights, onClose }: Props) {
               &nbsp;·&nbsp;LGD:{" "}
               <strong style={{ color: "#0F172A" }}>{pct(lease.lgd)}</strong>
               &nbsp;·&nbsp;EAD:{" "}
-              <strong style={{ color: "#0F172A" }}>${lease.eadNum.toFixed(1)}M</strong>
+              <strong style={{ color: "#0F172A" }}>{fmt(lease.eadNum * 1_000_000, { compact: true })}</strong>
             </div>
           </div>
         </div>
