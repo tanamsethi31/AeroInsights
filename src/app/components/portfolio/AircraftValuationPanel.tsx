@@ -399,7 +399,7 @@ function ExpandedPanel({
                     onClick={() => onRevertOverride(valuation.msn, k)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", fontSize: "0.875rem", padding: "0 0.25rem", lineHeight: 1 }}
                   >
-                    ✕
+                    <i className="bi bi-x" />
                   </button>
                 </div>
               );

@@ -186,7 +186,11 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _ }: Props)
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
             <span style={{ fontSize: "1.25rem" }}>
-              {flag === "green" ? "●" : flag === "amber" ? "◆" : "▲"}
+              {flag === "green"
+                ? <i className="bi bi-circle-fill" style={{ color: "#15803D", fontSize: "0.6rem" }} />
+                : flag === "amber"
+                  ? <i className="bi bi-diamond-fill" style={{ color: "#B45309", fontSize: "0.6rem" }} />
+                  : <i className="bi bi-triangle-fill" style={{ color: "#B91C1C", fontSize: "0.6rem" }} />}
             </span>
             <span style={{ fontSize: "1rem", fontWeight: 700, color: flagColor, textTransform: "capitalize" }}>
               {flag === "green" ? "Adequate" : flag === "amber" ? "Attention" : "Shortfall"}
@@ -269,8 +273,12 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _ }: Props)
                   : p.eolShortfall;
                 const eventColor        = eventShortfall > 0 ? "#B91C1C" : "#15803D";
                 const eolColor          = eolPos > 0 ? "#B91C1C" : "#15803D";
-                const eventIcon         = eventShortfall > 0 ? "▲" : "●";
-                const eolIcon           = eolPos > 0 ? "▲" : "●";
+                const eventIcon         = eventShortfall > 0
+                  ? <i className="bi bi-triangle-fill" style={{ color: "#B91C1C", fontSize: "0.6rem" }} />
+                  : <i className="bi bi-circle-fill" style={{ color: "#15803D", fontSize: "0.6rem" }} />;
+                const eolIcon           = eolPos > 0
+                  ? <i className="bi bi-triangle-fill" style={{ color: "#B91C1C", fontSize: "0.6rem" }} />
+                  : <i className="bi bi-circle-fill" style={{ color: "#15803D", fontSize: "0.6rem" }} />;
 
                 return (
                   <tr

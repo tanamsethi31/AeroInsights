@@ -271,7 +271,7 @@ function ConcentrationView({
             Apply
           </button>
           <span style={{ fontSize: "0.6875rem", color: "#94A3B8", marginLeft: "auto" }}>
-            ▲ amber &gt;{threshold}% · ● red &gt;{(threshold * 1.5).toFixed(0)}%
+            <i className="bi bi-triangle-fill" style={{ fontSize: "0.6rem", color: "#B45309", marginRight: "2px" }} />amber &gt;{threshold}% · <i className="bi bi-circle-fill" style={{ fontSize: "0.6rem", color: "#B91C1C", marginRight: "2px" }} />red &gt;{(threshold * 1.5).toFixed(0)}%
           </span>
         </div>
 
@@ -302,7 +302,10 @@ function ConcentrationView({
                         </span>
                         {level !== "none" && (
                           <span style={{ fontSize: "0.6rem", fontWeight: 700, padding: "0.1rem 0.3rem", borderRadius: "0.25rem", background: level === "amber" ? "rgba(180,83,9,0.1)" : "rgba(185,28,28,0.1)", color: level === "amber" ? "#B45309" : "#B91C1C", border: `1px solid ${level === "amber" ? "rgba(180,83,9,0.2)" : "rgba(185,28,28,0.2)"}` }}>
-                            {level === "amber" ? "▲" : "●"} +{(row.exposurePct - threshold).toFixed(1)}pp
+                            {level === "amber"
+                              ? <i className="bi bi-triangle-fill" style={{ fontSize: "0.6rem", color: "#B45309", marginRight: "2px" }} />
+                              : <i className="bi bi-circle-fill" style={{ fontSize: "0.6rem", color: "#B91C1C", marginRight: "2px" }} />
+                            }+{(row.exposurePct - threshold).toFixed(1)}pp
                           </span>
                         )}
                       </span>
@@ -568,15 +571,15 @@ function CovenantHeadroomView({ thresholds }: { thresholds: ThresholdMap }) {
                       </span>
                     ) : status === "red" ? (
                       <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B91C1C", padding: "0.2rem 0.5rem", background: "rgba(185,28,28,0.1)", border: "1px solid rgba(185,28,28,0.2)", borderRadius: "9999px" }}>
-                        ● Red Breach
+                        <i className="bi bi-circle-fill" style={{ fontSize: "0.55rem", color: "#B91C1C", marginRight: "4px" }} />Red Breach
                       </span>
                     ) : status === "amber" ? (
                       <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B45309", padding: "0.2rem 0.5rem", background: "rgba(180,83,9,0.1)", border: "1px solid rgba(180,83,9,0.2)", borderRadius: "9999px" }}>
-                        ▲ Amber Breach
+                        <i className="bi bi-triangle-fill" style={{ fontSize: "0.55rem", color: "#B45309", marginRight: "4px" }} />Amber Breach
                       </span>
                     ) : (
                       <span style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#15803D", padding: "0.2rem 0.5rem", background: "rgba(21,128,61,0.1)", border: "1px solid rgba(21,128,61,0.2)", borderRadius: "9999px" }}>
-                        ✓ Compliant
+                        <i className="bi bi-check" style={{ color: "#15803D", marginRight: "2px" }} />Compliant
                       </span>
                     )}
                   </td>

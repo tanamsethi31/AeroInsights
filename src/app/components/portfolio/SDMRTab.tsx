@@ -519,7 +519,12 @@ export function SDMRTab() {
                               border: `1px solid ${mrFlagBorder(flag)}`,
                               borderRadius: "0.375rem", padding: "0.2rem 0.5rem",
                             }}>
-                              {flag === "green" ? "●" : flag === "amber" ? "◆" : "▲"} {adeq.label}
+                              {flag === "green"
+                                ? <i className="bi bi-circle-fill" style={{ color: "#15803D", fontSize: "0.6rem", marginRight: "4px" }} />
+                                : flag === "amber"
+                                  ? <i className="bi bi-diamond-fill" style={{ color: "#B45309", fontSize: "0.6rem", marginRight: "4px" }} />
+                                  : <i className="bi bi-triangle-fill" style={{ color: "#B91C1C", fontSize: "0.6rem", marginRight: "4px" }} />
+                              }{adeq.label}
                             </span>
                           );
                         })()}
