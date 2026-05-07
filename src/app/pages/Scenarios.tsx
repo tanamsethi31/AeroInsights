@@ -4,6 +4,7 @@ import { useViewMode } from "../contexts/ViewModeContext";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { InsolvencyTab } from "../components/scenarios/InsolvencyTab";
+import { LeasePricingTab } from "../components/scenarios/LeasePricingTab";
 import { StatusPill } from "../components/ui/StatusPill";
 import {
   Play,
@@ -15,12 +16,24 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  Copy,
+  GitBranch,
+  Layers,
 } from "lucide-react";
 import {
   RunResultPanel,
   type ScenarioRunResult,
 } from "../components/scenarios/RunResultPanel";
 import { generateNarrative } from "../services/narrativeService";
+import { SCENARIO_CALIBRATION } from "../data/intelligenceData";
+import {
+  ScenarioInputs,
+  StageDistribution,
+  BASE_ECL,
+  ZERO_INPUTS,
+  computeECL,
+  computeStages,
+} from "../utils/eclCalculator";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,17 +44,6 @@ const PATH_TAB: Record<string, string> = {
 };
 
 type RunMode = "deterministic" | "montecarlo";
-
-interface ScenarioInputs {
-  gdpDelta: number;        // e.g. −0.02 = −2%
-  rpkDelta: number;        // e.g. −0.25 = −25%
-  fuelDelta: number;       // e.g. 0.40 = +40%
-  fxDelta: number;         // e.g. −0.15 = −15%
-  rateDelta: number;       // e.g. 0.0075 = +75 bps
-  assetValueDelta: number; // e.g. −0.10 = −10%
-  pdS2Multi: number;       // e.g. 1.4
-  pdS3Multi: number;       // e.g. 1.2
-}
 
 type CardPhase = "idle" | "config" | "running" | "done";
 
@@ -54,45 +56,13 @@ interface CardState {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BASE_ECL = 47.2;
 const BOOK_VALUE = 2840; // $M — used for % of book
-
-const ZERO_INPUTS: ScenarioInputs = {
-  gdpDelta: 0, rpkDelta: 0, fuelDelta: 0, fxDelta: 0,
-  rateDelta: 0, assetValueDelta: 0, pdS2Multi: 1.0, pdS3Multi: 1.0,
-};
 
 // ─── Computation Helpers ──────────────────────────────────────────────────────
 
 function seededRand(seed: number, salt: number): number {
   const x = Math.sin(seed * 9301 + salt * 49297 + 233) * 1_000_000;
   return x - Math.floor(x);
-}
-
-function computeECL(inputs: ScenarioInputs): number {
-  const delta =
-    Math.min(0, inputs.gdpDelta) * -250 +
-    Math.min(0, inputs.rpkDelta) * -48 +
-    Math.max(0, inputs.fuelDelta) * 28 +
-    Math.min(0, inputs.fxDelta) * -32 +
-    Math.max(0, inputs.rateDelta) * 14 +
-    Math.min(0, inputs.assetValueDelta) * -52 +
-    (inputs.pdS2Multi - 1.0) * 8.5 +
-    (inputs.pdS3Multi - 1.0) * 18.2;
-  return Math.max(BASE_ECL * 0.3, BASE_ECL + delta);
-}
-
-function computeStages(ecl: number, inputs: ScenarioInputs) {
-  const stress = Math.max(
-    0,
-    Math.min(0, inputs.rpkDelta) * -2 +
-      (inputs.pdS3Multi - 1) * 1.5 +
-      Math.min(0, inputs.assetValueDelta) * -1.5
-  ) / 3;
-  const s1Share = Math.max(0.05, 0.178 - stress * 0.13);
-  const s3Share = Math.min(0.70, 0.365 + stress * 0.25);
-  const s2Share = Math.max(0.05, 1 - s1Share - s3Share);
-  return { s1: ecl * s1Share, s2: ecl * s2Share, s3: ecl * s3Share };
 }
 
 function computeShapley(
@@ -644,6 +614,7 @@ export default function Scenarios() {
   }, [cardStates, setCardPhase]);
 
   // ── Custom Builder state ──
+  const [calBannerDismissed, setCalBannerDismissed] = useState(false);
   const [customName, setCustomName] = useState("My Custom Scenario");
   const [formInputs, setFormInputs] = useState<ScenarioInputs>(ZERO_INPUTS);
   const [customMode, setCustomMode] = useState<RunMode>("deterministic");
@@ -681,11 +652,41 @@ export default function Scenarios() {
     setTimeout(() => {
       const seed = Math.floor(Math.random() * 9999) + 1;
       const newRun = buildRun(customName || "Custom Scenario", formInputs, customMode, customPaths, seed, null);
+      if (branchFromId) { (newRun as ScenarioRunResult).parentId = branchFromId; }
       setRuns((prev) => [newRun, ...prev]);
       setCustomResultId(newRun.id);
       setCustomRunning(false);
+      setBranchFromId(null);
     }, duration);
   };
+
+  // ── Clone / Branch state ──
+  const [branchFromId, setBranchFromId] = useState<string | null>(null);
+  const [clonePending, setClonePending] = useState<{
+    inputs: ScenarioInputs; name: string; mode: RunMode; paths: number;
+  } | null>(null);
+
+  // Pre-populate Custom Builder when a clone/duplicate is triggered
+  useEffect(() => {
+    if (!clonePending) return;
+    setCustomName(clonePending.name);
+    setFormInputs(clonePending.inputs);
+    setCustomMode(clonePending.mode);
+    setCustomPaths(clonePending.paths);
+    setDslText(generateDSL(clonePending.inputs, clonePending.name, clonePending.mode, clonePending.paths, customSeed));
+    setDslErrors([]);
+    setCustomResultId(null);
+    setActiveTab("Custom Builder");
+    setClonePending(null);
+  }, [clonePending, customSeed]);
+
+  // Derive template inputs for a run (custom runs fall back to ZERO_INPUTS)
+  function getRunInputs(run: ScenarioRunResult): ScenarioInputs {
+    if (run.templateId) {
+      return TEMPLATES.find((t) => t.id === run.templateId)?.inputs ?? ZERO_INPUTS;
+    }
+    return ZERO_INPUTS;
+  }
 
   // ── Run History state ──
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -712,7 +713,7 @@ export default function Scenarios() {
 
   const tabs = isExecutiveMode
     ? EXEC_SCENARIO_TABS
-    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes"];
+    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Lease Pricing"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -813,6 +814,13 @@ export default function Scenarios() {
                           style={{ ...BTN_PRIMARY, padding: "0.375rem 0.75rem", fontSize: "0.8125rem" }}
                         >
                           <Play size={11} /> Configure & Run
+                        </button>
+                        <button
+                          title="Clone this template into the Custom Builder"
+                          onClick={() => setClonePending({ inputs: tpl.inputs, name: `${tpl.name} (Custom)`, mode: "deterministic", paths: 10000 })}
+                          style={{ ...BTN_OUTLINE, padding: "0.375rem 0.5rem", fontSize: "0.8125rem" }}
+                        >
+                          <Layers size={11} />
                         </button>
                         <button style={{ ...BTN_OUTLINE, padding: "0.375rem 0.5rem", fontSize: "0.8125rem" }}>
                           <Download size={11} />
@@ -934,6 +942,131 @@ export default function Scenarios() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "1.5rem" }}>
           {/* Left: Editor / Form */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+            {/* ── Scenario Calibration Banner ── */}
+            {!calBannerDismissed && (
+              <div
+                style={{
+                  background: "rgba(180,83,9,0.06)",
+                  border: "1px solid rgba(180,83,9,0.25)",
+                  borderLeft: "3px solid #B45309",
+                  borderRadius: "0 0.625rem 0.625rem 0",
+                  padding: "0.875rem 1rem",
+                }}
+              >
+                {/* Header row */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "0.625rem",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "0.875rem" }}>⚡</span>
+                    <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#B45309" }}>
+                      Market Calibration Available
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        padding: "0.1rem 0.45rem",
+                        borderRadius: "9999px",
+                        background: "rgba(180,83,9,0.12)",
+                        color: "#B45309",
+                      }}
+                    >
+                      {SCENARIO_CALIBRATION.length} signals diverged from last-run assumptions
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setCalBannerDismissed(true)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#94A3B8",
+                      fontSize: "1rem",
+                      lineHeight: 1,
+                      padding: "0.1rem",
+                    }}
+                    title="Dismiss"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Divergence rows */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.75rem" }}>
+                  {SCENARIO_CALIBRATION.map((div) => (
+                    <div
+                      key={div.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: "0.5rem",
+                        fontSize: "0.78rem",
+                        alignItems: "center",
+                        padding: "0.3rem 0.5rem",
+                        background: "rgba(255,255,255,0.6)",
+                        borderRadius: "0.375rem",
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: "#0F172A" }}>{div.label}</span>
+                      <span style={{ color: "#475569" }}>
+                        <span style={{ fontWeight: 600 }}>Market:</span> {div.currentMarket}
+                      </span>
+                      <span
+                        style={{
+                          color:
+                            div.severity === "high" ? "#B91C1C" :
+                            div.severity === "medium" ? "#B45309" : "#15803D",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {div.divergence}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Action button */}
+                <button
+                  onClick={() => {
+                    const patch: Record<string, number> = {};
+                    for (const d of SCENARIO_CALIBRATION) {
+                      patch[d.suggestedInputKey] = d.suggestedValue;
+                    }
+                    updateFormInputs(patch as Parameters<typeof updateFormInputs>[0]);
+                    setCalBannerDismissed(true);
+                  }}
+                  style={{
+                    padding: "0.4rem 1rem",
+                    borderRadius: "0.375rem",
+                    border: "1px solid #B45309",
+                    background: "#B45309",
+                    color: "#FFFFFF",
+                    fontSize: "0.8125rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  ⚡ Pre-populate from market data
+                </button>
+                <span
+                  style={{
+                    marginLeft: "0.75rem",
+                    fontSize: "0.75rem",
+                    color: "#94A3B8",
+                  }}
+                >
+                  Sets Fuel +14.3%, GDP −0.6pp, EUR/USD −2.0% · You can adjust before running
+                </span>
+              </div>
+            )}
+
             <Card
               title="Scenario Definition"
               subtitle={editorMode === "form" ? "Visual parameter form — changes sync to DSL" : "JSON DSL editor — validated on change"}
@@ -1193,7 +1326,25 @@ export default function Scenarios() {
                 </tr>
               </thead>
               <tbody>
-                {runs.map((run, i) => {
+                {(() => {
+                  // Build parent→children map for tree view
+                  const childMap = new Map<string, ScenarioRunResult[]>();
+                  runs.forEach((r) => {
+                    if (r.parentId) {
+                      const arr = childMap.get(r.parentId) ?? [];
+                      arr.push(r);
+                      childMap.set(r.parentId, arr);
+                    }
+                  });
+                  // Roots = runs with no parentId, in existing order
+                  const roots = runs.filter((r) => !r.parentId);
+                  // Flatten: root then its children, for striping
+                  const flat: Array<{ run: ScenarioRunResult; isChild: boolean }> = [];
+                  roots.forEach((r) => {
+                    flat.push({ run: r, isChild: false });
+                    (childMap.get(r.id) ?? []).forEach((c) => flat.push({ run: c, isChild: true }));
+                  });
+                  return flat.map(({ run, isChild }, i) => {
                   const isExpanded = expandedRunId === run.id;
                   return (
                     <React.Fragment key={run.id}>
@@ -1216,9 +1367,16 @@ export default function Scenarios() {
                           </button>
                         </td>
                         <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569", whiteSpace: "nowrap" }}>
+                          {isChild && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", marginRight: "0.375rem", color: "#CBD5E1" }}>
+                              <GitBranch size={10} />
+                            </span>
+                          )}
                           {run.id}
                         </td>
-                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{run.name}</td>
+                        <td style={{ padding: isChild ? "0.75rem 1rem 0.75rem 1.75rem" : "0.75rem 1rem", fontWeight: 600, color: isChild ? "#475569" : "#0F172A" }}>
+                          {run.name}
+                        </td>
                         <td style={{ padding: "0.75rem 1rem" }}>
                           <span style={{ fontSize: "0.75rem", background: "#F4F5F7", color: "#475569", padding: "0.2rem 0.5rem", borderRadius: "0.5rem", border: "1px solid #E2E8F0" }}>
                             {run.mode === "deterministic" ? "Deterministic" : "Monte Carlo"}
@@ -1240,12 +1398,26 @@ export default function Scenarios() {
                           <StatusPill stage="green" label="Complete" />
                         </td>
                         <td style={{ padding: "0.75rem 1rem" }}>
-                          <div style={{ display: "flex", gap: "0.375rem" }}>
+                          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "nowrap" }}>
                             <button
                               onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
                               style={{ ...BTN_OUTLINE, fontSize: "0.75rem", padding: "0.25rem 0.5rem", gap: "0.25rem" }}
                             >
                               {isExpanded ? <><ChevronUp size={10} /> Hide</> : <><ChevronDown size={10} /> View Results</>}
+                            </button>
+                            <button
+                              title="Clone this run into the Custom Builder"
+                              onClick={() => setClonePending({ inputs: getRunInputs(run), name: `Clone of ${run.name}`, mode: run.mode, paths: run.paths ?? 10000 })}
+                              style={{ ...BTN_OUTLINE, fontSize: "0.75rem", padding: "0.25rem 0.5rem", gap: "0.25rem", whiteSpace: "nowrap" }}
+                            >
+                              <Copy size={10} /> Clone & Edit
+                            </button>
+                            <button
+                              title="Branch a new scenario from this run"
+                              onClick={() => { setBranchFromId(run.id); setClonePending({ inputs: getRunInputs(run), name: `Branch of ${run.name}`, mode: run.mode, paths: run.paths ?? 10000 }); }}
+                              style={{ ...BTN_OUTLINE, fontSize: "0.75rem", padding: "0.25rem 0.5rem", gap: "0.25rem", whiteSpace: "nowrap" }}
+                            >
+                              <GitBranch size={10} /> Branch
                             </button>
                             <button style={{ ...BTN_OUTLINE, fontSize: "0.75rem", padding: "0.25rem 0.4rem" }}>
                               <Download size={10} />
@@ -1268,7 +1440,8 @@ export default function Scenarios() {
                       )}
                     </React.Fragment>
                   );
-                })}
+                  });
+                })()}
               </tbody>
             </table>
           </div>
@@ -1277,6 +1450,9 @@ export default function Scenarios() {
 
       {/* ══ INSOLVENCY REGIMES TAB ══════════════════════════════════════ */}
       {activeTab === "Insolvency Regimes" && <InsolvencyTab />}
+
+      {/* ══ LEASE PRICING TAB ═══════════════════════════════════════════ */}
+      {activeTab === "Lease Pricing" && <LeasePricingTab />}
 
       <style>{`
         @keyframes progress-fill {
