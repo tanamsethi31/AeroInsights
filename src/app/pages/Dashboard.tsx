@@ -707,7 +707,7 @@ export default function Dashboard() {
                       const lr = getLastRefreshed(item.lesseeId);
                       return lr ? (
                         <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.125rem" }}>
-                          ⬤ Signals: {timeAgo(lr)}
+                          <i className="bi bi-circle-fill" style={{ fontSize: "0.5rem", verticalAlign: "middle", marginRight: "4px" }} /> Signals: {timeAgo(lr)}
                         </div>
                       ) : null;
                     })()}

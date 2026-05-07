@@ -617,14 +617,14 @@ export default function Settings() {
                                 <span style={{ fontSize: "0.6875rem", color: "#94A3B8", fontWeight: 500 }}>Disabled</span>
                               ) : bLevel === "red" ? (
                                 <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B91C1C" }}>
-                                  ● Red Breach (+{overage.toFixed(1)}pp)
+                                  <i className="bi bi-circle-fill" style={{ fontSize: "0.5rem", marginRight: "4px", color: "#B91C1C" }} />Red Breach (+{overage.toFixed(1)}pp)
                                 </span>
                               ) : bLevel === "amber" ? (
                                 <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B45309" }}>
                                   ▲ Amber Breach (+{overage.toFixed(1)}pp)
                                 </span>
                               ) : (
-                                <span style={{ fontSize: "0.6875rem", fontWeight: 500, color: "#15803D" }}>✓ Compliant</span>
+                                <span style={{ fontSize: "0.6875rem", fontWeight: 500, color: "#15803D" }}><i className="bi bi-check" style={{ marginRight: "2px" }} />Compliant</span>
                               )}
                             </td>
                             {/* Delete */}

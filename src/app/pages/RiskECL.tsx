@@ -584,7 +584,9 @@ export default function RiskECL() {
                   marginTop: "0.125rem",
                 }}
               >
-                {weightsValid ? "✓ Valid" : "Must = 100%"}
+                {weightsValid
+                  ? <><i className="bi bi-check" style={{ marginRight: "2px" }} />Valid</>
+                  : "Must = 100%"}
               </div>
             </div>
           </div>
@@ -1654,7 +1656,7 @@ export default function RiskECL() {
             <div style={{ fontSize: "0.8125rem", color: "#94A3B8" }}>
               {sicrSaved ? (
                 <span style={{ color: "#15803D", fontWeight: 500 }}>
-                  ✓ Configuration saved — audit log entry created
+                  <i className="bi bi-check-circle-fill" style={{ marginRight: "4px", color: "#15803D" }} />Configuration saved — audit log entry created
                 </span>
               ) : sicrDirty ? (
                 <span style={{ color: "#B45309" }}>Unsaved changes</span>
