@@ -8,8 +8,7 @@
  * card when null is received.
  */
 import type { ScenarioRunResult } from "../components/scenarios/RunResultPanel";
-
-const BASE_ECL = 47.2;
+import { BASE_ECL } from "../utils/eclCalculator";
 
 export async function generateNarrative(run: ScenarioRunResult): Promise<string | null> {
   const endpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined;
@@ -29,7 +28,7 @@ export async function generateNarrative(run: ScenarioRunResult): Promise<string 
   const driver1     = run.shapley[0];
   const driver2     = run.shapley[1] ?? run.shapley[0];
 
-  const prompt = `You are a financial risk analyst writing a factual run summary. Use ONLY the numbers provided below. Do not invent, infer, or round any value differently from what is shown. Output exactly 4-6 sentences. No bullet points. No headings. Plain prose only.
+  const prompt = `You are a financial risk analyst writing a factual run summary. Use ONLY the numbers provided below. Do not invent, infer, or round any value differently from what is shown. Output exactly 4-6 sentences. No bullet points. No headings. Plain prose only. Always write counts and quantities as digits, never as words (write "2", not "Two"; write "4", not "Four").
 
 RUN DATA:
 - Scenario: ${run.name}
@@ -49,6 +48,7 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
 "The [Scenario Name] scenario produces a portfolio ECL of $[ecl]M, representing [ecl%]% of book value and a [change]% ${changeLabel} vs. the Baseline. [s3LeaseCount] leases migrate to Stage 3 under this scenario, led by [lessee1] ($[ecl1]M ECL, [juris1]) and [lessee2] ($[ecl2]M ECL, [juris2]). The primary drivers are [driver1] (+[contribution1]pp contribution) and [driver2] (+[contribution2]pp contribution). [s3LeaseCount] aircraft have recoverable amounts below carrying value under this scenario, triggering potential IAS 36 review."`;
 
   try {
+    console.log("[narrative] fetching for run", run.id);
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -62,13 +62,16 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
       }),
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn("[narrative] non-200 response:", response.status, await response.text().catch(() => ""));
+      return null;
+    }
 
     const data = await response.json() as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const text = data?.choices?.[0]?.message?.content;
-    if (!text) return null;
+    if (!text) { console.warn("[narrative] no text in response", data); return null; }
 
     // 3-anchor validation: each anchor must appear verbatim in the response
     const anchor1 = run.ecl.toFixed(1);                          // e.g. "61.2"
@@ -76,11 +79,14 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
     const anchor3 = ` ${run.s3LeaseCount} `;                      // e.g. " 4 " — prevents trivial substring match
 
     if (!text.includes(anchor1) || !text.includes(anchor2) || !text.includes(anchor3)) {
+      console.warn("[narrative] anchor validation failed", { anchor1, anchor2, anchor3, text });
       return null;
     }
 
+    console.log("[narrative] success for run", run.id);
     return text.trim();
-  } catch {
+  } catch (err) {
+    console.error("[narrative] fetch error:", err);
     return null;
   }
 }

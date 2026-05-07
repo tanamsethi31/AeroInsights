@@ -28,7 +28,6 @@ import { generateNarrative } from "../services/narrativeService";
 import { SCENARIO_CALIBRATION } from "../data/intelligenceData";
 import {
   ScenarioInputs,
-  StageDistribution,
   BASE_ECL,
   ZERO_INPUTS,
   computeECL,
