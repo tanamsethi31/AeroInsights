@@ -20,6 +20,7 @@ import {
   Copy,
   GitBranch,
   Layers,
+  Zap,
 } from "lucide-react";
 import {
   RunResultPanel,
@@ -977,7 +978,7 @@ export default function Scenarios() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span style={{ fontSize: "0.875rem" }}>⚡</span>
+                    <Zap size={14} style={{ color: "#B45309", flexShrink: 0 }} />
                     <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#B45309" }}>
                       Market Calibration Available
                     </span>
@@ -1066,7 +1067,7 @@ export default function Scenarios() {
                     cursor: "pointer",
                   }}
                 >
-                  ⚡ Pre-populate from market data
+                  <><Zap size={13} style={{ marginRight: "4px" }} /> Pre-populate from market data</>
                 </button>
                 <span
                   style={{

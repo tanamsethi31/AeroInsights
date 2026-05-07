@@ -1,6 +1,7 @@
 // src/app/components/agent/AgentMessage.tsx
 import * as React from "react";
 import { useNavigate } from "react-router";
+import { Zap } from "lucide-react";
 import { useAgent } from "../../contexts/AgentContext";
 
 export interface ActionCard {
@@ -282,7 +283,7 @@ function ActionConfirmCard({
           marginBottom: "10px",
         }}
       >
-        <span style={{ fontSize: "0.875rem" }}>⚡</span>
+        <Zap size={14} style={{ color: "#002147", flexShrink: 0 }} />
         <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "#0F172A" }}>
           Ready to open {pageLabel}
         </span>

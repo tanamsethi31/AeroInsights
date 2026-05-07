@@ -231,7 +231,7 @@ export function AgentPanel() {
 
           case "error":
             updateMessage(assistantMsgId, {
-              content: `⚠ ${event.msg}`,
+              content: `[!] ${event.msg}`,
               isStreaming: false,
             });
             break;
