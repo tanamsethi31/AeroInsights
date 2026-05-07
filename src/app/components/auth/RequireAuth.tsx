@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useNavigate, useLocation } from "react-router";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
   ?? "http://localhost:8000/api/v1";
@@ -15,14 +15,19 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
 export function RequireAuth() {
   const { isLoading, isAuthenticated, getAccessTokenSilently, user } = useAuth0();
   const navigate = useNavigate();
+  const location = useLocation();
   const synced = useRef(false);
 
-  // Redirect to /login if not authenticated
+  // Redirect to /login, preserving the intended destination so it can be
+  // restored after the Auth0 callback completes.
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate("/login", { replace: true });
+      navigate("/login", {
+        replace: true,
+        state: { returnTo: location.pathname + location.search },
+      });
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, navigate, location]);
 
   // Sync user to backend on first authenticated render
   useEffect(() => {

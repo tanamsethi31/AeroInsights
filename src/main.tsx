@@ -8,6 +8,13 @@ const domain   = import.meta.env.VITE_AUTH0_DOMAIN as string;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID as string;
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE as string;
 
+// After Auth0 redirects back, navigate to the route that was originally
+// requested (stored in appState.returnTo by Login.tsx).
+function onRedirectCallback(appState?: { returnTo?: string }) {
+  const target = appState?.returnTo ?? window.location.pathname;
+  window.history.replaceState({}, document.title, target);
+}
+
 createRoot(document.getElementById("root")!).render(
   <Auth0Provider
     domain={domain}
@@ -17,6 +24,7 @@ createRoot(document.getElementById("root")!).render(
       audience,
       scope: "openid email profile",
     }}
+    onRedirectCallback={onRedirectCallback}
   >
     <App />
   </Auth0Provider>

@@ -1,7 +1,11 @@
 import { useAuth0 } from "@auth0/auth0-react";
+import { useLocation } from "react-router";
 
 export default function Login() {
   const { loginWithRedirect, isLoading } = useAuth0();
+  const location = useLocation();
+  // Destination preserved by RequireAuth; fall back to dashboard root.
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? "/";
 
   return (
     <div
@@ -75,7 +79,7 @@ export default function Login() {
         </div>
 
         <button
-          onClick={() => loginWithRedirect()}
+          onClick={() => loginWithRedirect({ appState: { returnTo } })}
           disabled={isLoading}
           style={{
             width: "100%",
