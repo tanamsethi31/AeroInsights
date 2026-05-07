@@ -625,6 +625,12 @@ export default function Scenarios() {
   const [customRunning, setCustomRunning] = useState(false);
   const [customResultId, setCustomResultId] = useState<string | null>(null);
 
+  // ── Clone / Branch state ──
+  const [branchFromId, setBranchFromId] = useState<string | null>(null);
+  const [clonePending, setClonePending] = useState<{
+    inputs: ScenarioInputs; name: string; mode: RunMode; paths: number;
+  } | null>(null);
+
   const updateFormInputs = (partial: Partial<ScenarioInputs>) => {
     const next = { ...formInputs, ...partial };
     setFormInputs(next);
@@ -658,12 +664,6 @@ export default function Scenarios() {
       setBranchFromId(null);
     }, duration);
   };
-
-  // ── Clone / Branch state ──
-  const [branchFromId, setBranchFromId] = useState<string | null>(null);
-  const [clonePending, setClonePending] = useState<{
-    inputs: ScenarioInputs; name: string; mode: RunMode; paths: number;
-  } | null>(null);
 
   // Pre-populate Custom Builder when a clone/duplicate is triggered
   useEffect(() => {
