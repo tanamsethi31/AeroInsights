@@ -8,6 +8,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
@@ -247,6 +248,191 @@ const C = {
   white:     [255, 255, 255] as [number, number, number],
   slate400:  [148, 163, 184] as [number, number, number],
 };
+
+// ─── Currency-aware formatter for export use ──────────────────────────────────
+
+function fe(usdMillions: number, currency: CurrencyCode): string {
+  return fmtCurrency(usdMillions * 1_000_000, currency, true);
+}
+
+// ─── Named report generators — PDF ───────────────────────────────────────────
+
+export function generateReportPDF(reportId: string, currency: CurrencyCode): void {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const date = new Date().toLocaleDateString("en-IE", { dateStyle: "long" });
+
+  function addHeader(title: string, subtitle: string) {
+    doc.setFillColor(0, 33, 71);
+    doc.rect(0, 0, 210, 22, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Aeroinsights", 14, 9);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(title, 14, 15);
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(8);
+    doc.text(`Generated: ${date}  |  Currency: ${currency}`, 14, 28);
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(subtitle, 14, 38);
+  }
+
+  function save(slug: string) {
+    doc.save(`aeroinsights-${slug}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  switch (reportId) {
+    case "RPT-001": {
+      addHeader("Auditor Evidence Pack", "IFRS 9 Model Audit — ECL Disclosure");
+      autoTable(doc, {
+        startY: 45,
+        head: [["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m", "LGD", "ECL 12m", "ECL LT", "Stage"]],
+        body: ECL_ROWS.map(r => [
+          r.id, r.lessee, r.aircraft,
+          fe(r.ead, currency), `${r.pd12m}%`, `${r.lgd}%`,
+          fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`,
+        ]),
+        styles: { fontSize: 7.5, cellPadding: 2.5 },
+        headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+      save("auditor-evidence-pack");
+      break;
+    }
+    case "RPT-002": {
+      addHeader("Board Pack — Q1 2026", "Executive Portfolio Summary");
+      autoTable(doc, {
+        startY: 45,
+        head: [["Scenario", "ECL 12m", "ECL Lifetime", "Coverage"]],
+        body: SCENARIOS.map(s => [s.scenario, s.ecl12m, s.eclLT, s.coverage]),
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+      });
+      save("board-pack");
+      break;
+    }
+    case "RPT-003": {
+      addHeader("Portfolio Register", "Full Lease Register");
+      autoTable(doc, {
+        startY: 45,
+        head: [["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Rent/mo", "Stage"]],
+        body: LEASES.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`]),
+        styles: { fontSize: 7.5, cellPadding: 2.5 },
+        headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+      save("portfolio-register");
+      break;
+    }
+    case "RPT-004": {
+      addHeader("ECL Disclosure Pack", "IFRS 9 §35H / §35I Disclosures");
+      autoTable(doc, {
+        startY: 45,
+        head: [["Quarter", "Stage 1", "Stage 2", "Stage 3", "Total ECL"]],
+        body: ECL_TREND.map(t => [
+          t.quarter,
+          fe(t.s1, currency), fe(t.s2, currency), fe(t.s3, currency), fe(t.total, currency),
+        ]),
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+      });
+      save("ecl-disclosure-pack");
+      break;
+    }
+    case "RPT-005": {
+      addHeader("Watchlist Report", "Red & Amber Lessees — Current Period");
+      autoTable(doc, {
+        startY: 45,
+        head: [["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"]],
+        body: LESSEES.filter(l => l.stage !== "1").map(l => [
+          l.name, l.country, l.rating, `S${l.stage}`, l.behavior, l.leases, l.exposure, l.daysLate,
+        ]),
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+        alternateRowStyles: { fillColor: [254, 242, 242] },
+      });
+      save("watchlist-report");
+      break;
+    }
+    case "RPT-006": {
+      addHeader("Jurisdiction Risk Summary", "CTC Compliance & Enforceability Index");
+      autoTable(doc, {
+        startY: 45,
+        head: [["Country", "CTC", "Score", "Repo P50 (mo)", "Success Prob", "Sanctions"]],
+        body: JURISDICTIONS.map(j => [j.country, j.ctc, j.score, j.repoP50, j.successProb, j.sanctions]),
+        styles: { fontSize: 8.5, cellPadding: 3 },
+        headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+      save("jurisdiction-risk-summary");
+      break;
+    }
+    default:
+      console.warn("Unknown reportId:", reportId);
+  }
+}
+
+// ─── Named report generators — XLSX ──────────────────────────────────────────
+
+export function generateReportXLSX(reportId: string, currency: CurrencyCode): void {
+  const wb = XLSX.utils.book_new();
+  const meta = `Generated: ${new Date().toLocaleDateString("en-IE")} | Currency: ${currency}`;
+
+  function addSheet(name: string, headers: string[], rows: (string | number)[][]) {
+    const ws = XLSX.utils.aoa_to_sheet([[meta], [], headers, ...rows]);
+    ws["!cols"] = headers.map((h, i) => ({
+      wch: Math.min(Math.max(h.length, ...rows.map(r => String(r[i] ?? "").length)) + 3, 30),
+    }));
+    XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31));
+  }
+
+  switch (reportId) {
+    case "RPT-001":
+      addSheet("ECL Audit",
+        ["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m %", "LGD %", "ECL 12m", "ECL LT", "Stage"],
+        ECL_ROWS.map(r => [r.id, r.lessee, r.aircraft, fe(r.ead, currency), r.pd12m, r.lgd, fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`])
+      );
+      break;
+    case "RPT-002":
+      addSheet("Board Pack",
+        ["Scenario", "ECL 12m", "ECL Lifetime", "Coverage"],
+        SCENARIOS.map(s => [s.scenario, s.ecl12m, s.eclLT, s.coverage])
+      );
+      break;
+    case "RPT-003":
+      addSheet("Lease Register",
+        ["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Monthly Rent", "Stage"],
+        LEASES.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`])
+      );
+      break;
+    case "RPT-004":
+      addSheet("ECL Trend",
+        ["Quarter", "Stage 1", "Stage 2", "Stage 3", "Total"],
+        ECL_TREND.map(t => [t.quarter, fe(t.s1, currency), fe(t.s2, currency), fe(t.s3, currency), fe(t.total, currency)])
+      );
+      break;
+    case "RPT-005":
+      addSheet("Watchlist",
+        ["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"],
+        LESSEES.map(l => [l.name, l.country, l.rating, `S${l.stage}`, l.behavior, l.leases, l.exposure, l.daysLate])
+      );
+      break;
+    case "RPT-006":
+      addSheet("Jurisdiction Risk",
+        ["Country", "CTC", "Score", "Repo P50 (mo)", "Success Prob", "Sanctions"],
+        JURISDICTIONS.map(j => [j.country, j.ctc, j.score, j.repoP50, j.successProb, j.sanctions])
+      );
+      break;
+    default:
+      console.warn("Unknown reportId:", reportId);
+      return;
+  }
+
+  XLSX.writeFile(wb, `aeroinsights-${reportId.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
 
 // ─── PDF Export ────────────────────────────────────────────────────────────────
 
