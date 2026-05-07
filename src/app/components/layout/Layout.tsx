@@ -6,9 +6,11 @@ import { AppSidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { AgentProvider } from "../../contexts/AgentContext";
 import { AgentPanel } from "../agent/AgentPanel";
+import { CurrencyProvider } from "../../contexts/CurrencyContext";
 
 export function Layout() {
   return (
+    <CurrencyProvider>
     <AgentProvider>
       <SidebarProvider
         style={
@@ -40,5 +42,6 @@ export function Layout() {
         <AgentPanel />
       </SidebarProvider>
     </AgentProvider>
+    </CurrencyProvider>
   );
 }

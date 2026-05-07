@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as React from "react";
+import { useCurrency, CURRENCIES, type CurrencyCode } from "../../contexts/CurrencyContext";
 import { AgentButton } from "../agent/AgentButton";
 import { Bell, Search, Mail, ChevronDown, LogOut, CircleUser, LayoutDashboard, FileText, Plane } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -37,6 +38,10 @@ export function Header() {
   const [emailOpen, setEmailOpen]   = React.useState(false);
   const [unreadCount, setUnreadCount] = React.useState(getUnreadCount);
 
+  const { currency, setCurrency } = useCurrency();
+  const [currencyMenuOpen, setCurrencyMenuOpen] = React.useState(false);
+  const currencyRef = useRef<HTMLDivElement>(null);
+
   const { user, logout } = useAuth0();
   const navigate = useNavigate();
 
@@ -52,6 +57,9 @@ export function Header() {
       }
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
         setAlertsOpen(false);
+      }
+      if (currencyRef.current && !currencyRef.current.contains(e.target as Node)) {
+        setCurrencyMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -237,6 +245,69 @@ export function Header() {
 
         {/* Agent button */}
         <AgentButton />
+
+        {/* Currency selector */}
+        <div ref={currencyRef} style={{ position: "relative" }}>
+          <button
+            onClick={() => setCurrencyMenuOpen((v) => !v)}
+            style={{
+              display: "flex", alignItems: "center", gap: "4px",
+              padding: "5px 10px",
+              background: currencyMenuOpen ? "#F1F5F9" : "transparent",
+              border: "1px solid #E2E8F0",
+              borderRadius: "6px",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              color: "#0F172A",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={(e) => { if (!currencyMenuOpen) (e.currentTarget as HTMLButtonElement).style.background = "#F8FAFC"; }}
+            onMouseLeave={(e) => { if (!currencyMenuOpen) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+          >
+            {currency}
+            <ChevronDown size={12} style={{ color: "#94A3B8" }} />
+          </button>
+
+          {currencyMenuOpen && (
+            <div style={{
+              position: "absolute",
+              top: "calc(100% + 6px)",
+              left: 0,
+              minWidth: "180px",
+              background: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderRadius: "8px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+              zIndex: 200,
+              padding: "4px 0",
+              overflow: "hidden",
+            }}>
+              {(Object.entries(CURRENCIES) as [CurrencyCode, { symbol: string; rate: number; decimals: number; label: string }][]).map(([code, meta]) => (
+                <button
+                  key={code}
+                  onClick={() => { setCurrency(code); setCurrencyMenuOpen(false); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "8px",
+                    width: "100%", padding: "8px 14px",
+                    background: currency === code ? "#F1F5F9" : "transparent",
+                    border: "none",
+                    fontSize: "0.8125rem",
+                    color: currency === code ? "#002147" : "#0F172A",
+                    fontWeight: currency === code ? 600 : 400,
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                  onMouseEnter={(e) => { if (currency !== code) (e.currentTarget as HTMLButtonElement).style.background = "#F8FAFC"; }}
+                  onMouseLeave={(e) => { if (currency !== code) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                >
+                  <span style={{ fontWeight: 700, color: "#002147", minWidth: "36px" }}>{code}</span>
+                  <span style={{ color: "#64748B", fontSize: "0.75rem" }}>{meta.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Right side */}
         <div className="ml-auto flex items-center gap-1">
