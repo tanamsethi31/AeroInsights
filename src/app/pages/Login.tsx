@@ -79,7 +79,14 @@ export default function Login() {
         </div>
 
         <button
-          onClick={() => loginWithRedirect({ appState: { returnTo } })}
+          onClick={() =>
+            loginWithRedirect({
+              appState: { returnTo },
+              // Always show the login form — prevents Auth0 silently
+              // re-using a cached session, so users can switch accounts.
+              authorizationParams: { prompt: "login" },
+            })
+          }
           disabled={isLoading}
           style={{
             width: "100%",

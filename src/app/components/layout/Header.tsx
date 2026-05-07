@@ -423,7 +423,17 @@ export function Header() {
                 </button>
                 <div style={{ height: "1px", background: "#F1F5F9", margin: "0.25rem 0" }} />
                 <button
-                  onClick={() => logout({ logoutParams: { returnTo: window.location.origin + "/login" } })}
+                  onClick={() =>
+                    logout({
+                      logoutParams: {
+                        returnTo: window.location.origin + "/login",
+                        // federated clears the Auth0 session AND the upstream
+                        // identity-provider session (Google etc.) so the next
+                        // "Sign in" click always shows a fresh login form.
+                        federated: true,
+                      },
+                    })
+                  }
                   style={{ display: "flex", alignItems: "center", gap: "0.5rem", width: "100%", padding: "0.5625rem 1rem", background: "transparent", border: "none", fontSize: "0.8125rem", color: "#B91C1C", cursor: "pointer", textAlign: "left" }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#FEF2F2")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}
