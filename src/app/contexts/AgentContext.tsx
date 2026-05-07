@@ -26,7 +26,7 @@ interface AgentContextValue {
   setIsMinimized: (v: boolean) => void;
   messages: ChatMessage[];
   addMessage: (msg: ChatMessage) => void;
-  updateLastMessage: (id: string, patch: Partial<ChatMessage>) => void;
+  updateMessage: (id: string, patch: Partial<ChatMessage>) => void;
   clearMessages: () => void;
   pageContext: string;
   usage: AgentUsage;
@@ -77,7 +77,7 @@ const PAGE_CONTEXT_MAP: Record<string, string> = {
 function getPageContext(pathname: string): string {
   if (PAGE_CONTEXT_MAP[pathname]) return PAGE_CONTEXT_MAP[pathname];
   for (const [key, val] of Object.entries(PAGE_CONTEXT_MAP)) {
-    if (key !== "/" && pathname.startsWith(key)) return val;
+    if (key !== "/" && (pathname.startsWith(key + "/") || pathname === key)) return val;
   }
   return "Aeroinsights Platform";
 }
@@ -141,7 +141,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     setMessages((prev) => [...prev, msg]);
   }, []);
 
-  const updateLastMessage = React.useCallback(
+  const updateMessage = React.useCallback(
     (id: string, patch: Partial<ChatMessage>) => {
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
     },
@@ -158,26 +158,29 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const value = React.useMemo(
+    () => ({
+      isOpen,
+      setIsOpen,
+      isMinimized,
+      setIsMinimized,
+      messages,
+      addMessage,
+      updateMessage,
+      clearMessages,
+      pageContext,
+      usage,
+      incrementUsage,
+      pendingInputs,
+      setPendingInputs,
+      hasNewSignal,
+      setHasNewSignal,
+    }),
+    [isOpen, isMinimized, messages, pageContext, usage, pendingInputs, hasNewSignal]
+  );
+
   return (
-    <AgentContext.Provider
-      value={{
-        isOpen,
-        setIsOpen,
-        isMinimized,
-        setIsMinimized,
-        messages,
-        addMessage,
-        updateLastMessage,
-        clearMessages,
-        pageContext,
-        usage,
-        incrementUsage,
-        pendingInputs,
-        setPendingInputs,
-        hasNewSignal,
-        setHasNewSignal,
-      }}
-    >
+    <AgentContext.Provider value={value}>
       {children}
     </AgentContext.Provider>
   );
