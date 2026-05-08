@@ -679,27 +679,27 @@ export default function Dashboard() {
                 gap: "0.25rem",
                 fontSize: "0.75rem",
                 fontWeight: 600,
-                color: "#002147",
-                background: "transparent",
-                border: "1px solid #E2E8F0",
+                color: "rgba(255,255,255,0.85)",
+                background: "rgba(255,255,255,0.10)",
+                border: "1px solid rgba(255,255,255,0.22)",
                 borderRadius: "9999px",
                 padding: "0.375rem 0.75rem",
                 cursor: refreshing ? "not-allowed" : "pointer",
-                opacity: refreshing ? 0.65 : 1,
+                opacity: refreshing ? 0.55 : 1,
               }}
             >
               <RefreshCw size={11} />
               {refreshing ? "Refreshing…" : "Refresh All"}
             </button>
             {unreadCount > 0 && (
-              <span style={{ fontSize: "0.6875rem", fontWeight: 700, background: "#B91C1C", color: "#FFFFFF", borderRadius: "9999px", padding: "0.1rem 0.5rem", minWidth: "18px", textAlign: "center" }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 700, background: "#FCA5A5", color: "#7F1D1D", borderRadius: "9999px", padding: "0.1rem 0.5rem", minWidth: "18px", textAlign: "center" }}>
                 {unreadCount} new
               </span>
             )}
             {unreadCount > 0 && (
               <button
                 onClick={() => setReadIds(new Set(watchlistEntries.filter(e => e.status !== "green").map(e => e.lesseeId)))}
-                style={{ fontSize: "0.75rem", color: "#94A3B8", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.60)", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline" }}
               >
                 Mark all read
               </button>
@@ -710,7 +710,7 @@ export default function Dashboard() {
               style={{
                 fontSize: "0.8125rem",
                 fontWeight: 500,
-                color: "#002147",
+                color: "rgba(255,255,255,0.85)",
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
@@ -872,7 +872,7 @@ export default function Dashboard() {
             style={{
               fontSize: "0.8125rem",
               fontWeight: 500,
-              color: "#002147",
+              color: "rgba(255,255,255,0.85)",
               background: "transparent",
               border: "none",
               cursor: "pointer",

@@ -71,23 +71,23 @@ export function AgentSuggestions({ pathname, onSelect }: AgentSuggestionsProps) 
           key={chip}
           onClick={() => onSelect(chip)}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "#002147";
-            (e.currentTarget as HTMLButtonElement).style.color = "#002147";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.55)";
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.20)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
-            (e.currentTarget as HTMLButtonElement).style.color = "#475569";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.22)";
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.10)";
           }}
           style={{
             padding: "6px 12px",
-            background: "#F8FAFC",
-            border: "1px solid #E2E8F0",
+            background: "rgba(255,255,255,0.10)",
+            border: "1px solid rgba(255,255,255,0.22)",
             borderRadius: "20px",
             fontSize: "0.8125rem",
-            color: "#475569",
+            color: "rgba(255,255,255,0.80)",
             cursor: "pointer",
             lineHeight: 1.4,
-            transition: "border-color 150ms ease, color 150ms ease",
+            transition: "border-color 150ms ease, background 150ms ease",
           }}
         >
           {chip}

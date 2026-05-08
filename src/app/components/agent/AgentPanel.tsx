@@ -62,11 +62,11 @@ function ActionsMenu({ onSelect }: { onSelect: (text: string) => void }) {
           gap: "4px",
           padding: "0 10px",
           height: "34px",
-          background: "#F8FAFC",
-          border: "1px solid #E2E8F0",
+          background: "rgba(255,255,255,0.10)",
+          border: "1px solid rgba(255,255,255,0.22)",
           borderRadius: "6px",
           fontSize: "0.8125rem",
-          color: "#475569",
+          color: "rgba(255,255,255,0.85)",
           cursor: "pointer",
           flexShrink: 0,
           whiteSpace: "nowrap",
@@ -304,6 +304,7 @@ export function AgentPanel() {
         @keyframes blink {
           50% { opacity: 0; }
         }
+        .agent-input::placeholder { color: rgba(255,255,255,0.40); }
       `}</style>
 
       {/* Header bar — 56px */}
@@ -391,7 +392,7 @@ export function AgentPanel() {
           </div>
 
           {/* Chat area */}
-          <div style={{ flex: 1, overflowY: "auto", paddingTop: "12px", background: "rgba(0,33,71,0.02)" }}>
+          <div style={{ flex: 1, overflowY: "auto", paddingTop: "12px", background: "rgba(0,33,71,0.07)" }}>
             {messages.length === 0 && (
               <AgentSuggestions
                 pathname={location.pathname}
@@ -411,10 +412,11 @@ export function AgentPanel() {
             <div ref={chatEndRef} />
           </div>
 
-          {/* Input area — 64px */}
+          {/* Input area */}
           <div
             style={{
-              borderTop: "1px solid #E2E8F0",
+              background: "#002147",
+              borderTop: "1px solid rgba(255,255,255,0.10)",
               padding: "10px 12px",
               display: "flex",
               gap: "8px",
@@ -434,21 +436,22 @@ export function AgentPanel() {
               }
               disabled={atLimit || isThinking}
               rows={1}
+              className="agent-input"
               style={{
                 flex: 1,
                 resize: "none",
-                border: "1px solid #E2E8F0",
+                border: "1px solid rgba(255,255,255,0.18)",
                 borderRadius: "8px",
                 padding: "8px 10px",
                 fontSize: "0.875rem",
-                color: "#0F172A",
+                color: "#FFFFFF",
                 fontFamily: "inherit",
                 outline: "none",
                 lineHeight: 1.5,
                 minHeight: "36px",
                 maxHeight: "120px",
                 overflowY: "auto",
-                background: atLimit ? "#F8FAFC" : "#FFFFFF",
+                background: atLimit ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.09)",
               }}
             />
             <button
@@ -460,7 +463,9 @@ export function AgentPanel() {
                 height: "36px",
                 borderRadius: "8px",
                 background:
-                  !input.trim() || isThinking || atLimit ? "#E2E8F0" : "#002147",
+                  !input.trim() || isThinking || atLimit
+                    ? "rgba(255,255,255,0.12)"
+                    : "rgba(255,255,255,0.92)",
                 border: "none",
                 cursor:
                   !input.trim() || isThinking || atLimit ? "not-allowed" : "pointer",
@@ -474,7 +479,7 @@ export function AgentPanel() {
               <Send
                 size={15}
                 color={
-                  !input.trim() || isThinking || atLimit ? "#94A3B8" : "#FFFFFF"
+                  !input.trim() || isThinking || atLimit ? "rgba(255,255,255,0.35)" : "#002147"
                 }
               />
             </button>
@@ -484,8 +489,8 @@ export function AgentPanel() {
           <div
             style={{
               height: "28px",
-              background: "rgba(0,33,71,0.04)",
-              borderTop: "1px solid rgba(0,33,71,0.10)",
+              background: "#002147",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
               display: "flex",
               alignItems: "center",
               padding: "0 12px",
@@ -496,7 +501,7 @@ export function AgentPanel() {
             <span
               style={{
                 fontSize: "0.75rem",
-                color: nearLimit ? "#B45309" : "#94A3B8",
+                color: nearLimit ? "#FCD34D" : "rgba(255,255,255,0.45)",
                 fontWeight: nearLimit ? 600 : 400,
               }}
             >
@@ -505,7 +510,7 @@ export function AgentPanel() {
             </span>
             <span
               title={`Daily limit: ${USAGE_LIMIT} queries per user. Resets at midnight UTC.`}
-              style={{ fontSize: "0.75rem", color: "#CBD5E1", cursor: "help" }}
+              style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.30)", cursor: "help" }}
             >
               ⓘ
             </span>
