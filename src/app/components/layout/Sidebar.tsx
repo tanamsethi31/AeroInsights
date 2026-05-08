@@ -308,7 +308,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 <img
                   src="/logo.png"
                   alt="Aeroinsights"
-                  style={{ width: "100%", height: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
