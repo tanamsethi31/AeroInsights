@@ -158,6 +158,15 @@ export default function Dashboard() {
 
   const { refreshAll: refreshAllSignals, refreshing, getLastRefreshed } = useSignalRefresh();
 
+  const [expandedTiles, setExpandedTiles] = useState<Set<string>>(new Set());
+  function toggleTile(id: string) {
+    setExpandedTiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   function timeAgo(date: Date): string {
     const diffMins = Math.floor((Date.now() - date.getTime()) / 60000);
     if (diffMins < 1) return "just now";
@@ -471,61 +480,97 @@ export default function Dashboard() {
             const sevColor =
               (tile.severity as SignalSeverity) === "high"   ? "#B91C1C" :
               (tile.severity as SignalSeverity) === "medium" ? "#B45309" : "#15803D";
-            const sevBg =
-              (tile.severity as SignalSeverity) === "high"   ? "rgba(185,28,28,0.06)" :
-              (tile.severity as SignalSeverity) === "medium" ? "rgba(180,83,9,0.06)"  : "rgba(21,128,61,0.06)";
             const dirArrow =
               tile.direction === "up" ? "▲" : tile.direction === "down" ? "▼" : "—";
+            const tileExpanded = expandedTiles.has(tile.id);
 
             return (
-              <button
+              <div
                 key={tile.id}
-                onClick={() => navigate(tile.href)}
                 style={{
                   background: "#FFFFFF",
                   border: "1px solid #E2E8F0",
                   borderTop: `3px solid ${sevColor}`,
                   borderRadius: "0.625rem",
-                  padding: "0.75rem 0.875rem",
-                  textAlign: "left",
-                  cursor: "pointer",
+                  overflow: "hidden",
                   transition: "box-shadow 140ms ease-out, transform 140ms ease-out",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.10)";
-                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.10)";
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
-                  (e.currentTarget as HTMLButtonElement).style.transform = "none";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+                  (e.currentTarget as HTMLDivElement).style.transform = "none";
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.35rem" }}>
-                  <i className={`bi ${tile.icon}`} style={{ fontSize: "1rem" }} />
-                  <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#475569" }}>{tile.label}</span>
-                </div>
-                <div
+                {/* Clickable metric area → navigate */}
+                <button
+                  onClick={() => navigate(tile.href)}
                   style={{
-                    fontSize: "1rem",
-                    fontWeight: 800,
-                    color: sevColor,
-                    lineHeight: 1.1,
-                    letterSpacing: "-0.01em",
+                    display: "block",
+                    width: "100%",
+                    background: "transparent",
+                    border: "none",
+                    padding: "0.75rem 0.875rem 0.5rem",
+                    textAlign: "left",
+                    cursor: "pointer",
                   }}
                 >
-                  {dirArrow} {tile.value}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.35rem" }}>
+                    <i className={`bi ${tile.icon}`} style={{ fontSize: "1rem" }} />
+                    <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#475569" }}>{tile.label}</span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "1rem",
+                      fontWeight: 800,
+                      color: sevColor,
+                      lineHeight: 1.1,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {dirArrow} {tile.value}
+                  </div>
+                </button>
+
+                {/* Expand detail toggle */}
+                <div style={{ padding: "0 0.875rem 0.625rem", display: "flex", alignItems: "center" }}>
+                  <button
+                    onClick={() => toggleTile(tile.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "2px",
+                      fontSize: "0.68rem", color: "#94A3B8",
+                      background: "transparent", border: "none",
+                      cursor: "pointer", padding: 0,
+                    }}
+                  >
+                    <ChevronDown
+                      size={10}
+                      style={{
+                        transform: tileExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 150ms ease",
+                      }}
+                    />
+                    {tileExpanded ? "less" : "details"}
+                  </button>
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "#475569",
-                    marginTop: "0.25rem",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {tile.subtext}
-                </div>
-              </button>
+
+                {/* Subtext — only shown when expanded */}
+                {tileExpanded && (
+                  <div
+                    style={{
+                      padding: "0.5rem 0.875rem 0.75rem",
+                      fontSize: "0.7rem",
+                      color: "#475569",
+                      lineHeight: 1.4,
+                      borderTop: "1px solid #F1F5F9",
+                    }}
+                  >
+                    {tile.subtext}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -682,7 +727,7 @@ export default function Dashboard() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
           <thead>
             <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-              {["Lessee", "Country", "Status", "Trigger", "Details", "Last Changed", ""].map(label => (
+              {["Lessee", "Country", "Status", "Trigger", "Last Changed", "Details", ""].map(label => (
                 <th
                   key={label || "_action"}
                   style={{
@@ -747,15 +792,6 @@ export default function Dashboard() {
                       {item.trigger}
                     </span>
                   </td>
-                  <td
-                    style={{
-                      padding: "0.75rem 1rem",
-                      color: "#475569",
-                      maxWidth: "280px",
-                    }}
-                  >
-                    <ExpandableCell text={item.reason} max={55} />
-                  </td>
                   <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", whiteSpace: "nowrap" }}>
                     <div>{item.lastChanged}</div>
                     {(() => {
@@ -766,6 +802,9 @@ export default function Dashboard() {
                         </div>
                       ) : null;
                     })()}
+                  </td>
+                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>
+                    <ExpandableCell text={item.reason} />
                   </td>
                   <td style={{ padding: "0.75rem 1rem" }}>
                     <button
@@ -920,7 +959,7 @@ export default function Dashboard() {
                   {run.portfolioECL}
                 </td>
                 <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>
-                  <ExpandableCell text={run.keyFinding} max={40} />
+                  <ExpandableCell text={run.keyFinding} />
                 </td>
                 <td style={{ padding: "0.75rem 1rem" }}>
                   <div className="flex items-center gap-1">
