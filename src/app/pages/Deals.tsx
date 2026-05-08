@@ -53,9 +53,9 @@ export default function Deals() {
       <div style={{
         display: "flex",
         gap: "4px",
-        background: "#FFFFFF",
+        background: "#F1F5F9",
         border: "1px solid #E2E8F0",
-        borderRadius: "10px",
+        borderRadius: "9999px",
         padding: "4px",
         marginBottom: "24px",
         width: "fit-content",
@@ -67,16 +67,20 @@ export default function Deals() {
               key={tab.id}
               onClick={() => handleTabClick(tab)}
               style={{
-                padding: "7px 18px",
-                borderRadius: "7px",
+                padding: "7px 20px",
+                borderRadius: "9999px",
                 border: "none",
                 background: active ? "#002147" : "transparent",
                 color: active ? "#FFFFFF" : "#64748B",
                 fontSize: "13px",
-                fontWeight: active ? 700 : 500,
+                fontWeight: active ? 600 : 500,
                 cursor: "pointer",
                 transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
+                boxShadow: active ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
+                whiteSpace: "nowrap",
               }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
             >
               {tab.label}
             </button>
