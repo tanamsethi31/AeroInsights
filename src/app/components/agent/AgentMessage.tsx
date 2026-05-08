@@ -388,7 +388,7 @@ export function AgentMessage({
           borderRadius: isUser ? "18px 18px 4px 18px" : "0 18px 18px 18px",
           borderLeft: isUser ? undefined : "2px solid #002147",
           padding: "10px 14px",
-          fontSize: "0.875rem",
+          fontSize: "0.75rem",
           lineHeight: 1.5,
         }}
       >
