@@ -427,10 +427,6 @@ export function Header() {
                     logout({
                       logoutParams: {
                         returnTo: window.location.origin + "/login",
-                        // federated clears the Auth0 session AND the upstream
-                        // identity-provider session (Google etc.) so the next
-                        // "Sign in" click always shows a fresh login form.
-                        federated: true,
                       },
                     })
                   }
