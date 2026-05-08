@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AlertTriangle, ShieldCheck, ShieldAlert, Shield } from "lucide-react";
+import { CountryFlag } from "../ui/CountryFlag";
 import { Card } from "../ui/Card";
 import { StatusPill } from "../ui/StatusPill";
 import type { Jurisdiction, Precedent } from "./jurisdictionData";
@@ -117,7 +118,7 @@ export function JurisdictionDetail({ jurisdiction: j, precedents }: Props) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
-          <span style={{ fontSize: "2.5rem", lineHeight: 1 }}>{j.flag}</span>
+          <CountryFlag code={j.code} size={36} />
           <div>
             <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0F172A", margin: 0 }}>{j.country}</h3>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>

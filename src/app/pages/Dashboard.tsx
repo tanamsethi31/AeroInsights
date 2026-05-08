@@ -20,6 +20,7 @@ import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { ExportSnapshotModal } from "../components/ui/ExportSnapshotModal";
 import { ExpandableCell } from "../components/ui/ExpandableCell";
+import { CountryFlag } from "../components/ui/CountryFlag";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { ArrowRight, Play, Download, RefreshCw, AlertCircle, CheckCircle2, Circle, ChevronRight, ChevronDown, X as XIcon } from "lucide-react";
 
@@ -768,7 +769,12 @@ export default function Dashboard() {
                   <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>
                     {item.lesseeName}
                   </td>
-                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{item.country}</td>
+                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                      <CountryFlag country={item.country} />
+                      {item.country}
+                    </span>
+                  </td>
                   <td style={{ padding: "0.75rem 1rem" }}>
                     <StatusPill
                       stage={item.status}

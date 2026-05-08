@@ -3,6 +3,7 @@ import { ExternalLink } from "lucide-react";
 import { Card } from "../ui/Card";
 import { StatusPill } from "../ui/StatusPill";
 import { useSortable, sortIcon, sortIconStyle } from "../ui/useSortable";
+import { CountryFlag } from "../ui/CountryFlag";
 import type { Precedent, Jurisdiction } from "./jurisdictionData";
 
 interface PrecedentTableProps {
@@ -146,7 +147,7 @@ export function PrecedentTable({ precedents, jurisdictions }: PrecedentTableProp
                     <td style={{ padding: "0.625rem 1rem", color: "#475569" }}>{p.airline}</td>
                     <td style={{ padding: "0.625rem 1rem" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                        <span>{jur?.flag ?? ""}</span>
+                        {jur && <CountryFlag code={jur.code} />}
                         <span style={{ color: "#475569" }}>{jur?.country ?? p.country}</span>
                       </span>
                     </td>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
 import { Check, X, Circle, Plane } from "lucide-react";
+import { CountryFlag } from "../components/ui/CountryFlag";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
@@ -353,7 +354,10 @@ export default function Counterparties() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>{l.country} · {l.rating}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#94A3B8", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                    <CountryFlag country={l.country} size={12} />
+                    {l.country} · {l.rating}
+                  </div>
                   {/* Sanctions badge */}
                   {(() => {
                     const sc = LESSEE_SANCTIONS[l.id];

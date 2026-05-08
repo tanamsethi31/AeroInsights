@@ -16,6 +16,7 @@ import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
 import { ExpandableCell } from "../ui/ExpandableCell";
+import { CountryFlag } from "../ui/CountryFlag";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1329,7 +1330,8 @@ export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
       <div style={{ background: "#002147", borderRadius: "1rem 1rem 0 0", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.25rem" }}>{meta.name}</div>
-          <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.7)" }}>
+          <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <CountryFlag country={meta.country} size={13} />
             {meta.country} · {meta.rating} · {meta.leaseCount} leases · {fmtM(meta.exposure)} exposure
           </div>
         </div>

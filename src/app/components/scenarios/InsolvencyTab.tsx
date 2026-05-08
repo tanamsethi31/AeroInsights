@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Globe } from "lucide-react";
 import { Card } from "../ui/Card";
+import { CountryFlag } from "../ui/CountryFlag";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ const REGIMES: Regime[] = [
     id: "chapter11",
     name: "US Chapter 11 (§1110 / §365)",
     jurisdiction: "United States",
-    flag: "🇺🇸",
+    flag: "US",
     stayDuration: "Automatic stay. 60-day §1110 cure window for aircraft leases",
     cureWindow: "60 days from filing; lessor may repossess if not cured or assumption agreed",
     executoryContracts: "§365 — trustee may assume or reject; §1110 provides lessor a priority cure mechanism",
@@ -46,7 +47,7 @@ const REGIMES: Regime[] = [
     id: "india_ibc",
     name: "India IBC (CTC Act 2025)",
     jurisdiction: "India",
-    flag: "🇮🇳",
+    flag: "IN",
     stayDuration: "Moratorium under §14 IBC. CTC Act 2025 amends to mandate 90-day cure / repossession window",
     cureWindow: "90 days (CTC Act 2025). Pre-2025 cases could run 270 days",
     executoryContracts: "Cape Town Convention applies; CTC Act 2025 requires courts to honour deregistration requests",
@@ -61,7 +62,7 @@ const REGIMES: Regime[] = [
     id: "brazil_rj",
     name: "Brazil RJ (Recuperação Judicial)",
     jurisdiction: "Brazil",
-    flag: "🇧🇷",
+    flag: "BR",
     stayDuration: "180-day initial stay; extensions common (AerCap LATAM precedent: 380 days)",
     cureWindow: "60 days (CTC in force since 2013 but enforcement mixed)",
     executoryContracts: "RJ plan must include lease treatment; lessor has retention-of-title claim",
@@ -76,7 +77,7 @@ const REGIMES: Regime[] = [
     id: "mexico_concurso",
     name: "Mexico Concurso Mercantil",
     jurisdiction: "Mexico",
-    flag: "🇲🇽",
+    flag: "MX",
     stayDuration: "Automatic stay on filing; conciliador appointed within 5 days",
     cureWindow: "90 days from conciliador appointment",
     executoryContracts: "Contract reviewed by conciliador; CTC in force and Cape Town certificates honoured",
@@ -91,7 +92,7 @@ const REGIMES: Regime[] = [
     id: "indonesia_pkpu",
     name: "Indonesia PKPU",
     jurisdiction: "Indonesia",
-    flag: "🇮🇩",
+    flag: "ID",
     stayDuration: "45-day initial + up to 270-day maximum suspension of payments",
     cureWindow: "N/A — PKPU is a suspension, not a cure; lessor must negotiate within the plan",
     executoryContracts: "PKPU plan requires 50%+ creditor vote by value; not CTC-compliant",
@@ -238,10 +239,10 @@ export function InsolvencyTab() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", width: "100%" }}>
-                <span style={{ fontSize: "1.125rem", lineHeight: 1 }}>
-                  {r.flag.startsWith("bi-")
-                    ? <i className={`bi ${r.flag}`} />
-                    : r.flag}
+                <span style={{ lineHeight: 1, display: "flex", alignItems: "center" }}>
+                  {r.flag === "bi-globe"
+                    ? <Globe size={18} style={{ color: "#94A3B8" }} />
+                    : <CountryFlag code={r.flag} size={15} />}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A", lineHeight: 1.3 }}>{r.name}</div>
@@ -266,7 +267,7 @@ export function InsolvencyTab() {
 
         {/* Section A: Regime Detail Card */}
         <Card
-          title={`${regime.flag.startsWith("bi-") ? "" : regime.flag + " "}${regime.name}`}
+          title={regime.name}
           subtitle={regime.jurisdiction}
           headerRight={
             <span style={{
@@ -382,7 +383,7 @@ export function InsolvencyTab() {
                   style={{ width: "100%", padding: "0.5rem 0.75rem", border: "1px solid #E2E8F0", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
                 >
                   {REGIMES.map(r => (
-                    <option key={r.id} value={r.id}>{r.flag.startsWith("bi-") ? "" : r.flag + " "}{r.name}</option>
+                    <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </select>
               </div>
