@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { LeaseGenerator } from "../components/deals/LeaseGenerator";
 import { RackAndStack } from "../components/deals/RackAndStack";
 import { PortfolioExitNPV } from "../components/deals/PortfolioExitNPV";
+import { PageHeader } from "../components/ui/PageHeader";
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
@@ -37,17 +38,12 @@ export default function Deals() {
   };
 
   return (
-    <div style={{ padding: "28px 32px", minHeight: "100vh", background: "#F8FAFC" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
-      {/* Page header */}
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A", margin: 0 }}>
-          Deals
-        </h1>
-        <p style={{ fontSize: "13px", color: "#64748B", marginTop: "4px" }}>
-          Lease structuring, option analysis and portfolio exit valuation
-        </p>
-      </div>
+      <PageHeader
+        title="Deals"
+        subtitle="Lease structuring, option analysis and portfolio exit valuation"
+      />
 
       {/* Tab bar */}
       <div style={{
@@ -57,7 +53,7 @@ export default function Deals() {
         border: "1px solid #E2E8F0",
         borderRadius: "9999px",
         padding: "4px",
-        marginBottom: "24px",
+        marginTop: "-1.5rem",
         width: "fit-content",
       }}>
         {TABS.map(tab => {
@@ -89,9 +85,11 @@ export default function Deals() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "generator"  && <LeaseGenerator />}
-      {activeTab === "rack-stack" && <RackAndStack />}
-      {activeTab === "exit-npv"   && <PortfolioExitNPV />}
+      <div>
+        {activeTab === "generator"  && <LeaseGenerator />}
+        {activeTab === "rack-stack" && <RackAndStack />}
+        {activeTab === "exit-npv"   && <PortfolioExitNPV />}
+      </div>
     </div>
   );
 }
