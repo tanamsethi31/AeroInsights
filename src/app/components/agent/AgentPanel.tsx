@@ -8,13 +8,12 @@ import { streamAgentResponse } from "../../services/agentService";
 import { AgentMessage, type ActionCard } from "./AgentMessage";
 import { AgentSuggestions } from "./AgentSuggestions";
 
-// Configurable via Vercel env var VITE_AI_DAILY_LIMIT (default 20).
-// Change in Vercel dashboard → Settings → Environment Variables, then redeploy.
+// Per-user daily limit shown in the UI. Must match AI_USER_DAILY_LIMIT on the server.
 const USAGE_LIMIT = Math.max(
   1,
-  parseInt((import.meta.env.VITE_AI_DAILY_LIMIT as string | undefined) ?? "20", 10),
+  parseInt((import.meta.env.VITE_AI_DAILY_LIMIT as string | undefined) ?? "5", 10),
 );
-const USAGE_WARN = Math.max(1, Math.floor(USAGE_LIMIT * 0.8));
+const USAGE_WARN = Math.max(1, USAGE_LIMIT - 1); // warn at 1 remaining
 
 // ─── Pending action tracker ─────────────────────────────────────────────────────
 
@@ -430,7 +429,7 @@ export function AgentPanel() {
               onKeyDown={handleKeyDown}
               placeholder={
                 atLimit
-                  ? "Daily query limit reached. Resets at midnight UTC."
+                  ? `You've used all ${USAGE_LIMIT} AI queries for today. Resets at midnight UTC.`
                   : "Ask about your portfolio…"
               }
               disabled={atLimit || isThinking}
@@ -502,10 +501,10 @@ export function AgentPanel() {
               }}
             >
               {usage.count} / {USAGE_LIMIT} queries today
-              {nearLimit && " — nearing limit"}
+              {nearLimit && " — last query remaining"}
             </span>
             <span
-              title={`Daily limit: ${USAGE_LIMIT} queries. Resets at midnight UTC. Configured via VITE_AI_DAILY_LIMIT.`}
+              title={`Daily limit: ${USAGE_LIMIT} queries per user. Resets at midnight UTC.`}
               style={{ fontSize: "0.75rem", color: "#CBD5E1", cursor: "help" }}
             >
               ⓘ

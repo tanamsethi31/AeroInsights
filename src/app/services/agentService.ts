@@ -201,7 +201,16 @@ async function* fetchStream(
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    yield { type: "error", msg: `API error ${res.status}: ${body}` };
+    if (res.status === 429) {
+      try {
+        const parsed = JSON.parse(body) as { error?: string };
+        yield { type: "error", msg: parsed.error ?? "Daily query limit reached. Please try again tomorrow." };
+      } catch {
+        yield { type: "error", msg: "Daily query limit reached. Please try again tomorrow." };
+      }
+    } else {
+      yield { type: "error", msg: `API error ${res.status}: ${body}` };
+    }
     return;
   }
 
