@@ -47,12 +47,11 @@ export function CountryFlag({
   const iso = (code ?? (country ? NAME_TO_ISO[country] : undefined))?.toLowerCase();
   if (!iso) return null;
 
-  const width = Math.round(size * 1.5);
-  const retinaWidth = Math.min(width * 2, 160); // nearest sensible CDN size
+  const width = Math.round(size * 1.5); // 3:2 flag ratio
 
   return (
     <img
-      src={`https://flagcdn.com/w${retinaWidth}/${iso}.png`}
+      src={`https://flagcdn.com/${iso}.svg`}
       width={width}
       height={size}
       alt=""
