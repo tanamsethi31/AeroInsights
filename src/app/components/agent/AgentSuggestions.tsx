@@ -71,20 +71,22 @@ export function AgentSuggestions({ pathname, onSelect }: AgentSuggestionsProps) 
           key={chip}
           onClick={() => onSelect(chip)}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.55)";
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.20)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "#002147";
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,33,71,0.10)";
+            (e.currentTarget as HTMLButtonElement).style.color = "#002147";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.22)";
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.10)";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,33,71,0.22)";
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,33,71,0.05)";
+            (e.currentTarget as HTMLButtonElement).style.color = "#002147";
           }}
           style={{
             padding: "6px 12px",
-            background: "rgba(255,255,255,0.10)",
-            border: "1px solid rgba(255,255,255,0.22)",
+            background: "rgba(0,33,71,0.05)",
+            border: "1px solid rgba(0,33,71,0.22)",
             borderRadius: "20px",
             fontSize: "0.8125rem",
-            color: "rgba(255,255,255,0.80)",
+            color: "#002147",
             cursor: "pointer",
             lineHeight: 1.4,
             transition: "border-color 150ms ease, background 150ms ease",

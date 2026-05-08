@@ -29,7 +29,7 @@ export function Card({
   noPadding,
   collapsible,
   defaultCollapsed = false,
-  blueHeader = false,
+  blueHeader = true,
 }: CardProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
 

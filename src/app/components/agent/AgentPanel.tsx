@@ -391,8 +391,17 @@ export function AgentPanel() {
             </span>
           </div>
 
-          {/* Chat area */}
-          <div style={{ flex: 1, overflowY: "auto", paddingTop: "12px", background: "rgba(0,33,71,0.07)" }}>
+          {/* Chat area — top fade gives depth as messages scroll in */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              paddingTop: "12px",
+              background: "rgba(0,33,71,0.07)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, black 28px)",
+              maskImage: "linear-gradient(to bottom, transparent 0px, black 28px)",
+            }}
+          >
             {messages.length === 0 && (
               <AgentSuggestions
                 pathname={location.pathname}

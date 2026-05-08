@@ -409,7 +409,7 @@ export function IAS36Tab() {
         </div>
 
         {/* Card 1 — Inputs */}
-        <Card title="Inputs" subtitle="Edit values to recompute in real time">
+        <Card title="Inputs" subtitle="Edit values to recompute in real time" blueHeader={false}>
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             {/* Main inputs grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>

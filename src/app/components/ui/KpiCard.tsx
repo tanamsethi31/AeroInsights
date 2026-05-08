@@ -49,11 +49,13 @@ export function KpiCard({
         const el = e.currentTarget as HTMLDivElement;
         el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
         el.style.borderColor = "#CBD5E1";
+        el.style.borderTopColor = "#002147";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
         el.style.borderColor = "#E2E8F0";
+        el.style.borderTopColor = "#002147";
       }}
     >
       <div

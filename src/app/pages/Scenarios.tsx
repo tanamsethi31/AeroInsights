@@ -1292,7 +1292,7 @@ export default function Scenarios() {
 
           {/* Right: Config + Validation */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <Card title="Run Configuration">
+            <Card title="Run Configuration" blueHeader={false}>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <ModeToggle
                   mode={customMode} paths={customPaths}
@@ -1319,7 +1319,7 @@ export default function Scenarios() {
               </div>
             </Card>
 
-            <Card title="Validation">
+            <Card title="Validation" blueHeader={false}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {dslErrors.length === 0 ? (
                   <>
@@ -1356,7 +1356,7 @@ export default function Scenarios() {
             </Card>
 
             {/* Scenario summary */}
-            <Card title="Scenario Summary">
+            <Card title="Scenario Summary" blueHeader={false}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.8125rem" }}>
                 {[
                   ["GDP shock", formInputs.gdpDelta === 0 ? "Baseline" : `${formInputs.gdpDelta > 0 ? "+" : ""}${(formInputs.gdpDelta * 100).toFixed(1)}%`],
