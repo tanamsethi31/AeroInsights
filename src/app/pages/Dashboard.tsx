@@ -19,6 +19,7 @@ import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { ExportSnapshotModal } from "../components/ui/ExportSnapshotModal";
+import { ExpandableCell } from "../components/ui/ExpandableCell";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { ArrowRight, Play, Download, RefreshCw, AlertCircle, CheckCircle2, Circle, ChevronRight, ChevronDown, X as XIcon } from "lucide-react";
 
@@ -753,7 +754,7 @@ export default function Dashboard() {
                       maxWidth: "280px",
                     }}
                   >
-                    {item.reason}
+                    <ExpandableCell text={item.reason} max={55} />
                   </td>
                   <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", whiteSpace: "nowrap" }}>
                     <div>{item.lastChanged}</div>
@@ -918,7 +919,9 @@ export default function Dashboard() {
                 >
                   {run.portfolioECL}
                 </td>
-                <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{run.keyFinding}</td>
+                <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>
+                  <ExpandableCell text={run.keyFinding} max={40} />
+                </td>
                 <td style={{ padding: "0.75rem 1rem" }}>
                   <div className="flex items-center gap-1">
                     <button

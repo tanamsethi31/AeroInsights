@@ -15,6 +15,7 @@ import type { RestructuringInputRow } from "./restructuringEngine";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
+import { ExpandableCell } from "../ui/ExpandableCell";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -976,7 +977,9 @@ function TimelineTab({ monthlyDPD, events }: { monthlyDPD: MonthlyDPD[]; events:
                       {eventLabel(ev.type)}
                     </span>
                   </td>
-                  <td style={{ padding: "0.5rem 0.875rem", color: "#0F172A" }}>{ev.description}</td>
+                  <td style={{ padding: "0.5rem 0.875rem", color: "#0F172A" }}>
+                    <ExpandableCell text={ev.description} max={70} />
+                  </td>
                   <td style={{ padding: "0.5rem 0.875rem", color: "#64748B", fontSize: "0.75rem" }}>{ev.impact}</td>
                 </tr>
               );
@@ -1009,7 +1012,9 @@ function ScenariosTab({ scenarios }: { scenarios: ScenarioRow[] }) {
           {scenarios.map((s) => (
             <tr key={s.name} style={{ borderBottom: "1px solid #E2E8F0", background: scenarioBg(s.name) }}>
               <td style={{ padding: "0.875rem 1rem", fontWeight: 700, color: s.name === "Severe Stress" ? "#B91C1C" : s.name === "Mild Stress" ? "#B45309" : "#0F172A" }}>{s.name}</td>
-              <td style={{ padding: "0.875rem 1rem", color: "#475569", fontStyle: "italic", fontSize: "0.75rem", maxWidth: "240px" }}>{s.description}</td>
+              <td style={{ padding: "0.875rem 1rem", color: "#475569", fontStyle: "italic", fontSize: "0.75rem", maxWidth: "240px" }}>
+                <ExpandableCell text={s.description} max={55} />
+              </td>
               <td style={{ padding: "0.875rem 1rem", fontWeight: 600, color: "#0F172A" }}>{fmtM(s.ecl12m)}</td>
               <td style={{ padding: "0.875rem 1rem", color: "#475569" }}>{fmtM(s.eclLifetime)}</td>
               <td style={{ padding: "0.875rem 1rem", fontWeight: 700, color: s.vsBase12mPct === 0 ? "#64748B" : s.vsBase12mPct > 100 ? "#B91C1C" : "#B45309" }}>
