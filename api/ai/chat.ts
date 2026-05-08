@@ -7,9 +7,9 @@
  *  3. Per-user daily limits can be enforced here in the future (Vercel KV).
  *
  * Server-side env vars required (set in Vercel dashboard, NOT prefixed VITE_):
- *   AZURE_OPENAI_ENDPOINT          e.g. https://my-resource.openai.azure.com
- *   AZURE_OPENAI_KEY               your Azure OpenAI API key
- *   AZURE_OPENAI_AGENT_DEPLOYMENT  e.g. gpt-4o
+ *   AZURE_OPENAI_URL   Full Target URI from Azure AI Foundry, e.g.
+ *                      https://my-resource.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2025-01-01-preview
+ *   AZURE_OPENAI_KEY   Your Azure OpenAI API key
  */
 
 export const config = { runtime: "edge" };
@@ -25,21 +25,16 @@ export default async function handler(req: Request): Promise<Response> {
   if (!auth.startsWith("Bearer ")) {
     return json({ error: "Unauthorized" }, 401);
   }
-  // The token's signature is validated by Auth0 when it was issued; the
-  // presence of a well-formed JWT is sufficient for this proxy because the
-  // real authorization (allowlist + RBAC) already happened at login time.
-  // For stricter validation add @auth0/nextjs-auth0 JWKS verification here.
 
-  // ── Azure config ────────────────────────────────────────────────────────────
-  const endpoint   = process.env.AZURE_OPENAI_ENDPOINT;
-  const apiKey     = process.env.AZURE_OPENAI_KEY;
-  const deployment = process.env.AZURE_OPENAI_AGENT_DEPLOYMENT;
+  // ── Azure config ─────────────────────────────────────────────────────────────
+  // AZURE_OPENAI_URL is the full Target URI copied from Azure AI Foundry.
+  // This avoids any API-version mismatch from hardcoded values.
+  const azureUrl = process.env.AZURE_OPENAI_URL;
+  const apiKey   = process.env.AZURE_OPENAI_KEY;
 
-  if (!endpoint || !apiKey || !deployment) {
+  if (!azureUrl || !apiKey) {
     return json({ error: "AI not configured on server. Contact your administrator." }, 503);
   }
-
-  const azureUrl = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=2024-02-01`;
 
   // ── Forward request body ────────────────────────────────────────────────────
   let body: unknown;
