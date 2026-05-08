@@ -63,6 +63,11 @@ export function Layout() {
               "--sidebar-width": "16rem",
               "--sidebar-width-icon": "3rem",
               "--header-height": "3.5rem",
+              // Pin to viewport height so every flex descendant gets a resolved height.
+              // Without this, shadcn's min-h-svh leaves heights unconstrained and
+              // height:100% on AgentPanel resolves to 'auto' (content-tall).
+              height: "100vh",
+              overflow: "hidden",
             } as React.CSSProperties
           }
         >

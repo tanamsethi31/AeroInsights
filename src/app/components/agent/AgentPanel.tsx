@@ -284,7 +284,9 @@ export function AgentPanel() {
       style={{
         width: isMinimized ? "48px" : "420px",
         flexShrink: 0,
-        height: "100%",
+        // No explicit height — flex align-self:stretch (default) fills the row height.
+        // height:100% would resolve to 'auto' if the parent has no pinned height.
+        alignSelf: "stretch",
         background: "#FFFFFF",
         borderLeft: "1px solid #E2E8F0",
         boxShadow: "-4px 0 16px rgba(0,0,0,0.08)",
