@@ -366,12 +366,11 @@ export function AgentPanel() {
 
       {!isMinimized && (
         <>
-          {/* Context strip — 36px */}
+          {/* Context strip — 36px — no bottom border; chat area fades in beneath it */}
           <div
             style={{
               height: "36px",
               background: "rgba(0,33,71,0.05)",
-              borderBottom: "1px solid rgba(0,33,71,0.10)",
               display: "flex",
               alignItems: "center",
               padding: "0 12px",
@@ -398,8 +397,8 @@ export function AgentPanel() {
               overflowY: "auto",
               paddingTop: "12px",
               background: "rgba(0,33,71,0.07)",
-              WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, black 28px)",
-              maskImage: "linear-gradient(to bottom, transparent 0px, black 28px)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, black 52px)",
+              maskImage: "linear-gradient(to bottom, transparent 0px, black 52px)",
             }}
           >
             {messages.length === 0 && (
