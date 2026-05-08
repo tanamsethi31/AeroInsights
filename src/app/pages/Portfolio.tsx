@@ -234,7 +234,7 @@ export default function Portfolio() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginBottom: "1.5rem", width: "fit-content" }}>
+      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", width: "fit-content" }}>
         {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => (
           <button
             key={tab}

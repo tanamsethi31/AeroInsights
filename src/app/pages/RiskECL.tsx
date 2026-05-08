@@ -1926,36 +1926,30 @@ export default function RiskECL() {
       )}
 
       {/* Tabs — filtered in Executive Mode to headline views only */}
-      <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex" }}>
-        {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => (
-          <button
-            key={tab}
-            className="tab-btn"
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: "0.75rem 1.25rem",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              border: "none",
-              borderBottom:
-                activeTab === tab
-                  ? "2px solid #002147"
-                  : "2px solid transparent",
-              background: "transparent",
-              color: activeTab === tab ? "#002147" : "#475569",
-              cursor: "pointer",
-              marginBottom: "-1px",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.375rem",
-            }}
-          >
-            {tab === "SICR Config" && (
-              <SlidersHorizontal size={13} />
-            )}
-            {tab}
-          </button>
-        ))}
+      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginTop: "-1.5rem", width: "fit-content" }}>
+        {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => {
+          const active = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: "7px 20px", borderRadius: "9999px", border: "none",
+                background: active ? "#002147" : "transparent",
+                color: active ? "#FFFFFF" : "#64748B",
+                fontSize: "13px", fontWeight: active ? 600 : 500,
+                cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
+                boxShadow: active ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
+                whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "0.375rem",
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
+            >
+              {tab === "SICR Config" && <SlidersHorizontal size={13} />}
+              {tab}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab content */}

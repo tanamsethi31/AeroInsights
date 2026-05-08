@@ -756,7 +756,7 @@ export default function Scenarios() {
       </PageHeader>
 
       {/* ── Tabs ── */}
-      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginBottom: "1.5rem", width: "fit-content" }}>
+      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginTop: "-1.5rem", width: "fit-content" }}>
         {tabs.map((tab) => (
           <button key={tab} className="tab-btn" onClick={() => setActiveTab(tab)} style={TAB_STYLE(activeTab === tab)}
             onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
