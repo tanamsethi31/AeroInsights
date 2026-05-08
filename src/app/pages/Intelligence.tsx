@@ -1477,52 +1477,34 @@ export default function Intelligence() {
       </PageHeader>
 
       {/* Sub-tab nav */}
-      <div
-        style={{
-          display: "flex",
-          gap: 0,
-          borderBottom: `1px solid ${T.border}`,
-          marginBottom: "1.5rem",
-        }}
-      >
+      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginBottom: "1.5rem", width: "fit-content" }}>
         {TABS.map((tab) => {
-          const active  = activeTab === tab.id;
-          const badge   = badges[tab.id];
+          const active = activeTab === tab.id;
+          const badge  = badges[tab.id];
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: "0.625rem 1.25rem",
-                border: "none",
-                borderBottom: active ? `2px solid ${T.blue}` : "2px solid transparent",
-                background: "none",
-                color: active ? T.blue : T.muted,
-                fontWeight: active ? 700 : 500,
-                fontSize: "0.875rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                transition: "color 140ms ease-out",
-                whiteSpace: "nowrap",
+                padding: "7px 20px", borderRadius: "9999px", border: "none",
+                background: active ? "#002147" : "transparent",
+                color: active ? "#FFFFFF" : "#64748B",
+                fontSize: "13px", fontWeight: active ? 600 : 500,
+                cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
+                boxShadow: active ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
+                whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "0.4rem",
               }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
             >
               {tab.label}
               {badge > 0 && (
                 <span
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minWidth: "18px",
-                    height: "18px",
-                    borderRadius: "9999px",
-                    background: T.red,
-                    color: "#FFFFFF",
-                    fontSize: "0.65rem",
-                    fontWeight: 800,
-                    padding: "0 0.3rem",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    minWidth: "18px", height: "18px", borderRadius: "9999px",
+                    background: active ? "rgba(255,255,255,0.25)" : T.red,
+                    color: "#FFFFFF", fontSize: "0.65rem", fontWeight: 800, padding: "0 0.3rem",
                   }}
                 >
                   {badge}

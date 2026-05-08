@@ -234,23 +234,22 @@ export default function Portfolio() {
       </div>
 
       {/* Tabs */}
-      <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex", gap: "0" }}>
+      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginBottom: "1.5rem", width: "fit-content" }}>
         {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => (
           <button
             key={tab}
-            className="tab-btn"
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: "0.75rem 1.25rem",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              border: "none",
-              borderBottom: activeTab === tab ? "2px solid #002147" : "2px solid transparent",
-              background: "transparent",
-              color: activeTab === tab ? "#002147" : "#475569",
-              cursor: "pointer",
-              marginBottom: "-1px",
+              padding: "7px 20px", borderRadius: "9999px", border: "none",
+              background: activeTab === tab ? "#002147" : "transparent",
+              color: activeTab === tab ? "#FFFFFF" : "#64748B",
+              fontSize: "13px", fontWeight: activeTab === tab ? 600 : 500,
+              cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
+              boxShadow: activeTab === tab ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
+              whiteSpace: "nowrap",
             }}
+            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
+            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
           >
             {tab}
           </button>
@@ -411,7 +410,7 @@ export default function Portfolio() {
                         <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
                           <td colSpan={11} style={{ padding: 0, background: "#FAFAFA" }}>
                             {/* Sub-tab switcher */}
-                            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #E2E8F0", paddingLeft: "1rem", background: "#F4F5F7" }}>
+                            <div style={{ display: "flex", gap: "3px", background: "#EAEFF5", borderBottom: "1px solid #E2E8F0", padding: "5px 5px 5px 1rem" }}>
                               {(["Valuation", "Maintenance Forecast"] as const).map((st) => {
                                 const key = st === "Maintenance Forecast" ? "Maintenance" : "Valuation";
                                 const active = (aircraftSubTab[a.msn] ?? "Valuation") === key;
@@ -420,9 +419,12 @@ export default function Portfolio() {
                                     key={st}
                                     onClick={(e) => { e.stopPropagation(); setAircraftSubTab((prev) => ({ ...prev, [a.msn]: key as "Valuation" | "Maintenance" })); }}
                                     style={{
-                                      padding: "0.5rem 1rem", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
-                                      border: "none", borderBottom: active ? "2px solid #002147" : "2px solid transparent",
-                                      background: "transparent", color: active ? "#002147" : "#64748B", marginBottom: "-1px",
+                                      padding: "4px 14px", fontSize: "0.8125rem", fontWeight: active ? 600 : 500,
+                                      cursor: "pointer", border: "none", borderRadius: "9999px",
+                                      background: active ? "#002147" : "transparent",
+                                      color: active ? "#FFFFFF" : "#64748B",
+                                      transition: "all 150ms cubic-bezier(0.23,1,0.32,1)",
+                                      boxShadow: active ? "0 1px 3px rgba(0,33,71,0.18)" : "none",
                                     }}
                                   >
                                     {st}

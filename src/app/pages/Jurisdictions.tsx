@@ -45,22 +45,22 @@ export default function Jurisdictions() {
       />
 
       {/* Tabs */}
-      <div style={{ borderBottom: "1px solid #E2E8F0", display: "flex" }}>
+      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginBottom: "1.5rem", width: "fit-content" }}>
         {(isExecutiveMode ? EXEC_TABS : ALL_TABS).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: "0.75rem 1.25rem",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              border: "none",
-              borderBottom: activeTab === tab ? "2px solid #002147" : "2px solid transparent",
-              background: "transparent",
-              color: activeTab === tab ? "#002147" : "#475569",
-              cursor: "pointer",
-              marginBottom: "-1px",
+              padding: "7px 20px", borderRadius: "9999px", border: "none",
+              background: activeTab === tab ? "#002147" : "transparent",
+              color: activeTab === tab ? "#FFFFFF" : "#64748B",
+              fontSize: "13px", fontWeight: activeTab === tab ? 600 : 500,
+              cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
+              boxShadow: activeTab === tab ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
+              whiteSpace: "nowrap",
             }}
+            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
+            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
           >
             {tab}
           </button>
