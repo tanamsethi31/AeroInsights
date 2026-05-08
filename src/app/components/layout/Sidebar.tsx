@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useNavigate, useLocation } from "react-router";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -282,6 +283,7 @@ function NavFlatItem({ item, badge }: { item: NavItem; badge?: number }) {
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate();
+  const { logout } = useAuth0();
   const { isExecutiveMode, setIsExecutiveMode } = useViewMode();
 
   /** Count of non-green lessees — shown as badge on the Counterparties nav item */
@@ -400,10 +402,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => {
-                // TODO: Implement actual sign out logic
-                navigate("/login");
-              }}
+              onClick={() =>
+                logout({ logoutParams: { returnTo: window.location.origin + "/login" } })
+              }
               className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
               tooltip="Sign Out"
             >
