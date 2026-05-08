@@ -121,21 +121,20 @@ export function EmailReportModal({ onClose }: EmailReportModalProps) {
             display: "flex",
             alignItems: "center",
             padding: "16px 20px",
-            borderBottom: "1px solid #E2E8F0",
-            borderLeft: "3px solid #002147",
+            background: "#002147",
           }}
         >
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#0F172A" }}>
+            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#FFFFFF" }}>
               Distribute Report
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "2px" }}>
+            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.55)", marginTop: "2px" }}>
               Send a report via email to your team
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", display: "flex" }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.70)", display: "flex" }}
           >
             <X size={18} />
           </button>

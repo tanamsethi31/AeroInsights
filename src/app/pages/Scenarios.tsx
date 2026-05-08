@@ -632,6 +632,7 @@ export default function Scenarios() {
   const [dslErrors, setDslErrors] = useState<string[]>([]);
   const [customRunning, setCustomRunning] = useState(false);
   const [customResultId, setCustomResultId] = useState<string | null>(null);
+  const customResultRef = useRef<HTMLDivElement>(null);
 
   // ── Clone / Branch state ──
   const [branchFromId, setBranchFromId] = useState<string | null>(null);
@@ -673,6 +674,8 @@ export default function Scenarios() {
     if (!parsed.ok && parsed.errors.some((e) => e.startsWith("Invalid") || e.includes("must be"))) return;
     setCustomRunning(true);
     setCustomResultId(null);
+    // Scroll to result area immediately so the skeleton is visible
+    setTimeout(() => customResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     const duration = customMode === "deterministic" ? 1800 : 3200;
     setTimeout(() => {
       const seed = Math.floor(Math.random() * 9999) + 1;
@@ -1208,15 +1211,81 @@ export default function Scenarios() {
               )}
             </Card>
 
-            {/* Custom Result Panel */}
-            {customResultId && findRun(customResultId) && (
-              <div>
-                <RunResultPanel
-                  run={findRun(customResultId)!}
-                  onClose={() => setCustomResultId(null)}
-                  narrative={getNarrative(customResultId)}
-                  onRequestNarrative={handleRequestNarrative}
-                />
+            {/* Custom Result Panel + Skeleton */}
+            {(customRunning || (customResultId && findRun(customResultId))) && (
+              <div ref={customResultRef}>
+                {customRunning ? (
+                  <div
+                    style={{
+                      background: "#FFFFFF",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "var(--radius-lg)",
+                      padding: "1.5rem",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "1.25rem" }}>
+                      <RefreshCw size={14} className="animate-spin" style={{ color: "#94A3B8" }} />
+                      <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#475569" }}>
+                        {customMode === "deterministic" ? "Running deterministic model…" : "Running Monte Carlo paths…"}
+                      </span>
+                    </div>
+                    {/* Skeleton rows */}
+                    {[180, 140, 220, 100, 160].map((w, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          height: i === 0 ? "2rem" : "0.875rem",
+                          width: `${w}px`,
+                          maxWidth: "100%",
+                          background: "linear-gradient(90deg, #F1F5F9 25%, #E8EFF7 50%, #F1F5F9 75%)",
+                          backgroundSize: "400px 100%",
+                          borderRadius: "0.375rem",
+                          marginBottom: i === 0 ? "1rem" : "0.625rem",
+                          animation: "skeletonShimmer 1.4s ease-in-out infinite",
+                        }}
+                      />
+                    ))}
+                    <style>{`
+                      @keyframes skeletonShimmer {
+                        0%   { background-position: -400px 0; }
+                        100% { background-position:  400px 0; }
+                      }
+                    `}</style>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(3,1fr)",
+                        gap: "0.75rem",
+                        marginTop: "1.25rem",
+                      }}
+                    >
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          style={{
+                            height: "5rem",
+                            background: "linear-gradient(90deg, #F1F5F9 25%, #E8EFF7 50%, #F1F5F9 75%)",
+                            backgroundSize: "400px 100%",
+                            borderRadius: "0.625rem",
+                            border: "1px solid #E2E8F0",
+                            animation: "skeletonShimmer 1.4s ease-in-out infinite",
+                            animationDelay: `${i * 0.15}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  customResultId && findRun(customResultId) && (
+                    <RunResultPanel
+                      run={findRun(customResultId)!}
+                      onClose={() => setCustomResultId(null)}
+                      narrative={getNarrative(customResultId)}
+                      onRequestNarrative={handleRequestNarrative}
+                    />
+                  )
+                )}
               </div>
             )}
           </div>

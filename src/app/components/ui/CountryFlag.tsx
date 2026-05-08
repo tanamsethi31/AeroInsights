@@ -29,9 +29,6 @@ const NAME_TO_ISO: Record<string, string> = {
   "Venezuela": "ve", "Vietnam": "vn",
 };
 
-const OXFORD_BLUE_FILTER =
-  "grayscale(1) sepia(1) hue-rotate(150deg) saturate(0.55) brightness(0.65)";
-
 export function CountryFlag({
   code,
   country,
@@ -61,7 +58,6 @@ export function CountryFlag({
         height: `${size}px`,
         objectFit: "cover",
         borderRadius: "2px",
-        filter: OXFORD_BLUE_FILTER,
         flexShrink: 0,
         display: "inline-block",
         verticalAlign: "middle",

@@ -223,6 +223,7 @@ const CAT_FILTERS: { id: SignalCategory | "all"; label: string }[] = [
 
 function SignalCard({ sig }: { sig: MacroSignal }) {
   const [expanded, setExpanded] = useState(false);
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
   const navigate = useNavigate();
   const invert = sig.category === "aviation"; // RPK up = good
 
@@ -368,22 +369,46 @@ function SignalCard({ sig }: { sig: MacroSignal }) {
             {sig.globalNarrative}
           </div>
 
-          {/* Portfolio narrative — highlighted */}
-          <div
+          {/* Portfolio narrative — collapsible */}
+          <button
+            onClick={() => setPortfolioOpen((p) => !p)}
             style={{
-              background: "rgba(0,33,71,0.04)",
-              border: `1px solid rgba(0,33,71,0.12)`,
-              borderLeft: `3px solid ${T.blue}`,
-              borderRadius: "0 0.375rem 0.375rem 0",
-              padding: "0.625rem 0.75rem",
-              fontSize: "0.8125rem",
-              color: T.text,
-              lineHeight: 1.6,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              color: T.blue,
             }}
           >
-            <span style={{ fontWeight: 600, color: T.blue }}>Your portfolio: </span>
-            {sig.portfolioNarrative}
-          </div>
+            <svg
+              width="10" height="10" viewBox="0 0 10 10"
+              style={{ transform: portfolioOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 150ms ease", flexShrink: 0 }}
+            >
+              <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Your portfolio
+          </button>
+          {portfolioOpen && (
+            <div
+              style={{
+                background: "rgba(0,33,71,0.04)",
+                border: `1px solid rgba(0,33,71,0.12)`,
+                borderLeft: `3px solid ${T.blue}`,
+                borderRadius: "0 0.375rem 0.375rem 0",
+                padding: "0.625rem 0.75rem",
+                fontSize: "0.8125rem",
+                color: T.text,
+                lineHeight: 1.6,
+              }}
+            >
+              {sig.portfolioNarrative}
+            </div>
+          )}
 
           {/* Action narrative — collapsible */}
           {expanded && (

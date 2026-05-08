@@ -481,6 +481,12 @@ export default function Dashboard() {
             const sevColor =
               (tile.severity as SignalSeverity) === "high"   ? "#B91C1C" :
               (tile.severity as SignalSeverity) === "medium" ? "#B45309" : "#15803D";
+            const sevBg =
+              (tile.severity as SignalSeverity) === "high"   ? "rgba(185,28,28,0.07)" :
+              (tile.severity as SignalSeverity) === "medium" ? "rgba(180,83,9,0.07)"  : "rgba(21,128,61,0.07)";
+            const sevBorder =
+              (tile.severity as SignalSeverity) === "high"   ? "rgba(185,28,28,0.20)" :
+              (tile.severity as SignalSeverity) === "medium" ? "rgba(180,83,9,0.20)"  : "rgba(21,128,61,0.20)";
             const dirArrow =
               tile.direction === "up" ? "▲" : tile.direction === "down" ? "▼" : "—";
             const tileExpanded = expandedTiles.has(tile.id);
@@ -489,19 +495,19 @@ export default function Dashboard() {
               <div
                 key={tile.id}
                 style={{
-                  background: "#FFFFFF",
-                  border: "1px solid #E2E8F0",
-                  borderTop: `3px solid ${sevColor}`,
+                  background: sevBg,
+                  border: `1px solid ${sevBorder}`,
                   borderRadius: "0.625rem",
                   overflow: "hidden",
-                  transition: "box-shadow 140ms ease-out, transform 140ms ease-out",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  transition: "box-shadow 160ms ease-out, transform 160ms ease-out",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.10)";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
                   (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
                   (e.currentTarget as HTMLDivElement).style.transform = "none";
                 }}
               >
@@ -580,7 +586,7 @@ export default function Dashboard() {
       {/* Charts row — collapsible; collapsed by default in Executive Mode */}
       <DashboardSection label="Charts & Analysis" defaultOpen={!isExecutiveMode}>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
-        <Card title="ECL Trend — Last 6 Months" subtitle="Baseline scenario, portfolio-level">
+        <Card title="ECL Trend — Last 6 Months" subtitle="Baseline scenario, portfolio-level" blueHeader>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={eclTrendData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
               <defs>
@@ -627,7 +633,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </Card>
 
-        <Card title="Stage Distribution" subtitle="By lease count and ECL">
+        <Card title="Stage Distribution" subtitle="By lease count and ECL" blueHeader>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={stageDistData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
               <CartesianGrid key="stage-grid" strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
@@ -661,6 +667,7 @@ export default function Dashboard() {
       <Card
         title="Watchlist Headlines"
         subtitle="Lessees requiring immediate attention"
+        blueHeader
         headerRight={
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <button
@@ -855,6 +862,7 @@ export default function Dashboard() {
       <Card
         title="Recent Scenario Runs"
         subtitle="Last 5 reproducible runs — click to load exact inputs"
+        blueHeader
         collapsible
         defaultCollapsed={isExecutiveMode}
         headerRight={

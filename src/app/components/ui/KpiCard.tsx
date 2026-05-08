@@ -37,6 +37,7 @@ export function KpiCard({
         padding: "1.25rem 1.5rem",
         boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
         border: "1px solid #E2E8F0",
+        borderTop: "3px solid #002147",
         display: "flex",
         flexDirection: "column",
         gap: "0.375rem",

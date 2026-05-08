@@ -310,7 +310,7 @@ export function AgentPanel() {
       <div
         style={{
           height: "56px",
-          borderBottom: "1px solid #E2E8F0",
+          background: "#002147",
           display: "flex",
           alignItems: "center",
           padding: "0 12px",
@@ -318,13 +318,13 @@ export function AgentPanel() {
           flexShrink: 0,
         }}
       >
-        <Zap size={16} color="#002147" />
+        <Zap size={16} color="#FFFFFF" />
         {!isMinimized && (
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#0F172A" }}>
+            <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#FFFFFF" }}>
               Aeroinsights Intelligence
             </div>
-            <div style={{ fontSize: "0.6875rem", color: "#64748B" }}>
+            <div style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.55)" }}>
               GPT-4o · EU West · Data stays in region
             </div>
           </div>
@@ -337,7 +337,7 @@ export function AgentPanel() {
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              color: "#94A3B8",
+              color: "rgba(255,255,255,0.65)",
               padding: "4px",
               display: "flex",
               alignItems: "center",
@@ -352,7 +352,7 @@ export function AgentPanel() {
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              color: "#94A3B8",
+              color: "rgba(255,255,255,0.65)",
               padding: "4px",
               display: "flex",
               alignItems: "center",
@@ -369,8 +369,8 @@ export function AgentPanel() {
           <div
             style={{
               height: "36px",
-              background: "#F8FAFC",
-              borderBottom: "1px solid #E2E8F0",
+              background: "rgba(0,33,71,0.05)",
+              borderBottom: "1px solid rgba(0,33,71,0.10)",
               display: "flex",
               alignItems: "center",
               padding: "0 12px",
@@ -391,7 +391,7 @@ export function AgentPanel() {
           </div>
 
           {/* Chat area */}
-          <div style={{ flex: 1, overflowY: "auto", paddingTop: "12px" }}>
+          <div style={{ flex: 1, overflowY: "auto", paddingTop: "12px", background: "rgba(0,33,71,0.02)" }}>
             {messages.length === 0 && (
               <AgentSuggestions
                 pathname={location.pathname}
@@ -484,8 +484,8 @@ export function AgentPanel() {
           <div
             style={{
               height: "28px",
-              background: "#F8FAFC",
-              borderTop: "1px solid #E2E8F0",
+              background: "rgba(0,33,71,0.04)",
+              borderTop: "1px solid rgba(0,33,71,0.10)",
               display: "flex",
               alignItems: "center",
               padding: "0 12px",

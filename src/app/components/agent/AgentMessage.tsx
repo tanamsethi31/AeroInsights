@@ -140,7 +140,7 @@ function RenderContent({ content }: { content: string }) {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {h}
+                    {parseInline(h)}
                   </th>
                 ))}
               </tr>
@@ -153,7 +153,7 @@ function RenderContent({ content }: { content: string }) {
                       key={ci}
                       style={{ padding: "6px 10px", color: "#0F172A", fontSize: "0.8125rem" }}
                     >
-                      {cell}
+                      {parseInline(cell)}
                     </td>
                   ))}
                 </tr>

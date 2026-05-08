@@ -83,18 +83,19 @@ export function AlertsPanel({ onClose, onOpenRules, onUnreadChange }: AlertsPane
           display: "flex",
           alignItems: "center",
           padding: "12px 16px",
-          borderBottom: "1px solid #E2E8F0",
+          background: "#002147",
           gap: "8px",
+          flexShrink: 0,
         }}
       >
-        <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#0F172A", flex: 1 }}>
+        <span style={{ fontWeight: 700, fontSize: "0.9375rem", color: "#FFFFFF", flex: 1 }}>
           Alerts
         </span>
         <span
           style={{
             fontSize: "0.6875rem",
-            background: "#F1F5F9",
-            color: "#475569",
+            background: "rgba(255,255,255,0.15)",
+            color: "rgba(255,255,255,0.85)",
             borderRadius: "12px",
             padding: "2px 8px",
             fontWeight: 600,
@@ -105,20 +106,20 @@ export function AlertsPanel({ onClose, onOpenRules, onUnreadChange }: AlertsPane
         <button
           onClick={handleMarkAll}
           title="Mark all as read"
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: "4px", display: "flex" }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.70)", padding: "4px", display: "flex" }}
         >
           <CheckCheck size={16} />
         </button>
         <button
           onClick={onOpenRules}
           title="Alert settings"
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: "4px", display: "flex" }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.70)", padding: "4px", display: "flex" }}
         >
           <Settings size={16} />
         </button>
         <button
           onClick={onClose}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: "4px", display: "flex" }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.70)", padding: "4px", display: "flex" }}
         >
           <X size={16} />
         </button>

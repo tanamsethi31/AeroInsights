@@ -16,6 +16,8 @@ interface CardProps {
    * re-expands automatically — unless the user has manually overridden it.
    */
   defaultCollapsed?: boolean;
+  /** Oxford blue header with white text. */
+  blueHeader?: boolean;
 }
 
 export function Card({
@@ -27,6 +29,7 @@ export function Card({
   noPadding,
   collapsible,
   defaultCollapsed = false,
+  blueHeader = false,
 }: CardProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
 
@@ -53,7 +56,8 @@ export function Card({
           className="flex items-center justify-between"
           style={{
             padding: "1rem 1.5rem",
-            borderBottom: collapsed ? "none" : "1px solid #E2E8F0",
+            background: blueHeader ? "#002147" : undefined,
+            borderBottom: blueHeader ? "none" : (collapsed ? "none" : "1px solid #E2E8F0"),
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -62,7 +66,7 @@ export function Card({
                 style={{
                   fontSize: "0.9375rem",
                   fontWeight: 600,
-                  color: "#0F172A",
+                  color: blueHeader ? "#FFFFFF" : "#0F172A",
                   margin: 0,
                   lineHeight: 1.4,
                 }}
@@ -71,7 +75,7 @@ export function Card({
               </h3>
             )}
             {subtitle && (
-              <p style={{ fontSize: "0.8125rem", color: "#94A3B8", margin: "0.125rem 0 0" }}>
+              <p style={{ fontSize: "0.8125rem", color: blueHeader ? "rgba(255,255,255,0.55)" : "#94A3B8", margin: "0.125rem 0 0" }}>
                 {subtitle}
               </p>
             )}
@@ -92,7 +96,7 @@ export function Card({
                   padding: "4px",
                   display: "flex",
                   alignItems: "center",
-                  color: "#94A3B8",
+                  color: blueHeader ? "rgba(255,255,255,0.65)" : "#94A3B8",
                   flexShrink: 0,
                 }}
               >
