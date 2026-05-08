@@ -1,3 +1,6 @@
+import * as React from "react";
+import { ChevronDown } from "lucide-react";
+
 interface CardProps {
   children: React.ReactNode;
   title?: string;
@@ -5,9 +8,35 @@ interface CardProps {
   className?: string;
   headerRight?: React.ReactNode;
   noPadding?: boolean;
+  /** When true the card body can be toggled open/closed via a chevron button. */
+  collapsible?: boolean;
+  /**
+   * Initial collapsed state. If this changes (e.g. the user switches modes)
+   * the card resets to the new default so exec-mode collapses and analyst
+   * re-expands automatically — unless the user has manually overridden it.
+   */
+  defaultCollapsed?: boolean;
 }
 
-export function Card({ children, title, subtitle, className = "", headerRight, noPadding }: CardProps) {
+export function Card({
+  children,
+  title,
+  subtitle,
+  className = "",
+  headerRight,
+  noPadding,
+  collapsible,
+  defaultCollapsed = false,
+}: CardProps) {
+  const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
+
+  // Sync when the caller changes defaultCollapsed (mode toggle, etc.)
+  React.useEffect(() => {
+    setCollapsed(defaultCollapsed);
+  }, [defaultCollapsed]);
+
+  const hasHeader = !!(title || headerRight || collapsible);
+
   return (
     <div
       className={className}
@@ -19,15 +48,15 @@ export function Card({ children, title, subtitle, className = "", headerRight, n
         overflow: "hidden",
       }}
     >
-      {(title || headerRight) && (
+      {hasHeader && (
         <div
           className="flex items-center justify-between"
           style={{
             padding: "1rem 1.5rem",
-            borderBottom: "1px solid #E2E8F0",
+            borderBottom: collapsed ? "none" : "1px solid #E2E8F0",
           }}
         >
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             {title && (
               <h3
                 style={{
@@ -47,10 +76,42 @@ export function Card({ children, title, subtitle, className = "", headerRight, n
               </p>
             )}
           </div>
-          {headerRight && <div className="flex items-center gap-2">{headerRight}</div>}
+
+          <div className="flex items-center gap-2">
+            {headerRight && (
+              <div className="flex items-center gap-2">{headerRight}</div>
+            )}
+            {collapsible && (
+              <button
+                onClick={() => setCollapsed((c) => !c)}
+                aria-label={collapsed ? "Expand section" : "Collapse section"}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  color: "#94A3B8",
+                  flexShrink: 0,
+                }}
+              >
+                <ChevronDown
+                  size={15}
+                  style={{
+                    transform: collapsed ? "rotate(0deg)" : "rotate(180deg)",
+                    transition: "transform 200ms ease",
+                  }}
+                />
+              </button>
+            )}
+          </div>
         </div>
       )}
-      <div style={noPadding ? {} : { padding: "1.5rem" }}>{children}</div>
+
+      {!collapsed && (
+        <div style={noPadding ? {} : { padding: "1.5rem" }}>{children}</div>
+      )}
     </div>
   );
 }

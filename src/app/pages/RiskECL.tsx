@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
 import { useLocation } from "react-router";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { useViewMode } from "../contexts/ViewModeContext";
-import { Fade } from "../components/ui/Fade";
 
 const PATH_TAB: Record<string, string> = {
   "/risk-ecl/summary":   "ECL Overview",
@@ -320,6 +319,66 @@ const IAS36_ALERT = {
 const fmt = (n: number) => `$${n.toFixed(1)}M`;
 const pct = (n: number) => `${n.toFixed(2)}%`;
 
+/** Collapsible section used to replace Fade-hidden analyst blocks. */
+function RiskSection({
+  label,
+  defaultOpen,
+  children,
+}: {
+  label: string;
+  defaultOpen: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const didMount = useRef(false);
+
+  useEffect(() => {
+    if (didMount.current) setOpen(defaultOpen);
+    else didMount.current = true;
+  }, [defaultOpen]);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: "0.25rem 0",
+          marginBottom: open ? "0.75rem" : "0",
+          color: "#64748B",
+          fontSize: "0.8125rem",
+          fontWeight: 500,
+        }}
+      >
+        {/* ChevronDown from lucide-react — imported below */}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 200ms ease",
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        {label}
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
 function computeWeightedECL(
   weights: { base: number; adverse: number; upside: number }
 ) {
@@ -429,8 +488,8 @@ export default function RiskECL() {
             : "IFRS 9 ITG — probability-weighted ECL across ≥3 scenarios. Weights must sum to 100%."
         }
       >
-        {/* Weight sliders — analyst only */}
-        <Fade show={!isExecutiveMode} id="ecl-weight-controls">
+        {/* Weight sliders — collapsible; collapsed by default in Executive Mode */}
+        <RiskSection label="Probability Controls" defaultOpen={!isExecutiveMode}>
         <div
           style={{
             display: "grid",
@@ -591,11 +650,11 @@ export default function RiskECL() {
             </div>
           </div>
         </div>
-        </Fade>
+        </RiskSection>
 
         {/* Probability-Weighted ECL Summary Table — always visible */}
         {weightsValid && (
-          <div style={{ marginTop: isExecutiveMode ? 0 : "1.25rem" }}>
+          <div style={{ marginTop: "1.25rem" }}>
             <div
               style={{
                 fontSize: "0.75rem",
@@ -756,8 +815,8 @@ export default function RiskECL() {
         )}
       </Card>
 
-      {/* Charts row — analyst only */}
-      <Fade show={!isExecutiveMode} id="ecl-charts-row">
+      {/* Charts row — collapsible; collapsed by default in Executive Mode */}
+      <RiskSection label="Stage Analysis Charts" defaultOpen={!isExecutiveMode}>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
         <Card
           title="ECL by Stage — Quarterly Trend"
@@ -909,7 +968,7 @@ export default function RiskECL() {
           </div>
         </Card>
       </div>
-      </Fade>
+      </RiskSection>
     </div>
   );
 

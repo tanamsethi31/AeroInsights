@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useSignalRefresh } from "../services/useSignalRefresh";
 import { useNavigate } from "react-router";
 import { getWatchlistSummary } from "../components/counterparties/watchlistEngine";
@@ -19,9 +19,63 @@ import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { ExportSnapshotModal } from "../components/ui/ExportSnapshotModal";
-import { Fade } from "../components/ui/Fade";
 import { useViewMode } from "../contexts/ViewModeContext";
-import { ArrowRight, Play, Download, RefreshCw, AlertCircle, CheckCircle2, Circle, ChevronRight, X as XIcon } from "lucide-react";
+import { ArrowRight, Play, Download, RefreshCw, AlertCircle, CheckCircle2, Circle, ChevronRight, ChevronDown, X as XIcon } from "lucide-react";
+
+/**
+ * A lightweight collapsible wrapper used for dashboard sections (e.g. Charts).
+ * `defaultOpen` drives the initial state and resets it whenever it changes
+ * (i.e. when the user toggles executive ↔ analyst mode).
+ */
+function DashboardSection({
+  label,
+  defaultOpen,
+  children,
+}: {
+  label: string;
+  defaultOpen: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const didMount = useRef(false);
+
+  // Reset when mode toggles, but not on the very first render.
+  useEffect(() => {
+    if (didMount.current) setOpen(defaultOpen);
+    else didMount.current = true;
+  }, [defaultOpen]);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: "0.25rem 0",
+          marginBottom: open ? "0.75rem" : "0",
+          color: "#64748B",
+          fontSize: "0.8125rem",
+          fontWeight: 500,
+        }}
+      >
+        <ChevronDown
+          size={14}
+          style={{
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 200ms ease",
+          }}
+        />
+        {label}
+      </button>
+      {open && children}
+    </div>
+  );
+}
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { DASHBOARD_SIGNAL_TILES, type SignalSeverity } from "../data/intelligenceData";
 
@@ -476,8 +530,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts row — hidden in Executive Mode */}
-      <Fade show={!isExecutiveMode} id="dashboard-charts">
+      {/* Charts row — collapsible; collapsed by default in Executive Mode */}
+      <DashboardSection label="Charts & Analysis" defaultOpen={!isExecutiveMode}>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
         <Card title="ECL Trend — Last 6 Months" subtitle="Baseline scenario, portfolio-level">
           <ResponsiveContainer width="100%" height={200}>
@@ -554,7 +608,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </Card>
       </div>
-      </Fade>
+      </DashboardSection>
 
       {/* Watchlist Headlines */}
       <Card
@@ -751,11 +805,12 @@ export default function Dashboard() {
         </table>
       </Card>
 
-      {/* Last 5 Scenario Runs — hidden in Executive Mode */}
-      <Fade show={!isExecutiveMode} id="dashboard-scenarios">
+      {/* Last 5 Scenario Runs — collapsible; collapsed by default in Executive Mode */}
       <Card
         title="Recent Scenario Runs"
         subtitle="Last 5 reproducible runs — click to load exact inputs"
+        collapsible
+        defaultCollapsed={isExecutiveMode}
         headerRight={
           <button
             onClick={() => navigate("/scenarios")}
@@ -927,7 +982,6 @@ export default function Dashboard() {
           </tbody>
         </table>
       </Card>
-      </Fade>
     </div>
     </>
   );
