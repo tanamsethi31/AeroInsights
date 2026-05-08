@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
@@ -1427,8 +1427,16 @@ function JurisdictionWatchView() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+const PATH_TO_TAB: Record<string, IntelTab> = {
+  "/intelligence/lessee-radar": "lessee-radar",
+  "/intelligence/deal-feed":    "deal-feed",
+  "/intelligence/jx-watch":    "jx-watch",
+};
+
 export default function Intelligence() {
-  const [activeTab, setActiveTab] = useState<IntelTab>("signals");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab: IntelTab = PATH_TO_TAB[location.pathname] ?? "signals";
 
   // Red dot for high-severity signals
   const highSignals  = MACRO_SIGNALS.filter((s) => s.severity === "high").length;
@@ -1484,7 +1492,7 @@ export default function Intelligence() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => navigate(`/intelligence/${tab.id}`)}
               style={{
                 padding: "7px 20px", borderRadius: "9999px", border: "none",
                 background: active ? "#002147" : "transparent",
