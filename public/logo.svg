@@ -1,0 +1,12 @@
+<svg viewBox="130 170 740 630" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <!-- Upper left leg of A -->
+  <polygon points="500,200 294,573 353,565"/>
+  <!-- Upper right leg of A -->
+  <polygon points="500,200 649,526 582,535"/>
+  <!-- Swoosh -->
+  <polygon points="155,620 151,592 821,502 825,530 829,558 159,648"/>
+  <!-- Lower left piece (below swoosh) -->
+  <polygon points="260,634 185,770 270,770 328,625"/>
+  <!-- Lower right piece (below swoosh) -->
+  <polygon points="673,579 760,770 640,770 596,589"/>
+</svg>

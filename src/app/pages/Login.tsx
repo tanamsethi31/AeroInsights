@@ -42,23 +42,19 @@ export default function Login() {
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "52px",
-              height: "52px",
+              width: "64px",
+              height: "64px",
               background: "#002147",
-              borderRadius: "12px",
+              borderRadius: "16px",
               marginBottom: "1rem",
+              padding: "12px",
             }}
           >
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <path
-                d="M4 20L14 4L24 20H4Z"
-                stroke="#FFFFFF"
-                strokeWidth="2.5"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              <path d="M9 20L14 11L19 20" stroke="#FFFFFF" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
-            </svg>
+            <img
+              src="/logo.png"
+              alt="Aeroinsights"
+              style={{ width: "100%", height: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+            />
           </div>
 
           <div

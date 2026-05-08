@@ -303,9 +303,13 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             >
               <div
                 className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg"
-                style={{ background: "#002147" }}
+                style={{ background: "#002147", padding: "5px" }}
               >
-                <BarChart3 size={18} className="text-white" />
+                <img
+                  src="/logo.png"
+                  alt="Aeroinsights"
+                  style={{ width: "100%", height: "100%", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+                />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold text-sidebar-accent-foreground">
