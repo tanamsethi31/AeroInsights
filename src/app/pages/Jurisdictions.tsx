@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
+import { CountryFlag } from "../components/ui/CountryFlag";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Search } from "lucide-react";
 import { useViewMode } from "../contexts/ViewModeContext";
@@ -120,7 +121,7 @@ export default function Jurisdictions() {
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
-                        <span style={{ fontSize: "1.125rem", flexShrink: 0 }}>{j.flag}</span>
+                        <CountryFlag code={j.code} size={15} />
                         <span style={{ fontSize: "0.875rem", fontWeight: active ? 600 : 400, color: "#0F172A", truncate: "true", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {j.country}
                         </span>
@@ -184,7 +185,7 @@ export default function Jurisdictions() {
                     <tr key={j.code} style={{ borderBottom: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
                       <td style={{ padding: "0.625rem 1rem" }}>
                         <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <span>{j.flag}</span>
+                          <CountryFlag code={j.code} size={14} />
                           <span style={{ fontWeight: 600, color: "#0F172A" }}>{j.country}</span>
                         </span>
                       </td>
