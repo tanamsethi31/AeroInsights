@@ -1,30 +1,38 @@
 // src/app/components/layout/Layout.tsx
 import * as React from "react";
 import { Outlet } from "react-router";
-import { SidebarProvider, SidebarInset } from "../ui/sidebar";
+import { SidebarProvider, SidebarInset, useSidebar } from "../ui/sidebar";
 import { AppSidebar } from "./Sidebar";
 import { Header } from "./Header";
-import { AgentProvider } from "../../contexts/AgentContext";
+import { AgentProvider, useAgent } from "../../contexts/AgentContext";
 import { AgentPanel } from "../agent/AgentPanel";
 import { CurrencyProvider } from "../../contexts/CurrencyContext";
 
-export function Layout() {
+/**
+ * Inner layout shell — must live inside both SidebarProvider (to call useSidebar)
+ * and AgentProvider (to call useAgent).
+ */
+function LayoutContent() {
+  const { isOpen } = useAgent();
+  const { setOpen } = useSidebar();
+
+  // Collapse the sidebar automatically whenever the AI panel opens.
+  React.useEffect(() => {
+    if (isOpen) setOpen(false);
+  }, [isOpen, setOpen]);
+
   return (
-    <CurrencyProvider>
-    <AgentProvider>
-      <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "16rem",
-            "--sidebar-width-icon": "3rem",
-            "--header-height": "3.5rem",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar />
-        <SidebarInset className="overflow-hidden">
-          <Header />
-          <main className="flex flex-1 flex-col overflow-auto bg-[#f8fafc]">
+    <>
+      <AppSidebar />
+      <SidebarInset className="overflow-hidden">
+        <Header />
+
+        {/* Below-header split view: [main content] | [AI panel] */}
+        <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+          <main
+            className="flex flex-1 flex-col overflow-auto bg-[#f8fafc]"
+            style={{ minWidth: 0 }}
+          >
             <div
               style={{
                 maxWidth: "1400px",
@@ -36,12 +44,31 @@ export function Layout() {
               <Outlet />
             </div>
           </main>
-        </SidebarInset>
 
-        {/* AgentPanel: position:fixed overlay — does not affect layout flow */}
-        <AgentPanel />
-      </SidebarProvider>
-    </AgentProvider>
+          {/* AgentPanel sits in the document flow — no overlay, no z-index issues */}
+          <AgentPanel />
+        </div>
+      </SidebarInset>
+    </>
+  );
+}
+
+export function Layout() {
+  return (
+    <CurrencyProvider>
+      <AgentProvider>
+        <SidebarProvider
+          style={
+            {
+              "--sidebar-width": "16rem",
+              "--sidebar-width-icon": "3rem",
+              "--header-height": "3.5rem",
+            } as React.CSSProperties
+          }
+        >
+          <LayoutContent />
+        </SidebarProvider>
+      </AgentProvider>
     </CurrencyProvider>
   );
 }

@@ -282,19 +282,17 @@ export function AgentPanel() {
   return (
     <div
       style={{
-        position: "fixed",
-        right: 0,
-        top: 0,
-        height: "100vh",
         width: isMinimized ? "48px" : "420px",
-        zIndex: 50,
+        flexShrink: 0,
+        height: "100%",
         background: "#FFFFFF",
         borderLeft: "1px solid #E2E8F0",
-        boxShadow: "-4px 0 24px rgba(0,0,0,0.10)",
+        boxShadow: "-4px 0 16px rgba(0,0,0,0.08)",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
         animation: "agentSlideIn 240ms cubic-bezier(0.32,0.72,0,1)",
+        transition: "width 180ms ease",
       }}
     >
       <style>{`
