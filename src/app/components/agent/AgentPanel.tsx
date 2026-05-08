@@ -390,15 +390,16 @@ export function AgentPanel() {
             </span>
           </div>
 
-          {/* Chat area — top fade gives depth as messages scroll in */}
+          {/* Chat area — fades in from top, fades out at bottom into input area */}
           <div
             style={{
               flex: 1,
               overflowY: "auto",
               paddingTop: "12px",
+              paddingBottom: "20px",
               background: "rgba(0,33,71,0.07)",
-              WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, black 52px)",
-              maskImage: "linear-gradient(to bottom, transparent 0px, black 52px)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, black 52px, black calc(100% - 40px), transparent 100%)",
+              maskImage: "linear-gradient(to bottom, transparent 0px, black 52px, black calc(100% - 40px), transparent 100%)",
             }}
           >
             {messages.length === 0 && (
@@ -424,7 +425,6 @@ export function AgentPanel() {
           <div
             style={{
               background: "#002147",
-              borderTop: "1px solid rgba(255,255,255,0.10)",
               padding: "10px 12px",
               display: "flex",
               gap: "8px",
