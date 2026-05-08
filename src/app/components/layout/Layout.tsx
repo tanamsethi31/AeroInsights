@@ -16,9 +16,12 @@ function LayoutContent() {
   const { isOpen } = useAgent();
   const { setOpen } = useSidebar();
 
-  // Collapse the sidebar automatically whenever the AI panel opens.
+  // Collapse the sidebar only at the moment the AI panel is opened (false → true).
+  // After that the user is free to re-open the sidebar independently.
+  const prevIsOpen = React.useRef(isOpen);
   React.useEffect(() => {
-    if (isOpen) setOpen(false);
+    if (isOpen && !prevIsOpen.current) setOpen(false);
+    prevIsOpen.current = isOpen;
   }, [isOpen, setOpen]);
 
   return (
