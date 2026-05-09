@@ -45,6 +45,7 @@ create table if not exists assets (
   created_at       timestamptz not null default now()
 );
 create index if not exists assets_org_id_idx on assets(org_id);
+create unique index if not exists assets_org_msn_unique on assets(org_id, msn);
 
 -- ─── lessees ─────────────────────────────────────────────────────────────────
 create table if not exists lessees (
@@ -80,6 +81,7 @@ create table if not exists provisions (
   id              uuid primary key default gen_random_uuid(),
   org_id          uuid not null references organisations(id) on delete cascade,
   asset_id        uuid not null references assets(id) on delete cascade,
+  lease_id        uuid references leases(id) on delete set null,
   stage           int,
   ecl_amount      numeric,
   pd              numeric,
@@ -116,6 +118,13 @@ create table if not exists lessee_financials (
   period_end   date,
   fetched_at   timestamptz not null default now()
 );
+create index if not exists market_data_org_id_idx on market_data(org_id);
+create index if not exists lessee_financials_org_id_idx on lessee_financials(org_id);
+
+-- NOTE: Leases and provisions reference assets/lessees by id only — no DB-level
+-- guarantee that referenced rows belong to the same org_id. Application layer
+-- (DataContext + insert logic) enforces this. Add composite FK triggers before
+-- production launch.
 
 -- ─── Row-Level Security ───────────────────────────────────────────────────────
 -- NOTE: RLS is disabled for Phase 1 demo. org_id filtering happens in the
