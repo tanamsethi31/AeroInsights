@@ -8,8 +8,9 @@ import { KpiCard } from "../ui/KpiCard";
 import {
   type DimKey,
   DEFAULT_POLICY_RULES,
-  PEAK_CONCENTRATIONS,
 } from "../../data/concentrationPolicy";
+import { usePortfolioData } from "../../hooks/usePortfolioData";
+import { toConcentrationData, type ConcentrationDimKey } from "../../lib/portfolioAdapters";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -350,9 +351,9 @@ const LESSEE_SHORT: Record<string, string> = {
   "Aeromexico":              "Aeromexico",
 };
 
-function HeatmapView() {
+function HeatmapView({ cells }: { cells: HeatmapCell[] }) {
   const cellMap = new Map<string, HeatmapCell>();
-  HEATMAP_CELLS.forEach((c) => cellMap.set(`${c.lessee}::${c.country}`, c));
+  cells.forEach((c) => cellMap.set(`${c.lessee}::${c.country}`, c));
 
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem", overflowX: "auto" }}>
@@ -443,9 +444,15 @@ function HeatmapView() {
 
 // ─── CovenantHeadroomView ─────────────────────────────────────────────────────
 
-function CovenantHeadroomView({ thresholds }: { thresholds: ThresholdMap }) {
+function CovenantHeadroomView({
+  thresholds,
+  peaks,
+}: {
+  thresholds: ThresholdMap;
+  peaks: Record<ConcentrationDimKey, { name: string; pct: number }>;
+}) {
   const rows = DEFAULT_POLICY_RULES.map((rule) => {
-    const peak = PEAK_CONCENTRATIONS[rule.dimension];
+    const peak = peaks[rule.dimension as ConcentrationDimKey];
     const limitPct = thresholds[rule.dimension];
     const headroomPp = limitPct - peak.pct;
     const headroomBps = Math.round(headroomPp * 100);
@@ -613,6 +620,14 @@ export function ConcentrationTab() {
   const [thresholds, setThresholds] = useState<ThresholdMap>({ ...DEFAULT_THRESHOLDS });
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
+  const { assets, lessees, leases, provisions } = usePortfolioData();
+  const {
+    concentrationData: liveConcentrationData,
+    heatmapCells: liveHeatmapCells,
+    kpis: liveKpis,
+    peakConcentrations: livePeaks,
+  } = toConcentrationData(assets, lessees, leases, provisions);
+
   function handleThresholdChange(dim: DimKey, val: number) {
     setThresholds((prev) => ({ ...prev, [dim]: val }));
   }
@@ -621,7 +636,7 @@ export function ConcentrationTab() {
   const activeBreaches = DEFAULT_POLICY_RULES
     .filter((r) => r.enabled && !dismissedAlerts.has(r.id))
     .map((r) => {
-      const peak = PEAK_CONCENTRATIONS[r.dimension];
+      const peak = livePeaks[r.dimension as ConcentrationDimKey];
       const level = breachLevel(peak.pct, thresholds[r.dimension]);
       return { rule: r, peak, level };
     })
@@ -632,10 +647,10 @@ export function ConcentrationTab() {
 
       {/* KPI Strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>
-        <KpiCard label="Book Value"       value={fmtM(KPI.bookValue)} />
+        <KpiCard label="Book Value"       value={fmtM(liveKpis.bookValue)} />
         <KpiCard label="Encumbered Value" value={fmtM(KPI.encumberedValue)} subtitle={`${KPI.encumberedPct}% of book`} />
-        <KpiCard label="Total ECL"        value={fmtM(KPI.totalECL)} delta="+5.4% vs Q4" deltaType="negative" />
-        <KpiCard label="ECL Rate"         value={fmtPct(KPI.eclRate)} />
+        <KpiCard label="Total ECL"        value={fmtM(liveKpis.totalECL)} delta="+5.4% vs Q4" deltaType="negative" />
+        <KpiCard label="ECL Rate"         value={fmtPct(liveKpis.eclRate)} />
         <KpiCard label="WA Lease Term"    value={`${KPI.waLeaseTerm} yrs`} />
         <KpiCard label="WA Credit"        value={KPI.waCredit} />
       </div>
@@ -723,14 +738,14 @@ export function ConcentrationTab() {
 
       {/* Content */}
       {activeSubTab === "Heatmap" ? (
-        <HeatmapView />
+        <HeatmapView cells={liveHeatmapCells} />
       ) : activeSubTab === "Covenant Headroom" ? (
-        <CovenantHeadroomView thresholds={thresholds} />
+        <CovenantHeadroomView thresholds={thresholds} peaks={livePeaks} />
       ) : (
         <ConcentrationView
           key={activeSubTab}
           dimKey={activeSubTab}
-          data={CONCENTRATION_DATA[activeSubTab]}
+          data={liveConcentrationData[activeSubTab as ConcentrationDimKey]}
           threshold={thresholds[activeSubTab]}
           onThresholdChange={(val) => handleThresholdChange(activeSubTab, val)}
         />
