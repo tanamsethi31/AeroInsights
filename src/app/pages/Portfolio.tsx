@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import {
@@ -51,6 +51,7 @@ const EXEC_TABS = ["Leases", "Aircraft"];
 
 export default function Portfolio() {
   const { pathname, state: locationState } = useLocation();
+  const navigate = useNavigate();
   const { isExecutiveMode } = useViewMode();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Leases");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Leases"); }, [pathname]);
@@ -337,7 +338,11 @@ export default function Portfolio() {
                     <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{lease.start}</td>
                     <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{lease.end}</td>
                     <td style={{ padding: "0.75rem 1rem", color: "#0F172A", fontWeight: 500 }}>${lease.rentUSD}</td>
-                    <td style={{ padding: "0.75rem 1rem" }}>
+                    <td
+                      style={{ padding: "0.75rem 1rem", cursor: "pointer" }}
+                      onClick={() => navigate("/risk-ecl")}
+                      title="View ECL breakdown in Risk & ECL"
+                    >
                       <StatusPill stage={lease.stage as "1" | "2" | "3"} label={`Stage ${lease.stage}`} />
                     </td>
                     <td style={{ padding: "0.75rem 1rem" }}>
@@ -502,7 +507,25 @@ export default function Portfolio() {
                     onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA")}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = i % 2 === 0 ? "#FFFFFF" : "#F4F5F7")}
                   >
-                    <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{l.name}</td>
+                    <td style={{ padding: "0.75rem 1rem" }}>
+                      <button
+                        onClick={() => navigate(`/counterparties?lessee=${l.id}`)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                          fontSize: "0.8125rem",
+                          color: "#002147",
+                          padding: 0,
+                          textDecoration: "underline",
+                          textDecorationColor: "rgba(0,33,71,0.3)",
+                          textUnderlineOffset: "2px",
+                        }}
+                      >
+                        {l.name}
+                      </button>
+                    </td>
                     <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{l.country}</td>
                     <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontWeight: 600, color: l.stage === "3" ? "#B91C1C" : l.stage === "2" ? "#B45309" : "#15803D" }}>{l.rating}</td>
                     <td style={{ padding: "0.75rem 1rem" }}>

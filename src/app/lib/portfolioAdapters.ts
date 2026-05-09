@@ -270,6 +270,7 @@ export function toAircraftTableRows(assets: Asset[], leases: Lease[], lessees: L
 // ─── Portfolio.tsx — Lessees tab ──────────────────────────────────────────────
 
 export interface LesseeTableRow {
+  id: string;
   name: string;
   country: string;
   rating: string;
@@ -293,6 +294,7 @@ export function toLesseeTableRows(lessees: Lessee[], leases: Lease[]): LesseeTab
   const leaseCount = new Map<string, number>();
   for (const l of leases) leaseCount.set(l.lessee_id, (leaseCount.get(l.lessee_id) ?? 0) + 1);
   return lessees.map((l) => ({
+    id: l.id,
     name: l.name,
     country: l.country ?? "—",
     rating: l.credit_rating ?? "—",
