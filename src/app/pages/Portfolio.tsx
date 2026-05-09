@@ -38,10 +38,12 @@ import { SDMRTab } from "../components/portfolio/SDMRTab";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
 import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForecastTab";
 import { PerformanceVsPlan } from "../components/portfolio/PerformanceVsPlan";
+import { KeyDatesTab } from "../components/portfolio/KeyDatesTab";
+import { toKeyDateRows, toKeyDateKPIs } from "../lib/keyDatesAdapters";
 
 
 
-const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR", "Performance vs. Plan"];
+const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR", "Performance vs. Plan", "Key Dates"];
 const EXEC_TABS = ["Leases", "Aircraft"];
 
 
@@ -59,6 +61,8 @@ export default function Portfolio() {
   const leases = toLeaseTableRows(leaseData, assets, lesseeData);
   const aircraft = toAircraftTableRows(assets, leaseData, lesseeData);
   const lessees = toLesseeTableRows(lesseeData, leaseData);
+  const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
+  const keyDateKPIs = toKeyDateKPIs(keyDateRows);
 
   const leaseAccessors = {
     lessee:   (l: LeaseTableRow) => l.lessee,
@@ -519,6 +523,11 @@ export default function Portfolio() {
 
       {/* Performance vs. Plan Tab */}
       {activeTab === "Performance vs. Plan" && <PerformanceVsPlan />}
+
+      {/* Key Dates Tab */}
+      {activeTab === "Key Dates" && (
+        <KeyDatesTab rows={keyDateRows} kpis={keyDateKPIs} />
+      )}
     </div>
     </>
   );

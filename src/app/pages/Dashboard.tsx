@@ -85,6 +85,8 @@ import { useOnboarding } from "../contexts/OnboardingContext";
 import { DASHBOARD_SIGNAL_TILES, type SignalSeverity } from "../data/intelligenceData";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toDashboardKPIs } from "../lib/portfolioAdapters";
+import { toKeyDateRows } from "../lib/keyDatesAdapters";
+import { CalendarClock } from "lucide-react";
 
 const eclTrendData = [
   { month: "Oct", ecl: 38.1, s1: 18.6, s2: 8.2, s3: 11.3, migrations: 1 },
@@ -203,6 +205,10 @@ export default function Dashboard() {
 
   const { assets, lessees: lesseeData, leases: leaseData, provisions } = usePortfolioData();
   const kpis = toDashboardKPIs(assets, lesseeData, provisions);
+  const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
+  const urgentLeases = keyDateRows
+    .filter(r => r.urgency === "critical" || r.urgency === "watch" || r.urgency === "expired")
+    .slice(0, 5);
 
   const [expandedTiles, setExpandedTiles] = useState<Set<string>>(new Set());
   function toggleTile(id: string) {
@@ -450,6 +456,57 @@ export default function Dashboard() {
           staggerIndex={3}
         />
       </div>
+
+      {/* Upcoming Expiries panel */}
+      {urgentLeases.length > 0 && (
+        <div style={{ background: "#FFFFFF", borderRadius: "var(--radius-lg)", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #E2E8F0", overflow: "hidden", padding: "1.25rem 1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
+            <CalendarClock size={16} style={{ color: "#B45309" }} />
+            <span style={{ fontWeight: 600, color: "#0F172A", fontSize: "0.9375rem" }}>Upcoming Expiries</span>
+            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#94A3B8" }}>
+              {keyDateRows.filter(r => r.urgency !== "long").length} within 12 months
+            </span>
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
+                {["Lessee", "Aircraft", "Expiry", "Days", "Stage"].map(h => (
+                  <th key={h} style={{ padding: "6px 12px", textAlign: "left", fontWeight: 600, fontSize: "0.6875rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {urgentLeases.map(r => {
+                const color = r.urgency === "expired" || r.urgency === "critical" ? "#B91C1C" : "#B45309";
+                return (
+                  <tr key={r.leaseId} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                    <td style={{ padding: "8px 12px", fontWeight: 500, color: "#0F172A" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                        {r.lessee}
+                      </div>
+                    </td>
+                    <td style={{ padding: "8px 12px", color: "#475569" }}>{r.aircraft}</td>
+                    <td style={{ padding: "8px 12px", color: "#475569", fontVariantNumeric: "tabular-nums" }}>
+                      {new Date(r.expiryDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}
+                    </td>
+                    <td style={{ padding: "8px 12px", fontWeight: 600, color, fontVariantNumeric: "tabular-nums" }}>
+                      {r.daysRemaining < 0 ? `${Math.abs(r.daysRemaining)}d ago` : `${r.daysRemaining}d`}
+                    </td>
+                    <td style={{ padding: "8px 12px" }}>
+                      <span style={{
+                        padding: "1px 6px", borderRadius: 4, fontWeight: 600, fontSize: "0.6875rem",
+                        background: r.stage === "3" ? "#FEF2F2" : r.stage === "2" ? "#FFFBEB" : "#F0FDF4",
+                        color: r.stage === "3" ? "#B91C1C" : r.stage === "2" ? "#B45309" : "#15803D",
+                      }}>S{r.stage}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Market Signals strip */}
       <motion.div
