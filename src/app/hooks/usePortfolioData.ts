@@ -22,6 +22,7 @@ export function usePortfolioData(): PortfolioData {
       return;
     }
 
+    let cancelled = false;
     setIsLoading(true);
     Promise.all([
       supabase.from("assets").select("*").eq("org_id", orgId),
@@ -30,15 +31,20 @@ export function usePortfolioData(): PortfolioData {
       supabase.from("provisions").select("*").eq("org_id", orgId),
     ])
       .then(([a, l, ls, p]) => {
+        if (cancelled) return;
         setAssets((a.data as Asset[]) ?? []);
         setLessees((l.data as Lessee[]) ?? []);
         setLeases((ls.data as Lease[]) ?? []);
         setProvisions((p.data as Provision[]) ?? []);
       })
       .catch((err) => {
-        console.error("[usePortfolioData] fetch error:", err);
+        if (!cancelled) console.error("[usePortfolioData] fetch error:", err);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, [orgId, hasUpload]);
 
   if (!hasUpload) {
