@@ -162,7 +162,7 @@ export default function Reports() {
 
       {/* Templates */}
       {activeTab === "Report Templates" && (
-        <>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
             {categories.map(cat => (
               <button key={cat} onClick={() => setCategoryFilter(cat)} style={{ padding: "0.375rem 0.75rem", fontSize: "0.8125rem", fontWeight: 500, border: "1px solid", borderRadius: "9999px", cursor: "pointer", background: categoryFilter === cat ? "#002147" : "transparent", color: categoryFilter === cat ? "#FFFFFF" : "#475569", borderColor: categoryFilter === cat ? "#002147" : "#E2E8F0" }}>
@@ -224,12 +224,12 @@ export default function Reports() {
               </motion.div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {/* Scheduled Reports */}
       {activeTab === "Scheduled Reports" && (
-        <>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "9999px", padding: "0.625rem 1.25rem", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>
               <Calendar size={14} /> New Schedule
@@ -271,7 +271,7 @@ export default function Reports() {
               </motion.div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
       {/* Export History */}
