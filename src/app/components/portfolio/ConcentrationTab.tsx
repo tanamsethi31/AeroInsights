@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from "react";
+import { useNavigate } from "react-router";
 import { AlertTriangle, Check } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -173,11 +174,13 @@ function ConcentrationView({
   data,
   threshold,
   onThresholdChange,
+  onNameClick,
 }: {
   dimKey: DimKey;
   data: ConcentrationRow[];
   threshold: number;
   onThresholdChange: (val: number) => void;
+  onNameClick?: (name: string) => void;
 }) {
   const [draft, setDraft] = useState(String(threshold));
   useEffect(() => { setDraft(String(threshold)); }, [threshold]);
@@ -294,7 +297,29 @@ function ConcentrationView({
                 return (
                   <tr key={row.name} style={{ borderBottom: "1px solid #F1F5F9", background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
                     <td style={{ padding: "0.5rem 0.875rem", textAlign: "center", fontSize: "0.75rem", color: "#94A3B8", fontWeight: 600 }}>{i + 1}</td>
-                    <td style={{ padding: "0.5rem 0.875rem", fontWeight: 600, color: "#0F172A" }}>{row.name}</td>
+                    <td style={{ padding: "0.5rem 0.875rem" }}>
+                      {onNameClick ? (
+                        <button
+                          onClick={() => onNameClick(row.name)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontWeight: 600,
+                            fontSize: "0.8125rem",
+                            color: "#002147",
+                            padding: 0,
+                            textDecoration: "underline",
+                            textDecorationColor: "rgba(0,33,71,0.3)",
+                            textUnderlineOffset: "2px",
+                          }}
+                        >
+                          {row.name}
+                        </button>
+                      ) : (
+                        <span style={{ fontWeight: 600, color: "#0F172A" }}>{row.name}</span>
+                      )}
+                    </td>
                     <td style={{ padding: "0.5rem 0.875rem", color: "#475569", fontVariantNumeric: "tabular-nums" }}>{fmtM(row.exposure)}</td>
                     <td style={{ padding: "0.5rem 0.875rem", fontVariantNumeric: "tabular-nums" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
@@ -621,6 +646,8 @@ export function ConcentrationTab() {
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
   const { assets, lessees, leases, provisions } = usePortfolioData();
+  const navigate = useNavigate();
+  const lesseeNameToId = new Map(lessees.map(l => [l.name, l.id]));
   const {
     concentrationData: liveConcentrationData,
     heatmapCells: liveHeatmapCells,
@@ -748,6 +775,11 @@ export function ConcentrationTab() {
           data={liveConcentrationData[activeSubTab as ConcentrationDimKey]}
           threshold={thresholds[activeSubTab]}
           onThresholdChange={(val) => handleThresholdChange(activeSubTab, val)}
+          onNameClick={
+            activeSubTab === "Lessee"
+              ? (name) => navigate(`/counterparties?lessee=${lesseeNameToId.get(name) ?? name}`)
+              : undefined
+          }
         />
       )}
     </div>
