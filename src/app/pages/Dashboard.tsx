@@ -431,6 +431,7 @@ export default function Dashboard() {
           deltaType="positive"
           subtitle={`${leaseData.length} leases · ${lesseeData.length} lessees`}
           staggerIndex={0}
+          onClick={() => navigate("/portfolio")}
         />
         <KpiCard
           label="Expected Credit Loss (ECL)"
@@ -439,6 +440,7 @@ export default function Dashboard() {
           deltaType="negative"
           subtitle="1.66% of book value"
           staggerIndex={1}
+          onClick={() => navigate("/risk-ecl")}
         />
         <KpiCard
           label="Watchlist Status"
@@ -447,6 +449,7 @@ export default function Dashboard() {
           delta="↑2 from last week"
           deltaType="negative"
           staggerIndex={2}
+          onClick={() => navigate("/counterparties")}
         />
         <KpiCard
           label="Active Scenarios"
@@ -455,6 +458,7 @@ export default function Dashboard() {
           deltaType="positive"
           subtitle="Last run: 09:14 today"
           staggerIndex={3}
+          onClick={() => navigate("/scenarios")}
         />
       </div>
 
@@ -467,9 +471,20 @@ export default function Dashboard() {
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
             <CalendarClock size={16} style={{ color: "#B45309" }} />
             <span style={{ fontWeight: 600, color: "#0F172A", fontSize: "0.9375rem" }}>Upcoming Expiries</span>
-            <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "#94A3B8" }}>
+            <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
               {keyDateRows.filter(r => r.urgency !== "long").length} within 12 months
             </span>
+            <button
+              onClick={() => navigate("/portfolio", { state: { tab: "Key Dates" } })}
+              style={{
+                marginLeft: "auto",
+                background: "none", border: "none", cursor: "pointer",
+                color: "#0369A1", fontSize: "0.75rem", fontWeight: 600,
+                display: "flex", alignItems: "center", gap: "4px", padding: 0,
+              }}
+            >
+              View all <ArrowRight size={11} />
+            </button>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
             <thead>
@@ -483,7 +498,17 @@ export default function Dashboard() {
               {urgentLeases.map(r => {
                 const color = r.urgency === "expired" || r.urgency === "critical" ? "#B91C1C" : "#B45309";
                 return (
-                  <tr key={r.leaseId} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                  <tr
+                    key={r.leaseId}
+                    onClick={() => navigate("/portfolio", { state: { tab: "Key Dates" } })}
+                    style={{
+                      borderBottom: "1px solid #F1F5F9",
+                      cursor: "pointer",
+                      transition: "background 120ms ease",
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#F8FAFC"}
+                    onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = "transparent"}
+                  >
                     <td style={{ padding: "8px 12px", fontWeight: 500, color: "#0F172A" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />

@@ -50,7 +50,7 @@ const EXEC_TABS = ["Leases", "Aircraft"];
 
 
 export default function Portfolio() {
-  const { pathname } = useLocation();
+  const { pathname, state: locationState } = useLocation();
   const { isExecutiveMode } = useViewMode();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Leases");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Leases"); }, [pathname]);
@@ -59,6 +59,13 @@ export default function Portfolio() {
       setActiveTab("Leases");
     }
   }, [isExecutiveMode, activeTab]);
+  // Deep-link: activate tab from navigation state (e.g. Dashboard → "Key Dates")
+  useEffect(() => {
+    if (locationState?.tab) {
+      setActiveTab(locationState.tab as string);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only — do not re-run on locationState change
   const { assets, lessees: lesseeData, leases: leaseData, isLoading } = usePortfolioData();
   const leases = toLeaseTableRows(leaseData, assets, lesseeData);
   const aircraft = toAircraftTableRows(assets, leaseData, lesseeData);
