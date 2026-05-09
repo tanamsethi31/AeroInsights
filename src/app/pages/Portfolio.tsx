@@ -76,7 +76,7 @@ export default function Portfolio() {
   const { assets, lessees: lesseeData, leases: leaseData, provisions, isLoading } = usePortfolioData();
   const leases = toLeaseTableRows(leaseData, assets, lesseeData);
   const aircraft = toAircraftTableRows(assets, leaseData, lesseeData);
-  const lessees = toLesseeTableRows(lesseeData, leaseData);
+  const lessees = toLesseeTableRows(lesseeData, leaseData, provisions);
   const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
   const keyDateKPIs = toKeyDateKPIs(keyDateRows);
   const paymentSchedule = toPaymentSchedule(leaseData, assets, lesseeData);

@@ -290,20 +290,47 @@ function deriveStage(lessee: Lessee): "1" | "2" | "3" {
   return "1";
 }
 
-export function toLesseeTableRows(lessees: Lessee[], leases: Lease[]): LesseeTableRow[] {
+export function toLesseeTableRows(
+  lessees: Lessee[],
+  leases: Lease[],
+  provisions?: Provision[],
+): LesseeTableRow[] {
   const leaseCount = new Map<string, number>();
   for (const l of leases) leaseCount.set(l.lessee_id, (leaseCount.get(l.lessee_id) ?? 0) + 1);
-  return lessees.map((l) => ({
-    id: l.id,
-    name: l.name,
-    country: l.country ?? "—",
-    rating: l.credit_rating ?? "—",
-    stage: deriveStage(l),
-    behaviorScore: 0,
-    leases: leaseCount.get(l.id) ?? 0,
-    exposure: "—",
-    paymentDays: 0,
-  }));
+
+  // Build exposure per lessee from provisions (optional)
+  const exposureByLesseeId = new Map<string, number>();
+  if (provisions && provisions.length > 0) {
+    const assetToLessee = new Map<string, string>();
+    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
+    for (const p of provisions) {
+      const lesseeId = assetToLessee.get(p.asset_id);
+      if (!lesseeId) continue;
+      exposureByLesseeId.set(lesseeId, (exposureByLesseeId.get(lesseeId) ?? 0) + (p.ead ?? 0));
+    }
+  }
+
+  return lessees.map((l) => {
+    const rawEAD = exposureByLesseeId.get(l.id) ?? 0;
+    const exposureM = rawEAD / 1_000_000;
+    const exposure =
+      rawEAD === 0
+        ? "—"
+        : exposureM >= 1000
+        ? `$${(exposureM / 1000).toFixed(2)}B`
+        : `$${exposureM.toFixed(0)}M`;
+    return {
+      id: l.id,
+      name: l.name,
+      country: l.country ?? "—",
+      rating: l.credit_rating ?? "—",
+      stage: deriveStage(l),
+      behaviorScore: 0,
+      leases: leaseCount.get(l.id) ?? 0,
+      exposure,
+      paymentDays: 0,
+    };
+  });
 }
 
 // ─── Portfolio.tsx — KPI strip ────────────────────────────────────────────────

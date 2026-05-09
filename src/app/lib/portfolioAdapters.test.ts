@@ -47,6 +47,26 @@ describe("toLesseeTableRows", () => {
   it("stage=1 for green watchlist", () => { expect(rows.find(r => r.name === "Emirates")?.stage).toBe("1"); });
 });
 
+describe("toLesseeTableRows — with provisions", () => {
+  const rows = toLesseeTableRows(MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS);
+
+  it("shows formatted exposure for IndiGo Airlines (EAD=24.2M)", () => {
+    const row = rows.find(r => r.name === "IndiGo Airlines");
+    expect(row?.exposure).toBe("$24M");
+  });
+
+  it("shows formatted exposure for Emirates (EAD=88.4M)", () => {
+    const row = rows.find(r => r.name === "Emirates");
+    expect(row?.exposure).toBe("$88M");
+  });
+
+  it("still shows — when no provisions passed", () => {
+    const rowsNoProvisions = toLesseeTableRows(MOCK_LESSEES, MOCK_LEASES);
+    const row = rowsNoProvisions.find(r => r.name === "IndiGo Airlines");
+    expect(row?.exposure).toBe("—");
+  });
+});
+
 describe("toDashboardKPIs", () => {
   const kpis = toDashboardKPIs(MOCK_ASSETS, MOCK_LESSEES, MOCK_PROVISIONS);
   it("counts fleet", () => { expect(kpis.fleetCount).toBe(MOCK_ASSETS.length); });
