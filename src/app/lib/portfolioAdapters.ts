@@ -4,6 +4,191 @@
 import type { Asset, Lessee, Lease, Provision } from "../types/portfolio";
 import type { LeaseRow } from "../components/risk-ecl/ECLDrilldownPanel";
 
+// ─── Concentration adapter ────────────────────────────────────────────────────
+
+const COUNTRY_TO_REGION: Record<string, string> = {
+  "UAE": "MEA", "Saudi Arabia": "MEA", "Qatar": "MEA", "Kuwait": "MEA", "Bahrain": "MEA",
+  "Turkey": "MEA", "Egypt": "MEA", "South Africa": "MEA", "Nigeria": "MEA", "Israel": "MEA",
+  "India": "APAC", "China": "APAC", "Singapore": "APAC", "Japan": "APAC",
+  "Australia": "APAC", "South Korea": "APAC", "Sri Lanka": "APAC", "Malaysia": "APAC",
+  "Thailand": "APAC", "Indonesia": "APAC", "Vietnam": "APAC", "Philippines": "APAC",
+  "France": "Europe", "Germany": "Europe", "Ireland": "Europe", "UK": "Europe",
+  "Netherlands": "Europe", "Spain": "Europe", "Italy": "Europe", "Switzerland": "Europe",
+  "Portugal": "Europe", "Belgium": "Europe", "Sweden": "Europe", "Norway": "Europe",
+  "USA": "Americas", "Canada": "Americas", "Brazil": "Americas", "Mexico": "Americas",
+  "Argentina": "Americas", "Colombia": "Americas", "Chile": "Americas", "Peru": "Americas",
+};
+
+function vintageBand(year: number | null): string {
+  if (!year) return "Unknown";
+  if (year >= 2023) return "2023+";
+  if (year >= 2021) return "2021–22";
+  if (year >= 2019) return "2019–20";
+  if (year >= 2017) return "2017–18";
+  if (year >= 2015) return "2015–16";
+  return "Before 2015";
+}
+
+export type ConcentrationDimKey = "Lessee" | "Country" | "Region" | "Type" | "Vintage" | "Currency";
+
+export interface ConcentrationRow {
+  name: string;
+  exposure: number;    // EAD in $
+  exposurePct: number; // % of total EAD (0–100)
+  ecl: number;         // ecl_amount in $
+  eclPct: number;      // ecl / exposure × 100 (loss rate %)
+}
+
+export interface ConcentrationHeatmapCell {
+  lessee: string;
+  country: string;
+  exposure: number;
+  ecl: number;
+}
+
+export interface ConcentrationOutput {
+  concentrationData: Record<ConcentrationDimKey, ConcentrationRow[]>;
+  heatmapCells: ConcentrationHeatmapCell[];
+  kpis: {
+    bookValue: number;  // total EAD
+    totalECL: number;   // total ecl_amount
+    eclRate: number;    // totalECL / bookValue × 100
+  };
+  peakConcentrations: Record<ConcentrationDimKey, { name: string; pct: number }>;
+}
+
+export function toConcentrationData(
+  assets: Asset[],
+  lessees: Lessee[],
+  leases: Lease[],
+  provisions: Provision[],
+): ConcentrationOutput {
+  const assetMap = indexById(assets);
+  const lesseeMap = indexById(lessees);
+
+  // Build asset_id → lessee_id via leases
+  const assetToLesseeId = new Map<string, string>();
+  const assetToCurrency = new Map<string, string>();
+  for (const l of leases) {
+    assetToLesseeId.set(l.asset_id, l.lessee_id);
+    assetToCurrency.set(l.asset_id, l.currency ?? "USD");
+  }
+
+  // Aggregate exposure (EAD) and ECL by dimension key
+  type DimAgg = Map<string, { exposure: number; ecl: number }>;
+
+  const byLessee:   DimAgg = new Map();
+  const byCountry:  DimAgg = new Map();
+  const byRegion:   DimAgg = new Map();
+  const byType:     DimAgg = new Map();
+  const byVintage:  DimAgg = new Map();
+  const byCurrency: DimAgg = new Map();
+
+  let totalEAD = 0;
+  let totalECL = 0;
+
+  for (const p of provisions) {
+    const ead = p.ead ?? 0;
+    const ecl = p.ecl_amount ?? 0;
+    totalEAD += ead;
+    totalECL += ecl;
+
+    const asset    = assetMap.get(p.asset_id);
+    const lesseeId = assetToLesseeId.get(p.asset_id) ?? "";
+    const lessee   = lesseeMap.get(lesseeId);
+
+    const lesseeName  = lessee?.name    ?? "Unknown";
+    const country     = lessee?.country ?? "Unknown";
+    const region      = COUNTRY_TO_REGION[country] ?? "Other";
+    const typeKey     = asset?.aircraft_type ?? "Unknown";
+    const vintageKey  = vintageBand(asset?.vintage ?? null);
+    const currencyKey = assetToCurrency.get(p.asset_id) ?? "USD";
+
+    function add(m: DimAgg, key: string) {
+      const prev = m.get(key) ?? { exposure: 0, ecl: 0 };
+      m.set(key, { exposure: prev.exposure + ead, ecl: prev.ecl + ecl });
+    }
+
+    add(byLessee,   lesseeName);
+    add(byCountry,  country);
+    add(byRegion,   region);
+    add(byType,     typeKey);
+    add(byVintage,  vintageKey);
+    add(byCurrency, currencyKey);
+  }
+
+  function toRows(agg: DimAgg): ConcentrationRow[] {
+    const rows: ConcentrationRow[] = [];
+    for (const [name, { exposure, ecl }] of agg) {
+      rows.push({
+        name,
+        exposure,
+        exposurePct: totalEAD > 0 ? (exposure / totalEAD) * 100 : 0,
+        ecl,
+        eclPct: exposure > 0 ? (ecl / exposure) * 100 : 0,
+      });
+    }
+    return rows.sort((a, b) => b.exposure - a.exposure);
+  }
+
+  const concentrationData: Record<ConcentrationDimKey, ConcentrationRow[]> = {
+    Lessee:   toRows(byLessee),
+    Country:  toRows(byCountry),
+    Region:   toRows(byRegion),
+    Type:     toRows(byType),
+    Vintage:  toRows(byVintage),
+    Currency: toRows(byCurrency),
+  };
+
+  // Peak concentrations = top row of each dimension
+  function peak(rows: ConcentrationRow[]): { name: string; pct: number } {
+    return rows.length > 0
+      ? { name: rows[0].name, pct: Math.round(rows[0].exposurePct * 10) / 10 }
+      : { name: "—", pct: 0 };
+  }
+
+  const peakConcentrations: Record<ConcentrationDimKey, { name: string; pct: number }> = {
+    Lessee:   peak(concentrationData.Lessee),
+    Country:  peak(concentrationData.Country),
+    Region:   peak(concentrationData.Region),
+    Type:     peak(concentrationData.Type),
+    Vintage:  peak(concentrationData.Vintage),
+    Currency: peak(concentrationData.Currency),
+  };
+
+  // Heatmap cells — one row per (lessee, country) combination observed in provisions
+  const heatmapCells: ConcentrationHeatmapCell[] = [];
+  const seen = new Set<string>();
+  for (const p of provisions) {
+    const lesseeId   = assetToLesseeId.get(p.asset_id) ?? "";
+    const lessee     = lesseeMap.get(lesseeId);
+    const lesseeName = lessee?.name    ?? "Unknown";
+    const country    = lessee?.country ?? "Unknown";
+    const key = `${lesseeName}||${country}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      heatmapCells.push({
+        lessee: lesseeName, country,
+        exposure: p.ead ?? 0, ecl: p.ecl_amount ?? 0,
+      });
+    } else {
+      const cell = heatmapCells.find(c => `${c.lessee}||${c.country}` === key);
+      if (cell) { cell.exposure += p.ead ?? 0; cell.ecl += p.ecl_amount ?? 0; }
+    }
+  }
+
+  return {
+    concentrationData,
+    heatmapCells,
+    kpis: {
+      bookValue: totalEAD,
+      totalECL,
+      eclRate: totalEAD > 0 ? (totalECL / totalEAD) * 100 : 0,
+    },
+    peakConcentrations,
+  };
+}
+
 export function indexById<T extends { id: string }>(items: T[]): Map<string, T> {
   const m = new Map<string, T>();
   for (const item of items) m.set(item.id, item);

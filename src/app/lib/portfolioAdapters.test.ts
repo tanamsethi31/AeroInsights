@@ -6,6 +6,7 @@ import {
   toLesseeTableRows,
   toDashboardKPIs,
   toEclTableRows,
+  toConcentrationData,
 } from "./portfolioAdapters";
 import { MOCK_ASSETS, MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS } from "../data/mockPortfolioData";
 
@@ -67,4 +68,62 @@ describe("toEclTableRows", () => {
   it("converts lgd fraction to %", () => { expect(rows[0].lgd).toBeCloseTo(MOCK_PROVISIONS[0].lgd! * 100, 2); });
   it("converts ecl_amount to $M", () => { expect(rows[0].ecl12m).toBeCloseTo(MOCK_PROVISIONS[0].ecl_amount! / 1_000_000, 2); });
   it("populates pdTerm with 4 points", () => { expect(rows[0].pdTerm).toHaveLength(4); });
+});
+
+describe("toConcentrationData", () => {
+  const result = toConcentrationData(MOCK_ASSETS, MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS);
+
+  it("returns 6 dimensions", () => {
+    const keys = Object.keys(result.concentrationData);
+    expect(keys).toContain("Lessee");
+    expect(keys).toContain("Country");
+    expect(keys).toContain("Region");
+    expect(keys).toContain("Type");
+    expect(keys).toContain("Vintage");
+    expect(keys).toContain("Currency");
+  });
+
+  it("Lessee rows sum to ~100% exposure", () => {
+    const sum = result.concentrationData.Lessee.reduce((s, r) => s + r.exposurePct, 0);
+    expect(sum).toBeCloseTo(100, 0);
+  });
+
+  it("Singapore Airlines is top lessee by EAD (91.2M)", () => {
+    const top = result.concentrationData.Lessee[0];
+    expect(top.name).toBe("Singapore Airlines");
+    expect(top.exposure).toBeCloseTo(91_200_000, -3);
+  });
+
+  it("Emirates is top lessee by EAD (88.4M) after Singapore Airlines", () => {
+    const second = result.concentrationData.Lessee[1];
+    expect(second.name).toBe("Emirates");
+  });
+
+  it("India and Singapore and Sri Lanka all map to APAC region", () => {
+    const apac = result.concentrationData.Region.find(r => r.name === "APAC");
+    expect(apac).toBeDefined();
+    // India(24.2) + Singapore(91.2) + Sri Lanka(34.2) = 149.6M
+    expect(apac!.exposure).toBeCloseTo(149_600_000, -3);
+  });
+
+  it("2021–22 vintage includes Emirates(2021) + Azul(2021) + Ryanair(2022) + Lufthansa(2022)", () => {
+    const v = result.concentrationData.Vintage.find(r => r.name === "2021–22");
+    expect(v).toBeDefined();
+    // 88.4 + 34.2 + 44.7 + 44.7 = 212.0M
+    expect(v!.exposure).toBeCloseTo(212_000_000, -3);
+  });
+
+  it("All leases are USD, so Currency has one row", () => {
+    expect(result.concentrationData.Currency).toHaveLength(1);
+    expect(result.concentrationData.Currency[0].name).toBe("USD");
+  });
+
+  it("kpis.bookValue equals total EAD (~490.9M)", () => {
+    expect(result.kpis.bookValue).toBeCloseTo(490_900_000, -3);
+  });
+
+  it("peakConcentrations.Lessee has Singapore Airlines as top name", () => {
+    expect(result.peakConcentrations.Lessee.name).toBe("Singapore Airlines");
+    expect(result.peakConcentrations.Lessee.pct).toBeCloseTo(18.6, 0);
+  });
 });
