@@ -45,7 +45,13 @@ import {
 import { IAS36Tab } from "../components/risk-ecl/IAS36Tab";
 import { StageMigrationTab } from "../components/risk-ecl/StageMigrationTab";
 import { usePortfolioData } from "../hooks/usePortfolioData";
-import { toEclTableRows } from "../lib/portfolioAdapters";
+import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
+import {
+  BASE_ECL,
+  ZERO_INPUTS,
+  computeECLFromBase,
+  type ScenarioInputs,
+} from "../utils/eclCalculator";
 
 const tornadoData = [
   { input: "PD Multiplier (Stage 3)", impact: 8.4, dir: "positive" },
@@ -63,12 +69,27 @@ const eclTrendByStage = [
   { quarter: "Q1 '26", s1: 8.4, s2: 21.6, s3: 17.2 },
 ];
 
-// Probability-weighted ECL by scenario (portfolio level)
-// Designed so Weighted ≈ $47.2M for 12m ECL at default 60/25/15 weights
-const scenarioSummary = {
-  base: { ecl12m: 44.1, eclLifetime: 80.4, coverage: 1.52 },
-  adverse: { ecl12m: 63.4, eclLifetime: 116.8, coverage: 2.18 },
-  upside: { ecl12m: 29.8, eclLifetime: 54.2, coverage: 1.03 },
+// Predefined scenario stress inputs (replace hardcoded scenarioSummary constants)
+const ADVERSE_INPUTS: ScenarioInputs = {
+  gdpDelta: -0.02,
+  rpkDelta: -0.25,
+  fuelDelta: 0.30,
+  fxDelta: 0,
+  rateDelta: 0.01,
+  assetValueDelta: -0.10,
+  pdS2Multi: 1.5,
+  pdS3Multi: 2.0,
+};
+
+const UPSIDE_INPUTS: ScenarioInputs = {
+  gdpDelta: 0.01,
+  rpkDelta: 0.08,
+  fuelDelta: -0.15,
+  fxDelta: 0,
+  rateDelta: -0.005,
+  assetValueDelta: 0.05,
+  pdS2Multi: 0.8,
+  pdS3Multi: 0.8,
 };
 
 // Default SICR config
@@ -170,23 +191,31 @@ function RiskSection({
   );
 }
 
+type ScenarioSummaryEntry = { ecl12m: number; eclLifetime: number; coverage: number };
+type ScenarioSummaryData = {
+  base: ScenarioSummaryEntry;
+  adverse: ScenarioSummaryEntry;
+  upside: ScenarioSummaryEntry;
+};
+
 function computeWeightedECL(
-  weights: { base: number; adverse: number; upside: number }
+  weights: { base: number; adverse: number; upside: number },
+  summary: ScenarioSummaryData,
 ) {
   const ecl12m =
-    (scenarioSummary.base.ecl12m * weights.base +
-      scenarioSummary.adverse.ecl12m * weights.adverse +
-      scenarioSummary.upside.ecl12m * weights.upside) /
+    (summary.base.ecl12m * weights.base +
+      summary.adverse.ecl12m * weights.adverse +
+      summary.upside.ecl12m * weights.upside) /
     100;
   const eclLifetime =
-    (scenarioSummary.base.eclLifetime * weights.base +
-      scenarioSummary.adverse.eclLifetime * weights.adverse +
-      scenarioSummary.upside.eclLifetime * weights.upside) /
+    (summary.base.eclLifetime * weights.base +
+      summary.adverse.eclLifetime * weights.adverse +
+      summary.upside.eclLifetime * weights.upside) /
     100;
   const coverage =
-    (scenarioSummary.base.coverage * weights.base +
-      scenarioSummary.adverse.coverage * weights.adverse +
-      scenarioSummary.upside.coverage * weights.upside) /
+    (summary.base.coverage * weights.base +
+      summary.adverse.coverage * weights.adverse +
+      summary.upside.coverage * weights.upside) /
     100;
   return { ecl12m, eclLifetime, coverage };
 }
@@ -231,9 +260,30 @@ export default function RiskECL() {
   const s1EAD  = s1Rows.reduce((s, r) => s + r.eadNum,       0);
   const s1Coverage = s1EAD > 0 ? (s1ECL / s1EAD) * 100 : 0;
 
+  // Compute live base ECL and coverage
+  const liveBaseECL = (() => {
+    const kpis = toDashboardKPIs(assets, lessees, provisions);
+    return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
+  })();
+
+  const totalEADm = provisions.reduce((s, p) => s + (p.ead ?? 0), 0) / 1_000_000;
+
+  const scenarioSummary: ScenarioSummaryData = (() => {
+    const LIFETIME_RATIO = 80.4 / 44.1; // preserve original ratio (~1.82)
+    const baseECL     = computeECLFromBase(liveBaseECL, ZERO_INPUTS);
+    const adverseECL  = computeECLFromBase(liveBaseECL, ADVERSE_INPUTS);
+    const upsideECL   = computeECLFromBase(liveBaseECL, UPSIDE_INPUTS);
+    const cov = (ecl: number) => totalEADm > 0 ? (ecl / totalEADm) * 100 : 0;
+    return {
+      base:    { ecl12m: baseECL,    eclLifetime: baseECL    * LIFETIME_RATIO, coverage: cov(baseECL)    },
+      adverse: { ecl12m: adverseECL, eclLifetime: adverseECL * LIFETIME_RATIO, coverage: cov(adverseECL) },
+      upside:  { ecl12m: upsideECL,  eclLifetime: upsideECL  * LIFETIME_RATIO, coverage: cov(upsideECL)  },
+    };
+  })();
+
   const weightSum = weights.base + weights.adverse + weights.upside;
   const weightsValid = weightSum === 100;
-  const weighted = computeWeightedECL(weights);
+  const weighted = computeWeightedECL(weights, scenarioSummary);
 
   const eclAccessors = {
     lessee: (r: LeaseRow) => r.lessee,
