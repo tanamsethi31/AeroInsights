@@ -10,6 +10,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { generatePDF, generateXLSX } from "../../services/exportService";
+import { usePortfolioData } from "../../hooks/usePortfolioData";
+import { toExportData } from "../../lib/portfolioAdapters";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,6 +128,11 @@ export function ExportSnapshotModal({ onClose }: Props) {
   const [generating, setGenerating] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
+  const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
+  const exportData = !isLoading && assets.length > 0
+    ? toExportData(assets, lessees, leases, provisions)
+    : undefined;
+
   // Persist on every config change
   useEffect(() => {
     saveConfig({ preset, customModules: [...customModules], format });
@@ -161,9 +168,9 @@ export function ExportSnapshotModal({ onClose }: Props) {
 
     try {
       if (format === "pdf") {
-        generatePDF(modules, getPresetLabel());
+        generatePDF(modules, getPresetLabel(), exportData);
       } else {
-        generateXLSX(modules, getPresetLabel());
+        generateXLSX(modules, getPresetLabel(), exportData);
       }
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 3000);

@@ -103,7 +103,15 @@ type ModuleRender = {
 function $m(n: number) { return `$${n.toFixed(1)}M`; }
 function pct(n: number) { return `${n.toFixed(2)}%`; }
 
-function getModuleData(id: string): ModuleRender | null {
+type LiveRows = {
+  eclRows: typeof ECL_ROWS;
+  lesseeRows: typeof LESSEES;
+  acRows: typeof AIRCRAFT;
+  leaseRows: typeof LEASES;
+};
+
+function getModuleData(id: string, rows: LiveRows): ModuleRender | null {
+  const { eclRows, lesseeRows, acRows, leaseRows } = rows;
   switch (id) {
 
     case "ecl_summary":
@@ -115,9 +123,9 @@ function getModuleData(id: string): ModuleRender | null {
       };
 
     case "stage_dist": {
-      const s1 = ECL_ROWS.filter(r => r.stage === "1");
-      const s2 = ECL_ROWS.filter(r => r.stage === "2");
-      const s3 = ECL_ROWS.filter(r => r.stage === "3");
+      const s1 = eclRows.filter(r => r.stage === "1");
+      const s2 = eclRows.filter(r => r.stage === "2");
+      const s3 = eclRows.filter(r => r.stage === "3");
       const sum = (arr: typeof ECL_ROWS, k: "ead" | "ecl12m" | "eclLT") =>
         arr.reduce((a, r) => a + r[k], 0);
       const cov = (stage: typeof ECL_ROWS) =>
@@ -130,7 +138,7 @@ function getModuleData(id: string): ModuleRender | null {
           ["Stage 1", s1.length, $m(sum(s1,"ead")), $m(sum(s1,"ecl12m")), $m(sum(s1,"eclLT")), cov(s1)],
           ["Stage 2", s2.length, $m(sum(s2,"ead")), $m(sum(s2,"ecl12m")), $m(sum(s2,"eclLT")), cov(s2)],
           ["Stage 3", s3.length, $m(sum(s3,"ead")), $m(sum(s3,"ecl12m")), $m(sum(s3,"eclLT")), cov(s3)],
-          ["Total",   ECL_ROWS.length, $m(sum(ECL_ROWS,"ead")), $m(sum(ECL_ROWS,"ecl12m")), $m(sum(ECL_ROWS,"eclLT")), pct((sum(ECL_ROWS,"ecl12m")/sum(ECL_ROWS,"ead"))*100)],
+          ["Total",   eclRows.length, $m(sum(eclRows,"ead")), $m(sum(eclRows,"ecl12m")), $m(sum(eclRows,"eclLT")), pct((sum(eclRows,"ecl12m")/sum(eclRows,"ead"))*100)],
         ],
       };
     }
@@ -162,13 +170,13 @@ function getModuleData(id: string): ModuleRender | null {
         title: "Portfolio Book Value",
         subtitle: "Aircraft net book value vs appraised market value",
         headers: ["MSN", "Type", "Reg", "Vintage", "NBV", "Market Value", "MV Adj", "Lessee"],
-        rows: AIRCRAFT.map(a => [a.msn, a.type, a.reg, a.vintage, a.nbv, a.mv, a.mvAdj, a.lessee]),
+        rows: acRows.map(a => [a.msn, a.type, a.reg, a.vintage, a.nbv, a.mv, a.mvAdj, a.lessee]),
       };
 
     case "aircraft_mix": {
       const counts: Record<string, number> = {};
-      AIRCRAFT.forEach(a => { counts[a.type] = (counts[a.type] ?? 0) + 1; });
-      const total = AIRCRAFT.length;
+      acRows.forEach(a => { counts[a.type] = (counts[a.type] ?? 0) + 1; });
+      const total = acRows.length;
       return {
         title: "Aircraft Mix",
         subtitle: "Fleet composition by aircraft type",
@@ -178,7 +186,7 @@ function getModuleData(id: string): ModuleRender | null {
     }
 
     case "watchlist_headlines": {
-      const at_risk = LESSEES.filter(l => l.stage === "3");
+      const at_risk = lesseeRows.filter(l => l.stage === "3");
       return {
         title: "Watchlist Headlines",
         subtitle: "Lessees classified Stage 3 (credit-impaired) — immediate attention required",
@@ -192,7 +200,7 @@ function getModuleData(id: string): ModuleRender | null {
         title: "Watchlist — Full Detail",
         subtitle: "All counterparties ranked by stage and behaviour score",
         headers: ["Lessee", "Country", "Rating", "Stage", "Behaviour", "Leases", "Exposure", "Avg Days Late"],
-        rows: [...LESSEES]
+        rows: [...lesseeRows]
           .sort((a, b) => parseInt(b.stage) - parseInt(a.stage) || a.behavior - b.behavior)
           .map(l => [l.name, l.country, l.rating, `Stage ${l.stage}`, l.behavior, l.leases, l.exposure, `${l.daysLate}d`]),
       };
@@ -210,7 +218,7 @@ function getModuleData(id: string): ModuleRender | null {
       };
 
     case "insolvency": {
-      const s3 = ECL_ROWS.filter(r => r.stage === "3");
+      const s3 = eclRows.filter(r => r.stage === "3");
       return {
         title: "Insolvency Risk Flags",
         subtitle: "Stage 3 leases — SICR trigger events and impairment metrics",
@@ -447,7 +455,13 @@ export function generateReportXLSX(reportId: string, currency: CurrencyCode, dat
 
 // ─── PDF Export ────────────────────────────────────────────────────────────────
 
-export function generatePDF(moduleIds: string[], presetLabel: string): void {
+export function generatePDF(moduleIds: string[], presetLabel: string, data?: PortfolioExportData): void {
+  const eclRows    = data?.eclRows      ?? ECL_ROWS;
+  const lesseeRows = data?.lesseeRows   ?? LESSEES;
+  const leaseRows  = data?.leaseRows    ?? LEASES;
+  const acRows     = data?.aircraftRows ?? AIRCRAFT;
+  const liveRows: LiveRows = { eclRows, lesseeRows, acRows, leaseRows };
+
   const doc  = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W    = doc.internal.pageSize.getWidth();
   const H    = doc.internal.pageSize.getHeight();
@@ -498,8 +512,8 @@ export function generatePDF(moduleIds: string[], presetLabel: string): void {
   let y = 28; // start below the banner
 
   for (const moduleId of moduleIds) {
-    const data = getModuleData(moduleId);
-    if (!data) continue;
+    const moduleData = getModuleData(moduleId, liveRows);
+    if (!moduleData) continue;
 
     // Section header bar
     if (y > H - 45) { doc.addPage(); y = 28; }
@@ -509,17 +523,17 @@ export function generatePDF(moduleIds: string[], presetLabel: string): void {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8.5);
     doc.setTextColor(...C.navy);
-    doc.text(data.title, LM + 3, y + 5.2);
+    doc.text(moduleData.title, LM + 3, y + 5.2);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(...C.muted);
-    doc.text(data.subtitle, W - LM - 3, y + 5.2, { align: "right" });
+    doc.text(moduleData.subtitle, W - LM - 3, y + 5.2, { align: "right" });
     y += 9.5;
 
     autoTable(doc, {
       startY: y,
-      head: [data.headers],
-      body: data.rows as (string | number)[][],
+      head: [moduleData.headers],
+      body: moduleData.rows as (string | number)[][],
       theme: "plain",
       styles: {
         fontSize: 7.5,
@@ -556,7 +570,13 @@ export function generatePDF(moduleIds: string[], presetLabel: string): void {
 
 // ─── XLSX Export ───────────────────────────────────────────────────────────────
 
-export function generateXLSX(moduleIds: string[], presetLabel: string): void {
+export function generateXLSX(moduleIds: string[], presetLabel: string, data?: PortfolioExportData): void {
+  const eclRows    = data?.eclRows      ?? ECL_ROWS;
+  const lesseeRows = data?.lesseeRows   ?? LESSEES;
+  const leaseRows  = data?.leaseRows    ?? LEASES;
+  const acRows     = data?.aircraftRows ?? AIRCRAFT;
+  const liveRows: LiveRows = { eclRows, lesseeRows, acRows, leaseRows };
+
   const wb = XLSX.utils.book_new();
 
   // Meta sheet first
@@ -573,31 +593,31 @@ export function generateXLSX(moduleIds: string[], presetLabel: string): void {
 
   // One sheet per module
   for (const moduleId of moduleIds) {
-    const data = getModuleData(moduleId);
-    if (!data) continue;
+    const moduleData = getModuleData(moduleId, liveRows);
+    if (!moduleData) continue;
 
     const ws = XLSX.utils.aoa_to_sheet([
       // Subtitle row (row 1)
-      [data.subtitle],
+      [moduleData.subtitle],
       // Blank row
       [],
       // Header row
-      data.headers,
+      moduleData.headers,
       // Data rows
-      ...data.rows,
+      ...moduleData.rows,
     ]);
 
     // Set column widths from content
-    ws["!cols"] = data.headers.map((h, i) => {
+    ws["!cols"] = moduleData.headers.map((h, i) => {
       const maxLen = Math.max(
         h.length,
-        ...data.rows.map(r => String(r[i] ?? "").length)
+        ...moduleData.rows.map(r => String(r[i] ?? "").length)
       );
       return { wch: Math.min(maxLen + 4, 32) };
     });
 
     // Sheet name: max 31 chars, no invalid characters
-    const sheetName = data.title.replace(/[/\\?*[\]:]/g, "").slice(0, 31);
+    const sheetName = moduleData.title.replace(/[/\\?*[\]:]/g, "").slice(0, 31);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   }
 
