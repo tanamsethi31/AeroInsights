@@ -28,14 +28,14 @@ describe("suggestMapping", () => {
     expect(result["msn"]).toBeNull();
   });
 
-  it("REQUIRED_FIELDS contains the 5 mandatory fields", () => {
+  it("REQUIRED_FIELDS contains the 6 mandatory fields", () => {
     expect(REQUIRED_FIELDS).toEqual(
       expect.arrayContaining(["registration", "msn", "aircraft_type", "lessee_name", "start_date", "end_date"])
     );
   });
 
   it("OUR_FIELDS lists all mappable fields", () => {
-    expect(OUR_FIELDS.length).toBeGreaterThan(8);
+    expect(OUR_FIELDS.length).toBeGreaterThanOrEqual(21);
     expect(OUR_FIELDS.some(f => f.id === "registration")).toBe(true);
     expect(OUR_FIELDS.some(f => f.id === "lessee_name")).toBe(true);
   });
