@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useSignalRefresh } from "../services/useSignalRefresh";
 import { useNavigate } from "react-router";
 import { getWatchlistSummary } from "../components/counterparties/watchlistEngine";
+import { WatchlistGlobe } from "../components/dashboard/WatchlistGlobe";
 import {
   AreaChart,
   Area,
@@ -856,6 +857,19 @@ export default function Dashboard() {
             })}
           </tbody>
         </table>
+      </Card>
+
+      {/* Watchlist Globe */}
+      <Card
+        title="Lessee Risk Map"
+        subtitle="Countries with active watchlist positions — hover to inspect"
+        blueHeader
+        collapsible
+        defaultCollapsed={false}
+      >
+        <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 8px" }}>
+          <WatchlistGlobe entries={watchlistEntries} />
+        </div>
       </Card>
 
       {/* Last 5 Scenario Runs — collapsible; collapsed by default in Executive Mode */}
