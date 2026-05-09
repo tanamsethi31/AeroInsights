@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import PortfolioHub from "./pages/PortfolioHub";
 import Deals from "./pages/Deals";
 import Intelligence from "./pages/Intelligence";
+import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 
 /**
  * Guards the dashboard index route.
@@ -41,6 +42,8 @@ export const router = createBrowserRouter([
     children: [
       // Portfolio hub — full-page, no sidebar/header shell
       { path: "portfolios", Component: PortfolioHub },
+      // Onboarding wizard — full-page, no sidebar/header shell
+      { path: "onboarding", Component: OnboardingWizard },
 
       // App shell — Layout wraps everything below
       {

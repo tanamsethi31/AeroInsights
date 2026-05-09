@@ -7,6 +7,7 @@ import { Header } from "./Header";
 import { AgentProvider, useAgent } from "../../contexts/AgentContext";
 import { AgentPanel } from "../agent/AgentPanel";
 import { CurrencyProvider } from "../../contexts/CurrencyContext";
+import { DemoBanner } from "./DemoBanner";
 
 /**
  * Inner layout shell — must live inside both SidebarProvider (to call useSidebar)
@@ -29,6 +30,7 @@ function LayoutContent() {
       <AppSidebar />
       <SidebarInset className="overflow-hidden">
         <Header />
+        <DemoBanner />
 
         {/* Below-header split view: [main content] | [AI panel] */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
