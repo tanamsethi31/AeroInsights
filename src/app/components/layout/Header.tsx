@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as React from "react";
+import { AnimatePresence } from "framer-motion";
 import { useCurrency, CURRENCIES, type CurrencyCode } from "../../contexts/CurrencyContext";
 import { AgentButton } from "../agent/AgentButton";
 import { Bell, Search, Mail, ChevronDown, LogOut, CircleUser, LayoutDashboard, FileText, Plane } from "lucide-react";
@@ -339,13 +340,15 @@ export function Header() {
                 </span>
               )}
             </button>
-            {alertsOpen && (
-              <AlertsPanel
-                onClose={() => setAlertsOpen(false)}
-                onOpenRules={() => { setAlertsOpen(false); setRulesOpen(true); }}
-                onUnreadChange={setUnreadCount}
-              />
-            )}
+            <AnimatePresence>
+              {alertsOpen && (
+                <AlertsPanel
+                  onClose={() => setAlertsOpen(false)}
+                  onOpenRules={() => { setAlertsOpen(false); setRulesOpen(true); }}
+                  onUnreadChange={setUnreadCount}
+                />
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Email Report Distribution */}
@@ -445,7 +448,9 @@ export function Header() {
 
       {/* Modals rendered inside header so they're scoped to the layout */}
       {rulesOpen && <AlertRulesConfig onClose={() => setRulesOpen(false)} />}
-      {emailOpen && <EmailReportModal onClose={() => setEmailOpen(false)} />}
+      <AnimatePresence>
+        {emailOpen && <EmailReportModal onClose={() => setEmailOpen(false)} />}
+      </AnimatePresence>
     </header>
   );
 }

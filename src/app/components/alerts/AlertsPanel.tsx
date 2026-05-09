@@ -1,5 +1,6 @@
 // src/app/components/alerts/AlertsPanel.tsx
 import * as React from "react";
+import { motion } from "framer-motion";
 import { X, Settings, CheckCheck } from "lucide-react";
 import {
   getAlerts,
@@ -60,7 +61,11 @@ export function AlertsPanel({ onClose, onOpenRules, onUnreadChange }: AlertsPane
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96, y: -8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: -8 }}
+      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
       style={{
         position: "absolute",
         top: "calc(100% + 8px)",
@@ -75,6 +80,7 @@ export function AlertsPanel({ onClose, onOpenRules, onUnreadChange }: AlertsPane
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        transformOrigin: "top right",
       }}
     >
       {/* Header */}
@@ -299,6 +305,6 @@ export function AlertsPanel({ onClose, onOpenRules, onUnreadChange }: AlertsPane
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 // src/app/components/reports/EmailReportModal.tsx
 import * as React from "react";
+import { motion } from "framer-motion";
 import { X, Send, Plus, Trash2, CheckCircle2 } from "lucide-react";
 
 interface EmailReportModalProps {
@@ -90,7 +91,11 @@ export function EmailReportModal({ onClose }: EmailReportModalProps) {
   const validCount = recipients.filter((r) => r.trim().includes("@")).length;
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
       style={{
         position: "fixed",
         inset: 0,
@@ -102,7 +107,11 @@ export function EmailReportModal({ onClose }: EmailReportModalProps) {
       }}
       onClick={onClose}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
         style={{
           background: "#FFFFFF",
           borderRadius: "12px",
@@ -359,7 +368,7 @@ export function EmailReportModal({ onClose }: EmailReportModalProps) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
