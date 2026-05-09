@@ -565,7 +565,7 @@ function ModeToggle({
 const EXEC_SCENARIO_TABS = ["Library"];
 
 export default function Scenarios() {
-  const { pathname } = useLocation();
+  const { pathname, state: locationState } = useLocation();
   const { isExecutiveMode } = useViewMode();
   const { pendingInputs, setPendingInputs } = useAgent();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
@@ -622,6 +622,7 @@ export default function Scenarios() {
   }, [cardStates, setCardPhase]);
 
   // ── Custom Builder state ──
+  const [prefillSource, setPrefillSource] = useState<string | null>(null);
   const [calBannerDismissed, setCalBannerDismissed] = useState(false);
   const [customName, setCustomName] = useState("My Custom Scenario");
   const [formInputs, setFormInputs] = useState<ScenarioInputs>(ZERO_INPUTS);
@@ -688,6 +689,16 @@ export default function Scenarios() {
       setBranchFromId(null);
     }, duration);
   };
+
+  // Apply pre-fill from Intelligence deep-link
+  useEffect(() => {
+    const state = locationState as { prefill?: Partial<ScenarioInputs>; prefillSource?: string } | null;
+    if (!state?.prefill) return;
+    const merged: ScenarioInputs = { ...ZERO_INPUTS, ...state.prefill } as ScenarioInputs;
+    setFormInputs(merged);
+    setActiveTab("Custom Builder");
+    if (state.prefillSource) setPrefillSource(state.prefillSource);
+  }, []); // intentionally empty — only runs on mount
 
   // Pre-populate Custom Builder when a clone/duplicate is triggered
   useEffect(() => {
@@ -999,6 +1010,32 @@ export default function Scenarios() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "1.5rem" }}>
           {/* Left: Editor / Form */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+            {/* ── Pre-fill Banner (from Intelligence deep-link) ── */}
+            {prefillSource && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 14px",
+                borderRadius: "8px",
+                background: "#EFF6FF",
+                border: "1px solid #BFDBFE",
+                marginBottom: "0",
+                fontSize: "0.8125rem",
+                color: "#1E40AF",
+              }}>
+                <span style={{ flex: 1 }}>
+                  <strong>Pre-filled from:</strong> {prefillSource}. Review and adjust inputs below before running.
+                </span>
+                <button
+                  onClick={() => setPrefillSource(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#60A5FA", fontWeight: 700, fontSize: "1rem", padding: 0 }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
             {/* ── Scenario Calibration Banner ── */}
             {!calBannerDismissed && (

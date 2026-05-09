@@ -36,6 +36,17 @@ export interface MacroSignal {
   portfolioNarrative: string;
   actionNarrative: string;
   actionLabel: string;
+  // If actionHref === "/scenarios/run", these values pre-fill the Custom Builder
+  actionPrefill?: {
+    gdpDelta?: number;
+    rpkDelta?: number;
+    fuelDelta?: number;
+    fxDelta?: number;
+    rateDelta?: number;
+    assetValueDelta?: number;
+    pdS2Multi?: number;
+    pdS3Multi?: number;
+  };
 }
 
 export type DealCategory =
@@ -59,6 +70,16 @@ export interface DealItem {
   portfolioTag: string;
   suggestedAction: string;
   actionHref: string;
+  actionPrefill?: {
+    gdpDelta?: number;
+    rpkDelta?: number;
+    fuelDelta?: number;
+    fxDelta?: number;
+    rateDelta?: number;
+    assetValueDelta?: number;
+    pdS2Multi?: number;
+    pdS3Multi?: number;
+  };
 }
 
 export type JxEventType = "legal" | "credit" | "regulatory" | "political";
@@ -140,6 +161,7 @@ export const MACRO_SIGNALS: MacroSignal[] = [
     actionNarrative:
       "At current fuel price, the Fuel Cost Stress Index for IndiGo has risen to 38.1% of operating costs — above the 35% historical distress threshold. Estimated ECL impact across the book: +$4.2M. Consider updating your Fuel Spike scenario baseline.",
     actionLabel: "Update Fuel Spike scenario",
+    actionPrefill: { fuelDelta: 27, pdS3Multi: 1.3 },
   },
   {
     id: "sig-02",
@@ -167,6 +189,7 @@ export const MACRO_SIGNALS: MacroSignal[] = [
     actionNarrative:
       "A 0.6pp GDP downward revision of this magnitude historically correlates with a +0.3pp PD uplift for BB-rated Indian carriers in the IMF's EM aviation stress model. Estimated ECL impact for IndiGo: +$2.1M. Stage 3 assumption unchanged — consider whether lifetime PD curve should steepen.",
     actionLabel: "Run updated IndiGo scenario",
+    actionPrefill: { gdpDelta: -1, pdS3Multi: 1.2 },
   },
   {
     id: "sig-03",
@@ -515,6 +538,7 @@ export const DEAL_FEED: DealItem[] = [
     portfolioTag: "Affects IndiGo, Aeromexico, Azul — $448M unhedged fuel exposure",
     suggestedAction: "Run Fuel Spike scenario on Stage 2/3 lessees",
     actionHref: "/scenarios/run",
+    actionPrefill: { fuelDelta: 40, pdS3Multi: 1.5 },
   },
   {
     id: "deal-03",

@@ -513,7 +513,9 @@ function SignalCard({ sig }: { sig: MacroSignal }) {
             {sig.source} ↗
           </a>
           <button
-            onClick={() => navigate("/scenarios/run")}
+            onClick={() => navigate("/scenarios/run", {
+              state: { prefill: sig.actionPrefill, prefillSource: sig.name },
+            })}
             style={{
               padding: "0.3rem 0.75rem",
               borderRadius: "0.375rem",
@@ -653,6 +655,7 @@ function RadarCell({ sig }: { sig: LesseeRadarSignal }) {
 }
 
 function LesseeRadarView() {
+  const navigate = useNavigate();
   const sorted = useMemo(
     () => [...LESSEE_RADAR].sort((a, b) => b.compositeScore - a.compositeScore),
     []
@@ -736,6 +739,7 @@ function LesseeRadarView() {
                 { label: "Fuel Cost Stress", align: "right"  },
                 { label: "Rev/Lease",        align: "right"  },
                 { label: "Signal",           align: "center" },
+                { label: "Action",           align: "center" },
               ].map((h) => (
                 <th
                   key={h.label}
@@ -905,6 +909,44 @@ function LesseeRadarView() {
                       {composite.charAt(0).toUpperCase() + composite.slice(1)} · {entry.compositeScore}
                     </span>
                   </td>
+
+                  {/* Stress-test action */}
+                  <td
+                    style={{
+                      padding: "0.625rem 0.75rem",
+                      borderBottom: `1px solid ${T.border}`,
+                      textAlign: "center",
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        const pdMulti = entry.fuelCostStress.status === "red" ? 2.0
+                                      : entry.fuelCostStress.status === "amber" ? 1.5 : 1.2;
+                        navigate("/scenarios/run", {
+                          state: {
+                            prefill: { pdS3Multi: pdMulti, fuelDelta: 20 },
+                            prefillSource: `${entry.lesseeId} Lessee Radar`,
+                          },
+                        });
+                      }}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        border: `1.5px solid ${T.blue}`,
+                        background: "transparent",
+                        color: T.blue,
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "background 150ms ease-out",
+                        whiteSpace: "nowrap",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#EFF6FF")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    >
+                      ↗ Stress-test
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -1069,7 +1111,9 @@ function DealCard({ item }: { item: DealItem }) {
           }}
         >
           <button
-            onClick={() => navigate(item.actionHref)}
+            onClick={() => navigate(item.actionHref, {
+              state: { prefill: item.actionPrefill, prefillSource: item.headline },
+            })}
             style={{
               padding: "0.35rem 0.75rem",
               borderRadius: "0.375rem",
@@ -1082,7 +1126,7 @@ function DealCard({ item }: { item: DealItem }) {
               whiteSpace: "nowrap",
             }}
           >
-            View Counterparty
+            {item.actionHref === "/scenarios/run" ? "Run Scenario" : "View Counterparty"}
           </button>
         </div>
       )}
