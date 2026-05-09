@@ -7,6 +7,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { LesseeProfilePanel, type LesseeId } from "../components/counterparties/LesseeProfilePanel";
+import { SimpleLesseePanel, type SimpleLesseeData } from "../components/counterparties/SimpleLesseePanel";
 import { WATCHLIST_DATA } from "../components/counterparties/watchlistEngine";
 import {
   LESSEE_SANCTIONS,
@@ -17,6 +18,7 @@ import {
   alertColor,
   type AircraftSanctionsAlert,
 } from "../data/sanctionsData";
+import { usePortfolioData } from "../hooks/usePortfolioData";
 
 // ─── SignalFeedPanel ──────────────────────────────────────────────────────────
 
@@ -169,106 +171,130 @@ function SignalFeedPanel({ onSelectLessee }: { onSelectLessee: (id: string) => v
   );
 }
 
-const lessees = [
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/** Maps known lessee names to their full intelligence profile ID. */
+const LESSEE_NAME_TO_PROFILE_ID: Record<string, LesseeId> = {
+  "IndiGo Airlines":          "INDIGO",
+  "Aeromexico":               "AEROMEX",
+  "SriLankan Airlines":       "SRILNKN",
+  "Azul Brazilian Airlines":  "AZUL",
+  "Air Transat":              "TRANSATCA",
+  "Emirates":                 "EMIRATES",
+};
+
+interface CounterpartyRow {
+  id: string;              // UUID for real data, profile id for demo data
+  profileId?: LesseeId;    // set when name matches known coverage
+  name: string;
+  country: string;
+  rating: string;
+  stage: "1" | "2" | "3";
+  behaviorScore: number;
+  scores: { punctuality: number; restructuringCoop: number; govtInterference: number; litigationPropensity: number };
+  exposure: string;
+  leases: number;
+  lastPayment: string;
+  daysOverdue: number;
+  notes: string;
+  watchlistStatus?: "green" | "amber" | "red" | null;
+}
+
+const DEMO_LESSEES: CounterpartyRow[] = [
   {
-    id: "INDIGO",
-    name: "IndiGo Airlines",
-    country: "India",
-    rating: "BB-",
-    stage: "3" as const,
+    id: "INDIGO", profileId: "INDIGO",
+    name: "IndiGo Airlines", country: "India", rating: "BB-", stage: "3",
     behaviorScore: 44,
     scores: { punctuality: 28, restructuringCoop: 52, govtInterference: 41, litigationPropensity: 55 },
-    exposure: "$184M",
-    leases: 6,
-    lastPayment: "2026-03-14",
-    daysOverdue: 45,
+    exposure: "$184M", leases: 6, lastPayment: "2026-03-14", daysOverdue: 45,
     notes: "Payment 45 days overdue. §1110 cure risk elevated. Seeking deferral.",
+    watchlistStatus: "red",
   },
   {
-    id: "AEROMEX",
-    name: "Aeromexico",
-    country: "Mexico",
-    rating: "CCC",
-    stage: "3" as const,
+    id: "AEROMEX", profileId: "AEROMEX",
+    name: "Aeromexico", country: "Mexico", rating: "CCC", stage: "3",
     behaviorScore: 29,
     scores: { punctuality: 18, restructuringCoop: 38, govtInterference: 35, litigationPropensity: 25 },
-    exposure: "$122M",
-    leases: 4,
-    lastPayment: "2026-01-31",
-    daysOverdue: 88,
+    exposure: "$122M", leases: 4, lastPayment: "2026-01-31", daysOverdue: 88,
     notes: "Chapter 11 filing. §1110 cure window active. AerCap and Air Lease precedent reviewed.",
+    watchlistStatus: "red",
   },
   {
-    id: "SRILNKN",
-    name: "SriLankan Airlines",
-    country: "Sri Lanka",
-    rating: "B+",
-    stage: "2" as const,
+    id: "SRILNKN", profileId: "SRILNKN",
+    name: "SriLankan Airlines", country: "Sri Lanka", rating: "B+", stage: "2",
     behaviorScore: 62,
     scores: { punctuality: 55, restructuringCoop: 70, govtInterference: 48, litigationPropensity: 75 },
-    exposure: "$118M",
-    leases: 4,
-    lastPayment: "2026-04-10",
-    daysOverdue: 12,
+    exposure: "$118M", leases: 4, lastPayment: "2026-04-10", daysOverdue: 12,
     notes: "Downgraded by S&P. Government-owned carrier. High litigation propensity.",
+    watchlistStatus: "amber",
   },
   {
-    id: "AZUL",
-    name: "Azul Brazilian Airlines",
-    country: "Brazil",
-    rating: "B+",
-    stage: "2" as const,
+    id: "AZUL", profileId: "AZUL",
+    name: "Azul Brazilian Airlines", country: "Brazil", rating: "B+", stage: "2",
     behaviorScore: 71,
     scores: { punctuality: 68, restructuringCoop: 78, govtInterference: 62, litigationPropensity: 76 },
-    exposure: "$142M",
-    leases: 5,
-    lastPayment: "2026-04-20",
-    daysOverdue: 6,
+    exposure: "$142M", leases: 5, lastPayment: "2026-04-20", daysOverdue: 6,
     notes: "Schedule reductions. Liquidity tightening. Constructive engagement so far.",
+    watchlistStatus: "amber",
   },
   {
-    id: "TRANSATCA",
-    name: "Air Transat",
-    country: "Canada",
-    rating: "B",
-    stage: "2" as const,
+    id: "TRANSATCA", profileId: "TRANSATCA",
+    name: "Air Transat", country: "Canada", rating: "B", stage: "2",
     behaviorScore: 68,
     scores: { punctuality: 62, restructuringCoop: 75, govtInterference: 88, litigationPropensity: 47 },
-    exposure: "$96M",
-    leases: 3,
-    lastPayment: "2026-04-22",
-    daysOverdue: 8,
+    exposure: "$96M", leases: 3, lastPayment: "2026-04-22", daysOverdue: 8,
     notes: "Restructuring discussions initiated. Canadian jurisdiction favorable for lessor.",
+    watchlistStatus: "amber",
   },
   {
-    id: "EMIRATES",
-    name: "Emirates",
-    country: "UAE",
-    rating: "A-",
-    stage: "1" as const,
+    id: "EMIRATES", profileId: "EMIRATES",
+    name: "Emirates", country: "UAE", rating: "A-", stage: "1",
     behaviorScore: 94,
     scores: { punctuality: 98, restructuringCoop: 95, govtInterference: 92, litigationPropensity: 91 },
-    exposure: "$412M",
-    leases: 8,
-    lastPayment: "2026-04-28",
-    daysOverdue: 0,
+    exposure: "$412M", leases: 8, lastPayment: "2026-04-28", daysOverdue: 0,
     notes: "Exemplary payment history. Strong sovereign backing. Low risk.",
+    watchlistStatus: "green",
   },
 ];
 
 
 export default function Counterparties() {
   const location = useLocation();
-  const [selectedLessee, setSelectedLessee] = useState(lessees[0]);
+  const { lessees: lesseeData, leases: leaseData, isDemo } = usePortfolioData();
+
+  // Build the display list: demo lessees when in demo mode, real data when uploaded
+  const lesseeRows: CounterpartyRow[] = useMemo(() => {
+    if (isDemo) return DEMO_LESSEES;
+    const leaseCounts = new Map<string, number>();
+    for (const l of leaseData) leaseCounts.set(l.lessee_id, (leaseCounts.get(l.lessee_id) ?? 0) + 1);
+    return lesseeData.map(l => ({
+      id: l.id,
+      profileId: LESSEE_NAME_TO_PROFILE_ID[l.name],
+      name: l.name,
+      country: l.country ?? "—",
+      rating: l.credit_rating ?? "—",
+      stage: (l.watchlist_status === "red" ? "3" : l.watchlist_status === "amber" ? "2" : "1") as "1" | "2" | "3",
+      behaviorScore: 0,
+      scores: { punctuality: 0, restructuringCoop: 0, govtInterference: 0, litigationPropensity: 0 },
+      exposure: "—",
+      leases: leaseCounts.get(l.id) ?? 0,
+      lastPayment: "—",
+      daysOverdue: 0,
+      notes: "",
+      watchlistStatus: l.watchlist_status,
+    }));
+  }, [lesseeData, leaseData, isDemo]);
+
+  const [selectedLessee, setSelectedLessee] = useState<CounterpartyRow>(lesseeRows[0] ?? DEMO_LESSEES[0]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get("lessee");
     if (id) {
-      const found = lessees.find(l => l.id === id);
+      const found = lesseeRows.find(l => l.id === id || l.profileId === id);
       if (found) setSelectedLessee(found);
     }
-  }, [location.search]);
+  }, [location.search, lesseeRows]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -280,7 +306,7 @@ export default function Counterparties() {
       {/* Portfolio-wide live signal feed */}
       <SignalFeedPanel
         onSelectLessee={(id) => {
-          const found = lessees.find(l => l.id === id);
+          const found = lesseeRows.find(l => l.id === id || l.profileId === id);
           if (found) setSelectedLessee(found);
         }}
       />
@@ -321,10 +347,10 @@ export default function Counterparties() {
         <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
           <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #E2E8F0" }}>
             <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0F172A" }}>Lessees</div>
-            <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>{lessees.length} counterparties</div>
+            <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>{lesseeRows.length} counterparties</div>
           </div>
           <div>
-            {lessees.map((l, li) => (
+            {lesseeRows.map((l, li) => (
               <motion.button
                 key={l.id}
                 onClick={() => setSelectedLessee(l)}
@@ -404,7 +430,19 @@ export default function Counterparties() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
         >
-          <LesseeProfilePanel lesseeId={selectedLessee.id as LesseeId} />
+          {selectedLessee.profileId ? (
+            <LesseeProfilePanel lesseeId={selectedLessee.profileId} />
+          ) : (
+            <SimpleLesseePanel lessee={{
+              name: selectedLessee.name,
+              country: selectedLessee.country,
+              rating: selectedLessee.rating,
+              stage: selectedLessee.stage,
+              leases: selectedLessee.leases,
+              exposure: selectedLessee.exposure,
+              watchlistStatus: selectedLessee.watchlistStatus,
+            } satisfies SimpleLesseeData} />
+          )}
         </motion.div>
       </div>
 
