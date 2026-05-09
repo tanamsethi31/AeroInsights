@@ -40,10 +40,12 @@ import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForec
 import { PerformanceVsPlan } from "../components/portfolio/PerformanceVsPlan";
 import { KeyDatesTab } from "../components/portfolio/KeyDatesTab";
 import { toKeyDateRows, toKeyDateKPIs } from "../lib/keyDatesAdapters";
+import { PaymentsTab } from "../components/portfolio/PaymentsTab";
+import { toPaymentSchedule } from "../lib/paymentAdapters";
 
 
 
-const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR", "Performance vs. Plan", "Key Dates"];
+const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR", "Performance vs. Plan", "Payments", "Key Dates"];
 const EXEC_TABS = ["Leases", "Aircraft"];
 
 
@@ -63,6 +65,7 @@ export default function Portfolio() {
   const lessees = toLesseeTableRows(lesseeData, leaseData);
   const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
   const keyDateKPIs = toKeyDateKPIs(keyDateRows);
+  const paymentSchedule = toPaymentSchedule(leaseData, assets, lesseeData);
 
   const leaseAccessors = {
     lessee:   (l: LeaseTableRow) => l.lessee,
@@ -523,6 +526,11 @@ export default function Portfolio() {
 
       {/* Performance vs. Plan Tab */}
       {activeTab === "Performance vs. Plan" && <PerformanceVsPlan />}
+
+      {/* Payments Tab */}
+      {activeTab === "Payments" && (
+        <PaymentsTab schedule={paymentSchedule} />
+      )}
 
       {/* Key Dates Tab */}
       {activeTab === "Key Dates" && (
