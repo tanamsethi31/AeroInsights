@@ -664,6 +664,19 @@ export default function Dashboard() {
       </div>
       </DashboardSection>
 
+      {/* Watchlist Globe */}
+      <Card
+        title="Lessee Risk Map"
+        subtitle="Countries with active watchlist positions — hover to inspect"
+        blueHeader
+        collapsible
+        defaultCollapsed={false}
+      >
+        <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 8px" }}>
+          <WatchlistGlobe entries={watchlistEntries} />
+        </div>
+      </Card>
+
       {/* Watchlist Headlines */}
       <Card
         title="Watchlist Headlines"
@@ -857,19 +870,6 @@ export default function Dashboard() {
             })}
           </tbody>
         </table>
-      </Card>
-
-      {/* Watchlist Globe */}
-      <Card
-        title="Lessee Risk Map"
-        subtitle="Countries with active watchlist positions — hover to inspect"
-        blueHeader
-        collapsible
-        defaultCollapsed={false}
-      >
-        <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 8px" }}>
-          <WatchlistGlobe entries={watchlistEntries} />
-        </div>
       </Card>
 
       {/* Last 5 Scenario Runs — collapsible; collapsed by default in Executive Mode */}

@@ -266,8 +266,6 @@ export function WatchlistGlobe({ entries }: Props) {
           style={{
             cursor: dragging.current ? "grabbing" : "grab",
             display: "block",
-            borderRadius: "50%",
-            boxShadow: "0 4px 24px rgba(0,33,71,0.12)",
           }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
