@@ -259,16 +259,35 @@ const DEMO_LESSEES: CounterpartyRow[] = [
 ];
 
 
+function fmtExposure(usdRaw: number): string {
+  const m = usdRaw / 1_000_000;
+  if (m >= 1000) return `$${(m / 1000).toFixed(2)}B`;
+  return `$${m.toFixed(0)}M`;
+}
+
 export default function Counterparties() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { lessees: lesseeData, leases: leaseData, isDemo } = usePortfolioData();
+  const { lessees: lesseeData, leases: leaseData, provisions, isDemo } = usePortfolioData();
 
   // Build the display list: demo lessees when in demo mode, real data when uploaded
   const lesseeRows: CounterpartyRow[] = useMemo(() => {
     if (isDemo) return DEMO_LESSEES;
     const leaseCounts = new Map<string, number>();
     for (const l of leaseData) leaseCounts.set(l.lessee_id, (leaseCounts.get(l.lessee_id) ?? 0) + 1);
+
+    // Build asset → lessee mapping
+    const assetToLessee = new Map<string, string>();
+    for (const l of leaseData) assetToLessee.set(l.asset_id, l.lessee_id);
+
+    // Sum EAD per lessee
+    const exposureByLesseeId = new Map<string, number>();
+    for (const p of provisions) {
+      const lesseeId = assetToLessee.get(p.asset_id);
+      if (!lesseeId) continue;
+      exposureByLesseeId.set(lesseeId, (exposureByLesseeId.get(lesseeId) ?? 0) + (p.ead ?? 0));
+    }
+
     return lesseeData.map(l => ({
       id: l.id,
       profileId: LESSEE_NAME_TO_PROFILE_ID[l.name],
@@ -278,14 +297,14 @@ export default function Counterparties() {
       stage: (l.watchlist_status === "red" ? "3" : l.watchlist_status === "amber" ? "2" : "1") as "1" | "2" | "3",
       behaviorScore: 0,
       scores: { punctuality: 0, restructuringCoop: 0, govtInterference: 0, litigationPropensity: 0 },
-      exposure: "—",
+      exposure: fmtExposure(exposureByLesseeId.get(l.id) ?? 0),
       leases: leaseCounts.get(l.id) ?? 0,
       lastPayment: "—",
       daysOverdue: 0,
       notes: "",
       watchlistStatus: l.watchlist_status,
     }));
-  }, [lesseeData, leaseData, isDemo]);
+  }, [lesseeData, leaseData, provisions, isDemo]);
 
   const [selectedLessee, setSelectedLessee] = useState<CounterpartyRow>(lesseeRows[0] ?? DEMO_LESSEES[0]);
 
