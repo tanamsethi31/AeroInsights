@@ -104,10 +104,10 @@ function $m(n: number) { return `$${n.toFixed(1)}M`; }
 function pct(n: number) { return `${n.toFixed(2)}%`; }
 
 type LiveRows = {
-  eclRows: typeof ECL_ROWS;
-  lesseeRows: typeof LESSEES;
-  acRows: typeof AIRCRAFT;
-  leaseRows: typeof LEASES;
+  eclRows:    PortfolioExportData["eclRows"];
+  lesseeRows: PortfolioExportData["lesseeRows"];
+  acRows:     PortfolioExportData["aircraftRows"];
+  leaseRows:  PortfolioExportData["leaseRows"];
 };
 
 function getModuleData(id: string, rows: LiveRows): ModuleRender | null {
@@ -565,7 +565,7 @@ export function generatePDF(moduleIds: string[], presetLabel: string, data?: Por
 
   const slug = presetLabel.toLowerCase().replace(/\s+/g, "-");
   const date = new Date().toISOString().slice(0, 10);
-  doc.save(`aerinsights-${slug}-${date}.pdf`);
+  doc.save(`aeroinsights-${slug}-${date}.pdf`);
 }
 
 // ─── XLSX Export ───────────────────────────────────────────────────────────────
@@ -623,7 +623,7 @@ export function generateXLSX(moduleIds: string[], presetLabel: string, data?: Po
 
   const slug = presetLabel.toLowerCase().replace(/\s+/g, "-");
   const date = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `aerinsights-${slug}-${date}.xlsx`);
+  XLSX.writeFile(wb, `aeroinsights-${slug}-${date}.xlsx`);
 }
 
 // ─── Convenience: generate the lease register as standalone XLSX ───────────────

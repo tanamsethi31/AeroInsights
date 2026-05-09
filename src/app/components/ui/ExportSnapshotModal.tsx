@@ -128,8 +128,8 @@ export function ExportSnapshotModal({ onClose }: Props) {
   const [generating, setGenerating] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
-  const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
-  const exportData = !isLoading && assets.length > 0
+  const { assets, lessees, leases, provisions, isLoading, isDemo } = usePortfolioData();
+  const exportData = !isLoading && !isDemo && assets.length > 0
     ? toExportData(assets, lessees, leases, provisions)
     : undefined;
 
