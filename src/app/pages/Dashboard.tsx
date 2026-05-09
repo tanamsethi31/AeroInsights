@@ -17,6 +17,7 @@ import {
   Bar,
   Legend,
 } from "recharts";
+import { GettingStartedPanel } from "../components/dashboard/GettingStartedPanel";
 import { KpiCard } from "../components/ui/KpiCard";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
@@ -456,6 +457,9 @@ export default function Dashboard() {
           staggerIndex={3}
         />
       </div>
+
+      {/* Getting Started panel — shown only to users who just completed onboarding */}
+      <GettingStartedPanel />
 
       {/* Upcoming Expiries panel */}
       {urgentLeases.length > 0 && (
