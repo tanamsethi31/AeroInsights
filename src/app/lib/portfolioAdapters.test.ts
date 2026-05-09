@@ -60,6 +60,18 @@ describe("toDashboardKPIs", () => {
   it("counts red watchlist lessees", () => {
     expect(kpis.watchlistRedCount).toBe(MOCK_LESSEES.filter(l => l.watchlist_status === "red").length);
   });
+  it("sums EAD as book value in $M", () => {
+    const expected = MOCK_PROVISIONS.reduce((s, p) => s + (p.ead ?? 0), 0) / 1_000_000;
+    expect(kpis.bookValueM).toBeCloseTo(expected, 1);
+  });
+  it("counts amber watchlist lessees", () => {
+    const expected = MOCK_LESSEES.filter(l => l.watchlist_status === "amber").length;
+    expect(kpis.watchlistAmberCount).toBe(expected);
+  });
+  it("counts green (or null) watchlist lessees", () => {
+    const expected = MOCK_LESSEES.filter(l => l.watchlist_status === "green" || l.watchlist_status == null).length;
+    expect(kpis.watchlistGreenCount).toBe(expected);
+  });
 });
 
 describe("toEclTableRows", () => {

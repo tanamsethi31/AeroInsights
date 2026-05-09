@@ -89,6 +89,11 @@ import { toDashboardKPIs } from "../lib/portfolioAdapters";
 import { toKeyDateRows } from "../lib/keyDatesAdapters";
 import { CalendarClock } from "lucide-react";
 
+function fmtBookValue(m: number): string {
+  if (m >= 1000) return `$${(m / 1000).toFixed(2)}B`;
+  return `$${m.toFixed(0)}M`;
+}
+
 const eclTrendData = [
   { month: "Oct", ecl: 38.1, s1: 18.6, s2: 8.2, s3: 11.3, migrations: 1 },
   { month: "Nov", ecl: 40.5, s1: 19.0, s2: 9.1, s3: 12.4, migrations: 2 },
@@ -426,7 +431,7 @@ export default function Dashboard() {
       >
         <KpiCard
           label="Portfolio Book Value"
-          value="$2.84B"
+          value={fmtBookValue(kpis.bookValueM)}
           delta="+$42M vs prior period"
           deltaType="positive"
           subtitle={`${leaseData.length} leases · ${lesseeData.length} lessees`}
@@ -438,14 +443,14 @@ export default function Dashboard() {
           value={`$${kpis.totalECLm.toFixed(1)}M`}
           delta="+$2.4M (5.4%) vs Q4 2025"
           deltaType="negative"
-          subtitle="1.66% of book value"
+          subtitle={kpis.bookValueM > 0 ? `${((kpis.totalECLm / kpis.bookValueM) * 100).toFixed(2)}% of book value` : "—"}
           staggerIndex={1}
           onClick={() => navigate("/risk-ecl")}
         />
         <KpiCard
           label="Watchlist Status"
           value={`${kpis.watchlistRedCount}`}
-          subtitle="8 Red · 23 Amber · 142 Green"
+          subtitle={`${kpis.watchlistRedCount} Red · ${kpis.watchlistAmberCount} Amber · ${kpis.watchlistGreenCount} Green`}
           delta="↑2 from last week"
           deltaType="negative"
           staggerIndex={2}

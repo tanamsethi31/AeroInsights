@@ -347,6 +347,9 @@ export interface DashboardKPIs {
   totalECLm: number;
   stage3Count: number;
   watchlistRedCount: number;
+  watchlistAmberCount: number;
+  watchlistGreenCount: number;
+  bookValueM: number;
 }
 
 export function toDashboardKPIs(assets: Asset[], lessees: Lessee[], provisions: Provision[]): DashboardKPIs {
@@ -355,6 +358,9 @@ export function toDashboardKPIs(assets: Asset[], lessees: Lessee[], provisions: 
     totalECLm: provisions.reduce((s, p) => s + (p.ecl_amount ?? 0), 0) / 1_000_000,
     stage3Count: provisions.filter((p) => p.stage === 3).length,
     watchlistRedCount: lessees.filter((l) => l.watchlist_status === "red").length,
+    watchlistAmberCount: lessees.filter((l) => l.watchlist_status === "amber").length,
+    watchlistGreenCount: lessees.filter((l) => l.watchlist_status === "green" || l.watchlist_status == null).length,
+    bookValueM: provisions.reduce((s, p) => s + (p.ead ?? 0), 0) / 1_000_000,
   };
 }
 
