@@ -13,6 +13,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Download, FileText, Table, FileJson, File, Mail, Clock, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe } from "lucide-react";
 import { ReportFormatModal } from "../components/reports/ReportFormatModal";
+import { BoardPackModal } from "../components/reports/BoardPackModal";
 
 const REPORT_ICON_MAP: Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>> = {
   search:       Search,
@@ -116,6 +117,7 @@ export default function Reports() {
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Report Templates"); }, [pathname]);
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [formatModal, setFormatModal] = React.useState<{ id: string; name: string } | null>(null);
+  const [boardPackModal, setBoardPackModal] = React.useState<{ id: string; name: string } | null>(null);
 
   const categories = ["All", "Audit", "Board", "Portfolio", "Risk", "Jurisdiction"];
   const filtered = categoryFilter === "All" ? reportTemplates : reportTemplates.filter(r => r.category === categoryFilter);
@@ -210,7 +212,13 @@ export default function Reports() {
                     <Clock size={12} /> {report.lastGenerated}
                   </span>
                   <button
-                    onClick={() => setFormatModal({ id: report.id, name: report.name })}
+                    onClick={() => {
+                      if (report.id === "RPT-002") {
+                        setBoardPackModal({ id: report.id, name: report.name });
+                      } else {
+                        setFormatModal({ id: report.id, name: report.name });
+                      }
+                    }}
                     style={{
                       display: "flex", alignItems: "center", gap: "0.375rem",
                       background: "#002147", color: "#FFFFFF", border: "none",
@@ -316,6 +324,13 @@ export default function Reports() {
           reportId={formatModal.id}
           reportName={formatModal.name}
           onClose={() => setFormatModal(null)}
+        />
+      )}
+      {boardPackModal && (
+        <BoardPackModal
+          reportId={boardPackModal.id}
+          reportName={boardPackModal.name}
+          onClose={() => setBoardPackModal(null)}
         />
       )}
     </div>
