@@ -24,6 +24,8 @@ createRoot(document.getElementById("root")!).render(
       audience,
       scope: "openid email profile",
     }}
+    cacheLocation="localstorage"
+    useRefreshTokens={true}
     onRedirectCallback={onRedirectCallback}
   >
     <App />
