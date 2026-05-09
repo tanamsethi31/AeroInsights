@@ -39,4 +39,13 @@ describe("suggestMapping", () => {
     expect(OUR_FIELDS.some(f => f.id === "registration")).toBe(true);
     expect(OUR_FIELDS.some(f => f.id === "lessee_name")).toBe(true);
   });
+
+  it("does not map the same header to two different fields", () => {
+    // Even if an alias appears in multiple fields, each header should only be claimed once
+    const headers = ["pd", "pd estimate"];
+    const result = suggestMapping(headers);
+    const mappedValues = Object.values(result).filter((v): v is string => v !== null);
+    const unique = new Set(mappedValues);
+    expect(unique.size).toBe(mappedValues.length);
+  });
 });

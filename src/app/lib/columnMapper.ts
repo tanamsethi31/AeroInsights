@@ -25,17 +25,20 @@ export const OUR_FIELDS: FieldDef[] = [
   { id: "watchlist_status",label: "Watchlist Status",  required: false, example: "amber",           description: "green | amber | red" },
   { id: "monthly_rental",  label: "Monthly Rental",    required: false, example: "285000",          description: "Monthly rent (number, no commas)" },
   { id: "currency",        label: "Currency",          required: false, example: "USD",             description: "ISO currency code" },
-  { id: "stage",           label: "IFRS 9 Stage",      required: false, example: "2",              description: "1 | 2 | 3" },
+  { id: "stage",           label: "IFRS 9 Stage",      required: false, example: "2",               description: "1 | 2 | 3" },
   { id: "ecl_amount",      label: "ECL Amount",        required: false, example: "4200000",         description: "ECL provision (number)" },
   { id: "pd",              label: "PD",                required: false, example: "0.12",            description: "Probability of default used for ECL" },
   { id: "lgd",             label: "LGD",               required: false, example: "0.45",            description: "Loss given default" },
   { id: "ead",             label: "EAD",               required: false, example: "24200000",        description: "Exposure at default" },
 ];
 
-export const REQUIRED_FIELDS: string[] = OUR_FIELDS.filter(f => f.required).map(f => f.id);
+// Derives the union of all field ID strings from OUR_FIELDS at compile time
+type FieldId = typeof OUR_FIELDS[number]["id"];
+
+export const REQUIRED_FIELDS: FieldId[] = OUR_FIELDS.filter(f => f.required).map(f => f.id);
 
 // Aliases: map of field id → list of header strings that should match (lowercased)
-const ALIASES: Record<string, string[]> = {
+const ALIASES: Record<FieldId, string[]> = {
   registration:     ["registration", "reg", "tail", "tail no", "tail no.", "tail number", "a/c reg", "aircraft reg", "ac reg"],
   msn:              ["msn", "serial", "serial number", "manufacturer serial", "serial no", "s/n", "sn"],
   aircraft_type:    ["aircraft type", "aircraft_type", "type", "a/c type", "aircraft", "model", "aircraft model", "ac type"],
@@ -62,17 +65,24 @@ const ALIASES: Record<string, string[]> = {
 /**
  * Given the detected column headers from an uploaded file, returns a mapping
  * of our field id → the detected header that best matches, or null if no match.
+ * Each user header is claimed by at most one field (first-match wins per OUR_FIELDS order).
  */
-export function suggestMapping(detectedHeaders: string[]): Record<string, string | null> {
-  const result: Record<string, string | null> = {};
+export function suggestMapping(detectedHeaders: string[]): Record<FieldId, string | null> {
+  const result = {} as Record<FieldId, string | null>;
   const normalised = detectedHeaders.map(h => h.toLowerCase().trim());
+  const claimed = new Set<number>();
 
   for (const field of OUR_FIELDS) {
-    const aliases = ALIASES[field.id] ?? [];
-    const matchIndex = normalised.findIndex(h =>
-      aliases.some(alias => alias === h)
+    const aliases = ALIASES[field.id as FieldId] ?? [];
+    const matchIndex = normalised.findIndex((h, i) =>
+      !claimed.has(i) && aliases.some(alias => alias === h)
     );
-    result[field.id] = matchIndex >= 0 ? detectedHeaders[matchIndex] : null;
+    if (matchIndex >= 0) {
+      result[field.id as FieldId] = detectedHeaders[matchIndex];
+      claimed.add(matchIndex);
+    } else {
+      result[field.id as FieldId] = null;
+    }
   }
 
   return result;
