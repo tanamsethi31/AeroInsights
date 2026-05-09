@@ -44,218 +44,8 @@ import {
 } from "../components/risk-ecl/ECLDrilldownPanel";
 import { IAS36Tab } from "../components/risk-ecl/IAS36Tab";
 import { StageMigrationTab } from "../components/risk-ecl/StageMigrationTab";
-
-// ─── DATA ─────────────────────────────────────────────────────────────────────
-
-const eclByLease: LeaseRow[] = [
-  {
-    id: "LSE-2019-001",
-    lessee: "IndiGo Airlines",
-    aircraft: "A320neo",
-    eadNum: 24.2,
-    pd12m: 12.4,
-    pdLifetime: 18.1,
-    lgd: 54,
-    ecl12m: 1.62,
-    eclLifetime: 2.36,
-    stage: "3",
-    sicrTrigger:
-      "30+ DPD backstop — 47 days past due on Jan 2026 payment. India sovereign watchlist event also triggered (AWG CTC score downgraded).",
-    pdTerm: [
-      { year: "1Y", pd: 12.4 },
-      { year: "2Y", pd: 14.8 },
-      { year: "3Y", pd: 16.5 },
-      { year: "LT", pd: 18.1 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 1.62, eclLifetime: 2.36 },
-      adverse: { ecl12m: 2.28, eclLifetime: 3.41 },
-      upside: { ecl12m: 1.04, eclLifetime: 1.52 },
-    },
-    journalMovement: 0.74,
-  },
-  {
-    id: "LSE-2020-014",
-    lessee: "Aeromexico",
-    aircraft: "B737-800",
-    eadNum: 32.1,
-    pd12m: 28.7,
-    pdLifetime: 41.2,
-    lgd: 61,
-    ecl12m: 5.64,
-    eclLifetime: 8.07,
-    stage: "3",
-    sicrTrigger:
-      "≥2-notch credit downgrade — Moody's B2 → Caa1 (3 notches). Chapter 11 refiling risk elevated; lessee entered insolvency proceedings Jan 2026.",
-    pdTerm: [
-      { year: "1Y", pd: 28.7 },
-      { year: "2Y", pd: 35.1 },
-      { year: "3Y", pd: 38.4 },
-      { year: "LT", pd: 41.2 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 5.64, eclLifetime: 8.07 },
-      adverse: { ecl12m: 8.12, eclLifetime: 12.18 },
-      upside: { ecl12m: 3.81, eclLifetime: 5.42 },
-    },
-    journalMovement: 1.91,
-  },
-  {
-    id: "LSE-2021-022",
-    lessee: "Emirates",
-    aircraft: "B777-300ER",
-    eadNum: 88.4,
-    pd12m: 0.3,
-    pdLifetime: 1.1,
-    lgd: 28,
-    ecl12m: 0.07,
-    eclLifetime: 0.27,
-    stage: "1",
-    sicrTrigger: null,
-    pdTerm: [
-      { year: "1Y", pd: 0.3 },
-      { year: "2Y", pd: 0.5 },
-      { year: "3Y", pd: 0.8 },
-      { year: "LT", pd: 1.1 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 0.07, eclLifetime: 0.27 },
-      adverse: { ecl12m: 0.12, eclLifetime: 0.44 },
-      upside: { ecl12m: 0.05, eclLifetime: 0.18 },
-    },
-    journalMovement: 0.01,
-  },
-  {
-    id: "LSE-2020-031",
-    lessee: "SriLankan Airlines",
-    aircraft: "A330-300",
-    eadNum: 34.2,
-    pd12m: 4.2,
-    pdLifetime: 9.8,
-    lgd: 48,
-    ecl12m: 0.69,
-    eclLifetime: 1.61,
-    stage: "2",
-    sicrTrigger:
-      "Country watchlist event — Sri Lanka sovereign watchlist: IMF programme compliance risk. 12-notch bank sector index deterioration in Q4 2025.",
-    pdTerm: [
-      { year: "1Y", pd: 4.2 },
-      { year: "2Y", pd: 6.8 },
-      { year: "3Y", pd: 8.3 },
-      { year: "LT", pd: 9.8 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 0.69, eclLifetime: 1.61 },
-      adverse: { ecl12m: 1.02, eclLifetime: 2.44 },
-      upside: { ecl12m: 0.44, eclLifetime: 1.02 },
-    },
-    journalMovement: 0.35,
-  },
-  {
-    id: "LSE-2022-009",
-    lessee: "Ryanair",
-    aircraft: "B737 MAX 8",
-    eadNum: 44.7,
-    pd12m: 0.5,
-    pdLifetime: 1.8,
-    lgd: 22,
-    ecl12m: 0.05,
-    eclLifetime: 0.18,
-    stage: "1",
-    sicrTrigger: null,
-    pdTerm: [
-      { year: "1Y", pd: 0.5 },
-      { year: "2Y", pd: 0.9 },
-      { year: "3Y", pd: 1.3 },
-      { year: "LT", pd: 1.8 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 0.05, eclLifetime: 0.18 },
-      adverse: { ecl12m: 0.08, eclLifetime: 0.29 },
-      upside: { ecl12m: 0.03, eclLifetime: 0.12 },
-    },
-    journalMovement: -0.01,
-  },
-  {
-    id: "LSE-2018-047",
-    lessee: "Air France",
-    aircraft: "A350-900",
-    eadNum: 68.3,
-    pd12m: 0.8,
-    pdLifetime: 2.4,
-    lgd: 31,
-    ecl12m: 0.17,
-    eclLifetime: 0.51,
-    stage: "1",
-    sicrTrigger: null,
-    pdTerm: [
-      { year: "1Y", pd: 0.8 },
-      { year: "2Y", pd: 1.4 },
-      { year: "3Y", pd: 1.9 },
-      { year: "LT", pd: 2.4 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 0.17, eclLifetime: 0.51 },
-      adverse: { ecl12m: 0.26, eclLifetime: 0.78 },
-      upside: { ecl12m: 0.11, eclLifetime: 0.33 },
-    },
-    journalMovement: 0.02,
-  },
-  {
-    id: "LSE-2021-055",
-    lessee: "Azul Brazilian Airlines",
-    aircraft: "A320neo",
-    eadNum: 28.9,
-    pd12m: 3.8,
-    pdLifetime: 8.4,
-    lgd: 46,
-    ecl12m: 0.51,
-    eclLifetime: 1.12,
-    stage: "2",
-    sicrTrigger:
-      "30+ DPD backstop — 35 days past due on Jan 2026 instalment. BRL/USD depreciation (+14% vs prior year) compresses liquidity margin.",
-    pdTerm: [
-      { year: "1Y", pd: 3.8 },
-      { year: "2Y", pd: 5.9 },
-      { year: "3Y", pd: 7.2 },
-      { year: "LT", pd: 8.4 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 0.51, eclLifetime: 1.12 },
-      adverse: { ecl12m: 0.76, eclLifetime: 1.68 },
-      upside: { ecl12m: 0.33, eclLifetime: 0.72 },
-    },
-    journalMovement: 0.22,
-  },
-  {
-    id: "LSE-2019-063",
-    lessee: "Air Transat",
-    aircraft: "A321neo",
-    eadNum: 22.1,
-    pd12m: 5.1,
-    pdLifetime: 11.2,
-    lgd: 44,
-    ecl12m: 0.5,
-    eclLifetime: 1.09,
-    stage: "2",
-    sicrTrigger:
-      "30+ DPD backstop — 31 days past due on Dec 2025 payment. Payment holiday negotiation underway; formal SICR triggered on identification of financial difficulty.",
-    pdTerm: [
-      { year: "1Y", pd: 5.1 },
-      { year: "2Y", pd: 7.6 },
-      { year: "3Y", pd: 9.4 },
-      { year: "LT", pd: 11.2 },
-    ],
-    scenarioECL: {
-      base: { ecl12m: 0.5, eclLifetime: 1.09 },
-      adverse: { ecl12m: 0.74, eclLifetime: 1.64 },
-      upside: { ecl12m: 0.32, eclLifetime: 0.70 },
-    },
-    journalMovement: 0.18,
-  },
-];
-
-
+import { usePortfolioData } from "../hooks/usePortfolioData";
+import { toEclTableRows } from "../lib/portfolioAdapters";
 
 const tornadoData = [
   { input: "PD Multiplier (Stage 3)", impact: 8.4, dir: "positive" },
@@ -426,6 +216,9 @@ export default function RiskECL() {
   const [sicrConfig, setSicrConfig] = useState({ ...defaultSicrConfig });
   const [sicrDirty, setSicrDirty] = useState(false);
   const [sicrSaved, setSicrSaved] = useState(false);
+
+  const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
+  const eclByLease = toEclTableRows(provisions, assets, lessees, leases);
 
   const weightSum = weights.base + weights.adverse + weights.upside;
   const weightsValid = weightSum === 100;
@@ -1770,6 +1563,15 @@ export default function RiskECL() {
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
+
+  if (isLoading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div style={{ height: 48, borderRadius: 8, background: "#E2E8F0", animation: "pulse 1.5s ease-in-out infinite", maxWidth: 400 }} />
+        <div style={{ height: 400, borderRadius: 12, background: "#E2E8F0", animation: "pulse 1.5s ease-in-out infinite" }} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
