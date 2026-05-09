@@ -43,7 +43,7 @@ export interface Provision {
   org_id: string;
   asset_id: string;
   lease_id: string | null;
-  stage: number | null;
+  stage: 1 | 2 | 3 | null;
   ecl_amount: number | null;
   pd: number | null;
   lgd: number | null;
