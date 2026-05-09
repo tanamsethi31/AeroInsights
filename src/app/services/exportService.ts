@@ -9,6 +9,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
+import type { PortfolioExportData } from "../lib/portfolioAdapters";
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
@@ -257,7 +258,12 @@ function fe(usdMillions: number, currency: CurrencyCode): string {
 
 // ─── Named report generators — PDF ───────────────────────────────────────────
 
-export function generateReportPDF(reportId: string, currency: CurrencyCode): void {
+export function generateReportPDF(reportId: string, currency: CurrencyCode, data?: PortfolioExportData): void {
+  const eclRows    = data?.eclRows      ?? ECL_ROWS;
+  const lesseeRows = data?.lesseeRows   ?? LESSEES;
+  const leaseRows  = data?.leaseRows    ?? LEASES;
+  const acRows     = data?.aircraftRows ?? AIRCRAFT;
+
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const date = new Date().toLocaleDateString("en-IE", { dateStyle: "long" });
 
@@ -290,7 +296,7 @@ export function generateReportPDF(reportId: string, currency: CurrencyCode): voi
       autoTable(doc, {
         startY: 45,
         head: [["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m", "LGD", "ECL 12m", "ECL LT", "Stage"]],
-        body: ECL_ROWS.map(r => [
+        body: eclRows.map(r => [
           r.id, r.lessee, r.aircraft,
           fe(r.ead, currency), `${r.pd12m}%`, `${r.lgd}%`,
           fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`,
@@ -319,7 +325,7 @@ export function generateReportPDF(reportId: string, currency: CurrencyCode): voi
       autoTable(doc, {
         startY: 45,
         head: [["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Rent/mo", "Stage"]],
-        body: LEASES.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`]),
+        body: leaseRows.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`]),
         styles: { fontSize: 7.5, cellPadding: 2.5 },
         headStyles: { fillColor: [0, 33, 71], textColor: 255 },
         alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -347,7 +353,7 @@ export function generateReportPDF(reportId: string, currency: CurrencyCode): voi
       autoTable(doc, {
         startY: 45,
         head: [["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"]],
-        body: LESSEES.filter(l => l.stage !== "1").map(l => [
+        body: lesseeRows.filter(l => l.stage !== "1").map(l => [
           l.name, l.country, l.rating, `S${l.stage}`, l.behavior, l.leases, l.exposure, l.daysLate,
         ]),
         styles: { fontSize: 8, cellPadding: 2.5 },
@@ -377,7 +383,12 @@ export function generateReportPDF(reportId: string, currency: CurrencyCode): voi
 
 // ─── Named report generators — XLSX ──────────────────────────────────────────
 
-export function generateReportXLSX(reportId: string, currency: CurrencyCode): void {
+export function generateReportXLSX(reportId: string, currency: CurrencyCode, data?: PortfolioExportData): void {
+  const eclRows    = data?.eclRows      ?? ECL_ROWS;
+  const lesseeRows = data?.lesseeRows   ?? LESSEES;
+  const leaseRows  = data?.leaseRows    ?? LEASES;
+  const acRows     = data?.aircraftRows ?? AIRCRAFT;
+
   const wb = XLSX.utils.book_new();
   const meta = `Generated: ${new Date().toLocaleDateString("en-IE")} | Currency: ${currency}`;
 
@@ -393,7 +404,7 @@ export function generateReportXLSX(reportId: string, currency: CurrencyCode): vo
     case "RPT-001":
       addSheet("ECL Audit",
         ["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m %", "LGD %", "ECL 12m", "ECL LT", "Stage"],
-        ECL_ROWS.map(r => [r.id, r.lessee, r.aircraft, fe(r.ead, currency), r.pd12m, r.lgd, fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`])
+        eclRows.map(r => [r.id, r.lessee, r.aircraft, fe(r.ead, currency), r.pd12m, r.lgd, fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`])
       );
       break;
     case "RPT-002":
@@ -405,7 +416,7 @@ export function generateReportXLSX(reportId: string, currency: CurrencyCode): vo
     case "RPT-003":
       addSheet("Lease Register",
         ["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Monthly Rent", "Stage"],
-        LEASES.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`])
+        leaseRows.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`])
       );
       break;
     case "RPT-004":
@@ -417,7 +428,7 @@ export function generateReportXLSX(reportId: string, currency: CurrencyCode): vo
     case "RPT-005":
       addSheet("Watchlist",
         ["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"],
-        LESSEES.map(l => [l.name, l.country, l.rating, `S${l.stage}`, l.behavior, l.leases, l.exposure, l.daysLate])
+        lesseeRows.map(l => [l.name, l.country, l.rating, `S${l.stage}`, l.behavior, l.leases, l.exposure, l.daysLate])
       );
       break;
     case "RPT-006":

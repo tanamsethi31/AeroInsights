@@ -4,6 +4,8 @@ import { X, FileText, Table, FileType } from "lucide-react";
 import { useCurrency } from "../../contexts/CurrencyContext";
 import { generateReportPDF, generateReportXLSX } from "../../services/exportService";
 import { generateReportDOCX } from "../../services/reportGenerators";
+import { usePortfolioData } from "../../hooks/usePortfolioData";
+import { toExportData } from "../../lib/portfolioAdapters";
 
 type Format = "pdf" | "xlsx" | "docx";
 
@@ -27,6 +29,8 @@ const FORMATS: {
 
 export function ReportFormatModal({ reportId, reportName, onClose }: ReportFormatModalProps) {
   const { currency } = useCurrency();
+  const { assets, lessees, leases, provisions } = usePortfolioData();
+  const exportData = toExportData(assets, lessees, leases, provisions);
   const [selected, setSelected] = React.useState<Format>("pdf");
   const [downloading, setDownloading] = React.useState(false);
   const [done, setDone] = React.useState(false);
@@ -34,8 +38,8 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
   async function handleDownload() {
     setDownloading(true);
     try {
-      if (selected === "pdf")  generateReportPDF(reportId, currency);
-      if (selected === "xlsx") generateReportXLSX(reportId, currency);
+      if (selected === "pdf")  generateReportPDF(reportId, currency, exportData);
+      if (selected === "xlsx") generateReportXLSX(reportId, currency, exportData);
       if (selected === "docx") await generateReportDOCX(reportId, currency);
       setDone(true);
       setTimeout(onClose, 1200);
