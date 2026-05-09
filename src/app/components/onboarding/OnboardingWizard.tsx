@@ -28,6 +28,7 @@ export function OnboardingWizard() {
   const [step, setStep] = React.useState<OnboardingStep>("org");
   const [orgId, setOrgId] = React.useState<string | null>(null);
   const [importedCount, setImportedCount] = React.useState<number | null>(null);
+  const [role, setRole] = React.useState<"admin" | "analyst">("admin");
 
   const stepIndex = STEPS.indexOf(step);
 
@@ -38,6 +39,8 @@ export function OnboardingWizard() {
   }
 
   function handleGoToDashboard() {
+    localStorage.setItem("aero_onboarding_role", role);
+    localStorage.removeItem("aero_gs_dismissed");
     navigate("/");
   }
 
@@ -106,7 +109,7 @@ export function OnboardingWizard() {
               {step === "org" && (
                 <OrgSetupStep
                   userId={user?.sub ?? ""}
-                  onComplete={(id) => { setOrgId(id); setStep("invite"); }}
+                  onComplete={(id, r) => { setOrgId(id); setRole(r); setStep("invite"); }}
                 />
               )}
               {step === "invite" && (
@@ -125,6 +128,7 @@ export function OnboardingWizard() {
               {step === "done" && (
                 <ConfirmationStep
                   importedCount={importedCount}
+                  role={role}
                   onGoToDashboard={handleGoToDashboard}
                 />
               )}
