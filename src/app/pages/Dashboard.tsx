@@ -83,6 +83,8 @@ function DashboardSection({
 }
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { DASHBOARD_SIGNAL_TILES, type SignalSeverity } from "../data/intelligenceData";
+import { usePortfolioData } from "../hooks/usePortfolioData";
+import { toDashboardKPIs } from "../lib/portfolioAdapters";
 
 const eclTrendData = [
   { month: "Oct", ecl: 38.1, s1: 18.6, s2: 8.2, s3: 11.3, migrations: 1 },
@@ -198,6 +200,9 @@ export default function Dashboard() {
 
   const { refreshAll: refreshAllSignals, refreshing, getLastRefreshed } = useSignalRefresh();
   const [globeHovered, setGlobeHovered] = useState<WatchlistStatusEntry | null>(null);
+
+  const { assets, lessees: lesseeData, leases: leaseData, provisions } = usePortfolioData();
+  const kpis = toDashboardKPIs(assets, lesseeData, provisions);
 
   const [expandedTiles, setExpandedTiles] = useState<Set<string>>(new Set());
   function toggleTile(id: string) {
@@ -417,12 +422,12 @@ export default function Dashboard() {
           value="$2.84B"
           delta="+$42M vs prior period"
           deltaType="positive"
-          subtitle="173 leases · 48 lessees"
+          subtitle={`${leaseData.length} leases · ${lesseeData.length} lessees`}
           staggerIndex={0}
         />
         <KpiCard
           label="Expected Credit Loss (ECL)"
-          value="$47.2M"
+          value={`$${kpis.totalECLm.toFixed(1)}M`}
           delta="+$2.4M (5.4%) vs Q4 2025"
           deltaType="negative"
           subtitle="1.66% of book value"
@@ -430,7 +435,7 @@ export default function Dashboard() {
         />
         <KpiCard
           label="Watchlist Status"
-          value="31"
+          value={`${kpis.watchlistRedCount}`}
           subtitle="8 Red · 23 Amber · 142 Green"
           delta="↑2 from last week"
           deltaType="negative"
