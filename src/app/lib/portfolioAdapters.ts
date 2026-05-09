@@ -306,6 +306,40 @@ export function toLesseeTableRows(lessees: Lessee[], leases: Lease[]): LesseeTab
   }));
 }
 
+// ─── Portfolio.tsx — KPI strip ────────────────────────────────────────────────
+
+export interface PortfolioKPIs {
+  fleetCount: number;          // assets.length
+  bookValueM: number;          // sum of provision.ead / 1_000_000
+  totalECLM: number;           // sum of provision.ecl_amount / 1_000_000
+  avgRemainingTermYrs: number; // average remaining lease term in years (floored at 0)
+}
+
+export function toPortfolioKPIs(
+  assets: Asset[],
+  leases: Lease[],
+  provisions: Provision[],
+): PortfolioKPIs {
+  const today = Date.now();
+  const YEAR_MS = 1000 * 60 * 60 * 24 * 365.25;
+
+  const bookValueM = provisions.reduce((s, p) => s + (p.ead ?? 0), 0) / 1_000_000;
+  const totalECLM  = provisions.reduce((s, p) => s + (p.ecl_amount ?? 0), 0) / 1_000_000;
+  const avgRemainingTermYrs = leases.length > 0
+    ? leases.reduce((s, l) => {
+        const end = new Date(l.end_date).getTime();
+        return s + Math.max(0, (end - today) / YEAR_MS);
+      }, 0) / leases.length
+    : 0;
+
+  return {
+    fleetCount: assets.length,
+    bookValueM,
+    totalECLM,
+    avgRemainingTermYrs,
+  };
+}
+
 // ─── Dashboard.tsx ────────────────────────────────────────────────────────────
 
 export interface DashboardKPIs {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import {
   indexById,
   toLeaseTableRows,
@@ -7,6 +7,8 @@ import {
   toDashboardKPIs,
   toEclTableRows,
   toConcentrationData,
+  toPortfolioKPIs,
+  type PortfolioKPIs,
 } from "./portfolioAdapters";
 import { MOCK_ASSETS, MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS } from "../data/mockPortfolioData";
 
@@ -68,6 +70,44 @@ describe("toEclTableRows", () => {
   it("converts lgd fraction to %", () => { expect(rows[0].lgd).toBeCloseTo(MOCK_PROVISIONS[0].lgd! * 100, 2); });
   it("converts ecl_amount to $M", () => { expect(rows[0].ecl12m).toBeCloseTo(MOCK_PROVISIONS[0].ecl_amount! / 1_000_000, 2); });
   it("populates pdTerm with 4 points", () => { expect(rows[0].pdTerm).toHaveLength(4); });
+});
+
+describe("toPortfolioKPIs", () => {
+  let kpis: PortfolioKPIs;
+
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-09T12:00:00Z"));
+    kpis = toPortfolioKPIs(MOCK_ASSETS, MOCK_LEASES, MOCK_PROVISIONS);
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it("counts fleet from assets array", () => {
+    expect(kpis.fleetCount).toBe(10);
+  });
+
+  it("sums EAD as book value in $M", () => {
+    // 24.2+32.1+88.4+34.2+44.7+68.3+34.2+28.9+91.2+44.7 = 490.9
+    expect(kpis.bookValueM).toBeCloseTo(490.9, 1);
+  });
+
+  it("sums ECL in $M", () => {
+    // 4.2+3.8+0.89+2.1+0.45+0.68+1.9+1.5+1.1+0.34 = 16.96
+    expect(kpis.totalECLM).toBeCloseTo(16.96, 1);
+  });
+
+  it("computes average remaining term > 0 yrs", () => {
+    // All leases end after 2026-05-09, so avg should be positive
+    expect(kpis.avgRemainingTermYrs).toBeGreaterThan(0);
+    expect(kpis.avgRemainingTermYrs).toBeLessThan(15);
+  });
+
+  it("returns 0 avgRemainingTermYrs for empty leases", () => {
+    const k = toPortfolioKPIs(MOCK_ASSETS, [], MOCK_PROVISIONS);
+    expect(k.avgRemainingTermYrs).toBe(0);
+  });
 });
 
 describe("toConcentrationData", () => {

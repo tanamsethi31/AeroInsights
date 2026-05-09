@@ -6,6 +6,7 @@ import {
   toLeaseTableRows,
   toAircraftTableRows,
   toLesseeTableRows,
+  toPortfolioKPIs,
   type LeaseTableRow,
   type LesseeTableRow as LesseeRow,
   type AircraftTableRow,
@@ -48,6 +49,11 @@ import { toPaymentSchedule } from "../lib/paymentAdapters";
 const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR", "Performance vs. Plan", "Payments", "Key Dates"];
 const EXEC_TABS = ["Leases", "Aircraft"];
 
+function fmtM(m: number): string {
+  if (m >= 1000) return `$${(m / 1000).toFixed(2)}B`;
+  return `$${m.toFixed(0)}M`;
+}
+
 
 export default function Portfolio() {
   const { pathname, state: locationState } = useLocation();
@@ -67,13 +73,14 @@ export default function Portfolio() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount-only — do not re-run on locationState change
-  const { assets, lessees: lesseeData, leases: leaseData, isLoading } = usePortfolioData();
+  const { assets, lessees: lesseeData, leases: leaseData, provisions, isLoading } = usePortfolioData();
   const leases = toLeaseTableRows(leaseData, assets, lesseeData);
   const aircraft = toAircraftTableRows(assets, leaseData, lesseeData);
   const lessees = toLesseeTableRows(lesseeData, leaseData);
   const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
   const keyDateKPIs = toKeyDateKPIs(keyDateRows);
   const paymentSchedule = toPaymentSchedule(leaseData, assets, lesseeData);
+  const portfolioKPIs = toPortfolioKPIs(assets, leaseData, provisions);
 
   const leaseAccessors = {
     lessee:   (l: LeaseTableRow) => l.lessee,
@@ -237,10 +244,10 @@ export default function Portfolio() {
 
       {/* KPI Strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-        <KpiCard label="Book Value" value="$2.84B" delta="+1.5% QoQ" deltaType="positive" />
-        <KpiCard label="Encumbered Value" value="$2.61B" subtitle="91.9% of book" />
-        <KpiCard label="Expected Loss" value="$47.2M" delta="+5.4% vs Q4" deltaType="negative" />
-        <KpiCard label="Avg Lease Term" value="5.8 yrs" delta="-0.3yr vs prior" deltaType="negative" />
+        <KpiCard label="Fleet" value={`${portfolioKPIs.fleetCount} aircraft`} />
+        <KpiCard label="Book Value (EAD)" value={fmtM(portfolioKPIs.bookValueM)} />
+        <KpiCard label="Total ECL" value={fmtM(portfolioKPIs.totalECLM)} deltaType="negative" />
+        <KpiCard label="Avg Remaining Term" value={`${portfolioKPIs.avgRemainingTermYrs.toFixed(1)} yrs`} />
       </div>
 
       {/* Tabs */}
