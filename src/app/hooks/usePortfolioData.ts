@@ -14,7 +14,13 @@ export function usePortfolioData(): PortfolioData {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!hasUpload || !orgId) return;
+    if (!hasUpload || !orgId) {
+      setAssets([]);
+      setLessees([]);
+      setLeases([]);
+      setProvisions([]);
+      return;
+    }
 
     setIsLoading(true);
     Promise.all([
@@ -28,6 +34,9 @@ export function usePortfolioData(): PortfolioData {
         setLessees((l.data as Lessee[]) ?? []);
         setLeases((ls.data as Lease[]) ?? []);
         setProvisions((p.data as Provision[]) ?? []);
+      })
+      .catch((err) => {
+        console.error("[usePortfolioData] fetch error:", err);
       })
       .finally(() => setIsLoading(false));
   }, [orgId, hasUpload]);
