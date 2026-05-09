@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
+import { usePortfolioData } from "../hooks/usePortfolioData";
 import {
   MACRO_SIGNALS,
   LESSEE_RADAR,
@@ -222,7 +223,11 @@ const CAT_FILTERS: { id: SignalCategory | "all"; label: string }[] = [
   { id: "aviation", label: "Aviation" },
 ];
 
-function SignalCard({ sig }: { sig: MacroSignal }) {
+function SignalCard({ sig, lesseeIdByName, liveExposure }: {
+  sig: MacroSignal;
+  lesseeIdByName: Map<string, string>;
+  liveExposure: (name: string, fallback: number) => number;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [portfolioOpen, setPortfolioOpen] = useState(false);
   const navigate = useNavigate();
@@ -440,29 +445,34 @@ function SignalCard({ sig }: { sig: MacroSignal }) {
               gap: "0.3rem",
             }}
           >
-            {sig.affectedLessees.slice(0, 6).map((l) => (
-              <span
-                key={l.id}
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  padding: "0.1rem 0.45rem",
-                  borderRadius: "9999px",
-                  background:
-                    l.stage === "3" ? T.redBg :
-                    l.stage === "2" ? T.amberBg : T.greenBg,
-                  color:
-                    l.stage === "3" ? T.red :
-                    l.stage === "2" ? T.amber : T.green,
-                  border: `1px solid ${
-                    l.stage === "3" ? T.red + "44" :
-                    l.stage === "2" ? T.amber + "44" : T.green + "44"
-                  }`,
-                }}
-              >
-                S{l.stage} · {l.name}
-              </span>
-            ))}
+            {sig.affectedLessees.slice(0, 6).map((l) => {
+              const id = lesseeIdByName.get(l.name);
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => id ? navigate(`/counterparties?lessee=${id}`) : navigate("/counterparties")}
+                  style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 600,
+                    padding: "0.1rem 0.45rem",
+                    borderRadius: "9999px",
+                    background:
+                      l.stage === "3" ? T.redBg :
+                      l.stage === "2" ? T.amberBg : T.greenBg,
+                    color:
+                      l.stage === "3" ? T.red :
+                      l.stage === "2" ? T.amber : T.green,
+                    border: `1px solid ${
+                      l.stage === "3" ? T.red + "44" :
+                      l.stage === "2" ? T.amber + "44" : T.green + "44"
+                    }`,
+                    cursor: id ? "pointer" : "default",
+                  }}
+                >
+                  S{l.stage} · {l.name}
+                </button>
+              );
+            })}
             {sig.affectedLessees.length > 6 && (
               <span style={{ fontSize: "0.7rem", color: T.muted, padding: "0.1rem 0.25rem" }}>
                 +{sig.affectedLessees.length - 6} more
@@ -537,6 +547,30 @@ function SignalCard({ sig }: { sig: MacroSignal }) {
 
 function MacroSignalsView() {
   const [catFilter, setCatFilter] = useState<SignalCategory | "all">("all");
+  const { lessees, leases, provisions } = usePortfolioData();
+
+  const { lesseeEADByName, lesseeIdByName } = useMemo(() => {
+    const assetToLessee = new Map<string, string>();
+    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
+    const eadById = new Map<string, number>();
+    for (const p of provisions) {
+      const lid = assetToLessee.get(p.asset_id);
+      if (!lid) continue;
+      eadById.set(lid, (eadById.get(lid) ?? 0) + (p.ead ?? 0));
+    }
+    const lesseeEADByName = new Map<string, number>();
+    const lesseeIdByName  = new Map<string, string>();
+    for (const l of lessees) {
+      const ead = eadById.get(l.id);
+      if (ead !== undefined) lesseeEADByName.set(l.name, ead);
+      lesseeIdByName.set(l.name, l.id);
+    }
+    return { lesseeEADByName, lesseeIdByName };
+  }, [lessees, leases, provisions]);
+
+  function liveExposure(name: string, fallback: number): number {
+    return lesseeEADByName.get(name) ?? fallback;
+  }
 
   const filtered = useMemo(() => {
     const sigs = catFilter === "all"
@@ -612,7 +646,7 @@ function MacroSignalsView() {
         }}
       >
         {filtered.map((sig) => (
-          <SignalCard key={sig.id} sig={sig} />
+          <SignalCard key={sig.id} sig={sig} lesseeIdByName={lesseeIdByName} liveExposure={liveExposure} />
         ))}
       </div>
     </div>
@@ -656,6 +690,31 @@ function RadarCell({ sig }: { sig: LesseeRadarSignal }) {
 
 function LesseeRadarView() {
   const navigate = useNavigate();
+  const { lessees, leases, provisions } = usePortfolioData();
+
+  const { lesseeEADByName, lesseeIdByName } = useMemo(() => {
+    const assetToLessee = new Map<string, string>();
+    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
+    const eadById = new Map<string, number>();
+    for (const p of provisions) {
+      const lid = assetToLessee.get(p.asset_id);
+      if (!lid) continue;
+      eadById.set(lid, (eadById.get(lid) ?? 0) + (p.ead ?? 0));
+    }
+    const lesseeEADByName = new Map<string, number>();
+    const lesseeIdByName  = new Map<string, string>();
+    for (const l of lessees) {
+      const ead = eadById.get(l.id);
+      if (ead !== undefined) lesseeEADByName.set(l.name, ead);
+      lesseeIdByName.set(l.name, l.id);
+    }
+    return { lesseeEADByName, lesseeIdByName };
+  }, [lessees, leases, provisions]);
+
+  function liveExposure(name: string, fallback: number): number {
+    return lesseeEADByName.get(name) ?? fallback;
+  }
+
   const sorted = useMemo(
     () => [...LESSEE_RADAR].sort((a, b) => b.compositeScore - a.compositeScore),
     []
@@ -792,7 +851,16 @@ function LesseeRadarView() {
                       color: T.text,
                     }}
                   >
-                    {entry.lesseeName}
+                    <button
+                      onClick={() => {
+                        const id = lesseeIdByName.get(entry.lesseeName);
+                        if (id) navigate(`/counterparties?lessee=${id}`);
+                        else navigate("/counterparties");
+                      }}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "inherit", fontWeight: "inherit", fontSize: "inherit", textAlign: "left" }}
+                    >
+                      {entry.lesseeName}
+                    </button>
                   </td>
 
                   {/* Country */}
@@ -842,7 +910,7 @@ function LesseeRadarView() {
                       color: T.text,
                     }}
                   >
-                    {fmtUSD(entry.exposureUSD)}
+                    {fmtUSD(liveExposure(entry.lesseeName, entry.exposureUSD))}
                   </td>
 
                   {/* Load Factor */}
@@ -1224,7 +1292,11 @@ function DealFeedView() {
 
 // ─── Jurisdiction Watch View ──────────────────────────────────────────────────
 
-function JxCard({ event }: { event: JurisdictionEvent }) {
+function JxCard({ event, lesseeIdByName, liveTotalExposure }: {
+  event: JurisdictionEvent;
+  lesseeIdByName: Map<string, string>;
+  liveTotalExposure: (names: string[], fallback: number) => number;
+}) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
 
@@ -1387,24 +1459,29 @@ function JxCard({ event }: { event: JurisdictionEvent }) {
               padding: "0.25rem 0.625rem",
             }}
           >
-            Portfolio exposure: {fmtUSD(event.portfolioExposureUSD)}
+            Portfolio exposure: {fmtUSD(liveTotalExposure(event.lesseesAffected, event.portfolioExposureUSD))}
           </div>
-          {event.lesseesAffected.map((name) => (
-            <span
-              key={name}
-              style={{
-                fontSize: "0.72rem",
-                fontWeight: 600,
-                padding: "0.15rem 0.5rem",
-                borderRadius: "9999px",
-                background: T.bg,
-                color: T.muted,
-                border: `1px solid ${T.border}`,
-              }}
-            >
-              {name}
-            </span>
-          ))}
+          {event.lesseesAffected.map((name) => {
+            const id = lesseeIdByName.get(name);
+            return (
+              <button
+                key={name}
+                onClick={() => id ? navigate(`/counterparties?lessee=${id}`) : navigate("/counterparties")}
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  padding: "0.15rem 0.5rem",
+                  borderRadius: "9999px",
+                  background: T.bg,
+                  color: T.muted,
+                  border: `1px solid ${T.border}`,
+                  cursor: id ? "pointer" : "default",
+                }}
+              >
+                {name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1422,7 +1499,11 @@ function JxCard({ event }: { event: JurisdictionEvent }) {
       >
         <span style={{ color: T.muted }}>{event.source}</span>
         <button
-          onClick={() => navigate("/counterparties")}
+          onClick={() => {
+            const name = event.lesseesAffected[0];
+            const id = name ? lesseeIdByName.get(name) : undefined;
+            navigate(id && event.lesseesAffected.length === 1 ? `/counterparties?lessee=${id}` : "/counterparties");
+          }}
           style={{
             padding: "0.275rem 0.65rem",
             borderRadius: "0.375rem",
@@ -1442,6 +1523,37 @@ function JxCard({ event }: { event: JurisdictionEvent }) {
 }
 
 function JurisdictionWatchView() {
+  const { lessees, leases, provisions } = usePortfolioData();
+
+  const { lesseeEADByName, lesseeIdByName } = useMemo(() => {
+    const assetToLessee = new Map<string, string>();
+    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
+    const eadById = new Map<string, number>();
+    for (const p of provisions) {
+      const lid = assetToLessee.get(p.asset_id);
+      if (!lid) continue;
+      eadById.set(lid, (eadById.get(lid) ?? 0) + (p.ead ?? 0));
+    }
+    const lesseeEADByName = new Map<string, number>();
+    const lesseeIdByName  = new Map<string, string>();
+    for (const l of lessees) {
+      const ead = eadById.get(l.id);
+      if (ead !== undefined) lesseeEADByName.set(l.name, ead);
+      lesseeIdByName.set(l.name, l.id);
+    }
+    return { lesseeEADByName, lesseeIdByName };
+  }, [lessees, leases, provisions]);
+
+  function liveTotalExposure(names: string[], fallback: number): number {
+    let total = 0;
+    let found = false;
+    for (const n of names) {
+      const ead = lesseeEADByName.get(n);
+      if (ead !== undefined) { total += ead; found = true; }
+    }
+    return found ? total : fallback;
+  }
+
   const events = useMemo(() => {
     const sentOrder: Record<SignalSentiment, number> = { negative: 0, neutral: 1, positive: 2 };
     return [...JURISDICTION_EVENTS].sort(
@@ -1488,7 +1600,7 @@ function JurisdictionWatchView() {
       {/* Event cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
         {events.map((ev) => (
-          <JxCard key={ev.id} event={ev} />
+          <JxCard key={ev.id} event={ev} lesseeIdByName={lesseeIdByName} liveTotalExposure={liveTotalExposure} />
         ))}
       </div>
     </div>
