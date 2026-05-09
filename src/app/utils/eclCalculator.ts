@@ -30,7 +30,7 @@ export const ZERO_INPUTS: ScenarioInputs = {
   pdS3Multi: 1.0,
 };
 
-export function computeECL(inputs: ScenarioInputs): number {
+export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
   const delta =
     Math.min(0, inputs.gdpDelta) * -250 +
     Math.min(0, inputs.rpkDelta) * -48 +
@@ -40,7 +40,11 @@ export function computeECL(inputs: ScenarioInputs): number {
     Math.min(0, inputs.assetValueDelta) * -52 +
     (inputs.pdS2Multi - 1.0) * 8.5 +
     (inputs.pdS3Multi - 1.0) * 18.2;
-  return Math.max(BASE_ECL * 0.3, BASE_ECL + delta);
+  return Math.max(baseECL * 0.3, baseECL + delta);
+}
+
+export function computeECL(inputs: ScenarioInputs): number {
+  return computeECLFromBase(BASE_ECL, inputs);
 }
 
 export function computeStages(ecl: number, inputs: ScenarioInputs): StageDistribution {

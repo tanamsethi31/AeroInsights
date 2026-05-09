@@ -34,8 +34,11 @@ import {
   BASE_ECL,
   ZERO_INPUTS,
   computeECL,
+  computeECLFromBase,
   computeStages,
 } from "../utils/eclCalculator";
+import { usePortfolioData } from "../hooks/usePortfolioData";
+import { toDashboardKPIs } from "../lib/portfolioAdapters";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -636,6 +639,16 @@ export default function Scenarios() {
   const [customResultId, setCustomResultId] = useState<string | null>(null);
   const customResultRef = useRef<HTMLDivElement>(null);
 
+  // ── Live portfolio base ECL ──
+  const { assets, lessees, provisions } = usePortfolioData();
+  const liveBaseECL = React.useMemo(
+    () => {
+      const kpis = toDashboardKPIs(assets, lessees, provisions);
+      return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
+    },
+    [assets, lessees, provisions]
+  );
+
   // ── Clone / Branch state ──
   const [branchFromId, setBranchFromId] = useState<string | null>(null);
   const [clonePending, setClonePending] = useState<{
@@ -681,7 +694,7 @@ export default function Scenarios() {
     const duration = customMode === "deterministic" ? 1800 : 3200;
     setTimeout(() => {
       const seed = Math.floor(Math.random() * 9999) + 1;
-      const newRun = buildRun(customName || "Custom Scenario", formInputs, customMode, customPaths, seed, null);
+      const newRun = buildRun(customName || "Custom Scenario", formInputs, customMode, customPaths, seed, null, computeECLFromBase(liveBaseECL, formInputs));
       if (branchFromId) { (newRun as ScenarioRunResult).parentId = branchFromId; }
       setRuns((prev) => [newRun, ...prev]);
       setCustomResultId(newRun.id);
@@ -1226,25 +1239,30 @@ export default function Scenarios() {
                     warn={formInputs.pdS3Multi > 3.0} />
 
                   {/* Live ECL preview */}
-                  <div style={{ marginTop: "1rem", padding: "0.875rem", background: "rgba(0,33,71,0.04)", border: "1px solid rgba(0,33,71,0.1)", borderRadius: "0.375rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Live ECL Preview</div>
-                      <div style={{ fontSize: "1.375rem", fontWeight: 700, color: "#002147", fontVariantNumeric: "tabular-nums" }}>
-                        ${computeECL(formInputs).toFixed(1)}M
+                  <div style={{ marginTop: "1rem", padding: "0.875rem", background: "rgba(0,33,71,0.04)", border: "1px solid rgba(0,33,71,0.1)", borderRadius: "0.375rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Live ECL Preview</div>
+                        <div style={{ fontSize: "1.375rem", fontWeight: 700, color: "#002147", fontVariantNumeric: "tabular-nums" }}>
+                          ${computeECLFromBase(liveBaseECL, formInputs).toFixed(1)}M
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>vs portfolio ECL</div>
+                        <div style={{
+                          fontSize: "0.875rem", fontWeight: 600,
+                          color: computeECLFromBase(liveBaseECL, formInputs) > liveBaseECL ? "#B91C1C" : "#15803D",
+                          fontVariantNumeric: "tabular-nums",
+                        }}>
+                          {computeECLFromBase(liveBaseECL, formInputs) >= liveBaseECL ? "+" : ""}
+                          ${(computeECLFromBase(liveBaseECL, formInputs) - liveBaseECL).toFixed(1)}M
+                          {" "}({computeECLFromBase(liveBaseECL, formInputs) >= liveBaseECL ? "+" : ""}
+                          {(((computeECLFromBase(liveBaseECL, formInputs) - liveBaseECL) / liveBaseECL) * 100).toFixed(0)}%)
+                        </div>
                       </div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>vs baseline</div>
-                      <div style={{
-                        fontSize: "0.875rem", fontWeight: 600,
-                        color: computeECL(formInputs) > BASE_ECL ? "#B91C1C" : "#15803D",
-                        fontVariantNumeric: "tabular-nums",
-                      }}>
-                        {computeECL(formInputs) >= BASE_ECL ? "+" : ""}
-                        ${(computeECL(formInputs) - BASE_ECL).toFixed(1)}M
-                        {" "}({computeECL(formInputs) >= BASE_ECL ? "+" : ""}
-                        {(((computeECL(formInputs) - BASE_ECL) / BASE_ECL) * 100).toFixed(0)}%)
-                      </div>
+                    <div style={{ marginTop: "0.5rem", fontSize: "0.6875rem", color: "#94A3B8" }}>
+                      Portfolio base ECL: <span style={{ fontWeight: 600, color: "#475569" }}>${liveBaseECL.toFixed(1)}M</span>
                     </div>
                   </div>
 
