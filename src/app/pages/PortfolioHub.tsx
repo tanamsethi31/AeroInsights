@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth0 } from "@auth0/auth0-react";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, ArrowRight, Loader2, FolderOpen, Clock } from "lucide-react";
+import { BarChart3, Plus, ArrowRight, Loader2, FolderOpen, Clock, Database } from "lucide-react";
 import {
   usePortfolio,
   SAMPLE_PORTFOLIO,
@@ -321,12 +321,12 @@ export default function PortfolioHub() {
               </div>
             )}
 
-            {/* Empty state — two big action cards */}
+            {/* Empty state — three action cards */}
             {!loading && portfolios.length === 0 && (
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
                   gap: "1.25rem",
                 }}
               >
@@ -393,7 +393,34 @@ export default function PortfolioHub() {
                   </div>
                 </motion.button>
 
-                {/* Card 2 — Create portfolio */}
+                {/* Card 2 — Upload real portfolio */}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12, duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                  onClick={() => navigate("/onboarding")}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                    background: "#002147",
+                    border: "none",
+                    borderRadius: "12px",
+                    padding: "20px",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    color: "#FFFFFF",
+                  }}
+                >
+                  <Database size={24} style={{ color: "rgba(255,255,255,0.8)" }} />
+                  <div style={{ fontWeight: 700, fontSize: "1rem" }}>Upload your portfolio</div>
+                  <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.4 }}>
+                    Import your real fleet, leases, and lessees to unlock full platform capabilities.
+                  </div>
+                </motion.button>
+
+                {/* Card 3 — Create portfolio */}
                 <motion.button
                   onClick={() => setShowCreateModal(true)}
                   initial={{ opacity: 0, y: 14 }}
