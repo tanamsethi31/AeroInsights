@@ -7,10 +7,11 @@ const FLEET_SIZES = ["1–20 aircraft", "20–100 aircraft", "100+ aircraft"];
 
 interface OrgSetupStepProps {
   userId: string;
-  onComplete: (orgId: string) => void;
+  onComplete: (orgId: string, role: "admin" | "analyst") => void;
 }
 
 export function OrgSetupStep({ userId, onComplete }: OrgSetupStepProps) {
+  const [role, setRole] = React.useState<"admin" | "analyst">("admin");
   const [name, setName] = React.useState("");
   const [fleetSize, setFleetSize] = React.useState(FLEET_SIZES[0]);
   const [currency, setCurrency] = React.useState("EUR");
@@ -32,13 +33,13 @@ export function OrgSetupStep({ userId, onComplete }: OrgSetupStepProps) {
         .single();
       if (orgErr || !org) throw new Error(orgErr?.message ?? "Failed to create organisation");
 
-      // Link user as admin
+      // Link user with selected role
       const { error: memberErr } = await supabase
         .from("org_members")
-        .insert({ org_id: org.id, user_id: userId, role: "admin" });
+        .insert({ org_id: org.id, user_id: userId, role });
       if (memberErr) throw new Error(memberErr.message);
 
-      onComplete(org.id);
+      onComplete(org.id, role);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -48,6 +49,37 @@ export function OrgSetupStep({ userId, onComplete }: OrgSetupStepProps) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div>
+        <label style={{ display: "block", fontWeight: 600, fontSize: "0.875rem", color: "#0F172A", marginBottom: "6px" }}>
+          Your role
+        </label>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {(["admin", "analyst"] as const).map(r => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r)}
+              style={{
+                flex: 1, padding: "12px 10px", textAlign: "left",
+                border: `1.5px solid ${role === r ? "#002147" : "#E2E8F0"}`,
+                borderRadius: "8px",
+                background: role === r ? "rgba(0,33,71,0.04)" : "#FFFFFF",
+                cursor: "pointer",
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#0F172A" }}>
+                {r === "admin" ? "Setting up for my firm" : "Joining an existing team"}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "2px" }}>
+                {r === "admin"
+                  ? "Create org, invite team, manage settings"
+                  : "Analyse portfolios, run scenarios, review reports"}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div>
         <label style={{ display: "block", fontWeight: 600, fontSize: "0.875rem", color: "#0F172A", marginBottom: "6px" }}>
           Organisation name <span style={{ color: "#B91C1C" }}>*</span>
