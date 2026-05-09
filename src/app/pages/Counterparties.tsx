@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Check, X, Circle, Plane } from "lucide-react";
+import { Check, X, Circle, Plane, Zap } from "lucide-react";
+import { type ScenarioInputs } from "../utils/eclCalculator";
 import { CountryFlag } from "../components/ui/CountryFlag";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
@@ -260,6 +261,7 @@ const DEMO_LESSEES: CounterpartyRow[] = [
 
 export default function Counterparties() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { lessees: lesseeData, leases: leaseData, isDemo } = usePortfolioData();
 
   // Build the display list: demo lessees when in demo mode, real data when uploaded
@@ -295,6 +297,12 @@ export default function Counterparties() {
       if (found) setSelectedLessee(found);
     }
   }, [location.search, lesseeRows]);
+
+  function stressPrefill(stage: "1" | "2" | "3"): Partial<ScenarioInputs> {
+    if (stage === "3") return { rpkDelta: -0.30, gdpDelta: -0.02, pdS2Multi: 1.8, pdS3Multi: 2.5, assetValueDelta: -0.15 };
+    if (stage === "2") return { rpkDelta: -0.15, pdS2Multi: 1.5, pdS3Multi: 1.3 };
+    return {};
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -442,6 +450,36 @@ export default function Counterparties() {
               exposure: selectedLessee.exposure,
               watchlistStatus: selectedLessee.watchlistStatus,
             } satisfies SimpleLesseeData} />
+          )}
+          {(selectedLessee.stage === "2" || selectedLessee.stage === "3") && (
+            <div style={{ marginTop: "0.75rem", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                onClick={() =>
+                  navigate("/scenarios", {
+                    state: {
+                      prefill: stressPrefill(selectedLessee.stage),
+                      prefillSource: `Stress test: ${selectedLessee.name} (Stage ${selectedLessee.stage})`,
+                    },
+                  })
+                }
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  padding: "0.5rem 1rem",
+                  background: selectedLessee.stage === "3" ? "#B91C1C" : "#B45309",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <Zap size={14} />
+                Stress Test in Scenarios
+              </button>
+            </div>
           )}
         </motion.div>
       </div>

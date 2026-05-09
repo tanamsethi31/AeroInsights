@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { useViewMode } from "../contexts/ViewModeContext";
@@ -197,6 +197,7 @@ function computeWeightedECL(
 
 export default function RiskECL() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { isExecutiveMode } = useViewMode();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "ECL Overview");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "ECL Overview"); }, [pathname]);
@@ -848,8 +849,24 @@ export default function RiskECL() {
                 >
                   {row.id}
                 </td>
-                <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>
-                  {row.lessee}
+                <td style={{ padding: "0.75rem 1rem" }}>
+                  <button
+                    onClick={() => navigate(`/counterparties?lessee=${row.lesseeId}`)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      fontSize: "0.8125rem",
+                      color: "#002147",
+                      padding: 0,
+                      textDecoration: "underline",
+                      textDecorationColor: "rgba(0,33,71,0.3)",
+                      textUnderlineOffset: "2px",
+                    }}
+                  >
+                    {row.lessee}
+                  </button>
                 </td>
                 <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>
                   {row.aircraft}

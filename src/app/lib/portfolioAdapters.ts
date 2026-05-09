@@ -350,6 +350,7 @@ export function toEclTableRows(
 
     return {
       id: p.id,
+      lesseeId,
       lessee: lessee?.name ?? "—",
       aircraft: asset?.aircraft_type ?? "—",
       eadNum,

@@ -18,6 +18,7 @@ export interface ScenarioECL {
 
 export interface LeaseRow {
   id: string;
+  lesseeId: string;
   lessee: string;
   aircraft: string;
   eadNum: number;
