@@ -265,25 +265,32 @@ export default function Portfolio() {
               <div className="flex items-center gap-1">
                 <Filter size={14} style={{ color: "#94A3B8" }} />
                 <span style={{ fontSize: "0.8125rem", color: "#475569" }}>Stage:</span>
-                {["All", "1", "2", "3"].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStageFilter(s)}
-                    style={{
-                      padding: "0.25rem 0.625rem",
-                      fontSize: "0.75rem",
-                      fontWeight: 500,
-                      border: "1px solid",
-                      borderRadius: "1rem",
-                      cursor: "pointer",
-                      background: stageFilter === s ? "#002147" : "transparent",
-                      color: stageFilter === s ? "#FFFFFF" : "#475569",
-                      borderColor: stageFilter === s ? "#002147" : "#E2E8F0",
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {(["All", "1", "2", "3"] as const).map((s) => {
+                  const active = stageFilter === s;
+                  const stageColor =
+                    s === "1" ? "#15803D" :
+                    s === "2" ? "#B45309" :
+                    s === "3" ? "#B91C1C" : "#475569";
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setStageFilter(s)}
+                      style={{
+                        padding: "0.25rem 0.625rem",
+                        fontSize: "0.75rem",
+                        fontWeight: 500,
+                        border: "1px solid",
+                        borderRadius: "1rem",
+                        cursor: "pointer",
+                        background: active ? "#002147" : "transparent",
+                        color: active ? "#FFFFFF" : stageColor,
+                        borderColor: active ? "#002147" : stageColor,
+                      }}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           }

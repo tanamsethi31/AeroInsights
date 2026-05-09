@@ -708,7 +708,7 @@ export interface DashboardSignalTile {
 export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   {
     id: "dst-01",
-    icon: "bi-fuel-pump",
+    icon: "bi-fuel-pump-fill",
     label: "Jet-A1 Fuel",
     value: "+27.3% YTD",
     subtext: "$1.12/litre · All 10 lessees · ECL +$4.2M",
@@ -738,7 +738,7 @@ export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   },
   {
     id: "dst-04",
-    icon: "bi-airplane",
+    icon: "bi-airplane-fill",
     label: "EU Aviation RPK",
     value: "+4.8% YoY",
     subtext: "Eurocontrol Mar 2026 · Ryanair, Air France, Lufthansa",
@@ -748,7 +748,7 @@ export const DASHBOARD_SIGNAL_TILES: DashboardSignalTile[] = [
   },
   {
     id: "dst-05",
-    icon: "bi-clipboard",
+    icon: "bi-clipboard-fill",
     label: "Deal Feed",
     value: "4 events",
     subtext: "2 negative · 2 positive · IndiGo · Aeromexico · SriLankan",
