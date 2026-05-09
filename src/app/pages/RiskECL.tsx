@@ -221,6 +221,16 @@ export default function RiskECL() {
   const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
   const eclByLease = toEclTableRows(provisions, assets, lessees, leases);
 
+  const s1Rows = eclByLease.filter(r => r.stage === "1");
+  const s2Rows = eclByLease.filter(r => r.stage === "2");
+  const s3Rows = eclByLease.filter(r => r.stage === "3");
+
+  const s1ECL  = s1Rows.reduce((s, r) => s + r.ecl12m,      0);
+  const s2ECL  = s2Rows.reduce((s, r) => s + r.eclLifetime,  0);
+  const s3ECL  = s3Rows.reduce((s, r) => s + r.eclLifetime,  0);
+  const s1EAD  = s1Rows.reduce((s, r) => s + r.eadNum,       0);
+  const s1Coverage = s1EAD > 0 ? (s1ECL / s1EAD) * 100 : 0;
+
   const weightSum = weights.base + weights.adverse + weights.upside;
   const weightsValid = weightSum === 100;
   const weighted = computeWeightedECL(weights);
@@ -1649,23 +1659,21 @@ export default function RiskECL() {
         />
         <KpiCard
           label="Stage 1 ECL"
-          value="$8.4M"
-          subtitle="142 leases · 12-month"
-          delta="1.09% of Stage 1 EAD"
+          value={`$${s1ECL.toFixed(1)}M`}
+          subtitle={`${s1Rows.length} lease${s1Rows.length !== 1 ? "s" : ""} · 12-month`}
+          delta={`${s1Coverage.toFixed(2)}% of Stage 1 EAD`}
           deltaType="neutral"
         />
         <KpiCard
           label="Stage 2 ECL"
-          value="$21.6M"
-          subtitle="23 leases · Lifetime"
-          delta="+$1.2M vs prior"
+          value={`$${s2ECL.toFixed(1)}M`}
+          subtitle={`${s2Rows.length} lease${s2Rows.length !== 1 ? "s" : ""} · Lifetime`}
           deltaType="negative"
         />
         <KpiCard
           label="Stage 3 ECL"
-          value="$17.2M"
-          subtitle="8 leases · Lifetime"
-          delta="+$1.1M vs prior"
+          value={`$${s3ECL.toFixed(1)}M`}
+          subtitle={`${s3Rows.length} lease${s3Rows.length !== 1 ? "s" : ""} · Lifetime`}
           deltaType="negative"
         />
         <button
