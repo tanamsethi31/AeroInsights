@@ -1,65 +1,72 @@
 // src/app/components/dashboard/WatchlistGlobe.tsx
-import { useEffect, useRef, useState } from "react";
-import createGlobe from "cobe";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { geoOrthographic, geoPath, geoGraticule } from "d3-geo";
+import { feature } from "topojson-client";
 import type { WatchlistStatusEntry } from "../counterparties/watchlistEngine";
 
-// Country centroid coordinates [lat, lng]
-const COUNTRY_COORDS: Record<string, [number, number]> = {
-  India: [20.5937, 78.9629],
-  Mexico: [23.6345, -102.5528],
-  Brazil: [-14.235, -51.9253],
-  "Sri Lanka": [7.8731, 80.7718],
-  Canada: [56.1304, -106.3468],
-  UAE: [23.4241, 53.8478],
-  Ireland: [53.1424, -7.6921],
-  Germany: [51.1657, 10.4515],
-  France: [46.2276, 2.2137],
-  "United Kingdom": [55.3781, -3.436],
-  Singapore: [1.3521, 103.8198],
-  "United States": [37.0902, -95.7129],
-  Australia: [-25.2744, 133.7751],
-  Japan: [36.2048, 138.2529],
-  China: [35.8617, 104.1954],
-  Indonesia: [-0.7893, 113.9213],
-  Thailand: [15.87, 100.9925],
-  Turkey: [38.9637, 35.2433],
-  Spain: [40.4637, -3.7492],
-  Italy: [41.8719, 12.5674],
-  Netherlands: [52.1326, 5.2913],
-};
+// ── World data (fetched once, cached) ─────────────────────────────────────────
+let cachedWorld: GeoJSON.FeatureCollection | null = null;
+let fetchPromise: Promise<GeoJSON.FeatureCollection> | null = null;
 
-const SIZE = 320;
-const THETA = 0.3;
-
-function project(
-  lat: number,
-  lon: number,
-  phi: number,
-  size: number,
-): { x: number; y: number } | null {
-  const lam = (lon * Math.PI) / 180;
-  const p = (lat * Math.PI) / 180;
-
-  const x = Math.cos(p) * Math.sin(lam);
-  const y = Math.sin(p);
-  const z = Math.cos(p) * Math.cos(lam);
-
-  const cp = Math.cos(phi), sp = Math.sin(phi);
-  const ct = Math.cos(THETA), st = Math.sin(THETA);
-
-  const xr = x * cp - z * sp;
-  const yr = x * sp * st + y * ct + z * cp * st;
-  const zr = x * sp * ct - y * st + z * cp * ct;
-
-  if (zr < 0.05) return null;
-  return {
-    x: ((xr + 1) / 2) * size,
-    y: ((1 - yr) / 2) * size,
-  };
+function loadWorld(): Promise<GeoJSON.FeatureCollection> {
+  if (cachedWorld) return Promise.resolve(cachedWorld);
+  if (!fetchPromise) {
+    fetchPromise = fetch(
+      "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json",
+    )
+      .then((r) => r.json())
+      .then((topo) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const fc = feature(topo as any, (topo as any).objects.countries) as GeoJSON.FeatureCollection;
+        cachedWorld = fc;
+        return fc;
+      });
+  }
+  return fetchPromise;
 }
 
-function statusColor(s: string) {
+// ── Country name → ISO numeric code mapping for highlight lookup ──────────────
+const COUNTRY_ISO: Record<string, number[]> = {
+  India:            [356],
+  Mexico:           [484],
+  Brazil:           [76],
+  "Sri Lanka":      [144],
+  Canada:           [124],
+  UAE:              [784],
+  Ireland:          [372],
+  Germany:          [276],
+  France:           [250],
+  "United Kingdom": [826],
+  Singapore:        [702],
+  "United States":  [840],
+  Australia:        [36],
+  Japan:            [392],
+  China:            [156],
+};
+
+// Country centroid [lon, lat] for auto-centering on load
+const COUNTRY_CENTROID: Record<string, [number, number]> = {
+  India:            [79, 21],
+  Mexico:           [-102, 24],
+  Brazil:           [-52, -14],
+  "Sri Lanka":      [81, 8],
+  Canada:           [-96, 60],
+  UAE:              [54, 24],
+  Ireland:          [-8, 53],
+  Germany:          [10, 51],
+  France:           [2, 47],
+  "United Kingdom": [-3, 55],
+  Singapore:        [104, 1],
+  "United States":  [-98, 39],
+  Australia:        [134, -26],
+};
+
+function statusColor(s: string): string {
   return s === "red" ? "#B91C1C" : s === "amber" ? "#B45309" : "#15803D";
+}
+function statusFill(s: string): string {
+  return s === "red"   ? "rgba(185,28,28,0.30)" :
+         s === "amber" ? "rgba(180,83,9,0.28)"  : "rgba(21,128,61,0.25)";
 }
 
 interface Props {
@@ -67,180 +74,251 @@ interface Props {
 }
 
 export function WatchlistGlobe({ entries }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const phi = useRef(0.6);
-  const markerRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const lastPos = useRef<Record<string, { x: number; y: number }>>({});
-  const [hovered, setHovered] = useState<string | null>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const worldRef   = useRef<GeoJSON.FeatureCollection | null>(null);
 
-  // Auto-rotate stops on drag
-  const pointerDown = useRef(false);
-  const lastPointerX = useRef(0);
+  // Rotation state: [lon, lat]
+  const rotation  = useRef<[number, number]>([-70, -15]);
+  const dragging  = useRef(false);
+  const lastXY    = useRef<[number, number]>([0, 0]);
+  const rafId     = useRef<number>(0);
+  const [hovered, setHovered] = useState<WatchlistStatusEntry | null>(null);
+  const [ready,   setReady]   = useState(false);
+  const [size,    setSize]    = useState(340);
 
+  // ── Responsive size ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const cobeMarkers = entries
-      .filter((e) => COUNTRY_COORDS[e.country])
-      .map((e) => ({
-        location: COUNTRY_COORDS[e.country] as [number, number],
-        size: e.status === "red" ? 0.06 : e.status === "amber" ? 0.048 : 0.036,
-      }));
-
-    const globe = createGlobe(canvasRef.current, {
-      devicePixelRatio: 2,
-      width: SIZE * 2,
-      height: SIZE * 2,
-      phi: phi.current,
-      theta: THETA,
-      dark: 0,
-      diffuse: 1.1,
-      mapSamples: 20000,
-      mapBrightness: 5,
-      baseColor: [0.88, 0.91, 0.96],
-      markerColor: [0.0, 0.13, 0.28],
-      glowColor: [0.93, 0.96, 1.0],
-      markers: cobeMarkers,
-      onRender(state) {
-        if (!pointerDown.current) phi.current += 0.0025;
-        state.phi = phi.current;
-
-        for (const entry of entries) {
-          const coords = COUNTRY_COORDS[entry.country];
-          const div = markerRefs.current[entry.lesseeId];
-          if (!coords || !div) continue;
-
-          const pos = project(coords[0], coords[1], phi.current, SIZE);
-          if (pos) {
-            lastPos.current[entry.lesseeId] = pos;
-            div.style.display = "block";
-            div.style.left = `${pos.x}px`;
-            div.style.top = `${pos.y}px`;
-          } else {
-            div.style.display = "none";
-          }
-        }
-
-        if (tooltipRef.current && hovered) {
-          const p = lastPos.current[hovered];
-          if (p) {
-            tooltipRef.current.style.left = `${Math.min(p.x, SIZE - 175)}px`;
-            tooltipRef.current.style.top = `${p.y - 76}px`;
-          }
-        }
-      },
+    if (!wrapperRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      setSize(Math.max(260, Math.min(400, w - 32)));
     });
+    ro.observe(wrapperRef.current);
+    return () => ro.disconnect();
+  }, []);
 
-    // Fade in
-    requestAnimationFrame(() => {
-      if (canvasRef.current) canvasRef.current.style.opacity = "1";
-    });
-
-    return () => globe.destroy();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // ── Build highlight lookup ───────────────────────────────────────────────────
+  const highlights = useCallback((): Map<number, WatchlistStatusEntry> => {
+    const m = new Map<number, WatchlistStatusEntry>();
+    for (const e of entries) {
+      for (const code of COUNTRY_ISO[e.country] ?? []) {
+        m.set(code, e);
+      }
+    }
+    return m;
   }, [entries]);
 
-  function onPointerDown(e: React.PointerEvent) {
-    pointerDown.current = true;
-    lastPointerX.current = e.clientX;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }
-  function onPointerUp() { pointerDown.current = false; }
-  function onPointerMove(e: React.PointerEvent) {
-    if (!pointerDown.current) return;
-    const dx = e.clientX - lastPointerX.current;
-    phi.current += dx * 0.005;
-    lastPointerX.current = e.clientX;
+  // ── Draw ─────────────────────────────────────────────────────────────────────
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    const world  = worldRef.current;
+    if (!canvas || !world) return;
+
+    const ctx    = canvas.getContext("2d")!;
+    const dpr    = window.devicePixelRatio || 1;
+    const S      = size;
+    canvas.width  = S * dpr;
+    canvas.height = S * dpr;
+    canvas.style.width  = `${S}px`;
+    canvas.style.height = `${S}px`;
+    ctx.scale(dpr, dpr);
+
+    const projection = geoOrthographic()
+      .scale(S / 2 - 6)
+      .translate([S / 2, S / 2])
+      .rotate(rotation.current)
+      .clipAngle(90);
+
+    const path      = geoPath(projection, ctx);
+    const graticule = geoGraticule();
+    const hl        = highlights();
+
+    // Sphere background
+    ctx.beginPath();
+    path({ type: "Sphere" });
+    ctx.fillStyle = "#EEF2F8";
+    ctx.fill();
+
+    // Graticule lines
+    ctx.beginPath();
+    path(graticule());
+    ctx.strokeStyle = "rgba(100,116,139,0.12)";
+    ctx.lineWidth   = 0.5;
+    ctx.stroke();
+
+    // Countries
+    for (const f of world.features) {
+      const code   = parseInt((f as GeoJSON.Feature).id as string, 10);
+      const entry  = hl.get(code);
+      ctx.beginPath();
+      path(f as GeoJSON.Feature);
+      if (entry) {
+        ctx.fillStyle   = statusFill(entry.status);
+        ctx.strokeStyle = statusColor(entry.status);
+        ctx.lineWidth   = 1.2;
+      } else {
+        ctx.fillStyle   = "#D4DCE9";
+        ctx.strokeStyle = "#B8C4D4";
+        ctx.lineWidth   = 0.4;
+      }
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Sphere border
+    ctx.beginPath();
+    path({ type: "Sphere" });
+    ctx.strokeStyle = "#94A3B8";
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+  }, [size, highlights]);
+
+  // ── Load world + start render loop ──────────────────────────────────────────
+  useEffect(() => {
+    loadWorld().then((fc) => {
+      worldRef.current = fc;
+      setReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    let stopped = false;
+    function loop() {
+      if (stopped) return;
+      if (!dragging.current) {
+        rotation.current[0] -= 0.12;
+      }
+      draw();
+      rafId.current = requestAnimationFrame(loop);
+    }
+    rafId.current = requestAnimationFrame(loop);
+    return () => { stopped = true; cancelAnimationFrame(rafId.current); };
+  }, [ready, draw]);
+
+  // ── Pointer events ───────────────────────────────────────────────────────────
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    dragging.current = true;
+    lastXY.current   = [e.clientX, e.clientY];
+    (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
   }
 
-  const hoveredEntry = hovered ? entries.find((e) => e.lesseeId === hovered) : null;
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!dragging.current) {
+      // Hover: detect which highlighted country is under cursor
+      const canvas = canvasRef.current;
+      if (!canvas || !worldRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx   = e.clientX - rect.left;
+      const my   = e.clientY - rect.top;
+      const proj = geoOrthographic()
+        .scale(size / 2 - 6)
+        .translate([size / 2, size / 2])
+        .rotate(rotation.current)
+        .clipAngle(90);
+      const path = geoPath(proj);
+      const hl   = highlights();
+      let hit: WatchlistStatusEntry | null = null;
+      // Check highlighted countries first (faster exit)
+      for (const f of worldRef.current.features) {
+        const code  = parseInt((f as GeoJSON.Feature).id as string, 10);
+        const entry = hl.get(code);
+        if (entry && path.measure(f as GeoJSON.Feature) > 0) {
+          // Use point-in-path check via a temporary canvas
+          const tmp = document.createElement("canvas");
+          tmp.width  = size;
+          tmp.height = size;
+          const tc   = tmp.getContext("2d")!;
+          const tp   = geoPath(proj, tc);
+          tc.beginPath();
+          tp(f as GeoJSON.Feature);
+          if (tc.isPointInPath(mx, my)) { hit = entry; break; }
+        }
+      }
+      setHovered(hit);
+      return;
+    }
+    const dx = (e.clientX - lastXY.current[0]) * 0.4;
+    const dy = (e.clientY - lastXY.current[1]) * 0.4;
+    rotation.current[0] += dx;
+    rotation.current[1] -= dy;
+    rotation.current[1]  = Math.max(-80, Math.min(80, rotation.current[1]));
+    lastXY.current = [e.clientX, e.clientY];
+  }
+
+  function onPointerUp() {
+    dragging.current = false;
+  }
+
+  // ── Mouse tooltip position ────────────────────────────────────────────────────
+  const [mousePos, setMousePos] = useState<[number, number]>([0, 0]);
+  function onMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    setMousePos([e.clientX - rect.left, e.clientY - rect.top]);
+  }
 
   return (
-    <div
-      ref={wrapperRef}
-      style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}
-    >
-      <div style={{ position: "relative", width: SIZE, height: SIZE, cursor: "grab" }}>
+    <div ref={wrapperRef} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+      <div style={{ position: "relative", userSelect: "none" }}>
         <canvas
           ref={canvasRef}
-          width={SIZE * 2}
-          height={SIZE * 2}
-          style={{ width: SIZE, height: SIZE, opacity: 0, transition: "opacity 0.8s ease" }}
+          style={{
+            cursor: dragging.current ? "grabbing" : "grab",
+            display: "block",
+            borderRadius: "50%",
+            boxShadow: "0 4px 24px rgba(0,33,71,0.12)",
+          }}
           onPointerDown={onPointerDown}
-          onPointerUp={onPointerUp}
           onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onMouseMove={onMouseMove}
+          onMouseLeave={() => setHovered(null)}
         />
 
-        {/* Overlay markers — positions updated directly by onRender, no React re-renders */}
-        {entries.map((entry) => {
-          if (!COUNTRY_COORDS[entry.country]) return null;
-          const color = statusColor(entry.status);
-          const isHovered = hovered === entry.lesseeId;
-          return (
-            <div
-              key={entry.lesseeId}
-              ref={(el) => { markerRefs.current[entry.lesseeId] = el; }}
-              onMouseEnter={() => setHovered(entry.lesseeId)}
-              onMouseLeave={() => setHovered(null)}
-              style={{
-                position: "absolute",
-                transform: "translate(-50%, -50%)",
-                width: isHovered ? 14 : 9,
-                height: isHovered ? 14 : 9,
-                borderRadius: "50%",
-                background: color,
-                border: `2px solid ${isHovered ? "#fff" : "rgba(255,255,255,0.75)"}`,
-                boxShadow: isHovered ? `0 0 8px ${color}, 0 0 16px ${color}55` : `0 1px 3px rgba(0,0,0,0.18)`,
-                cursor: "pointer",
-                transition: "width 120ms ease, height 120ms ease, box-shadow 120ms ease",
-                zIndex: isHovered ? 10 : 2,
-                pointerEvents: "auto",
-              }}
-            />
-          );
-        })}
+        {!ready && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex",
+            alignItems: "center", justifyContent: "center",
+            fontSize: "0.75rem", color: "#94A3B8",
+          }}>
+            Loading map…
+          </div>
+        )}
 
         {/* Tooltip */}
-        {hoveredEntry && (
+        {hovered && (
           <div
-            ref={tooltipRef}
             style={{
               position: "absolute",
+              left: Math.min(mousePos[0] + 12, size - 185),
+              top:  Math.max(mousePos[1] - 70, 4),
               background: "#FFFFFF",
               border: "1px solid #E2E8F0",
-              borderLeft: `3px solid ${statusColor(hoveredEntry.status)}`,
+              borderLeft: `3px solid ${statusColor(hovered.status)}`,
               borderRadius: "8px",
               padding: "8px 12px",
               fontSize: "0.75rem",
               boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
               zIndex: 20,
-              width: "168px",
+              width: "175px",
               pointerEvents: "none",
             }}
           >
-            <div style={{ fontWeight: 700, color: "#0F172A", marginBottom: "3px", lineHeight: 1.3 }}>
-              {hoveredEntry.lesseeName}
+            <div style={{ fontWeight: 700, color: "#0F172A", marginBottom: "2px" }}>
+              {hovered.lesseeName}
             </div>
-            <div style={{ color: "#475569", lineHeight: 1.4, marginBottom: "4px" }}>
-              {hoveredEntry.trigger}
+            <div style={{ color: "#475569", marginBottom: "5px", lineHeight: 1.4 }}>
+              {hovered.trigger}
             </div>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "1px 7px",
-                borderRadius: "9999px",
-                fontSize: "0.6875rem",
-                fontWeight: 600,
-                background:
-                  hoveredEntry.status === "red" ? "rgba(185,28,28,0.10)" :
-                  hoveredEntry.status === "amber" ? "rgba(180,83,9,0.10)" : "rgba(21,128,61,0.10)",
-                color: statusColor(hoveredEntry.status),
-              }}
-            >
-              {hoveredEntry.status.charAt(0).toUpperCase() + hoveredEntry.status.slice(1)}
-            </div>
+            <span style={{
+              display: "inline-block", padding: "1px 8px",
+              borderRadius: "9999px", fontSize: "0.6875rem", fontWeight: 600,
+              background: statusFill(hovered.status),
+              color: statusColor(hovered.status),
+            }}>
+              {hovered.status.charAt(0).toUpperCase() + hovered.status.slice(1)}
+            </span>
           </div>
         )}
       </div>
@@ -249,7 +327,7 @@ export function WatchlistGlobe({ entries }: Props) {
       <div style={{ display: "flex", gap: "20px", fontSize: "0.75rem", color: "#64748B" }}>
         {(["red", "amber", "green"] as const).map((s) => (
           <div key={s} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <div style={{ width: 9, height: 9, borderRadius: "50%", background: statusColor(s), flexShrink: 0 }} />
+            <div style={{ width: 10, height: 10, borderRadius: "2px", background: statusFill(s), border: `1.5px solid ${statusColor(s)}`, flexShrink: 0 }} />
             {s === "red" ? "High Risk" : s === "amber" ? "Watch" : "Performing"}
           </div>
         ))}
