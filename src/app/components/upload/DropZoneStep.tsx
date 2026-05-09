@@ -38,6 +38,9 @@ function parseFile(file: File): Promise<{ headers: string[]; rows: Record<string
         reject(new Error("Could not parse file. Please use .csv, .xlsx, or .xls"));
       }
     };
+    reader.onerror = () => {
+      reject(new Error("Could not read file. Please try again."));
+    };
     reader.readAsArrayBuffer(file);
   });
 }
@@ -50,7 +53,8 @@ export function DropZoneStep({ onFileParsed }: DropZoneStepProps) {
 
   async function handleFile(file: File) {
     const allowed = [".csv", ".xlsx", ".xls"];
-    const ext = "." + file.name.split(".").pop()!.toLowerCase();
+    const dotIndex = file.name.lastIndexOf(".");
+    const ext = dotIndex === -1 ? "" : file.name.slice(dotIndex).toLowerCase();
     if (!allowed.includes(ext)) {
       setError("Please upload a .csv, .xlsx, or .xls file.");
       return;
