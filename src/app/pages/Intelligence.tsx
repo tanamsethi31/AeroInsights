@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
+import { motion, AnimatePresence } from "framer-motion";
 import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
@@ -1549,10 +1550,20 @@ export default function Intelligence() {
       </div>
 
       {/* View */}
-      {activeTab === "signals"      && <MacroSignalsView />}
-      {activeTab === "lessee-radar" && <LesseeRadarView />}
-      {activeTab === "deal-feed"    && <DealFeedView    />}
-      {activeTab === "jx-watch"     && <JurisdictionWatchView />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+        >
+          {activeTab === "signals"      && <MacroSignalsView />}
+          {activeTab === "lessee-radar" && <LesseeRadarView />}
+          {activeTab === "deal-feed"    && <DealFeedView    />}
+          {activeTab === "jx-watch"     && <JurisdictionWatchView />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

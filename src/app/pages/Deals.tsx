@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { motion, AnimatePresence } from "framer-motion";
 import { LeaseGenerator } from "../components/deals/LeaseGenerator";
 import { RackAndStack } from "../components/deals/RackAndStack";
 import { PortfolioExitNPV } from "../components/deals/PortfolioExitNPV";
@@ -85,11 +86,19 @@ export default function Deals() {
       </div>
 
       {/* Tab content */}
-      <div>
-        {activeTab === "generator"  && <LeaseGenerator />}
-        {activeTab === "rack-stack" && <RackAndStack />}
-        {activeTab === "exit-npv"   && <PortfolioExitNPV />}
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+        >
+          {activeTab === "generator"  && <LeaseGenerator />}
+          {activeTab === "rack-stack" && <RackAndStack />}
+          {activeTab === "exit-npv"   && <PortfolioExitNPV />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

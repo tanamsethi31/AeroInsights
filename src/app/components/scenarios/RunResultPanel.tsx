@@ -178,11 +178,14 @@ export function RunResultPanel({ run, onClose, compact = false, narrative, onReq
 
   return (
     <div
-      style={{
+      style={compact ? {
+        background: "transparent",
+        padding: "12px 0 0",
+      } : {
         background: "#FAFAFA",
         border: "1px solid #E2E8F0",
         borderRadius: "0.5rem",
-        padding: compact ? "1rem" : "1.25rem",
+        padding: "1.25rem",
       }}
     >
       {/* ── Narrative Summary Card ────────────────────────────── */}

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
@@ -67,6 +68,16 @@ export default function Jurisdictions() {
         ))}
       </div>
 
+      {/* ── Tab content ── */}
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+      >
+
       {/* ── Profiles ── */}
       {activeTab === "Profiles" && (
         <div style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start" }}>
@@ -101,9 +112,12 @@ export default function Jurisdictions() {
                 filteredJurisdictions.map((j, i) => {
                   const active = j.code === selectedCode;
                   return (
-                    <button
+                    <motion.button
                       key={j.code}
                       onClick={() => setSelectedCode(j.code)}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.025, ease: [0.23, 1, 0.32, 1] }}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -138,17 +152,23 @@ export default function Jurisdictions() {
                           <StatusPill stage="amber" label="Non-CTC" />
                         )}
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })
               )}
             </div>
           </div>
 
-          {/* Right: detail panel */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Right: detail panel — re-animates on selection change */}
+          <motion.div
+            key={selectedCode}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+            style={{ flex: 1, minWidth: 0 }}
+          >
             <JurisdictionDetail jurisdiction={selected} precedents={precedents} />
-          </div>
+          </motion.div>
         </div>
       )}
 
@@ -211,6 +231,9 @@ export default function Jurisdictions() {
       {activeTab === "Precedent Database" && (
         <PrecedentTable precedents={precedents} jurisdictions={jurisdictions} />
       )}
+
+      </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

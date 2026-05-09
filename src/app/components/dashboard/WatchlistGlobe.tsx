@@ -71,9 +71,10 @@ function statusFill(s: string): string {
 
 interface Props {
   entries: WatchlistStatusEntry[];
+  onHover?: (entry: WatchlistStatusEntry | null) => void;
 }
 
-export function WatchlistGlobe({ entries }: Props) {
+export function WatchlistGlobe({ entries, onHover }: Props) {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const worldRef   = useRef<GeoJSON.FeatureCollection | null>(null);
@@ -237,6 +238,7 @@ export function WatchlistGlobe({ entries }: Props) {
         }
       }
       setHovered(hit);
+      onHover?.(hit);
       return;
     }
     const dx = (e.clientX - lastXY.current[0]) * 0.4;
@@ -272,7 +274,7 @@ export function WatchlistGlobe({ entries }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onMouseMove={onMouseMove}
-          onMouseLeave={() => setHovered(null)}
+          onMouseLeave={() => { setHovered(null); onHover?.(null); }}
         />
 
         {!ready && (

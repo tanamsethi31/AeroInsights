@@ -17,6 +17,30 @@ interface AgentMessageProps {
   toolIndicator?: string;
 }
 
+// ─── Shimmer skeleton ───────────────────────────────────────────────────────────
+
+const AGENT_SHIMMER_CSS = `
+@keyframes agent-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.agent-shimmer {
+  background: linear-gradient(90deg, #E8EDF3 25%, #F3F6FA 50%, #E8EDF3 75%);
+  background-size: 800px 100%;
+  animation: agent-shimmer 1.4s linear infinite;
+  border-radius: 4px;
+}
+`;
+
+let _agentShimmerInjected = false;
+function injectAgentShimmerCSS() {
+  if (_agentShimmerInjected) return;
+  _agentShimmerInjected = true;
+  const el = document.createElement("style");
+  el.textContent = AGENT_SHIMMER_CSS;
+  document.head.appendChild(el);
+}
+
 // ─── Markdown table detection ───────────────────────────────────────────────────
 
 function isTableLine(line: string): boolean {
@@ -362,6 +386,9 @@ export function AgentMessage({
   const [actionDismissed, setActionDismissed] = React.useState(false);
 
   const isUser = role === "user";
+  const isPendingSkeleton = !isUser && isStreaming && !content.trim();
+
+  if (isPendingSkeleton) injectAgentShimmerCSS();
 
   function handleConfirm(card: ActionCard) {
     if (card.params && Object.keys(card.params).length > 0) {
@@ -390,43 +417,54 @@ export function AgentMessage({
           padding: "10px 14px",
           fontSize: "0.75rem",
           lineHeight: 1.5,
+          minWidth: isPendingSkeleton ? "180px" : undefined,
         }}
       >
-        {toolIndicator && (
-          <p
-            style={{
-              fontSize: "0.75rem",
-              fontStyle: "italic",
-              color: "#94A3B8",
-              margin: "0 0 6px 0",
-            }}
-          >
-            {toolIndicator}
-          </p>
-        )}
+        {isPendingSkeleton ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "2px 0" }}>
+            <div className="agent-shimmer" style={{ width: "85%", height: "10px" }} />
+            <div className="agent-shimmer" style={{ width: "70%", height: "10px" }} />
+            <div className="agent-shimmer" style={{ width: "50%", height: "10px" }} />
+          </div>
+        ) : (
+          <>
+            {toolIndicator && (
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  fontStyle: "italic",
+                  color: "#94A3B8",
+                  margin: "0 0 6px 0",
+                }}
+              >
+                {toolIndicator}
+              </p>
+            )}
 
-        <RenderContent content={content} />
+            <RenderContent content={content} />
 
-        {isStreaming && (
-          <span
-            style={{
-              display: "inline-block",
-              width: "6px",
-              height: "14px",
-              background: "#002147",
-              marginLeft: "2px",
-              verticalAlign: "middle",
-              animation: "blink 1s step-end infinite",
-            }}
-          />
-        )}
+            {isStreaming && (
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "6px",
+                  height: "14px",
+                  background: "#002147",
+                  marginLeft: "2px",
+                  verticalAlign: "middle",
+                  animation: "blink 1s step-end infinite",
+                }}
+              />
+            )}
 
-        {actionCard && !actionDismissed && (
-          <ActionConfirmCard
-            card={actionCard}
-            onConfirm={() => handleConfirm(actionCard)}
-            onCancel={() => setActionDismissed(true)}
-          />
+            {actionCard && !actionDismissed && (
+              <ActionConfirmCard
+                card={actionCard}
+                onConfirm={() => handleConfirm(actionCard)}
+                onCancel={() => setActionDismissed(true)}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

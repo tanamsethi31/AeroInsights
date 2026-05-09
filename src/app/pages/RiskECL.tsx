@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
 import { useLocation } from "react-router";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { useViewMode } from "../contexts/ViewModeContext";
 
@@ -1953,12 +1954,22 @@ export default function RiskECL() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "ECL Overview" && <OverviewTab />}
-      {activeTab === "Stage Migration" && <StageMigrationTab />}
-      {activeTab === "ECL by Lease" && <LeaseTab />}
-      {activeTab === "Sensitivity" && <SensitivityTab />}
-      {activeTab === "SICR Config" && <SICRConfigTab />}
-      {activeTab === "IAS 36 Impairment" && <IAS36Tab />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+        >
+          {activeTab === "ECL Overview" && <OverviewTab />}
+          {activeTab === "Stage Migration" && <StageMigrationTab />}
+          {activeTab === "ECL by Lease" && <LeaseTab />}
+          {activeTab === "Sensitivity" && <SensitivityTab />}
+          {activeTab === "SICR Config" && <SICRConfigTab />}
+          {activeTab === "IAS 36 Impairment" && <IAS36Tab />}
+        </motion.div>
+      </AnimatePresence>
 
       {/* ECL Drilldown Panel */}
       {drilldownLease && (

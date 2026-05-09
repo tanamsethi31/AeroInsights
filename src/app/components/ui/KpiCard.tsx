@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface KpiCardProps {
   label: string;
@@ -6,6 +7,7 @@ interface KpiCardProps {
   delta?: string;
   deltaType?: "positive" | "negative" | "neutral";
   subtitle?: string;
+  staggerIndex?: number;
 }
 
 export function KpiCard({
@@ -14,6 +16,7 @@ export function KpiCard({
   delta,
   deltaType = "neutral",
   subtitle,
+  staggerIndex = 0,
 }: KpiCardProps) {
   const deltaColor =
     deltaType === "positive"
@@ -30,7 +33,10 @@ export function KpiCard({
       : Minus;
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: staggerIndex * 0.05, ease: [0.23, 1, 0.32, 1] }}
       style={{
         background: "#FFFFFF",
         borderRadius: "var(--radius-lg)",
@@ -97,6 +103,6 @@ export function KpiCard({
           {delta}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth0 } from "@auth0/auth0-react";
+import { motion } from "framer-motion";
 import { BarChart3, Plus, ArrowRight, Loader2, FolderOpen, Clock } from "lucide-react";
 import {
   usePortfolio,
@@ -227,7 +228,12 @@ export default function PortfolioHub() {
         >
           <div style={{ width: "100%", maxWidth: "720px" }}>
             {/* Greeting */}
-            <div style={{ marginBottom: "2.5rem" }}>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+              style={{ marginBottom: "2.5rem" }}
+            >
               <h1
                 style={{
                   fontSize: "1.75rem",
@@ -246,7 +252,7 @@ export default function PortfolioHub() {
                   ? `You have ${portfolios.length} portfolio${portfolios.length > 1 ? "s" : ""}. Select one to continue.`
                   : "You don't have any portfolios yet. Choose how you'd like to get started."}
               </p>
-            </div>
+            </motion.div>
 
             {/* Loading state */}
             {loading && (
@@ -269,12 +275,18 @@ export default function PortfolioHub() {
                   marginBottom: "1.5rem",
                 }}
               >
-                {portfolios.map((p) => (
-                  <PortfolioCard
+                {portfolios.map((p, pi) => (
+                  <motion.div
                     key={p.id}
-                    portfolio={p}
-                    onSelect={() => handleSelectPortfolio(p)}
-                  />
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: pi * 0.08, ease: [0.23, 1, 0.32, 1] }}
+                  >
+                    <PortfolioCard
+                      portfolio={p}
+                      onSelect={() => handleSelectPortfolio(p)}
+                    />
+                  </motion.div>
                 ))}
                 {/* Add new */}
                 <button
@@ -319,8 +331,11 @@ export default function PortfolioHub() {
                 }}
               >
                 {/* Card 1 — Sample portfolio */}
-                <button
+                <motion.button
                   onClick={handleSample}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.38, delay: 0.08, ease: [0.23, 1, 0.32, 1] }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -376,11 +391,14 @@ export default function PortfolioHub() {
                     </span>
                     <ArrowRight size={16} style={{ color: "#FFFFFF" }} />
                   </div>
-                </button>
+                </motion.button>
 
                 {/* Card 2 — Create portfolio */}
-                <button
+                <motion.button
                   onClick={() => setShowCreateModal(true)}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.38, delay: 0.16, ease: [0.23, 1, 0.32, 1] }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -439,7 +457,7 @@ export default function PortfolioHub() {
                     </span>
                     <ArrowRight size={16} style={{ color: "#002147" }} />
                   </div>
-                </button>
+                </motion.button>
               </div>
             )}
           </div>

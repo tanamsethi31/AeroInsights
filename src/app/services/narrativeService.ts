@@ -10,17 +10,43 @@
 import type { ScenarioRunResult } from "../components/scenarios/RunResultPanel";
 import { BASE_ECL } from "../utils/eclCalculator";
 
+function buildFallbackNarrative(run: ScenarioRunResult): string {
+  const eclPct     = ((run.ecl / 2840) * 100).toFixed(2);
+  const changePct  = (((run.ecl - BASE_ECL) / BASE_ECL) * 100);
+  const changeSign = changePct >= 0 ? "+" : "";
+  const direction  = changePct >= 0 ? "increase" : "decrease";
+  const driver1    = run.shapley[0];
+  const driver2    = run.shapley[1] ?? run.shapley[0];
+  const lessee1    = run.topLessees[0];
+  const lessee2    = run.topLessees[1];
+  const modeStr    = run.mode === "montecarlo"
+    ? `Monte Carlo simulation (${run.paths?.toLocaleString() ?? "10,000"} paths)`
+    : "deterministic model";
+
+  return (
+    `The ${run.name} scenario produces a portfolio ECL of $${run.ecl.toFixed(1)}M, ` +
+    `representing ${eclPct}% of book value and a ${changeSign}${changePct.toFixed(1)}% ${direction} vs. the Baseline ($${BASE_ECL}M). ` +
+    `${run.s3LeaseCount} lease${run.s3LeaseCount !== 1 ? "s" : ""} migrate to Stage 3 under this scenario, ` +
+    `led by ${lessee1.name} ($${lessee1.ecl.toFixed(1)}M ECL, ${lessee1.jurisdiction}) ` +
+    `and ${lessee2.name} ($${lessee2.ecl.toFixed(1)}M ECL, ${lessee2.jurisdiction}). ` +
+    `The primary drivers are ${driver1.driver} (${driver1.contribution}% Shapley attribution) ` +
+    `and ${driver2.driver} (${driver2.contribution}% attribution). ` +
+    `Run via ${modeStr}, ${run.s3LeaseCount} aircraft have recoverable amounts below carrying value, ` +
+    `triggering potential IAS 36 impairment review.`
+  );
+}
+
 export async function generateNarrative(run: ScenarioRunResult): Promise<string | null> {
   const endpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined;
   const apiKey   = import.meta.env.VITE_AZURE_OPENAI_KEY    as string | undefined;
 
-  // Skip API call when env vars are absent or placeholder
+  // Skip API call when env vars are absent — use rich deterministic fallback
   if (!endpoint || !apiKey || apiKey === "PLACEHOLDER" || endpoint === "PLACEHOLDER") {
-    return null;
+    return buildFallbackNarrative(run);
   }
 
-  // Guard against malformed run data that would throw inside the prompt template
-  if (!run.shapley.length || run.topLessees.length < 2) return null;
+  // Guard against malformed run data — fall back to deterministic summary
+  if (!run.shapley.length || run.topLessees.length < 2) return buildFallbackNarrative(run);
 
   const eclPct      = ((run.ecl / 2840) * 100).toFixed(2);
   const changePct   = (((run.ecl - BASE_ECL) / BASE_ECL) * 100).toFixed(1);

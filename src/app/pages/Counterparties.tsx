@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
+import { motion } from "framer-motion";
 import { Check, X, Circle, Plane } from "lucide-react";
 import { CountryFlag } from "../components/ui/CountryFlag";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -297,14 +298,19 @@ export default function Counterparties() {
               { label: "Under Monitoring", value: monitor, color: monitor > 0 ? "#B45309" : "#94A3B8", bg: monitor > 0 ? "rgba(180,83,9,0.06)" : "#F8FAFC", border: monitor > 0 ? "rgba(180,83,9,0.2)" : "#E2E8F0", Icon: Circle },
               { label: "Sanctions Clear", value: clear, color: "#15803D", bg: "rgba(21,128,61,0.06)", border: "rgba(21,128,61,0.2)", Icon: Check },
               { label: "Fleet Exposure Flags", value: fleetAlerts, color: fleetAlerts > 0 ? "#B45309" : "#15803D", bg: fleetAlerts > 0 ? "rgba(180,83,9,0.06)" : "rgba(21,128,61,0.06)", border: fleetAlerts > 0 ? "rgba(180,83,9,0.2)" : "rgba(21,128,61,0.2)", Icon: Plane },
-            ].map(({ label, value, color, bg, border, Icon }) => (
-              <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: "0.75rem", padding: "0.875rem 1.125rem" }}>
+            ].map(({ label, value, color, bg, border, Icon }, ti) => (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, delay: ti * 0.07, ease: [0.23, 1, 0.32, 1] }}
+                style={{ background: bg, border: `1px solid ${border}`, borderRadius: "0.75rem", padding: "0.875rem 1.125rem" }}>
                 <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.375rem" }}>{label}</div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums", display: "flex", alignItems: "center", gap: "0.375rem" }}>
                   <Icon size={16} style={{ color }} />{value}
                 </div>
                 <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.2rem" }}>screened {new Date().toLocaleDateString("en-GB")}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
         );
@@ -318,10 +324,13 @@ export default function Counterparties() {
             <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>{lessees.length} counterparties</div>
           </div>
           <div>
-            {lessees.map((l) => (
-              <button
+            {lessees.map((l, li) => (
+              <motion.button
                 key={l.id}
                 onClick={() => setSelectedLessee(l)}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.25, delay: li * 0.05, ease: [0.23, 1, 0.32, 1] }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -383,13 +392,20 @@ export default function Counterparties() {
                   })()}
                 </div>
                 <StatusPill stage={l.stage} label={l.stage === "3" ? "S3" : l.stage === "2" ? "S2" : "S1"} />
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
 
-        {/* Lessee Detail */}
-        <LesseeProfilePanel lesseeId={selectedLessee.id as LesseeId} />
+        {/* Lessee Detail — re-animates on selection change */}
+        <motion.div
+          key={selectedLessee.id}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+        >
+          <LesseeProfilePanel lesseeId={selectedLessee.id as LesseeId} />
+        </motion.div>
       </div>
 
       {/* Fleet Sanctions Tracker */}

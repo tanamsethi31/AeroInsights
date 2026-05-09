@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "../components/ui/Card";
 
 const PATH_TAB: Record<string, string> = {
@@ -149,6 +150,16 @@ export default function Reports() {
         ))}
       </div>
 
+      {/* Tab content */}
+      <AnimatePresence mode="wait">
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+      >
+
       {/* Templates */}
       {activeTab === "Report Templates" && (
         <>
@@ -161,8 +172,13 @@ export default function Reports() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "1rem" }}>
-            {filtered.map(report => (
-              <div key={report.id} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "1rem", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {filtered.map((report, ri) => (
+              <motion.div
+                key={report.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: ri * 0.06, ease: [0.23, 1, 0.32, 1] }}
+                style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "1rem", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
                   <div style={{
                   width: "40px", height: "40px", borderRadius: "10px",
@@ -205,7 +221,7 @@ export default function Reports() {
                     <Download size={13} /> Generate
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </>
@@ -221,8 +237,13 @@ export default function Reports() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {scheduledReports.map(sched => (
-              <div key={sched.id} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "1rem", padding: "1.25rem", display: "flex", alignItems: "center", gap: "1.5rem" }}>
+            {scheduledReports.map((sched, si) => (
+              <motion.div
+                key={sched.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, delay: si * 0.07, ease: [0.23, 1, 0.32, 1] }}
+                style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "1rem", padding: "1.25rem", display: "flex", alignItems: "center", gap: "1.5rem" }}>
                 <div style={{ width: "48px", height: "48px", background: sched.status === "active" ? "rgba(21,128,61,0.08)" : "#F4F5F7", borderRadius: "1rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Mail size={20} style={{ color: sched.status === "active" ? "#15803D" : "#94A3B8" }} />
                 </div>
@@ -247,7 +268,7 @@ export default function Reports() {
                     {sched.status === "active" ? "Pause" : "Resume"}
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </>
@@ -286,6 +307,9 @@ export default function Reports() {
           </table>
         </Card>
       )}
+
+      </motion.div>
+      </AnimatePresence>
 
       {formatModal && (
         <ReportFormatModal

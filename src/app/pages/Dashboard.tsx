@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { motion } from "framer-motion";
 import { useSignalRefresh } from "../services/useSignalRefresh";
 import { useNavigate } from "react-router";
 import { getWatchlistSummary } from "../components/counterparties/watchlistEngine";
+import type { WatchlistStatusEntry } from "../components/counterparties/watchlistEngine";
 import { WatchlistGlobe } from "../components/dashboard/WatchlistGlobe";
 import {
   AreaChart,
@@ -83,13 +85,49 @@ import { useOnboarding } from "../contexts/OnboardingContext";
 import { DASHBOARD_SIGNAL_TILES, type SignalSeverity } from "../data/intelligenceData";
 
 const eclTrendData = [
-  { month: "Oct", ecl: 38.1 },
-  { month: "Nov", ecl: 40.5 },
-  { month: "Dec", ecl: 42.2 },
-  { month: "Jan", ecl: 41.8 },
-  { month: "Feb", ecl: 44.7 },
-  { month: "Mar", ecl: 47.2 },
+  { month: "Oct", ecl: 38.1, s1: 18.6, s2: 8.2, s3: 11.3, migrations: 1 },
+  { month: "Nov", ecl: 40.5, s1: 19.0, s2: 9.1, s3: 12.4, migrations: 2 },
+  { month: "Dec", ecl: 42.2, s1: 19.3, s2: 9.8, s3: 13.1, migrations: 0 },
+  { month: "Jan", ecl: 41.8, s1: 18.8, s2: 10.2, s3: 12.8, migrations: 1 },
+  { month: "Feb", ecl: 44.7, s1: 19.1, s2: 11.4, s3: 14.2, migrations: 2 },
+  { month: "Mar", ecl: 47.2, s1: 18.3, s2: 12.1, s3: 16.8, migrations: 3 },
 ];
+
+function EclTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number }>; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const s1 = payload.find(p => p.dataKey === "s1")?.value ?? 0;
+  const s2 = payload.find(p => p.dataKey === "s2")?.value ?? 0;
+  const s3 = payload.find(p => p.dataKey === "s3")?.value ?? 0;
+  const total = Number(s1) + Number(s2) + Number(s3);
+  const entry = eclTrendData.find(d => d.month === label);
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "12px 14px", fontSize: "0.8125rem", boxShadow: "0 4px 16px rgba(0,0,0,0.10)", minWidth: "180px" }}>
+      <div style={{ fontWeight: 700, color: "#0F172A", marginBottom: "8px" }}>{label} 2026</div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", paddingBottom: "6px", borderBottom: "1px solid #F1F5F9" }}>
+        <span style={{ color: "#94A3B8" }}>Total ECL</span>
+        <span style={{ fontWeight: 700, color: "#0F172A", fontVariantNumeric: "tabular-nums" }}>${total.toFixed(1)}M</span>
+      </div>
+      {[
+        { label: "Stage 1", value: s1, color: "#002147" },
+        { label: "Stage 2", value: s2, color: "#B45309" },
+        { label: "Stage 3", value: s3, color: "#B91C1C" },
+      ].map(({ label: l, value, color }) => (
+        <div key={l} style={{ display: "flex", justifyContent: "space-between", gap: "16px", marginBottom: "3px" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
+            {l}
+          </span>
+          <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 500, color }}>${Number(value).toFixed(1)}M</span>
+        </div>
+      ))}
+      {entry && entry.migrations > 0 && (
+        <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid #F1F5F9", fontSize: "0.75rem", color: "#B45309", fontWeight: 600 }}>
+          ↑ {entry.migrations} stage migration{entry.migrations > 1 ? "s" : ""} this period
+        </div>
+      )}
+    </div>
+  );
+}
 
 const stageDistData = [
   { stage: "Stage 1", count: 142, ecl: 8.4 },
@@ -159,6 +197,7 @@ export default function Dashboard() {
   const completedCount = checklist.filter((i) => i.completed).length;
 
   const { refreshAll: refreshAllSignals, refreshing, getLastRefreshed } = useSignalRefresh();
+  const [globeHovered, setGlobeHovered] = useState<WatchlistStatusEntry | null>(null);
 
   const [expandedTiles, setExpandedTiles] = useState<Set<string>>(new Set());
   function toggleTile(id: string) {
@@ -408,7 +447,11 @@ export default function Dashboard() {
       </div>
 
       {/* Market Signals strip */}
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.32, ease: [0.23, 1, 0.32, 1] }}
+      >
         <div
           style={{
             display: "flex",
@@ -478,7 +521,7 @@ export default function Dashboard() {
             gap: "0.75rem",
           }}
         >
-          {DASHBOARD_SIGNAL_TILES.map((tile) => {
+          {DASHBOARD_SIGNAL_TILES.map((tile, tileIdx) => {
             const sevColor =
               (tile.severity as SignalSeverity) === "high"   ? "#B91C1C" :
               (tile.severity as SignalSeverity) === "medium" ? "#B45309" : "#15803D";
@@ -493,23 +536,19 @@ export default function Dashboard() {
             const tileExpanded = expandedTiles.has(tile.id);
 
             return (
-              <div
+              <motion.div
                 key={tile.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, delay: 0.38 + tileIdx * 0.055, ease: [0.23, 1, 0.32, 1] }}
+                whileHover={{ y: -2, boxShadow: "0 6px 16px rgba(0,0,0,0.10)" }}
                 style={{
                   background: sevBg,
                   border: `1px solid ${sevBorder}`,
                   borderRadius: "0.625rem",
                   overflow: "hidden",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  transition: "box-shadow 160ms ease-out, transform 160ms ease-out",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-1px)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
-                  (e.currentTarget as HTMLDivElement).style.transform = "none";
+                  transition: "box-shadow 160ms ease-out",
                 }}
               >
                 {/* Clickable metric area → navigate */}
@@ -578,58 +617,43 @@ export default function Dashboard() {
                     {tile.subtext}
                   </div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
       {/* Charts row — collapsible; collapsed by default in Executive Mode */}
       <DashboardSection label="Charts & Analysis" defaultOpen={!isExecutiveMode}>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
-        <Card title="ECL Trend — Last 6 Months" subtitle="Baseline scenario, portfolio-level" blueHeader>
+        <Card title="ECL Trend — Last 6 Months" subtitle="Stage 1 / 2 / 3 breakdown · hover for detail" blueHeader>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={eclTrendData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
               <defs>
-                <linearGradient id="eclGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#002147" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#002147" stopOpacity={0} />
+                <linearGradient id="s1Grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#002147" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#002147" stopOpacity={0.06} />
+                </linearGradient>
+                <linearGradient id="s2Grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#B45309" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#B45309" stopOpacity={0.08} />
+                </linearGradient>
+                <linearGradient id="s3Grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#B91C1C" stopOpacity={0.40} />
+                  <stop offset="100%" stopColor="#B91C1C" stopOpacity={0.10} />
                 </linearGradient>
               </defs>
-              <CartesianGrid key="ecl-grid" strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis
-                key="ecl-xaxis"
-                dataKey="month"
-                tick={{ fontSize: 12, fill: "#475569" }}
-                axisLine={false}
-                tickLine={false}
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}M`} />
+              <Tooltip content={<EclTooltip />} />
+              <Legend
+                wrapperStyle={{ fontSize: "0.7rem", paddingTop: "4px" }}
+                formatter={(value) => value === "s1" ? "Stage 1" : value === "s2" ? "Stage 2" : "Stage 3"}
               />
-              <YAxis
-                key="ecl-yaxis"
-                tick={{ fontSize: 12, fill: "#475569" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `$${v}M`}
-              />
-              <Tooltip
-                key="ecl-tooltip"
-                contentStyle={{
-                  background: "#FFFFFF",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "0.75rem",
-                  fontSize: "0.8125rem",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
-                }}
-                formatter={(v: number) => [`$${v}M`, "ECL"]}
-              />
-              <Area
-                key="ecl-area"
-                type="monotone"
-                dataKey="ecl"
-                stroke="#002147"
-                strokeWidth={2}
-                fill="url(#eclGrad)"
-              />
+              <Area type="monotone" dataKey="s1" stackId="ecl" name="Stage 1" stroke="#002147" strokeWidth={1.5} fill="url(#s1Grad)" />
+              <Area type="monotone" dataKey="s2" stackId="ecl" name="Stage 2" stroke="#B45309" strokeWidth={1.5} fill="url(#s2Grad)" />
+              <Area type="monotone" dataKey="s3" stackId="ecl" name="Stage 3" stroke="#B91C1C" strokeWidth={1.5} fill="url(#s3Grad)" />
             </AreaChart>
           </ResponsiveContainer>
         </Card>
@@ -664,41 +688,24 @@ export default function Dashboard() {
       </div>
       </DashboardSection>
 
-      {/* Watchlist Globe */}
+      {/* Lessee Intelligence Map — Globe + Headlines split */}
       <Card
-        title="Lessee Risk Map"
-        subtitle="Countries with active watchlist positions — hover to inspect"
+        title="Lessee Intelligence Map"
+        subtitle="Global risk positions — hover a country to inspect"
         blueHeader
         collapsible
         defaultCollapsed={false}
-      >
-        <div style={{ display: "flex", justifyContent: "center", padding: "16px 0 8px" }}>
-          <WatchlistGlobe entries={watchlistEntries} />
-        </div>
-      </Card>
-
-      {/* Watchlist Headlines */}
-      <Card
-        title="Watchlist Headlines"
-        subtitle="Lessees requiring immediate attention"
-        blueHeader
         headerRight={
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <button
               onClick={refreshAllSignals}
               disabled={refreshing}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.25rem",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                color: "rgba(255,255,255,0.85)",
-                background: "rgba(255,255,255,0.10)",
-                border: "1px solid rgba(255,255,255,0.22)",
-                borderRadius: "9999px",
-                padding: "0.375rem 0.75rem",
-                cursor: refreshing ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: "0.25rem",
+                fontSize: "0.75rem", fontWeight: 600,
+                color: "rgba(255,255,255,0.85)", background: "rgba(255,255,255,0.10)",
+                border: "1px solid rgba(255,255,255,0.22)", borderRadius: "9999px",
+                padding: "0.375rem 0.75rem", cursor: refreshing ? "not-allowed" : "pointer",
                 opacity: refreshing ? 0.55 : 1,
               }}
             >
@@ -706,7 +713,7 @@ export default function Dashboard() {
               {refreshing ? "Refreshing…" : "Refresh All"}
             </button>
             {unreadCount > 0 && (
-              <span style={{ fontSize: "0.6875rem", fontWeight: 700, background: "#FCA5A5", color: "#7F1D1D", borderRadius: "9999px", padding: "0.1rem 0.5rem", minWidth: "18px", textAlign: "center" }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 700, background: "#FCA5A5", color: "#7F1D1D", borderRadius: "9999px", padding: "0.1rem 0.5rem" }}>
                 {unreadCount} new
               </span>
             )}
@@ -721,24 +728,10 @@ export default function Dashboard() {
             <button
               onClick={() => navigate("/counterparties")}
               className="flex items-center gap-1"
-              style={{
-                fontSize: "0.8125rem",
-                fontWeight: 500,
-                color: "rgba(255,255,255,0.85)",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                transition: "opacity 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
-              }}
-              onMouseDown={(e) =>
-                ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
-              }
-              onMouseUp={(e) =>
-                ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-              }
+              style={{ fontSize: "0.8125rem", fontWeight: 500, color: "rgba(255,255,255,0.85)", background: "transparent", border: "none", cursor: "pointer" }}
+              onMouseDown={(e) => ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")}
+              onMouseUp={(e) => ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")}
             >
               View All <ArrowRight size={14} />
             </button>
@@ -746,130 +739,89 @@ export default function Dashboard() {
         }
         noPadding
       >
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
-          <thead>
-            <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-              {["Lessee", "Country", "Status", "Trigger", "Last Changed", "Details", ""].map(label => (
-                <th
-                  key={label || "_action"}
-                  style={{
-                    padding: "0.75rem 1rem",
-                    textAlign: "left",
-                    fontWeight: 600,
-                    color: "#0F172A",
-                    fontSize: "0.75rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {watchlistEntries.map((item, i) => {
-              const isUnread = item.status !== "green" && !readIds.has(item.lesseeId);
-              const triggerColor = item.status === "red" ? "#B91C1C" : item.status === "amber" ? "#B45309" : "#15803D";
-              const triggerBg = item.status === "red" ? "rgba(185,28,28,0.08)" : item.status === "amber" ? "rgba(180,83,9,0.08)" : "rgba(21,128,61,0.08)";
-              return (
-                <tr
-                  key={item.lesseeId}
-                  style={{
-                    borderBottom: "1px solid #E2E8F0",
-                    background: isUnread ? "#FFFBEB" : i % 2 === 0 ? "#FFFFFF" : "#F4F5F7",
-                    transition: "background 150ms",
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA")}
-                  onMouseLeave={(e) =>
-                    ((e.currentTarget as HTMLTableRowElement).style.background =
-                      isUnread ? "#FFFBEB" : i % 2 === 0 ? "#FFFFFF" : "#F4F5F7")
-                  }
-                >
-                  <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>
-                    {item.lesseeName}
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                      <CountryFlag country={item.country} />
-                      {item.country}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem" }}>
-                    <StatusPill
-                      stage={item.status}
-                      label={item.status === "red" ? "Red" : item.status === "amber" ? "Amber" : "Green"}
-                    />
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem" }}>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.25rem",
-                        fontSize: "0.75rem",
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "400px" }}>
+          {/* Left — Globe */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px", borderRight: "1px solid #E2E8F0" }}>
+            <WatchlistGlobe entries={watchlistEntries} onHover={setGlobeHovered} />
+          </div>
+
+          {/* Right — Headlines feed */}
+          <div style={{ overflow: "auto", maxHeight: "520px" }}>
+            {/* Section header */}
+            <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Watchlist Headlines
+              </span>
+              <span style={{ fontSize: "0.7rem", color: "#94A3B8" }}>
+                {watchlistEntries.filter(e => e.status !== "green").length} active alerts
+              </span>
+            </div>
+
+            {/* Feed items */}
+            {watchlistEntries
+              .filter(e => e.status !== "green")
+              .sort((a, b) => (a.status === "red" && b.status !== "red" ? -1 : b.status === "red" && a.status !== "red" ? 1 : 0))
+              .map((item) => {
+                const isHighlighted = globeHovered?.lesseeId === item.lesseeId;
+                const triggerColor = item.status === "red" ? "#B91C1C" : "#B45309";
+                const triggerBg = item.status === "red" ? "rgba(185,28,28,0.07)" : "rgba(180,83,9,0.07)";
+                const isUnread = !readIds.has(item.lesseeId);
+                return (
+                  <div
+                    key={item.lesseeId}
+                    style={{
+                      padding: "10px 16px",
+                      borderBottom: "1px solid #F1F5F9",
+                      borderLeft: isHighlighted ? `3px solid ${triggerColor}` : "3px solid transparent",
+                      background: isHighlighted ? (item.status === "red" ? "rgba(185,28,28,0.04)" : "rgba(180,83,9,0.04)") : isUnread ? "#FFFBEB" : "#FFFFFF",
+                      transition: "background 200ms ease, border-left-color 150ms ease",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setReadIds(prev => new Set([...prev, item.lesseeId]));
+                      navigate(`/counterparties?lessee=${item.lesseeId}`);
+                    }}
+                    onMouseEnter={(e) => { if (!isHighlighted) (e.currentTarget as HTMLDivElement).style.background = "#F8FAFC"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = isHighlighted ? (item.status === "red" ? "rgba(185,28,28,0.04)" : "rgba(180,83,9,0.04)") : isUnread ? "#FFFBEB" : "#FFFFFF"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A" }}>{item.lesseeName}</span>
+                      <span style={{
+                        fontSize: "0.6875rem", fontWeight: 700, padding: "1px 7px", borderRadius: "9999px",
+                        background: item.status === "red" ? "rgba(185,28,28,0.10)" : "rgba(180,83,9,0.10)",
                         color: triggerColor,
-                        background: triggerBg,
-                        padding: "0.2rem 0.5rem",
-                        borderRadius: "0.5rem",
-                      }}
-                    >
-                      <AlertCircle size={11} />
+                      }}>
+                        {item.status === "red" ? "High Risk" : "Watch"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                      <CountryFlag country={item.country} />
+                      <span style={{ fontSize: "0.75rem", color: "#64748B" }}>{item.country}</span>
+                    </div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", color: triggerColor, background: triggerBg, padding: "2px 7px", borderRadius: "0.375rem" }}>
+                      <AlertCircle size={10} />
                       {item.trigger}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", whiteSpace: "nowrap" }}>
-                    <div>{item.lastChanged}</div>
+                    </div>
                     {(() => {
                       const lr = getLastRefreshed(item.lesseeId);
                       return lr ? (
-                        <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "0.125rem" }}>
-                          <i className="bi bi-circle-fill" style={{ fontSize: "0.5rem", verticalAlign: "middle", marginRight: "4px" }} /> Signals: {timeAgo(lr)}
+                        <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginTop: "4px" }}>
+                          Signals refreshed {timeAgo(lr)}
                         </div>
                       ) : null;
                     })()}
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>
-                    <ExpandableCell text={item.reason} />
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem" }}>
-                    <button
-                      onClick={() => {
-                        setReadIds(prev => new Set([...prev, item.lesseeId]));
-                        navigate(`/counterparties?lessee=${item.lesseeId}`);
-                      }}
-                      style={{
-                        fontSize: "0.8125rem",
-                        fontWeight: 500,
-                        color: "#002147",
-                        background: "transparent",
-                        border: "1px solid #E2E8F0",
-                        borderRadius: "9999px",
-                        padding: "0.375rem 0.75rem",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        transition:
-                          "border-color 150ms var(--ease-out-strong), transform 150ms var(--ease-out-strong)",
-                      }}
-                      onMouseDown={(e) =>
-                        ((e.currentTarget as HTMLButtonElement).style.transform = "scale(0.97)")
-                      }
-                      onMouseUp={(e) =>
-                        ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")
-                      }
-                    >
-                      View Profile
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  </div>
+                );
+              })}
+
+            {/* Green lessees — collapsed summary */}
+            <div style={{ padding: "10px 16px", background: "#F8FAFC" }}>
+              <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+                + {watchlistEntries.filter(e => e.status === "green").length} performing lessees monitored
+              </span>
+            </div>
+          </div>
+        </div>
       </Card>
 
       {/* Last 5 Scenario Runs — collapsible; collapsed by default in Executive Mode */}

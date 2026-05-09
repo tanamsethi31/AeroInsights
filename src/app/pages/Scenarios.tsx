@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { useAgent } from "../contexts/AgentContext";
@@ -784,14 +785,17 @@ export default function Scenarios() {
 
       {/* ══ LIBRARY TAB ══════════════════════════════════════════════════════ */}
       {activeTab === "Library" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
-          {TEMPLATES.map((tpl) => {
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", alignItems: "start" }}>
+          {TEMPLATES.map((tpl, tplIdx) => {
             const cs = cardStates[tpl.id];
             const result = cs.resultId ? findRun(cs.resultId) : null;
 
             return (
-              <div
+              <motion.div
                 key={tpl.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, delay: tplIdx * 0.06, ease: [0.23, 1, 0.32, 1] }}
                 style={{
                   background: "#FFFFFF", border: "1px solid #E2E8F0",
                   borderRadius: "0.5rem", overflow: "hidden",
@@ -891,73 +895,100 @@ export default function Scenarios() {
                   </div>
                 </div>
 
-                {/* Inline Config panel */}
-                {cs.phase === "config" && (
-                  <div
-                    style={{
-                      borderTop: "1px solid #E2E8F0",
-                      background: "#FAFAFA",
-                      padding: "1rem 1.25rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    <ModeToggle
-                      mode={cs.mode}
-                      paths={cs.paths}
-                      onMode={(m) => setCardPhase(tpl.id, { mode: m })}
-                      onPaths={(p) => setCardPhase(tpl.id, { paths: p })}
-                    />
-                    <button
-                      onClick={() => handleTemplateRun(tpl)}
-                      style={{ ...BTN_PRIMARY, justifyContent: "center", width: "100%" }}
+                {/* Inline Config / Running / Result — animated */}
+                <AnimatePresence initial={false}>
+                  {cs.phase === "config" && (
+                    <motion.div
+                      key="config"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ overflow: "hidden" }}
                     >
-                      <Play size={13} /> Execute Run
-                    </button>
-                  </div>
-                )}
-
-                {/* Running state */}
-                {cs.phase === "running" && (
-                  <div
-                    style={{
-                      borderTop: "1px solid #E2E8F0", background: "#FAFAFA",
-                      padding: "1rem 1.25rem", textAlign: "center",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", color: "#002147", marginBottom: "0.5rem" }}>
-                      <RefreshCw size={14} className="animate-spin" />
-                      <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
-                        {cs.mode === "deterministic" ? "Running deterministic model…" : `Running Monte Carlo (${cs.paths.toLocaleString()} paths)…`}
-                      </span>
-                    </div>
-                    <div style={{ height: "4px", background: "#E2E8F0", borderRadius: "2px", overflow: "hidden" }}>
                       <div
                         style={{
-                          height: "100%",
-                          background: "#002147",
-                          borderRadius: "2px",
-                          animation: "progress-fill 3s linear forwards",
-                          width: "0%",
+                          borderTop: "1px solid #E2E8F0",
+                          background: "#FAFAFA",
+                          padding: "1rem 1.25rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
                         }}
-                      />
-                    </div>
-                  </div>
-                )}
+                      >
+                        <ModeToggle
+                          mode={cs.mode}
+                          paths={cs.paths}
+                          onMode={(m) => setCardPhase(tpl.id, { mode: m })}
+                          onPaths={(p) => setCardPhase(tpl.id, { paths: p })}
+                        />
+                        <button
+                          onClick={() => handleTemplateRun(tpl)}
+                          style={{ ...BTN_PRIMARY, justifyContent: "center", width: "100%" }}
+                        >
+                          <Play size={13} /> Execute Run
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
 
-                {/* Result inline */}
-                {cs.phase === "done" && result && (
-                  <div style={{ borderTop: "1px solid #E2E8F0", padding: "0 1.25rem 1.25rem" }}>
-                    <RunResultPanel
-                      run={result}
-                      compact
-                      narrative={getNarrative(result.id)}
-                      onRequestNarrative={handleRequestNarrative}
-                    />
-                  </div>
-                )}
-              </div>
+                  {cs.phase === "running" && (
+                    <motion.div
+                      key="running"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div
+                        style={{
+                          borderTop: "1px solid #E2E8F0", background: "#FAFAFA",
+                          padding: "1rem 1.25rem", textAlign: "center",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", color: "#002147", marginBottom: "0.5rem" }}>
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                            {cs.mode === "deterministic" ? "Running deterministic model…" : `Running Monte Carlo (${cs.paths.toLocaleString()} paths)…`}
+                          </span>
+                        </div>
+                        <div style={{ height: "4px", background: "#E2E8F0", borderRadius: "2px", overflow: "hidden" }}>
+                          <div
+                            style={{
+                              height: "100%",
+                              background: "#002147",
+                              borderRadius: "2px",
+                              animation: "progress-fill 3s linear forwards",
+                              width: "0%",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {cs.phase === "done" && result && (
+                    <motion.div
+                      key="done"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.32, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div style={{ borderTop: "1px solid #E2E8F0", padding: "0 1.25rem 1.25rem" }}>
+                        <RunResultPanel
+                          run={result}
+                          compact
+                          narrative={getNarrative(result.id)}
+                          onRequestNarrative={handleRequestNarrative}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             );
           })}
         </div>
