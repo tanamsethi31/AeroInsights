@@ -1,14 +1,25 @@
 // src/app/utils/eclCalculator.ts
 
 export interface ScenarioInputs {
-  gdpDelta: number;        // e.g. −0.02 = −2%
-  rpkDelta: number;        // e.g. −0.25 = −25%
-  fuelDelta: number;       // e.g. 0.40 = +40%
-  fxDelta: number;         // e.g. −0.15 = −15%
-  rateDelta: number;       // e.g. 0.0075 = +75 bps
-  assetValueDelta: number; // e.g. −0.10 = −10%
-  pdS2Multi: number;       // e.g. 1.4
-  pdS3Multi: number;       // e.g. 1.2
+  // ── Macro shocks ──────────────────────────────────────────────────────────
+  gdpDelta: number;          // e.g. −0.02 = −2%
+  rpkDelta: number;          // e.g. −0.25 = −25%
+  fuelDelta: number;         // e.g. 0.40 = +40%
+  fxDelta: number;           // e.g. −0.15 = −15%
+  rateDelta: number;         // e.g. 0.0075 = +75 bps
+  assetValueDelta: number;   // e.g. −0.10 = −10%
+  pdS2Multi: number;         // e.g. 1.4
+  pdS3Multi: number;         // e.g. 1.2
+
+  // ── Deferral & forgiveness ────────────────────────────────────────────────
+  deferralMonths: number;    // 0–24: months of rent deferred across the fleet
+  govtSupportProb: number;   // 0–1: probability government backstops deferred rent
+  forgivenessRate: number;   // 0–1: share of deferred rent permanently written off
+
+  // ── Lessor mitigation ────────────────────────────────────────────────────
+  pbhConversionPct: number;  // 0–1: share of fleet switching to Power-by-Hour
+  etpRate: number;           // 0–1: early termination penalty as % of remaining lease value
+  lecRate: number;           // 0–1: lease end compensation as % of half-life value
 }
 
 export interface StageDistribution {
@@ -19,6 +30,9 @@ export interface StageDistribution {
 
 export const BASE_ECL = 47.2;
 
+// Monthly rent proxy for deferral penalty ($M). Matches demo fleet total monthly rent.
+const MONTHLY_RENT_M = 2.85;
+
 export const ZERO_INPUTS: ScenarioInputs = {
   gdpDelta: 0,
   rpkDelta: 0,
@@ -28,10 +42,17 @@ export const ZERO_INPUTS: ScenarioInputs = {
   assetValueDelta: 0,
   pdS2Multi: 1.0,
   pdS3Multi: 1.0,
+  deferralMonths: 0,
+  govtSupportProb: 0,
+  forgivenessRate: 0,
+  pbhConversionPct: 0,
+  etpRate: 0,
+  lecRate: 0,
 };
 
 export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
-  const delta =
+  // Macro + credit delta (existing logic, unchanged)
+  const macroDelta =
     Math.min(0, inputs.gdpDelta) * -250 +
     Math.min(0, inputs.rpkDelta) * -48 +
     Math.max(0, inputs.fuelDelta) * 28 +
@@ -40,6 +61,20 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
     Math.min(0, inputs.assetValueDelta) * -52 +
     (inputs.pdS2Multi - 1.0) * 8.5 +
     (inputs.pdS3Multi - 1.0) * 18.2;
+
+  // Deferral penalty: months × (1 − govt support) × forgiveness × monthly rent
+  const deferralPenalty =
+    inputs.deferralMonths *
+    (1 - inputs.govtSupportProb) *
+    inputs.forgivenessRate *
+    MONTHLY_RENT_M;
+
+  // Lessor mitigation benefits (reduce ECL)
+  const pbhBenefit = inputs.pbhConversionPct * baseECL * 0.15;
+  const etpBenefit = inputs.etpRate          * baseECL * 0.08;
+  const lecBenefit = inputs.lecRate          * baseECL * 0.05;
+
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 

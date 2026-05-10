@@ -66,3 +66,54 @@ describe("computeStages", () => {
     expect((s1 + s2 + s3) / ecl).toBeCloseTo(1.0, 5);
   });
 });
+
+describe("distress inputs", () => {
+  it("ZERO_INPUTS still has all new fields at 0", () => {
+    expect(ZERO_INPUTS.deferralMonths).toBe(0);
+    expect(ZERO_INPUTS.govtSupportProb).toBe(0);
+    expect(ZERO_INPUTS.forgivenessRate).toBe(0);
+    expect(ZERO_INPUTS.pbhConversionPct).toBe(0);
+    expect(ZERO_INPUTS.etpRate).toBe(0);
+    expect(ZERO_INPUTS.lecRate).toBe(0);
+  });
+
+  it("deferral with full forgiveness and no govt support increases ECL", () => {
+    const inputs = { ...ZERO_INPUTS, deferralMonths: 6, forgivenessRate: 1.0, govtSupportProb: 0 };
+    expect(computeECLFromBase(47.2, inputs)).toBeGreaterThan(47.2);
+  });
+
+  it("govt support at 100% fully negates deferral ECL impact", () => {
+    const noSupport = computeECLFromBase(47.2, { ...ZERO_INPUTS, deferralMonths: 6, forgivenessRate: 0.5, govtSupportProb: 0 });
+    const fullSupport = computeECLFromBase(47.2, { ...ZERO_INPUTS, deferralMonths: 6, forgivenessRate: 0.5, govtSupportProb: 1.0 });
+    expect(fullSupport).toBeCloseTo(47.2, 5);
+    expect(noSupport).toBeGreaterThan(47.2);
+  });
+
+  it("pbhConversionPct reduces ECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, pbhConversionPct: 0.5 });
+    expect(result).toBeLessThan(47.2);
+  });
+
+  it("etpRate reduces ECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, etpRate: 0.3 });
+    expect(result).toBeLessThan(47.2);
+  });
+
+  it("lecRate reduces ECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, lecRate: 0.2 });
+    expect(result).toBeLessThan(47.2);
+  });
+
+  it("zero distress inputs leave ECL unchanged", () => {
+    expect(computeECLFromBase(47.2, ZERO_INPUTS)).toBeCloseTo(47.2, 5);
+  });
+
+  it("floor still holds under combined distress + macro stress", () => {
+    const extreme = {
+      ...ZERO_INPUTS,
+      rpkDelta: -0.60, gdpDelta: -0.10, pdS3Multi: 5.0,
+      deferralMonths: 24, forgivenessRate: 1.0, govtSupportProb: 0,
+    };
+    expect(computeECLFromBase(47.2, extreme)).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
+  });
+});
