@@ -1,14 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   PORTFOLIO_AIRCRAFT,
   MARKET_RENT_USD,
   holdingCostMonthly,
-  residualFactor,
   npvOfCashflows,
   computeIRR,
   monthsBetween,
   fmtM,
+  toDealsAircraft,
+  type DealsAircraftRow,
 } from "../../data/dealsData";
+import { usePortfolioData } from "../../hooks/usePortfolioData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,13 +115,42 @@ export function RackAndStack() {
   const [discountRate, setDiscountRate] = useState(8);
   const [marketRentOverride, setMarketRentOverride] = useState<number | null>(null);
 
-  const aircraft = PORTFOLIO_AIRCRAFT[msnIndex];
+  const { assets, lessees, leases, provisions, isDemo } = usePortfolioData();
 
-  const LEASE_RENTS: Record<string, number> = {
-    "9218":  285_000, "41234": 310_000, "62047": 1_240_000,
-    "1728":  480_000, "67892": 340_000, "0378":   960_000,
-  };
-  const currentRent = LEASE_RENTS[aircraft.msn] ?? 0;
+  const portfolioAircraft: DealsAircraftRow[] = useMemo(
+    () => isDemo ? PORTFOLIO_AIRCRAFT : toDealsAircraft(assets, lessees, leases, provisions),
+    [assets, lessees, leases, provisions, isDemo]
+  );
+
+  // Reset index when aircraft list changes (e.g. live data loads)
+  useEffect(() => {
+    setMsnIndex(0);
+  }, [portfolioAircraft]);
+
+  const leaseByLeaseId = useMemo(
+    () => new Map(leases.map(l => [l.id, l])),
+    [leases]
+  );
+
+  if (portfolioAircraft.length === 0) {
+    return (
+      <div style={{ padding: "2rem", textAlign: "center", color: "#64748B", fontSize: "0.875rem" }}>
+        Loading portfolio data…
+      </div>
+    );
+  }
+
+  const aircraft = portfolioAircraft[msnIndex] ?? portfolioAircraft[0];
+
+  const currentLease = leaseByLeaseId.get(aircraft?.leaseId ?? "");
+  const currentRent  = isDemo
+    ? ({ "9218": 285_000, "41234": 310_000, "62047": 1_240_000, "1728": 480_000, "67892": 340_000, "0378": 960_000 } as Record<string, number>)[aircraft?.msn ?? ""] ?? 0
+    : (currentLease?.monthly_rental ?? 0);
+  const leaseEndStr  = isDemo
+    ? ({ "9218": "2028-03-01", "41234": "2027-06-15", "62047": "2030-01-10", "1728": "2026-09-01", "67892": "2032-04-15", "0378": "2028-07-20" } as Record<string, string>)[aircraft?.msn ?? ""] ?? "2028-01-01"
+    : (currentLease?.end_date ?? "2028-01-01");
+  const remaining = monthsBetween(NOW, new Date(leaseEndStr));
+
   const marketMid   = MARKET_RENT_USD[aircraft.type]?.mid ?? currentRent;
   const marketRent  = marketRentOverride ?? marketMid;
   const holding     = holdingCostMonthly(aircraft.type);
@@ -149,12 +180,6 @@ export function RackAndStack() {
     return { label: "Low", bg: "rgba(185,28,28,0.1)", color: "#B91C1C" };
   }
 
-  const LEASE_ENDS: Record<string, string> = {
-    "9218":  "2028-03-01", "41234": "2027-06-15", "62047": "2030-01-10",
-    "1728":  "2026-09-01", "67892": "2032-04-15", "0378":  "2028-07-20",
-  };
-  const remaining = monthsBetween(NOW, new Date(LEASE_ENDS[aircraft.msn] ?? "2028-01-01"));
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
@@ -169,7 +194,7 @@ export function RackAndStack() {
             onChange={(e) => { setMsnIndex(Number(e.target.value)); setMarketRentOverride(null); }}
             style={{ padding: "0.5rem 0.75rem", border: "1px solid #E2E8F0", borderRadius: "0.5rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF", cursor: "pointer" }}
           >
-            {PORTFOLIO_AIRCRAFT.map((a, i) => (
+            {portfolioAircraft.map((a, i) => (
               <option key={a.msn} value={i}>
                 {a.msn} · {a.type} · {a.lessee}
               </option>

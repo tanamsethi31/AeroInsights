@@ -1,5 +1,6 @@
 // ─── Shared data & finance math for Deals sub-tools ──────────────────────────
 import { TYPE_HEURISTICS } from "./maintenanceHeuristics";
+import type { Asset, Lessee, Lease, Provision } from "../types/portfolio";
 export { TYPE_HEURISTICS };
 
 // ─── Market rent heuristics (USD / month, fleet average, May 2026) ───────────
@@ -129,4 +130,85 @@ export function fmtPct(n: number, dp = 1): string {
 
 export function monthsBetween(a: Date, b: Date): number {
   return (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth();
+}
+
+// ─── Live portfolio adapters ──────────────────────────────────────────────────
+
+export interface DealsAircraftRow {
+  msn: string; type: string; reg: string; vintage: number;
+  nbvM: number; mvM: number; partOutM: number;
+  lessee: string; leaseId: string; stage: string;
+}
+
+export interface DealsLeaseRow {
+  id: string; msn: string; lessee: string; aircraft: string;
+  end: string; rentPerMonth: number;
+  sdM: number; mrBalanceM: number; nbvM: number; stage: string;
+}
+
+export function toDealsAircraft(
+  assets: Asset[], lessees: Lessee[], leases: Lease[], provisions: Provision[]
+): DealsAircraftRow[] {
+  const NOW_YEAR = 2026;
+  const lesseeMap = new Map(lessees.map(l => [l.id, l.name]));
+  const leaseByAsset = new Map(leases.map(l => [l.asset_id, l]));
+  const eadByAsset   = new Map(provisions.map(p => [p.asset_id, (p.ead ?? 0) / 1_000_000]));
+
+  return assets.map(a => {
+    const lease   = leaseByAsset.get(a.id);
+    const vintage = a.vintage ?? NOW_YEAR - 5;
+    const type    = a.aircraft_type;
+    const baseVal = (AIRCRAFT_BASE_VALUE[type] ?? 25_000_000) / 1_000_000;
+    const ageFactor = Math.max(0.10, 1 - (NOW_YEAR - vintage) / 30);
+    const mvM     = baseVal * ageFactor;
+    const nbvM    = eadByAsset.get(a.id) ?? mvM * 0.95;
+    const partOutM = mvM * 0.72;
+    return {
+      msn: a.msn,
+      type,
+      reg: a.registration,
+      vintage,
+      nbvM: Math.round(nbvM * 10) / 10,
+      mvM:  Math.round(mvM  * 10) / 10,
+      partOutM: Math.round(partOutM * 10) / 10,
+      lessee:  lease ? (lesseeMap.get(lease.lessee_id) ?? "—") : "—",
+      leaseId: lease?.id ?? "—",
+      stage:   lease?.stage != null ? String(lease.stage) : "1",
+    };
+  });
+}
+
+export function toDealsLeases(
+  assets: Asset[], lessees: Lessee[], leases: Lease[], provisions: Provision[]
+): DealsLeaseRow[] {
+  const PIVOT = new Date(2026, 4, 1); // May 1 2026
+  const assetMap  = new Map(assets.map(a => [a.id, a]));
+  const lesseeMap = new Map(lessees.map(l => [l.id, l.name]));
+  const eadByAsset = new Map(provisions.map(p => [p.asset_id, (p.ead ?? 0) / 1_000_000]));
+
+  return leases.map(l => {
+    const asset   = assetMap.get(l.asset_id);
+    const type    = asset?.aircraft_type ?? "A320neo";
+    const vintage = asset?.vintage ?? 2018;
+    const baseVal = (AIRCRAFT_BASE_VALUE[type] ?? 25_000_000) / 1_000_000;
+    const ageFactor = Math.max(0.10, 1 - (2026 - vintage) / 30);
+    const nbvM    = eadByAsset.get(l.asset_id) ?? (baseVal * ageFactor * 0.95);
+    const rent    = l.monthly_rental ?? 0;
+    const sdM     = (rent * 2) / 1_000_000;
+    const elapsed = Math.max(0, monthsBetween(new Date(l.start_date), PIVOT));
+    const mrRate  = autoMonthlyMR(type);
+    const mrBalanceM = (mrRate * elapsed) / 1_000_000;
+    return {
+      id:           l.id,
+      msn:          asset?.msn ?? "—",
+      lessee:       lesseeMap.get(l.lessee_id) ?? "—",
+      aircraft:     type,
+      end:          l.end_date,
+      rentPerMonth: rent,
+      sdM:          Math.round(sdM       * 100) / 100,
+      mrBalanceM:   Math.round(mrBalanceM * 10) / 10,
+      nbvM:         Math.round(nbvM       * 10) / 10,
+      stage:        l.stage != null ? String(l.stage) : "1",
+    };
+  });
 }

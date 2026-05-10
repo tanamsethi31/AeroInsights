@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Download, Info } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -10,7 +10,12 @@ import {
   fmtM,
   fmtPct,
   monthsBetween,
+  toDealsAircraft,
+  toDealsLeases,
+  type DealsAircraftRow,
+  type DealsLeaseRow,
 } from "../../data/dealsData";
+import { usePortfolioData } from "../../hooks/usePortfolioData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,10 +37,15 @@ interface ExitRow {
 
 // ─── NPV computation ──────────────────────────────────────────────────────────
 
-function computeExitRow(leaseId: string, discountRate: number): ExitRow | null {
-  const lease = PORTFOLIO_LEASES.find(l => l.id === leaseId);
-  const aircraft = lease ? PORTFOLIO_AIRCRAFT.find(a => a.msn === lease.msn) : null;
-  if (!lease || !aircraft) return null;
+function computeExitRow(
+  leaseId: string,
+  discountRate: number,
+  leaseRows: DealsLeaseRow[],
+  acRows: DealsAircraftRow[]
+): ExitRow | null {
+  const lease = leaseRows.find(l => l.id === leaseId);
+  const ac    = lease ? acRows.find(a => a.msn === lease.msn) : null;
+  if (!lease || !ac) return null;
 
   const today = new Date(2026, 4, 6); // May 6 2026
   const leaseEnd = new Date(lease.end);
@@ -53,7 +63,7 @@ function computeExitRow(leaseId: string, discountRate: number): ExitRow | null {
   const mrBalance = lease.mrBalanceM * 1_000_000;
 
   // Terminal aircraft value: current MV depreciated at 3% p.a., then discounted
-  const currentMV = aircraft.mvM * 1_000_000;
+  const currentMV = ac.mvM * 1_000_000;
   const terminalMV = currentMV * Math.pow(1 - 0.03 / 12, months);
   const residualPV = terminalMV * Math.pow(1 + r, -months);
 
@@ -177,10 +187,25 @@ function exportMemo(rows: ExitRow[], discountRate: number) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PortfolioExitNPV() {
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(PORTFOLIO_LEASES.map(l => l.id))
-  );
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [discountRate, setDiscountRate] = useState(8.0);
+
+  const { assets, lessees, leases: liveLeases, provisions, isDemo } = usePortfolioData();
+
+  const portfolioAircraft: DealsAircraftRow[] = useMemo(
+    () => isDemo ? PORTFOLIO_AIRCRAFT : toDealsAircraft(assets, lessees, liveLeases, provisions),
+    [assets, lessees, liveLeases, provisions, isDemo]
+  );
+
+  const portfolioLeases: DealsLeaseRow[] = useMemo(
+    () => isDemo ? PORTFOLIO_LEASES : toDealsLeases(assets, lessees, liveLeases, provisions),
+    [assets, lessees, liveLeases, provisions, isDemo]
+  );
+
+  // Sync selected set whenever the lease list changes (e.g. live data loads)
+  useEffect(() => {
+    setSelected(new Set(portfolioLeases.map(l => l.id)));
+  }, [portfolioLeases]);
 
   const toggle = (id: string) =>
     setSelected(prev => {
@@ -191,17 +216,17 @@ export function PortfolioExitNPV() {
 
   const toggleAll = () =>
     setSelected(prev =>
-      prev.size === PORTFOLIO_LEASES.length
+      prev.size === portfolioLeases.length
         ? new Set()
-        : new Set(PORTFOLIO_LEASES.map(l => l.id))
+        : new Set(portfolioLeases.map(l => l.id))
     );
 
   const rows = useMemo(() =>
-    PORTFOLIO_LEASES
+    portfolioLeases
       .filter(l => selected.has(l.id))
-      .map(l => computeExitRow(l.id, discountRate))
+      .map(l => computeExitRow(l.id, discountRate, portfolioLeases, portfolioAircraft))
       .filter((r): r is ExitRow => r !== null),
-    [selected, discountRate]
+    [selected, discountRate, portfolioLeases, portfolioAircraft]
   );
 
   const totRentPV   = rows.reduce((s, r) => s + r.rentPV,    0);
@@ -235,14 +260,14 @@ export function PortfolioExitNPV() {
           <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "8px", padding: "6px 8px", borderRadius: "6px", background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
             <input
               type="checkbox"
-              checked={selected.size === PORTFOLIO_LEASES.length}
+              checked={selected.size === portfolioLeases.length && portfolioLeases.length > 0}
               onChange={toggleAll}
               style={{ accentColor: "#002147" }}
             />
             <span style={{ fontSize: "12px", fontWeight: 600, color: "#1E40AF" }}>Select All</span>
           </label>
-          {PORTFOLIO_LEASES.map(l => {
-            const a = PORTFOLIO_AIRCRAFT.find(a => a.msn === l.msn);
+          {portfolioLeases.map(l => {
+            const a = portfolioAircraft.find(a => a.msn === l.msn);
             return (
               <label key={l.id} style={{
                 display: "flex",
