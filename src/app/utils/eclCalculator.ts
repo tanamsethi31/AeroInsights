@@ -20,6 +20,9 @@ export interface ScenarioInputs {
   pbhConversionPct: number;  // 0–1: share of fleet switching to Power-by-Hour
   etpRate: number;           // 0–1: early termination penalty as % of remaining lease value
   lecRate: number;           // 0–1: lease end compensation as % of half-life value
+
+  // ── Insolvency regime ─────────────────────────────────────────────────────
+  bankruptcyScenarioType: string | null; // null = no regime selected (zero ECL impact)
 }
 
 export interface StageDistribution {
@@ -32,6 +35,20 @@ export const BASE_ECL = 47.2;
 
 // Monthly rent proxy for deferral penalty ($M). Matches demo fleet total monthly rent.
 const MONTHLY_RENT_M = 2.85;
+
+// LGD adjustment factors by insolvency regime (fraction of baseECL).
+// Calibrated from P50 haircut data in InsolvencyTab.tsx.
+// Positive = ECL increases (worse LGD), Negative = ECL decreases (better recovery).
+// null bankruptcyScenarioType = 0 adjustment (no regime selected).
+// Unknown keys fall back to 0 via the ?? operator in computeECLFromBase.
+export const LGD_DELTAS: Record<string, number> = {
+  chapter11:           -0.12,  // §1110 cure window; gold standard for lessor recovery
+  india_ibc:           -0.05,  // CTC Act 2025 improvement; slower than US
+  mexico_concurso:      0.02,  // CTC in force; roughly neutral
+  brazil_rj:            0.04,  // AerCap LATAM precedent; up to 380-day stay
+  indonesia_pkpu:       0.09,  // Not CTC-compliant; government pressure
+  generic_liquidation:  0.18,  // Full loss floor; lessor ranks pari passu
+};
 
 export const ZERO_INPUTS: ScenarioInputs = {
   gdpDelta: 0,
@@ -48,10 +65,11 @@ export const ZERO_INPUTS: ScenarioInputs = {
   pbhConversionPct: 0,
   etpRate: 0,
   lecRate: 0,
+  bankruptcyScenarioType: null,
 };
 
 export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
-  // Macro + credit delta (existing logic, unchanged)
+  // Macro + credit delta (unchanged)
   const macroDelta =
     Math.min(0, inputs.gdpDelta) * -250 +
     Math.min(0, inputs.rpkDelta) * -48 +
@@ -78,7 +96,12 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
   const etpBenefit = inputs.etpRate          * baseECL * 0.08;
   const lecBenefit = inputs.lecRate          * baseECL * 0.05;
 
-  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit;
+  // LGD regime adjustment — null = no adjustment; unknown key = 0 (graceful fallback)
+  const lgdDelta = inputs.bankruptcyScenarioType !== null
+    ? (LGD_DELTAS[inputs.bankruptcyScenarioType] ?? 0) * baseECL
+    : 0;
+
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 

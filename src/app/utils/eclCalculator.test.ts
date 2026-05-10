@@ -119,3 +119,43 @@ describe("distress inputs", () => {
     expect(computeECLFromBase(47.2, extreme)).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
   });
 });
+
+describe("insolvency regime LGD adjustment", () => {
+  it("ZERO_INPUTS has bankruptcyScenarioType as null", () => {
+    expect(ZERO_INPUTS.bankruptcyScenarioType).toBeNull();
+  });
+
+  it("null bankruptcyScenarioType leaves ECL unchanged", () => {
+    expect(computeECLFromBase(47.2, ZERO_INPUTS)).toBeCloseTo(47.2, 5);
+  });
+
+  it("chapter11 reduces ECL by 12% of base", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: "chapter11" });
+    expect(result).toBeCloseTo(47.2 * (1 - 0.12), 5);
+  });
+
+  it("generic_liquidation increases ECL by 18% of base", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: "generic_liquidation" });
+    expect(result).toBeCloseTo(47.2 * (1 + 0.18), 5);
+  });
+
+  it("unknown regime key leaves ECL unchanged (graceful fallback)", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: "unknown_regime" });
+    expect(result).toBeCloseTo(47.2, 5);
+  });
+
+  it("chapter11 produces lower ECL than generic_liquidation for same macro inputs", () => {
+    const ch11 = computeECLFromBase(47.2, { ...ZERO_INPUTS, pdS3Multi: 2.0, bankruptcyScenarioType: "chapter11" });
+    const liq  = computeECLFromBase(47.2, { ...ZERO_INPUTS, pdS3Multi: 2.0, bankruptcyScenarioType: "generic_liquidation" });
+    expect(ch11).toBeLessThan(liq);
+  });
+
+  it("floor still holds with generic_liquidation + extreme macro stress", () => {
+    const extreme = {
+      ...ZERO_INPUTS,
+      rpkDelta: -0.60, gdpDelta: -0.10, pdS3Multi: 5.0,
+      bankruptcyScenarioType: "generic_liquidation",
+    };
+    expect(computeECLFromBase(47.2, extreme)).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
+  });
+});
