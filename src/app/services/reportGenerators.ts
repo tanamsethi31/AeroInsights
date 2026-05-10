@@ -5,6 +5,7 @@ import {
   TextRun, HeadingLevel, WidthType, BorderStyle, ShadingType,
 } from "docx";
 import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
+import type { PortfolioExportData } from "../lib/portfolioAdapters";
 
 // ── Static data (same as exportService) ──────────────────────────────────────
 
@@ -155,7 +156,11 @@ async function saveDocx(doc: Document, slug: string): Promise<void> {
 
 // ── Named DOCX generators ─────────────────────────────────────────────────────
 
-export async function generateReportDOCX(reportId: string, currency: CurrencyCode): Promise<void> {
+export async function generateReportDOCX(reportId: string, currency: CurrencyCode, data?: PortfolioExportData): Promise<void> {
+  const eclRows    = data?.eclRows    ?? ECL_ROWS;
+  const lesseeRows = data?.lesseeRows ?? LESSEES;
+  const leaseRows  = data?.leaseRows  ?? LEASES;
+
   let doc: Document;
 
   switch (reportId) {
@@ -164,7 +169,7 @@ export async function generateReportDOCX(reportId: string, currency: CurrencyCod
         ...docPreamble("Auditor Evidence Pack — IFRS 9 ECL Disclosure", currency),
         makeTable(
           ["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m", "LGD", "ECL 12m", "ECL LT", "Stage"],
-          ECL_ROWS.map(r => [
+          eclRows.map(r => [
             r.id, r.lessee, r.aircraft,
             fe(r.ead, currency), `${r.pd12m}%`, `${r.lgd}%`,
             fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`,
@@ -190,7 +195,7 @@ export async function generateReportDOCX(reportId: string, currency: CurrencyCod
         ...docPreamble("Portfolio Register — Full Lease Register", currency),
         makeTable(
           ["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Rent/mo", "Stage"],
-          LEASES.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`])
+          leaseRows.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`])
         ),
       ]}]});
       await saveDocx(doc, "portfolio-register");
@@ -215,7 +220,7 @@ export async function generateReportDOCX(reportId: string, currency: CurrencyCod
         ...docPreamble("Watchlist Report — Red & Amber Lessees", currency),
         makeTable(
           ["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"],
-          LESSEES.map(l => [
+          lesseeRows.map(l => [
             l.name, l.country, l.rating, `S${l.stage}`,
             String(l.behavior), String(l.leases), l.exposure, String(l.daysLate),
           ])

@@ -40,7 +40,7 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
     try {
       if (selected === "pdf")  generateReportPDF(reportId, currency, exportData);
       if (selected === "xlsx") generateReportXLSX(reportId, currency, exportData);
-      if (selected === "docx") await generateReportDOCX(reportId, currency);
+      if (selected === "docx") await generateReportDOCX(reportId, currency, exportData);
       setDone(true);
       setTimeout(onClose, 1200);
     } finally {
