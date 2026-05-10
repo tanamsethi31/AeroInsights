@@ -1011,6 +1011,8 @@ export default function Scenarios() {
     setDslErrors([]);
     setCustomResultId(null);
     setActiveTab("Custom Builder");
+    // Auto-expand collapsible sections when cloned inputs carry non-default values
+    if (clonePending.inputs.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
     setClonePending(null);
   }, [clonePending, customSeed]);
 
