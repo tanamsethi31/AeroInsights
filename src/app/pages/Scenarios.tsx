@@ -219,11 +219,13 @@ interface Template {
   p5Factor: number;
   p95Factor: number;
   keyFinding: string;
+  tags?: string[];                         // display pills on the card
+  category?: "macro" | "distress";         // used for Library sub-group labels
 }
 
 const TEMPLATES: Template[] = [
   {
-    id: "TPL-001", name: "Baseline", weight: "60%", ecl: 47.2,
+    id: "TPL-001", name: "Baseline", weight: "60%", ecl: 47.2, category: "macro" as const,
     lastRun: "29 Apr 2026", color: "#002147", bg: "rgba(0,33,71,0.05)",
     description: "Current macro conditions. GDP growth as IMF forecast, fuel at forward curve, lessee ratings held.",
     inputs: ZERO_INPUTS,
@@ -238,7 +240,7 @@ const TEMPLATES: Template[] = [
     keyFinding: "2 stage migrations detected vs prior period. Portfolio ECL stable at 1.66% of book value. No new Stage 3 entries this period.",
   },
   {
-    id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4,
+    id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4, category: "macro" as const,
     lastRun: "28 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Mild aviation demand shock. RPK −25%, fuel +15%, 3 stage-2 migrations, no bankruptcies.",
     inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
@@ -253,7 +255,7 @@ const TEMPLATES: Template[] = [
     keyFinding: "3 Stage 2 migrations. Low-cost carrier exposure is the dominant driver. No Stage 3 events in this scenario. ECL 45% above baseline.",
   },
   {
-    id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7,
+    id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7, category: "macro" as const,
     lastRun: "27 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "Severe demand shock. RPK −55%, fuel −30%, 8+ bankruptcies, mass deferral requests.",
     inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
@@ -268,7 +270,7 @@ const TEMPLATES: Template[] = [
     keyFinding: "ECL 164% above baseline. P95 tail: $250.9M. 12 projected Stage 3 migrations. 8 lessee insolvency risk events modelled.",
   },
   {
-    id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3,
+    id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Sustained fuel price increase of 40% vs baseline. Low-cost carriers most exposed.",
     inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
@@ -283,7 +285,7 @@ const TEMPLATES: Template[] = [
     keyFinding: "LCC portfolio segment ECL up 68%. Long-haul carriers less affected. Fuel-hedged lessees' Stage 2 exposure contained.",
   },
   {
-    id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1,
+    id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
     description: "EM sovereign stress. India, Brazil, Indonesia CDS widen +250bps. FX pressure −15%.",
     inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
@@ -298,7 +300,7 @@ const TEMPLATES: Template[] = [
     keyFinding: "India, Brazil, Indonesia exposure elevated. EM currency basket effect accounts for 29% of incremental ECL. 5 Stage 2 migrations projected.",
   },
   {
-    id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5,
+    id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5, category: "macro" as const,
     lastRun: "22 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "EM currency basket −35% vs USD. Rent-to-revenue ratios spike. 6+ lessee distress events.",
     inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
@@ -313,7 +315,7 @@ const TEMPLATES: Template[] = [
     keyFinding: "FX basket decline drives 48% of incremental ECL. USD-denominated rent obligations unsustainable for 6 EM-domiciled lessees.",
   },
   {
-    id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8,
+    id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8, category: "macro" as const,
     lastRun: "14 Jan 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.08)",
     description: "Sudden fleet detention in 2 jurisdictions. Repossession impossible. Full LGD on 12 aircraft.",
     inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
@@ -854,7 +856,11 @@ export default function Scenarios() {
       {/* ══ LIBRARY TAB ══════════════════════════════════════════════════════ */}
       {activeTab === "Library" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", alignItems: "start" }}>
-          {TEMPLATES.map((tpl, tplIdx) => {
+          {/* ── Macro Scenarios label ── */}
+          <div style={{ gridColumn: "1 / -1", fontSize: "0.6875rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", paddingBottom: "0.25rem", borderBottom: "1px solid #F1F5F9" }}>
+            Macro Scenarios
+          </div>
+          {TEMPLATES.filter((t) => t.category !== "distress").map((tpl, tplIdx) => {
             const cs = cardStates[tpl.id];
             const result = cs.resultId ? findRun(cs.resultId) : null;
 
@@ -898,6 +904,255 @@ export default function Scenarios() {
                   <p style={{ fontSize: "0.8125rem", color: "#475569", lineHeight: 1.6, margin: 0 }}>
                     {tpl.description}
                   </p>
+
+                  {tpl.tags && tpl.tags.length > 0 && (
+                    <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                      {tpl.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          style={{
+                            fontSize: "0.6875rem", fontWeight: 600,
+                            padding: "0.125rem 0.5rem",
+                            borderRadius: "9999px",
+                            background: "rgba(0,33,71,0.06)",
+                            color: "#475569",
+                            border: "1px solid rgba(0,33,71,0.12)",
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer row */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.5rem", borderTop: "1px solid #E2E8F0" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#94A3B8", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                      <Clock size={11} /> Last run: {tpl.lastRun}
+                    </span>
+
+                    {cs.phase === "idle" && (
+                      <div style={{ display: "flex", gap: "0.375rem" }}>
+                        <button
+                          onClick={() => setCardPhase(tpl.id, { phase: "config" })}
+                          style={{ ...BTN_PRIMARY, padding: "0.375rem 0.75rem", fontSize: "0.8125rem" }}
+                        >
+                          <Play size={11} /> Configure & Run
+                        </button>
+                        <button
+                          title="Clone this template into the Custom Builder"
+                          onClick={() => setClonePending({ inputs: tpl.inputs, name: `${tpl.name} (Custom)`, mode: "deterministic", paths: 10000 })}
+                          style={{ ...BTN_OUTLINE, padding: "0.375rem 0.5rem", fontSize: "0.8125rem" }}
+                        >
+                          <Layers size={11} />
+                        </button>
+                        <button style={{ ...BTN_OUTLINE, padding: "0.375rem 0.5rem", fontSize: "0.8125rem" }}>
+                          <Download size={11} />
+                        </button>
+                      </div>
+                    )}
+
+                    {cs.phase === "config" && (
+                      <button
+                        onClick={() => setCardPhase(tpl.id, { phase: "idle" })}
+                        style={{ ...BTN_OUTLINE, padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                      >
+                        <X size={11} /> Cancel
+                      </button>
+                    )}
+
+                    {cs.phase === "running" && (
+                      <span style={{ fontSize: "0.8125rem", color: "#94A3B8", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                        <RefreshCw size={12} className="animate-spin" />
+                        Running…
+                      </span>
+                    )}
+
+                    {cs.phase === "done" && (
+                      <div style={{ display: "flex", gap: "0.375rem" }}>
+                        <button
+                          onClick={() => {
+                            setCardPhase(tpl.id, { phase: "config", resultId: undefined });
+                          }}
+                          style={{ ...BTN_PRIMARY, padding: "0.375rem 0.75rem", fontSize: "0.8125rem" }}
+                        >
+                          <Play size={11} /> Re-run
+                        </button>
+                        <button
+                          onClick={() => setCardPhase(tpl.id, { phase: "idle", resultId: undefined })}
+                          style={{ ...BTN_OUTLINE, padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Inline Config / Running / Result — animated */}
+                <AnimatePresence initial={false}>
+                  {cs.phase === "config" && (
+                    <motion.div
+                      key="config"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div
+                        style={{
+                          borderTop: "1px solid #E2E8F0",
+                          background: "#FAFAFA",
+                          padding: "1rem 1.25rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
+                        }}
+                      >
+                        <ModeToggle
+                          mode={cs.mode}
+                          paths={cs.paths}
+                          onMode={(m) => setCardPhase(tpl.id, { mode: m })}
+                          onPaths={(p) => setCardPhase(tpl.id, { paths: p })}
+                        />
+                        <button
+                          onClick={() => handleTemplateRun(tpl)}
+                          style={{ ...BTN_PRIMARY, justifyContent: "center", width: "100%" }}
+                        >
+                          <Play size={13} /> Execute Run
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {cs.phase === "running" && (
+                    <motion.div
+                      key="running"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div
+                        style={{
+                          borderTop: "1px solid #E2E8F0", background: "#FAFAFA",
+                          padding: "1rem 1.25rem", textAlign: "center",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", color: "#002147", marginBottom: "0.5rem" }}>
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                            {cs.mode === "deterministic" ? "Running deterministic model…" : `Running Monte Carlo (${cs.paths.toLocaleString()} paths)…`}
+                          </span>
+                        </div>
+                        <div style={{ height: "4px", background: "#E2E8F0", borderRadius: "2px", overflow: "hidden" }}>
+                          <div
+                            style={{
+                              height: "100%",
+                              background: "#002147",
+                              borderRadius: "2px",
+                              animation: "progress-fill 3s linear forwards",
+                              width: "0%",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {cs.phase === "done" && result && (
+                    <motion.div
+                      key="done"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.32, ease: [0.23, 1, 0.32, 1] }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      <div style={{ borderTop: "1px solid #E2E8F0", padding: "0 1.25rem 1.25rem" }}>
+                        <RunResultPanel
+                          run={result}
+                          compact
+                          narrative={getNarrative(result.id)}
+                          onRequestNarrative={handleRequestNarrative}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
+          {/* ── Distress Scenarios label ── */}
+          <div style={{ gridColumn: "1 / -1", fontSize: "0.6875rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", paddingTop: "0.75rem", paddingBottom: "0.25rem", borderBottom: "1px solid #F1F5F9" }}>
+            Distress Scenarios
+          </div>
+          {TEMPLATES.filter((t) => t.category === "distress").map((tpl, tplIdx) => {
+            const cs = cardStates[tpl.id];
+            const result = cs.resultId ? findRun(cs.resultId) : null;
+
+            return (
+              <motion.div
+                key={tpl.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, delay: (tplIdx + TEMPLATES.filter(t => t.category !== "distress").length) * 0.06, ease: [0.23, 1, 0.32, 1] }}
+                style={{
+                  background: "#FFFFFF", border: "1px solid #E2E8F0",
+                  borderRadius: "0.5rem", overflow: "hidden",
+                  display: "flex", flexDirection: "column",
+                  transition: "border-color 150ms",
+                }}
+                onMouseEnter={(e) => cs.phase === "idle" && ((e.currentTarget as HTMLDivElement).style.borderColor = "#CBD5E1")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "#E2E8F0")}
+              >
+                {/* Card body */}
+                <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#0F172A" }}>{tpl.name}</div>
+                      <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginTop: "0.125rem" }}>
+                        Scenario weight:{" "}
+                        <span style={{ fontWeight: 600, color: tpl.color }}>{tpl.weight}</span>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        background: tpl.bg, border: `1px solid ${tpl.color}30`,
+                        borderRadius: "0.25rem", padding: "0.25rem 0.5rem",
+                        fontSize: "0.75rem", fontWeight: 600, color: tpl.color,
+                        fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+                      }}
+                    >
+                      ECL ${tpl.ecl.toFixed(1)}M
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: "0.8125rem", color: "#475569", lineHeight: 1.6, margin: 0 }}>
+                    {tpl.description}
+                  </p>
+
+                  {tpl.tags && tpl.tags.length > 0 && (
+                    <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                      {tpl.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          style={{
+                            fontSize: "0.6875rem", fontWeight: 600,
+                            padding: "0.125rem 0.5rem",
+                            borderRadius: "9999px",
+                            background: "rgba(0,33,71,0.06)",
+                            color: "#475569",
+                            border: "1px solid rgba(0,33,71,0.12)",
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Footer row */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.5rem", borderTop: "1px solid #E2E8F0" }}>
