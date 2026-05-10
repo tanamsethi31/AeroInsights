@@ -726,6 +726,7 @@ export default function Scenarios() {
   const [customPaths, setCustomPaths] = useState(10000);
   const [customSeed] = useState(42);
   const [editorMode, setEditorMode] = useState<"form" | "dsl">("form");
+  const [distressOpen, setDistressOpen] = useState(false);
   const [dslText, setDslText] = useState(() => generateDSL(ZERO_INPUTS, "My Custom Scenario", "deterministic", 10000, 42));
   const [dslErrors, setDslErrors] = useState<string[]>([]);
   const [customRunning, setCustomRunning] = useState(false);
@@ -776,6 +777,12 @@ export default function Scenarios() {
     setFormInputs(next);
     setDslText(generateDSL(next, customName, customMode, customPaths, customSeed));
     setDslErrors([]);
+    // Auto-expand distress section if any distress lever is non-zero
+    const hasDistress =
+      next.deferralMonths !== 0 || next.govtSupportProb !== 0 ||
+      next.forgivenessRate !== 0 || next.pbhConversionPct !== 0 ||
+      next.etpRate !== 0 || next.lecRate !== 0;
+    if (hasDistress) setDistressOpen(true);
   };
 
   // Read agent-injected inputs when Custom Builder tab becomes active
@@ -1622,6 +1629,164 @@ export default function Scenarios() {
                     fmt={(v) => `×${v.toFixed(1)}`}
                     warn={formInputs.pdS3Multi > 3.0} />
 
+                  {/* ── Distress & Mitigation — collapsible ── */}
+                  {(() => {
+                    const activeLevers = [
+                      formInputs.deferralMonths !== 0,
+                      formInputs.govtSupportProb !== 0,
+                      formInputs.forgivenessRate !== 0,
+                      formInputs.pbhConversionPct !== 0,
+                      formInputs.etpRate !== 0,
+                      formInputs.lecRate !== 0,
+                    ].filter(Boolean).length;
+
+                    const MONTHLY_RENT_M = 2.85;
+                    const deferralPenalty =
+                      formInputs.deferralMonths *
+                      (1 - formInputs.govtSupportProb) *
+                      formInputs.forgivenessRate *
+                      MONTHLY_RENT_M;
+                    const pbhBenefit  = formInputs.pbhConversionPct * liveBaseECL * 0.15;
+                    const etpBenefit  = formInputs.etpRate           * liveBaseECL * 0.08;
+                    const lecBenefit  = formInputs.lecRate            * liveBaseECL * 0.05;
+                    const netDistress = deferralPenalty - pbhBenefit - etpBenefit - lecBenefit;
+
+                    return (
+                      <div style={{ margin: "1rem 0", border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
+                        {/* Section header button */}
+                        <button
+                          onClick={() => setDistressOpen((o) => !o)}
+                          style={{
+                            width: "100%", display: "flex", alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "0.625rem 0.875rem",
+                            background: distressOpen ? "rgba(0,33,71,0.03)" : "#FAFAFA",
+                            border: "none", cursor: "pointer",
+                            borderBottom: distressOpen ? "1px solid #E2E8F0" : "none",
+                            transition: "background 150ms",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                              Distress &amp; Mitigation
+                            </span>
+                            {activeLevers > 0 && (
+                              <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.5rem", borderRadius: "9999px", background: "#002147", color: "#FFFFFF" }}>
+                                {activeLevers} active
+                              </span>
+                            )}
+                            {activeLevers === 0 && (
+                              <span style={{ fontSize: "0.6875rem", color: "#CBD5E1" }}>0 active levers</span>
+                            )}
+                          </div>
+                          <svg
+                            width="12" height="12" viewBox="0 0 12 12" fill="none"
+                            style={{ transform: distressOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms cubic-bezier(0.23,1,0.32,1)", color: "#94A3B8" }}
+                          >
+                            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+
+                        {/* Collapsible body */}
+                        <AnimatePresence initial={false}>
+                          {distressOpen && (
+                            <motion.div
+                              key="distress-body"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                              style={{ overflow: "hidden" }}
+                            >
+                              <div style={{ padding: "0.875rem" }}>
+                                {/* Sub-group: Deferral & Forgiveness */}
+                                <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.625rem" }}>
+                                  Deferral &amp; Forgiveness
+                                </div>
+                                <SliderRow
+                                  label="Deferral Duration"
+                                  min={0} max={24} step={1}
+                                  value={formInputs.deferralMonths}
+                                  onChange={(v) => updateFormInputs({ deferralMonths: v })}
+                                  fmt={(v) => v === 0 ? "None" : `${v} mo`}
+                                />
+                                <SliderRow
+                                  label="Govt Support Probability"
+                                  min={0} max={1} step={0.05}
+                                  value={formInputs.govtSupportProb}
+                                  onChange={(v) => updateFormInputs({ govtSupportProb: v })}
+                                  fmt={(v) => v === 0 ? "None" : `${Math.round(v * 100)}%`}
+                                />
+                                <SliderRow
+                                  label="Forgiveness Rate"
+                                  min={0} max={1} step={0.05}
+                                  value={formInputs.forgivenessRate}
+                                  onChange={(v) => updateFormInputs({ forgivenessRate: v })}
+                                  fmt={(v) => v === 0 ? "None" : `${Math.round(v * 100)}%`}
+                                />
+
+                                {/* Divider */}
+                                <div style={{ borderTop: "1px solid #F1F5F9", margin: "0.75rem 0" }} />
+
+                                {/* Sub-group: Lessor Mitigation */}
+                                <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.625rem" }}>
+                                  Lessor Mitigation
+                                </div>
+                                <SliderRow
+                                  label="PBH Conversion"
+                                  min={0} max={1} step={0.05}
+                                  value={formInputs.pbhConversionPct}
+                                  onChange={(v) => updateFormInputs({ pbhConversionPct: v })}
+                                  fmt={(v) => v === 0 ? "None" : `${Math.round(v * 100)}% of fleet`}
+                                />
+                                <SliderRow
+                                  label="ETP Rate"
+                                  min={0} max={0.5} step={0.05}
+                                  value={formInputs.etpRate}
+                                  onChange={(v) => updateFormInputs({ etpRate: v })}
+                                  fmt={(v) => v === 0 ? "None" : `${Math.round(v * 100)}% of lease value`}
+                                />
+                                <SliderRow
+                                  label="LEC Rate"
+                                  min={0} max={0.3} step={0.05}
+                                  value={formInputs.lecRate}
+                                  onChange={(v) => updateFormInputs({ lecRate: v })}
+                                  fmt={(v) => v === 0 ? "None" : `${Math.round(v * 100)}% of half-life value`}
+                                />
+
+                                {/* Net impact line */}
+                                {activeLevers > 0 && (
+                                  <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.75rem", background: "#F8FAFC", borderRadius: "0.375rem", border: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#475569", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                                    <span>
+                                      Deferral penalty{" "}
+                                      <span style={{ fontWeight: 700, color: "#B91C1C", fontVariantNumeric: "tabular-nums" }}>
+                                        +${deferralPenalty.toFixed(1)}M
+                                      </span>
+                                    </span>
+                                    <span style={{ color: "#CBD5E1" }}>·</span>
+                                    <span>
+                                      Mitigation{" "}
+                                      <span style={{ fontWeight: 700, color: "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                        −${(pbhBenefit + etpBenefit + lecBenefit).toFixed(1)}M
+                                      </span>
+                                    </span>
+                                    <span style={{ color: "#CBD5E1" }}>·</span>
+                                    <span>
+                                      Net{" "}
+                                      <span style={{ fontWeight: 700, color: netDistress >= 0 ? "#B91C1C" : "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                        {netDistress >= 0 ? "+" : "−"}${Math.abs(netDistress).toFixed(1)}M
+                                      </span>
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
+
                   {/* Live ECL preview */}
                   <div style={{ marginTop: "1rem", padding: "0.875rem", background: "rgba(0,33,71,0.04)", border: "1px solid rgba(0,33,71,0.1)", borderRadius: "0.375rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1655,6 +1820,7 @@ export default function Scenarios() {
                       onClick={() => {
                         setFormInputs(ZERO_INPUTS);
                         setDslText(generateDSL(ZERO_INPUTS, customName, customMode, customPaths, customSeed));
+                        setDistressOpen(false);
                       }}
                       style={{ ...BTN_OUTLINE, fontSize: "0.8125rem" }}
                     >
