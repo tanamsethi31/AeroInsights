@@ -545,32 +545,11 @@ function SignalCard({ sig, lesseeIdByName, liveExposure }: {
   );
 }
 
-function MacroSignalsView() {
+function MacroSignalsView({ lesseeIdByName, liveExposure }: {
+  lesseeIdByName: Map<string, string>;
+  liveExposure: (name: string, fallback: number) => number;
+}) {
   const [catFilter, setCatFilter] = useState<SignalCategory | "all">("all");
-  const { lessees, leases, provisions } = usePortfolioData();
-
-  const { lesseeEADByName, lesseeIdByName } = useMemo(() => {
-    const assetToLessee = new Map<string, string>();
-    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
-    const eadById = new Map<string, number>();
-    for (const p of provisions) {
-      const lid = assetToLessee.get(p.asset_id);
-      if (!lid) continue;
-      eadById.set(lid, (eadById.get(lid) ?? 0) + (p.ead ?? 0));
-    }
-    const lesseeEADByName = new Map<string, number>();
-    const lesseeIdByName  = new Map<string, string>();
-    for (const l of lessees) {
-      const ead = eadById.get(l.id);
-      if (ead !== undefined) lesseeEADByName.set(l.name, ead);
-      lesseeIdByName.set(l.name, l.id);
-    }
-    return { lesseeEADByName, lesseeIdByName };
-  }, [lessees, leases, provisions]);
-
-  function liveExposure(name: string, fallback: number): number {
-    return lesseeEADByName.get(name) ?? fallback;
-  }
 
   const filtered = useMemo(() => {
     const sigs = catFilter === "all"
@@ -688,32 +667,11 @@ function RadarCell({ sig }: { sig: LesseeRadarSignal }) {
   );
 }
 
-function LesseeRadarView() {
+function LesseeRadarView({ lesseeIdByName, liveExposure }: {
+  lesseeIdByName: Map<string, string>;
+  liveExposure: (name: string, fallback: number) => number;
+}) {
   const navigate = useNavigate();
-  const { lessees, leases, provisions } = usePortfolioData();
-
-  const { lesseeEADByName, lesseeIdByName } = useMemo(() => {
-    const assetToLessee = new Map<string, string>();
-    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
-    const eadById = new Map<string, number>();
-    for (const p of provisions) {
-      const lid = assetToLessee.get(p.asset_id);
-      if (!lid) continue;
-      eadById.set(lid, (eadById.get(lid) ?? 0) + (p.ead ?? 0));
-    }
-    const lesseeEADByName = new Map<string, number>();
-    const lesseeIdByName  = new Map<string, string>();
-    for (const l of lessees) {
-      const ead = eadById.get(l.id);
-      if (ead !== undefined) lesseeEADByName.set(l.name, ead);
-      lesseeIdByName.set(l.name, l.id);
-    }
-    return { lesseeEADByName, lesseeIdByName };
-  }, [lessees, leases, provisions]);
-
-  function liveExposure(name: string, fallback: number): number {
-    return lesseeEADByName.get(name) ?? fallback;
-  }
 
   const sorted = useMemo(
     () => [...LESSEE_RADAR].sort((a, b) => b.compositeScore - a.compositeScore),
@@ -1522,38 +1480,10 @@ function JxCard({ event, lesseeIdByName, liveTotalExposure }: {
   );
 }
 
-function JurisdictionWatchView() {
-  const { lessees, leases, provisions } = usePortfolioData();
-
-  const { lesseeEADByName, lesseeIdByName } = useMemo(() => {
-    const assetToLessee = new Map<string, string>();
-    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
-    const eadById = new Map<string, number>();
-    for (const p of provisions) {
-      const lid = assetToLessee.get(p.asset_id);
-      if (!lid) continue;
-      eadById.set(lid, (eadById.get(lid) ?? 0) + (p.ead ?? 0));
-    }
-    const lesseeEADByName = new Map<string, number>();
-    const lesseeIdByName  = new Map<string, string>();
-    for (const l of lessees) {
-      const ead = eadById.get(l.id);
-      if (ead !== undefined) lesseeEADByName.set(l.name, ead);
-      lesseeIdByName.set(l.name, l.id);
-    }
-    return { lesseeEADByName, lesseeIdByName };
-  }, [lessees, leases, provisions]);
-
-  function liveTotalExposure(names: string[], fallback: number): number {
-    let total = 0;
-    let found = false;
-    for (const n of names) {
-      const ead = lesseeEADByName.get(n);
-      if (ead !== undefined) { total += ead; found = true; }
-    }
-    return found ? total : fallback;
-  }
-
+function JurisdictionWatchView({ lesseeIdByName, liveTotalExposure }: {
+  lesseeIdByName: Map<string, string>;
+  liveTotalExposure: (names: string[], fallback: number) => number;
+}) {
   const events = useMemo(() => {
     const sentOrder: Record<SignalSentiment, number> = { negative: 0, neutral: 1, positive: 2 };
     return [...JURISDICTION_EVENTS].sort(
@@ -1619,6 +1549,39 @@ export default function Intelligence() {
   const location = useLocation();
   const navigate = useNavigate();
   const activeTab: IntelTab = PATH_TO_TAB[location.pathname] ?? "signals";
+
+  // ── Live portfolio exposure maps (single fetch for the whole page) ──────────
+  const { lessees, leases, provisions } = usePortfolioData();
+  const { lesseeEADByName, lesseeIdByName } = useMemo(() => {
+    const assetToLessee = new Map<string, string>();
+    for (const l of leases) assetToLessee.set(l.asset_id, l.lessee_id);
+    const eadById = new Map<string, number>();
+    for (const p of provisions) {
+      const lid = assetToLessee.get(p.asset_id);
+      if (!lid) continue;
+      eadById.set(lid, (eadById.get(lid) ?? 0) + (p.ead ?? 0));
+    }
+    const byName = new Map<string, number>();
+    const idByName = new Map<string, string>();
+    for (const l of lessees) {
+      const ead = eadById.get(l.id);
+      if (ead !== undefined) byName.set(l.name, ead);
+      idByName.set(l.name, l.id);
+    }
+    return { lesseeEADByName: byName, lesseeIdByName: idByName };
+  }, [lessees, leases, provisions]);
+
+  function liveExposure(name: string, fallback: number): number {
+    return lesseeEADByName.get(name) ?? fallback;
+  }
+  function liveTotalExposure(names: string[], fallback: number): number {
+    let total = 0; let found = false;
+    for (const n of names) {
+      const ead = lesseeEADByName.get(n);
+      if (ead !== undefined) { total += ead; found = true; }
+    }
+    return found ? total : fallback;
+  }
 
   // Red dot for high-severity signals
   const highSignals  = MACRO_SIGNALS.filter((s) => s.severity === "high").length;
@@ -1714,10 +1677,10 @@ export default function Intelligence() {
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
         >
-          {activeTab === "signals"      && <MacroSignalsView />}
-          {activeTab === "lessee-radar" && <LesseeRadarView />}
+          {activeTab === "signals"      && <MacroSignalsView lesseeIdByName={lesseeIdByName} liveExposure={liveExposure} />}
+          {activeTab === "lessee-radar" && <LesseeRadarView lesseeIdByName={lesseeIdByName} liveExposure={liveExposure} />}
           {activeTab === "deal-feed"    && <DealFeedView    />}
-          {activeTab === "jx-watch"     && <JurisdictionWatchView />}
+          {activeTab === "jx-watch"     && <JurisdictionWatchView lesseeIdByName={lesseeIdByName} liveTotalExposure={liveTotalExposure} />}
         </motion.div>
       </AnimatePresence>
     </div>
