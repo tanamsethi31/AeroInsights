@@ -32,6 +32,7 @@ import { SCENARIO_CALIBRATION } from "../data/intelligenceData";
 import {
   ScenarioInputs,
   BASE_ECL,
+  LGD_DELTAS, // used in Insolvency Regime section (Task 5)
   ZERO_INPUTS,
   computeECL,
   computeECLFromBase,
@@ -243,7 +244,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4, category: "macro" as const,
     lastRun: "28 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Mild aviation demand shock. RPK −25%, fuel +15%, 3 stage-2 migrations, no bankruptcies.",
-    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
+    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
     shapley: [
       { driver: "RPK / Traffic Shock (−25%)", contribution: 38, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.4", contribution: 27, direction: "up" },
@@ -258,7 +259,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7, category: "macro" as const,
     lastRun: "27 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "Severe demand shock. RPK −55%, fuel −30%, 8+ bankruptcies, mass deferral requests.",
-    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
+    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 41, direction: "up" },
       { driver: "PD — Stage 3 Multiplier ×2.1", contribution: 28, direction: "up" },
@@ -273,7 +274,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Sustained fuel price increase of 40% vs baseline. Low-cost carriers most exposed.",
-    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
+    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
     shapley: [
       { driver: "Fuel Price Shock (+40%)", contribution: 43, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.6", contribution: 30, direction: "up" },
@@ -288,7 +289,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
     description: "EM sovereign stress. India, Brazil, Indonesia CDS widen +250bps. FX pressure −15%.",
-    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
+    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
     shapley: [
       { driver: "Sovereign CDS Widening (+250bps)", contribution: 36, direction: "up" },
       { driver: "FX Basket Move (−15%)", contribution: 29, direction: "up" },
@@ -303,7 +304,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5, category: "macro" as const,
     lastRun: "22 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "EM currency basket −35% vs USD. Rent-to-revenue ratios spike. 6+ lessee distress events.",
-    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
+    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
     shapley: [
       { driver: "FX Basket Move (−35%)", contribution: 48, direction: "up" },
       { driver: "Rent-to-Revenue Ratio Spike", contribution: 27, direction: "up" },
@@ -318,7 +319,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8, category: "macro" as const,
     lastRun: "14 Jan 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.08)",
     description: "Sudden fleet detention in 2 jurisdictions. Repossession impossible. Full LGD on 12 aircraft.",
-    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
+    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
     shapley: [
       { driver: "Jurisdiction: Full LGD (100%)", contribution: 52, direction: "up" },
       { driver: "Aircraft Detention (12 assets)", contribution: 29, direction: "up" },
@@ -343,6 +344,7 @@ const TEMPLATES: Template[] = [
       pdS2Multi: 1.0, pdS3Multi: 1.0,
       deferralMonths: 9, govtSupportProb: 0.35, forgivenessRate: 0.50,
       pbhConversionPct: 0.20, etpRate: 0, lecRate: 0,
+      bankruptcyScenarioType: null,
     },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 42, direction: "up" as const },
@@ -366,6 +368,7 @@ const TEMPLATES: Template[] = [
       pdS2Multi: 1.5, pdS3Multi: 2.0,
       deferralMonths: 6, govtSupportProb: 0.60, forgivenessRate: 0.25,
       pbhConversionPct: 0, etpRate: 0.15, lecRate: 0.10,
+      bankruptcyScenarioType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Multiplier ×2.0", contribution: 45, direction: "up" as const },
@@ -389,6 +392,7 @@ const TEMPLATES: Template[] = [
       pdS2Multi: 1.8, pdS3Multi: 1.0,
       deferralMonths: 3, govtSupportProb: 0, forgivenessRate: 0.10,
       pbhConversionPct: 0, etpRate: 0.35, lecRate: 0.20,
+      bankruptcyScenarioType: null,
     },
     shapley: [
       { driver: "Stage 2 PD Multiplier ×1.8", contribution: 38, direction: "up" as const },
@@ -487,7 +491,7 @@ function generateDSL(
       // Optional: set to "chapter11", "india_ibc", "brazil_rj", "mexico_concurso", "indonesia_pkpu",
       // or "generic_liquidation" to layer insolvency-specific recovery adjustments.
       // See Insolvency Regimes tab.
-      bankruptcy_scenario_type: null,
+      bankruptcy_scenario_type: inputs.bankruptcyScenarioType,
     },
     null, 2
   );
@@ -526,6 +530,7 @@ function parseDSL(text: string): { ok: boolean; inputs?: ScenarioInputs; name?: 
         pbhConversionPct: s.pbh_conversion_pct ?? 0,
         etpRate: s.etp_rate ?? 0,
         lecRate: s.lec_rate ?? 0,
+        bankruptcyScenarioType: parsed.bankruptcy_scenario_type ?? null,
       },
     };
   } catch {
@@ -772,18 +777,22 @@ export default function Scenarios() {
     inputs: ScenarioInputs; name: string; mode: RunMode; paths: number;
   } | null>(null);
 
-  const updateFormInputs = (partial: Partial<ScenarioInputs>) => {
-    const next = { ...formInputs, ...partial };
-    setFormInputs(next);
-    setDslText(generateDSL(next, customName, customMode, customPaths, customSeed));
+  const updateFormInputs = useCallback((partial: Partial<ScenarioInputs>) => {
+    let next: ScenarioInputs;
+    setFormInputs((prev) => {
+      next = { ...prev, ...partial };
+      return next;
+    });
+    // `next` is assigned synchronously inside the updater before setFormInputs returns
+    setDslText(generateDSL(next!, customName, customMode, customPaths, customSeed));
     setDslErrors([]);
     // Auto-expand distress section if any distress lever is non-zero
     const hasDistress =
-      next.deferralMonths !== 0 || next.govtSupportProb !== 0 ||
-      next.forgivenessRate !== 0 || next.pbhConversionPct !== 0 ||
-      next.etpRate !== 0 || next.lecRate !== 0;
+      next!.deferralMonths !== 0 || next!.govtSupportProb !== 0 ||
+      next!.forgivenessRate !== 0 || next!.pbhConversionPct !== 0 ||
+      next!.etpRate !== 0 || next!.lecRate !== 0;
     if (hasDistress) setDistressOpen(true);
-  };
+  }, [customName, customMode, customPaths, customSeed, setDistressOpen]);
 
   // Read agent-injected inputs when Custom Builder tab becomes active
   useEffect(() => {
