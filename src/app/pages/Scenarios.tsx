@@ -705,6 +705,24 @@ const BTN_OUTLINE: React.CSSProperties = {
   padding: "0.5rem 0.875rem", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
 };
 
+const REGIME_DESCRIPTIONS: Record<string, string> = {
+  chapter11:           "§1110 gives lessor a 60-day cure window. DIP financing priority is the main tail risk.",
+  india_ibc:           "CTC Act 2025 mandates 90-day repossession. Court congestion and political pressure are tail risks.",
+  mexico_concurso:     "CTC in force; conciliador reviews leases in 90 days. Can convert to quiebra (liquidation).",
+  brazil_rj:           "180-day stay with common extensions (AerCap LATAM: 380 days). 55% creditor cram-down risk.",
+  indonesia_pkpu:      "Up to 270-day suspension. Indonesia is not a Cape Town Convention signatory.",
+  generic_liquidation: "Full liquidation. Lessor ranks pari passu with general unsecured creditors.",
+};
+
+const REGIME_SHORT_NAMES: Record<string, string> = {
+  chapter11:           "Ch.11 §1110",
+  india_ibc:           "India IBC",
+  mexico_concurso:     "Mexico Concurso",
+  brazil_rj:           "Brazil RJ",
+  indonesia_pkpu:      "Indonesia PKPU",
+  generic_liquidation: "Generic Liquidation",
+};
+
 // ─── Slider helper ────────────────────────────────────────────────────────────
 
 interface SliderRowProps {
@@ -867,24 +885,6 @@ export default function Scenarios() {
   const [editorMode, setEditorMode] = useState<"form" | "dsl">("form");
   const [distressOpen, setDistressOpen] = useState(false);
   const [insolvencyOpen, setInsolvencyOpen] = useState(false);
-
-  const REGIME_DESCRIPTIONS: Record<string, string> = {
-    chapter11:           "§1110 gives lessor a 60-day cure window. DIP financing priority is the main tail risk.",
-    india_ibc:           "CTC Act 2025 mandates 90-day repossession. Court congestion and political pressure are tail risks.",
-    mexico_concurso:     "CTC in force; conciliador reviews leases in 90 days. Can convert to quiebra (liquidation).",
-    brazil_rj:           "180-day stay with common extensions (AerCap LATAM: 380 days). 55% creditor cram-down risk.",
-    indonesia_pkpu:      "Up to 270-day suspension. Indonesia is not a Cape Town Convention signatory.",
-    generic_liquidation: "Full liquidation. Lessor ranks pari passu with general unsecured creditors.",
-  };
-
-  const REGIME_SHORT_NAMES: Record<string, string> = {
-    chapter11:           "Ch.11 §1110",
-    india_ibc:           "India IBC",
-    mexico_concurso:     "Mexico Concurso",
-    brazil_rj:           "Brazil RJ",
-    indonesia_pkpu:      "Indonesia PKPU",
-    generic_liquidation: "Generic Liquidation",
-  };
 
   const [dslText, setDslText] = useState(() => generateDSL(ZERO_INPUTS, "My Custom Scenario", "deterministic", 10000, 42));
   const [dslErrors, setDslErrors] = useState<string[]>([]);
@@ -2265,8 +2265,8 @@ export default function Scenarios() {
                                   </p>
                                 )}
 
-                                {/* LGD impact line — only when a regime is selected */}
-                                {selectedRegime !== null && (
+                                {/* LGD impact line — only when a regime is selected and portfolio ECL is loaded */}
+                                {selectedRegime !== null && liveBaseECL > 0 && (
                                   <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.75rem", background: "#F8FAFC", borderRadius: "0.375rem", border: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#475569", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                                     <span>
                                       LGD adjustment{" "}
