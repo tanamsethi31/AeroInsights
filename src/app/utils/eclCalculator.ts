@@ -62,7 +62,11 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
     (inputs.pdS2Multi - 1.0) * 8.5 +
     (inputs.pdS3Multi - 1.0) * 18.2;
 
-  // Deferral penalty: months × (1 − govt support) × forgiveness × monthly rent
+  // Deferral penalty: months × (1 − govt support) × forgiveness × monthly rent.
+  // Intentional simplification: when forgivenessRate = 0 (full repayment expected),
+  // penalty is zero — this model captures ECL from permanent write-offs only, not
+  // from time-value-of-money modification loss (IFRS 9 §5.5.25). Acceptable for
+  // scenario stress-testing; not for individual lease modification accounting.
   const deferralPenalty =
     inputs.deferralMonths *
     (1 - inputs.govtSupportProb) *
