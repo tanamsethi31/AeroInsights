@@ -866,6 +866,26 @@ export default function Scenarios() {
   const [customSeed] = useState(42);
   const [editorMode, setEditorMode] = useState<"form" | "dsl">("form");
   const [distressOpen, setDistressOpen] = useState(false);
+  const [insolvencyOpen, setInsolvencyOpen] = useState(false);
+
+  const REGIME_DESCRIPTIONS: Record<string, string> = {
+    chapter11:           "§1110 gives lessor a 60-day cure window. DIP financing priority is the main tail risk.",
+    india_ibc:           "CTC Act 2025 mandates 90-day repossession. Court congestion and political pressure are tail risks.",
+    mexico_concurso:     "CTC in force; conciliador reviews leases in 90 days. Can convert to quiebra (liquidation).",
+    brazil_rj:           "180-day stay with common extensions (AerCap LATAM: 380 days). 55% creditor cram-down risk.",
+    indonesia_pkpu:      "Up to 270-day suspension. Indonesia is not a Cape Town Convention signatory.",
+    generic_liquidation: "Full liquidation. Lessor ranks pari passu with general unsecured creditors.",
+  };
+
+  const REGIME_SHORT_NAMES: Record<string, string> = {
+    chapter11:           "Ch.11 §1110",
+    india_ibc:           "India IBC",
+    mexico_concurso:     "Mexico Concurso",
+    brazil_rj:           "Brazil RJ",
+    indonesia_pkpu:      "Indonesia PKPU",
+    generic_liquidation: "Generic Liquidation",
+  };
+
   const [dslText, setDslText] = useState(() => generateDSL(ZERO_INPUTS, "My Custom Scenario", "deterministic", 10000, 42));
   const [dslErrors, setDslErrors] = useState<string[]>([]);
   const [customRunning, setCustomRunning] = useState(false);
@@ -926,7 +946,8 @@ export default function Scenarios() {
       next!.forgivenessRate !== 0 || next!.pbhConversionPct !== 0 ||
       next!.etpRate !== 0 || next!.lecRate !== 0;
     if (hasDistress) setDistressOpen(true);
-  }, [customName, customMode, customPaths, customSeed, setDistressOpen]);
+    if (next!.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
+  }, [customName, customMode, customPaths, customSeed, setDistressOpen, setInsolvencyOpen]);
 
   // Read agent-injected inputs when Custom Builder tab becomes active
   useEffect(() => {
@@ -2161,6 +2182,112 @@ export default function Scenarios() {
                     );
                   })()}
 
+                  {/* ── Insolvency Regime — collapsible ── */}
+                  {(() => {
+                    const selectedRegime = formInputs.bankruptcyScenarioType;
+                    const lgdFactor = selectedRegime !== null ? (LGD_DELTAS[selectedRegime] ?? 0) : 0;
+                    const lgdImpact = lgdFactor * liveBaseECL;
+                    const isLgdPositive = lgdImpact > 0;
+
+                    return (
+                      <div style={{ margin: "1rem 0", border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
+                        {/* Section header */}
+                        <button
+                          onClick={() => setInsolvencyOpen((o) => !o)}
+                          style={{
+                            width: "100%", display: "flex", alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "0.625rem 0.875rem",
+                            background: insolvencyOpen ? "rgba(0,33,71,0.03)" : "#FAFAFA",
+                            border: "none", cursor: "pointer",
+                            borderBottom: insolvencyOpen ? "1px solid #E2E8F0" : "none",
+                            transition: "background 150ms",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                              Insolvency Regime
+                            </span>
+                            {selectedRegime !== null ? (
+                              <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.5rem", borderRadius: "9999px", background: "#002147", color: "#FFFFFF" }}>
+                                {REGIME_SHORT_NAMES[selectedRegime] ?? selectedRegime}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.6875rem", color: "#CBD5E1" }}>None selected</span>
+                            )}
+                          </div>
+                          <svg
+                            width="12" height="12" viewBox="0 0 12 12" fill="none"
+                            style={{ transform: insolvencyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms cubic-bezier(0.23,1,0.32,1)", color: "#94A3B8" }}
+                          >
+                            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+
+                        {/* Collapsible body */}
+                        <AnimatePresence initial={false}>
+                          {insolvencyOpen && (
+                            <motion.div
+                              key="insolvency-body"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                              style={{ overflow: "hidden" }}
+                            >
+                              <div style={{ padding: "0.875rem" }}>
+                                {/* Regime dropdown */}
+                                <select
+                                  value={selectedRegime ?? ""}
+                                  onChange={(e) => updateFormInputs({
+                                    bankruptcyScenarioType: e.target.value === "" ? null : e.target.value,
+                                  })}
+                                  style={{
+                                    width: "100%", padding: "0.5rem 0.75rem",
+                                    border: "1px solid #E2E8F0", borderRadius: "0.375rem",
+                                    background: "#FFFFFF", color: "#1E293B",
+                                    fontSize: "0.8125rem", cursor: "pointer",
+                                  }}
+                                >
+                                  <option value="">── None (no regime adjustment) ──</option>
+                                  <option value="chapter11">🇺🇸  US Chapter 11 (§1110)</option>
+                                  <option value="india_ibc">🇮🇳  India IBC</option>
+                                  <option value="mexico_concurso">🇲🇽  Mexico Concurso Mercantil</option>
+                                  <option value="brazil_rj">🇧🇷  Brazil RJ (Recuperação Judicial)</option>
+                                  <option value="indonesia_pkpu">🇮🇩  Indonesia PKPU</option>
+                                  <option value="generic_liquidation">🌐  Generic Liquidation (Ch.7 / Civil-Law)</option>
+                                </select>
+
+                                {/* Regime description */}
+                                {selectedRegime !== null && REGIME_DESCRIPTIONS[selectedRegime] && (
+                                  <p style={{ fontSize: "0.75rem", color: "#64748B", margin: "0.5rem 0 0", lineHeight: 1.5 }}>
+                                    {REGIME_DESCRIPTIONS[selectedRegime]}
+                                  </p>
+                                )}
+
+                                {/* LGD impact line — only when a regime is selected */}
+                                {selectedRegime !== null && (
+                                  <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.75rem", background: "#F8FAFC", borderRadius: "0.375rem", border: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#475569", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                                    <span>
+                                      LGD adjustment{" "}
+                                      <span style={{ fontWeight: 700, color: isLgdPositive ? "#B91C1C" : "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                        {isLgdPositive ? "+" : "−"}${Math.abs(lgdImpact).toFixed(1)}M
+                                      </span>
+                                    </span>
+                                    <span style={{ color: "#CBD5E1" }}>·</span>
+                                    <span style={{ color: "#64748B" }}>
+                                      {isLgdPositive ? "LGD deterioration" : "Recovery premium"}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
+
                   {/* Live ECL preview */}
                   <div style={{ marginTop: "1rem", padding: "0.875rem", background: "rgba(0,33,71,0.04)", border: "1px solid rgba(0,33,71,0.1)", borderRadius: "0.375rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2195,6 +2322,7 @@ export default function Scenarios() {
                         setFormInputs(ZERO_INPUTS);
                         setDslText(generateDSL(ZERO_INPUTS, customName, customMode, customPaths, customSeed));
                         setDistressOpen(false);
+                        setInsolvencyOpen(false);
                       }}
                       style={{ ...BTN_OUTLINE, fontSize: "0.8125rem" }}
                     >
