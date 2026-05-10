@@ -1672,7 +1672,7 @@ export default function Scenarios() {
                             </span>
                             {activeLevers > 0 && (
                               <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.5rem", borderRadius: "9999px", background: "#002147", color: "#FFFFFF" }}>
-                                {activeLevers} active
+                                {activeLevers} active levers
                               </span>
                             )}
                             {activeLevers === 0 && (
