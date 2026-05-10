@@ -39,6 +39,7 @@ import {
 } from "../utils/eclCalculator";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toDashboardKPIs } from "../lib/portfolioAdapters";
+import { PillTabs } from "../components/ui/PillTabs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,8 +61,6 @@ interface CardState {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const BOOK_VALUE = 2840; // $M — used for % of book
 
 // ─── Computation Helpers ──────────────────────────────────────────────────────
 
@@ -123,15 +122,23 @@ const STAGE3_LESSEES = [
   { name: "Air Transat",             jurisdiction: "Canada (CCAA)" },
 ] as const;
 
-function computeTopLessees(s3: number, seed: number): ScenarioRunResult["topLessees"] {
-  const n = STAGE3_LESSEES.length;
+function computeTopLessees(
+  s3: number,
+  seed: number,
+  lesseePool: ReadonlyArray<{ name: string; jurisdiction: string }> = STAGE3_LESSEES,
+): ScenarioRunResult["topLessees"] {
+  const n = lesseePool.length;
+  if (n === 0) return [];
   const idx1 = Math.floor(seededRand(seed, 20) * n);
+  if (n === 1) {
+    return [{ ...lesseePool[idx1], ecl: parseFloat((s3 * 0.45).toFixed(1)) }];
+  }
   // idx2 starts one step past idx1 then adds 0..n-2, so it can never equal idx1
   const idx2 = (idx1 + 1 + Math.floor(seededRand(seed, 21) * (n - 1))) % n;
   return [
     // Top lessee bears 45% of Stage 3 ECL; second lessee bears 28% (per narrative spec)
-    { ...STAGE3_LESSEES[idx1], ecl: parseFloat((s3 * 0.45).toFixed(1)) },
-    { ...STAGE3_LESSEES[idx2], ecl: parseFloat((s3 * 0.28).toFixed(1)) },
+    { ...lesseePool[idx1], ecl: parseFloat((s3 * 0.45).toFixed(1)) },
+    { ...lesseePool[idx2], ecl: parseFloat((s3 * 0.28).toFixed(1)) },
   ];
 }
 
@@ -151,7 +158,8 @@ function buildRun(
   paths: number,
   seed: number,
   templateId: string | null,
-  presetECL?: number
+  presetECL?: number,
+  lesseePool: ReadonlyArray<{ name: string; jurisdiction: string }> = STAGE3_LESSEES,
 ): ScenarioRunResult {
   const ecl = presetECL ?? computeECL(inputs);
   const stages = computeStages(ecl, inputs);
@@ -190,7 +198,7 @@ function buildRun(
     shapley,
     keyFinding: keyFindings.join(" "),
     scenarioHash: hashFromSeed(seed).slice(0, 12),
-    topLessees: computeTopLessees(stages.s3, seed),
+    topLessees: computeTopLessees(stages.s3, seed, lesseePool),
     s3LeaseCount: computeS3LeaseCount(stages.s3),
   };
 }
@@ -233,7 +241,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4,
     lastRun: "28 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Mild aviation demand shock. RPK −25%, fuel +15%, 3 stage-2 migrations, no bankruptcies.",
-    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15 },
+    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−25%)", contribution: 38, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.4", contribution: 27, direction: "up" },
@@ -248,7 +256,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7,
     lastRun: "27 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "Severe demand shock. RPK −55%, fuel −30%, 8+ bankruptcies, mass deferral requests.",
-    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1 },
+    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 41, direction: "up" },
       { driver: "PD — Stage 3 Multiplier ×2.1", contribution: 28, direction: "up" },
@@ -263,7 +271,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3,
     lastRun: "25 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Sustained fuel price increase of 40% vs baseline. Low-cost carriers most exposed.",
-    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2 },
+    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
     shapley: [
       { driver: "Fuel Price Shock (+40%)", contribution: 43, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.6", contribution: 30, direction: "up" },
@@ -278,7 +286,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1,
     lastRun: "25 Apr 2026", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
     description: "EM sovereign stress. India, Brazil, Indonesia CDS widen +250bps. FX pressure −15%.",
-    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5 },
+    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
     shapley: [
       { driver: "Sovereign CDS Widening (+250bps)", contribution: 36, direction: "up" },
       { driver: "FX Basket Move (−15%)", contribution: 29, direction: "up" },
@@ -293,7 +301,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5,
     lastRun: "22 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "EM currency basket −35% vs USD. Rent-to-revenue ratios spike. 6+ lessee distress events.",
-    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8 },
+    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
     shapley: [
       { driver: "FX Basket Move (−35%)", contribution: 48, direction: "up" },
       { driver: "Rent-to-Revenue Ratio Spike", contribution: 27, direction: "up" },
@@ -308,7 +316,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8,
     lastRun: "14 Jan 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.08)",
     description: "Sudden fleet detention in 2 jurisdictions. Repossession impossible. Full LGD on 12 aircraft.",
-    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8 },
+    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0 },
     shapley: [
       { driver: "Jurisdiction: Full LGD (100%)", contribution: 52, direction: "up" },
       { driver: "Aircraft Detention (12 assets)", contribution: 29, direction: "up" },
@@ -391,6 +399,12 @@ function generateDSL(
         asset_value_delta_pct: inputs.assetValueDelta,
         pd_override_stage2_multiplier: inputs.pdS2Multi,
         pd_override_stage3_multiplier: inputs.pdS3Multi,
+        deferral_months: inputs.deferralMonths,
+        govt_support_prob: inputs.govtSupportProb,
+        forgiveness_rate: inputs.forgivenessRate,
+        pbh_conversion_pct: inputs.pbhConversionPct,
+        etp_rate: inputs.etpRate,
+        lec_rate: inputs.lecRate,
       },
       run_config: {
         mode: mode === "deterministic" ? "deterministic" : "monte_carlo",
@@ -433,6 +447,12 @@ function parseDSL(text: string): { ok: boolean; inputs?: ScenarioInputs; name?: 
         assetValueDelta: s.asset_value_delta_pct ?? 0,
         pdS2Multi: s.pd_override_stage2_multiplier ?? 1.0,
         pdS3Multi: s.pd_override_stage3_multiplier ?? 1.0,
+        deferralMonths: s.deferral_months ?? 0,
+        govtSupportProb: s.govt_support_prob ?? 0,
+        forgivenessRate: s.forgiveness_rate ?? 0,
+        pbhConversionPct: s.pbh_conversion_pct ?? 0,
+        etpRate: s.etp_rate ?? 0,
+        lecRate: s.lec_rate ?? 0,
       },
     };
   } catch {
@@ -616,7 +636,7 @@ export default function Scenarios() {
         shapley: tpl.shapley,
         keyFinding: tpl.keyFinding,
         scenarioHash: hashFromSeed(seed).slice(0, 12),
-        topLessees: computeTopLessees(stages.s3, seed),
+        topLessees: computeTopLessees(stages.s3, seed, liveStage3Lessees ?? STAGE3_LESSEES),
         s3LeaseCount: computeS3LeaseCount(stages.s3),
       };
       setRuns((prev) => [newRun, ...prev]);
@@ -640,7 +660,7 @@ export default function Scenarios() {
   const customResultRef = useRef<HTMLDivElement>(null);
 
   // ── Live portfolio base ECL ──
-  const { assets, lessees, provisions } = usePortfolioData();
+  const { assets, lessees, leases, provisions, isDemo } = usePortfolioData();
   const liveBaseECL = React.useMemo(
     () => {
       const kpis = toDashboardKPIs(assets, lessees, provisions);
@@ -648,6 +668,29 @@ export default function Scenarios() {
     },
     [assets, lessees, provisions]
   );
+
+  // Derive live Stage 3 lessees from uploaded portfolio for scenario narrative
+  const liveStage3Lessees = React.useMemo(() => {
+    if (isDemo || lessees.length === 0 || provisions.length === 0) return null;
+    const assetToLesseeId = new Map<string, string>();
+    for (const lease of leases) {
+      assetToLesseeId.set(lease.asset_id, lease.lessee_id);
+    }
+    const stage3Ids = new Set<string>();
+    for (const p of provisions) {
+      if (p.stage === 3) {
+        const lid = assetToLesseeId.get(p.asset_id);
+        if (lid) stage3Ids.add(lid);
+      }
+    }
+    if (stage3Ids.size === 0) return null;
+    return lessees
+      .filter((l) => stage3Ids.has(l.id))
+      .map((l) => ({
+        name: l.name,
+        jurisdiction: (l as { country?: string }).country ?? "Unknown",
+      }));
+  }, [isDemo, lessees, leases, provisions]);
 
   // ── Clone / Branch state ──
   const [branchFromId, setBranchFromId] = useState<string | null>(null);
@@ -694,7 +737,7 @@ export default function Scenarios() {
     const duration = customMode === "deterministic" ? 1800 : 3200;
     setTimeout(() => {
       const seed = Math.floor(Math.random() * 9999) + 1;
-      const newRun = buildRun(customName || "Custom Scenario", formInputs, customMode, customPaths, seed, null, computeECLFromBase(liveBaseECL, formInputs));
+      const newRun = buildRun(customName || "Custom Scenario", formInputs, customMode, customPaths, seed, null, computeECLFromBase(liveBaseECL, formInputs), liveStage3Lessees ?? STAGE3_LESSEES);
       if (branchFromId) { (newRun as ScenarioRunResult).parentId = branchFromId; }
       setRuns((prev) => [newRun, ...prev]);
       setCustomResultId(newRun.id);
@@ -784,18 +827,19 @@ export default function Scenarios() {
       </PageHeader>
 
       {/* ── Tabs ── */}
-      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginTop: "-1.5rem", width: "fit-content" }}>
-        {tabs.map((tab) => (
-          <button key={tab} className="tab-btn" onClick={() => setActiveTab(tab)} style={TAB_STYLE(activeTab === tab)}
-            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
-            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
-          >
+      <PillTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        style={{ marginTop: "-1.5rem" }}
+        renderTab={(tab, isActive) => (
+          <>
             {tab}
             {tab === "Run History" && (
               <span
                 style={{
                   fontSize: "0.6875rem", fontWeight: 600,
-                  background: activeTab === "Run History" ? "rgba(255,255,255,0.25)" : "#002147",
+                  background: isActive ? "rgba(255,255,255,0.25)" : "#002147",
                   color: "#FFFFFF",
                   borderRadius: "0.75rem", padding: "0.1rem 0.4rem",
                 }}
@@ -803,9 +847,9 @@ export default function Scenarios() {
                 {runs.length}
               </span>
             )}
-          </button>
-        ))}
-      </div>
+          </>
+        )}
+      />
 
       {/* ══ LIBRARY TAB ══════════════════════════════════════════════════════ */}
       {activeTab === "Library" && (
@@ -1139,7 +1183,8 @@ export default function Scenarios() {
                   ))}
                 </div>
 
-                {/* Action button */}
+                {/* Action button + helper text — allow text to wrap on narrow widths */}
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
                 <button
                   onClick={() => {
                     const patch: Record<string, number> = {};
@@ -1150,7 +1195,7 @@ export default function Scenarios() {
                     setCalBannerDismissed(true);
                   }}
                   style={{
-                    padding: "0.4rem 1rem",
+                    padding: "0.4rem 1.25rem",
                     borderRadius: "0.375rem",
                     border: "1px solid #B45309",
                     background: "#B45309",
@@ -1158,19 +1203,27 @@ export default function Scenarios() {
                     fontSize: "0.8125rem",
                     fontWeight: 700,
                     cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.375rem",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
                   }}
                 >
-                  <><Zap size={13} style={{ marginRight: "4px" }} /> Pre-populate from market data</>
+                  <Zap size={13} /> Pre-populate from market data
                 </button>
                 <span
                   style={{
                     marginLeft: "0.75rem",
                     fontSize: "0.75rem",
                     color: "#94A3B8",
+                    maxWidth: "340px",
+                    lineHeight: 1.5,
                   }}
                 >
                   Sets Fuel +14.3%, GDP −0.6pp, EUR/USD −2.0% · You can adjust before running
                 </span>
+                </div>{/* end flex-wrap row */}
               </div>
             )}
 
@@ -1180,7 +1233,12 @@ export default function Scenarios() {
               headerRight={
                 <button
                   onClick={() => setEditorMode(editorMode === "form" ? "dsl" : "form")}
-                  style={{ ...BTN_OUTLINE, padding: "0.3rem 0.75rem", fontSize: "0.8125rem" }}
+                  style={{
+                    ...BTN_OUTLINE,
+                    padding: "0.3rem 0.75rem", fontSize: "0.8125rem",
+                    color: "rgba(255,255,255,0.85)",
+                    borderColor: "rgba(255,255,255,0.3)",
+                  }}
                 >
                   {editorMode === "form" ? "Switch to DSL" : "Switch to Form"}
                 </button>
