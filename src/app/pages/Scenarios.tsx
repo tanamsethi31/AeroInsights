@@ -329,6 +329,77 @@ const TEMPLATES: Template[] = [
     p5Factor: 0.72, p95Factor: 1.42,
     keyFinding: "Full asset detention in 2 jurisdictions. 12 aircraft at zero recovery. ECL 415% above baseline. CTC Alt-A not enforceable in scenario jurisdiction.",
   },
+
+  // ── Distress Scenarios ────────────────────────────────────────────────────
+  {
+    id: "TPL-D01", name: "COVID-Style Deferral Wave", weight: "—", ecl: 88.0,
+    lastRun: "Never", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
+    category: "distress" as const,
+    tags: ["Deferral", "Govt Support", "PBH"],
+    description: "Mass deferral requests across the fleet triggered by a severe traffic collapse. Government backstops ~35% of exposure. Half of deferred rent forgiven. 20% of fleet switches to Power-by-Hour.",
+    inputs: {
+      gdpDelta: -0.03, rpkDelta: -0.55, fuelDelta: -0.30,
+      fxDelta: 0, rateDelta: -0.005, assetValueDelta: 0,
+      pdS2Multi: 1.0, pdS3Multi: 1.0,
+      deferralMonths: 9, govtSupportProb: 0.35, forgivenessRate: 0.50,
+      pbhConversionPct: 0.20, etpRate: 0, lecRate: 0,
+    },
+    shapley: [
+      { driver: "RPK / Traffic Shock (−55%)", contribution: 42, direction: "up" as const },
+      { driver: "Deferral Penalty (9mo × 50% forgiven)", contribution: 28, direction: "up" as const },
+      { driver: "GDP Contraction (−3%)", contribution: 15, direction: "up" as const },
+      { driver: "Govt Support (−35% offset)", contribution: 10, direction: "down" as const },
+      { driver: "PBH Conversion (−20% fleet)", contribution: 5, direction: "down" as const },
+    ],
+    p5Factor: 0.60, p95Factor: 1.98,
+    keyFinding: "Deferral penalty adds $8.4M above macro ECL. Government support mitigates $4.5M. PBH conversion recovers $1.4M. Net distress impact: +$6.9M vs macro-only equivalent.",
+  },
+  {
+    id: "TPL-D02", name: "Bilateral Restructuring", weight: "—", ecl: 80.2,
+    lastRun: "Never", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
+    category: "distress" as const,
+    tags: ["Deferral", "Govt Support", "ETP", "LEC"],
+    description: "Single lessee in distress. Negotiated 6-month deferral with 60% government backstop and 25% forgiveness. Lessor recovers ETP (15%) and LEC (10%) on restructured leases.",
+    inputs: {
+      gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0,
+      fxDelta: 0, rateDelta: 0, assetValueDelta: 0,
+      pdS2Multi: 1.5, pdS3Multi: 2.0,
+      deferralMonths: 6, govtSupportProb: 0.60, forgivenessRate: 0.25,
+      pbhConversionPct: 0, etpRate: 0.15, lecRate: 0.10,
+    },
+    shapley: [
+      { driver: "Stage 3 PD Multiplier ×2.0", contribution: 45, direction: "up" as const },
+      { driver: "Stage 2 PD Multiplier ×1.5", contribution: 22, direction: "up" as const },
+      { driver: "RPK Shock (−20%)", contribution: 18, direction: "up" as const },
+      { driver: "ETP Recovery (15%)", contribution: 9, direction: "down" as const },
+      { driver: "LEC Recovery (10%)", contribution: 6, direction: "down" as const },
+    ],
+    p5Factor: 0.62, p95Factor: 1.91,
+    keyFinding: "High govt support (60%) significantly dampens deferral ECL. ETP + LEC together recover $1.8M. Net deferral impact after mitigation: +$0.9M. Strong PD stress drives the bulk of ECL uplift.",
+  },
+  {
+    id: "TPL-D03", name: "Early Termination Wave", weight: "—", ecl: 60.9,
+    lastRun: "Never", color: "#15803D", bg: "rgba(21,128,61,0.05)",
+    category: "distress" as const,
+    tags: ["ETP", "LEC", "Asset Stress"],
+    description: "Lessor-driven early terminations to maximise recovery before defaults crystallise. Short 3-month deferral with minimal forgiveness. Strong ETP (35%) and LEC (20%) recovery partially offsets losses.",
+    inputs: {
+      gdpDelta: 0, rpkDelta: 0, fuelDelta: 0,
+      fxDelta: 0, rateDelta: 0, assetValueDelta: -0.15,
+      pdS2Multi: 1.8, pdS3Multi: 1.0,
+      deferralMonths: 3, govtSupportProb: 0, forgivenessRate: 0.10,
+      pbhConversionPct: 0, etpRate: 0.35, lecRate: 0.20,
+    },
+    shapley: [
+      { driver: "Stage 2 PD Multiplier ×1.8", contribution: 38, direction: "up" as const },
+      { driver: "Asset Value Decline (−15%)", contribution: 32, direction: "up" as const },
+      { driver: "ETP Recovery (35%)", contribution: 20, direction: "down" as const },
+      { driver: "LEC Recovery (20%)", contribution: 8, direction: "down" as const },
+      { driver: "Deferral Penalty (3mo × 10%)", contribution: 2, direction: "up" as const },
+    ],
+    p5Factor: 0.65, p95Factor: 1.82,
+    keyFinding: "Lessor mitigation is the story here: ETP + LEC together recover $2.8M, nearly eliminating the deferral penalty. Net distress impact: −$0.9M (mitigation exceeds penalty). ECL driven primarily by asset value decline and Stage 2 migration.",
+  },
 ];
 
 // ─── Pre-seeded Run History ───────────────────────────────────────────────────
