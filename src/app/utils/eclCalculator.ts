@@ -96,7 +96,10 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
   const etpBenefit = inputs.etpRate          * baseECL * 0.08;
   const lecBenefit = inputs.lecRate          * baseECL * 0.05;
 
-  // LGD regime adjustment — null = no adjustment; unknown key = 0 (graceful fallback)
+  // LGD regime adjustment — null = no adjustment; unknown key = 0 (graceful fallback).
+  // Note: like the mitigation benefits above, lgdDelta scales with baseECL (not absolute).
+  // This is intentional: LGD adjustments represent a % of base exposure, not a fixed $ amount.
+  // In contrast, macroDelta uses fixed coefficients and does NOT scale with baseECL.
   const lgdDelta = inputs.bankruptcyScenarioType !== null
     ? (LGD_DELTAS[inputs.bankruptcyScenarioType] ?? 0) * baseECL
     : 0;

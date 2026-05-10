@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   BASE_ECL,
+  LGD_DELTAS,
   ZERO_INPUTS,
   computeECL,
   computeECLFromBase,
@@ -158,4 +159,12 @@ describe("insolvency regime LGD adjustment", () => {
     };
     expect(computeECLFromBase(47.2, extreme)).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
   });
+
+  it.each(Object.entries(LGD_DELTAS))(
+    "regime '%s' adjusts ECL by its calibrated factor",
+    (regime, factor) => {
+      const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: regime });
+      expect(result).toBeCloseTo(47.2 * (1 + factor), 5);
+    }
+  );
 });
