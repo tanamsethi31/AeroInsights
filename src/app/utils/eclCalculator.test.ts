@@ -27,7 +27,9 @@ describe("computeECLFromBase", () => {
     expect(computeECLFromBase(BASE_ECL, inputs)).toBeCloseTo(computeECL(inputs), 5);
   });
 
-  it("scales proportionally with different base ECL", () => {
+  it("scales proportionally with different base ECL when all mitigation rates are zero", () => {
+  // Proportionality only holds with ZERO_INPUTS: mitigation benefits scale with baseECL,
+  // so different baseECL values would not produce a 2x ratio if pbhConversionPct/etpRate/lecRate were non-zero.
     const inputs = ZERO_INPUTS;
     const r1 = computeECLFromBase(47.2, inputs);
     const r2 = computeECLFromBase(94.4, inputs);
