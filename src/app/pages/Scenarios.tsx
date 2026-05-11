@@ -7,6 +7,8 @@ import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { InsolvencyTab } from "../components/scenarios/InsolvencyTab";
 import { LeasePricingTab } from "../components/scenarios/LeasePricingTab";
+import { JurisdictionRiskTab } from "../components/scenarios/JurisdictionRiskTab";
+import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { StatusPill } from "../components/ui/StatusPill";
 import {
   Play,
@@ -244,7 +246,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4, category: "macro" as const,
     lastRun: "28 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Mild aviation demand shock. RPK −25%, fuel +15%, 3 stage-2 migrations, no bankruptcies.",
-    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
+    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−25%)", contribution: 38, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.4", contribution: 27, direction: "up" },
@@ -259,7 +261,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7, category: "macro" as const,
     lastRun: "27 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "Severe demand shock. RPK −55%, fuel −30%, 8+ bankruptcies, mass deferral requests.",
-    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
+    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 41, direction: "up" },
       { driver: "PD — Stage 3 Multiplier ×2.1", contribution: 28, direction: "up" },
@@ -274,7 +276,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Sustained fuel price increase of 40% vs baseline. Low-cost carriers most exposed.",
-    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
+    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0 },
     shapley: [
       { driver: "Fuel Price Shock (+40%)", contribution: 43, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.6", contribution: 30, direction: "up" },
@@ -289,7 +291,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
     description: "EM sovereign stress. India, Brazil, Indonesia CDS widen +250bps. FX pressure −15%.",
-    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
+    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0 },
     shapley: [
       { driver: "Sovereign CDS Widening (+250bps)", contribution: 36, direction: "up" },
       { driver: "FX Basket Move (−15%)", contribution: 29, direction: "up" },
@@ -304,7 +306,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5, category: "macro" as const,
     lastRun: "22 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "EM currency basket −35% vs USD. Rent-to-revenue ratios spike. 6+ lessee distress events.",
-    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
+    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0 },
     shapley: [
       { driver: "FX Basket Move (−35%)", contribution: 48, direction: "up" },
       { driver: "Rent-to-Revenue Ratio Spike", contribution: 27, direction: "up" },
@@ -319,7 +321,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8, category: "macro" as const,
     lastRun: "14 Jan 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.08)",
     description: "Sudden fleet detention in 2 jurisdictions. Repossession impossible. Full LGD on 12 aircraft.",
-    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null },
+    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0 },
     shapley: [
       { driver: "Jurisdiction: Full LGD (100%)", contribution: 52, direction: "up" },
       { driver: "Aircraft Detention (12 assets)", contribution: 29, direction: "up" },
@@ -345,6 +347,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 9, govtSupportProb: 0.35, forgivenessRate: 0.50,
       pbhConversionPct: 0.20, etpRate: 0, lecRate: 0,
       bankruptcyScenarioType: null,
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 42, direction: "up" as const },
@@ -369,6 +372,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 6, govtSupportProb: 0.60, forgivenessRate: 0.25,
       pbhConversionPct: 0, etpRate: 0.15, lecRate: 0.10,
       bankruptcyScenarioType: null,
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Multiplier ×2.0", contribution: 45, direction: "up" as const },
@@ -393,6 +397,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 3, govtSupportProb: 0, forgivenessRate: 0.10,
       pbhConversionPct: 0, etpRate: 0.35, lecRate: 0.20,
       bankruptcyScenarioType: null,
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 2 PD Multiplier ×1.8", contribution: 38, direction: "up" as const },
@@ -418,6 +423,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 3, govtSupportProb: 0, forgivenessRate: 0,
       pbhConversionPct: 0, etpRate: 0, lecRate: 0,
       bankruptcyScenarioType: "chapter11",
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 55, direction: "up" as const },
@@ -440,6 +446,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
       pbhConversionPct: 0, etpRate: 0, lecRate: 0,
       bankruptcyScenarioType: "india_ibc",
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 48, direction: "up" as const },
@@ -462,6 +469,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
       pbhConversionPct: 0, etpRate: 0, lecRate: 0,
       bankruptcyScenarioType: "mexico_concurso",
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×1.8)", contribution: 52, direction: "up" as const },
@@ -484,6 +492,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
       pbhConversionPct: 0, etpRate: 0, lecRate: 0,
       bankruptcyScenarioType: "brazil_rj",
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 44, direction: "up" as const },
@@ -506,6 +515,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
       pbhConversionPct: 0, etpRate: 0, lecRate: 0,
       bankruptcyScenarioType: "indonesia_pkpu",
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 38, direction: "up" as const },
@@ -528,6 +538,7 @@ const TEMPLATES: Template[] = [
       deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
       pbhConversionPct: 0, etpRate: 0, lecRate: 0,
       bankruptcyScenarioType: "generic_liquidation",
+      ctcGoldPct: 0, nonCtcPct: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×3.5)", contribution: 40, direction: "up" as const },
@@ -616,6 +627,10 @@ function generateDSL(
         pbh_conversion_pct: inputs.pbhConversionPct,
         etp_rate: inputs.etpRate,
         lec_rate: inputs.lecRate,
+        // Jurisdiction risk — omitted when both are 0 (feature inactive = CTC Gold baseline)
+        ...(inputs.ctcGoldPct !== 0 || inputs.nonCtcPct !== 0
+          ? { ctc_gold_pct: inputs.ctcGoldPct, non_ctc_pct: inputs.nonCtcPct }
+          : {}),
       },
       run_config: {
         mode: mode === "deterministic" ? "deterministic" : "monte_carlo",
@@ -665,6 +680,12 @@ function parseDSL(text: string): { ok: boolean; inputs?: ScenarioInputs; name?: 
         etpRate: s.etp_rate ?? 0,
         lecRate: s.lec_rate ?? 0,
         bankruptcyScenarioType: parsed.bankruptcy_scenario_type ?? null,
+        ctcGoldPct: typeof s.ctc_gold_pct === "number"
+          ? Math.min(1, Math.max(0, s.ctc_gold_pct))
+          : 0,
+        nonCtcPct: typeof s.non_ctc_pct === "number"
+          ? Math.min(1, Math.max(0, s.non_ctc_pct))
+          : 0,
       },
     };
   } catch {
@@ -885,6 +906,7 @@ export default function Scenarios() {
   const [editorMode, setEditorMode] = useState<"form" | "dsl">("form");
   const [distressOpen, setDistressOpen] = useState(false);
   const [insolvencyOpen, setInsolvencyOpen] = useState(false);
+  const [jurisdictionOpen, setJurisdictionOpen] = useState(false);
 
   const [dslText, setDslText] = useState(() => generateDSL(ZERO_INPUTS, "My Custom Scenario", "deterministic", 10000, 42));
   const [dslErrors, setDslErrors] = useState<string[]>([]);
@@ -925,6 +947,13 @@ export default function Scenarios() {
       }));
   }, [isDemo, lessees, leases, provisions]);
 
+  // Rental-weighted CTC tier mix — used by JurisdictionRiskTab "Use in Custom Builder"
+  // handler and the "From portfolio" button in the Custom Builder Jurisdiction Risk section.
+  const portfolioJurisdictionMix = React.useMemo(
+    () => computePortfolioJurisdictionMix(lessees, leases),
+    [lessees, leases]
+  );
+
   // ── Clone / Branch state ──
   const [branchFromId, setBranchFromId] = useState<string | null>(null);
   const [clonePending, setClonePending] = useState<{
@@ -947,7 +976,8 @@ export default function Scenarios() {
       next!.etpRate !== 0 || next!.lecRate !== 0;
     if (hasDistress) setDistressOpen(true);
     if (next!.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
-  }, [customName, customMode, customPaths, customSeed, setDistressOpen, setInsolvencyOpen]);
+    if (next!.ctcGoldPct !== 0 || next!.nonCtcPct !== 0) setJurisdictionOpen(true);
+  }, [customName, customMode, customPaths, customSeed, setDistressOpen, setInsolvencyOpen, setJurisdictionOpen]);
 
   // Read agent-injected inputs when Custom Builder tab becomes active
   useEffect(() => {
@@ -1013,6 +1043,7 @@ export default function Scenarios() {
     setActiveTab("Custom Builder");
     // Auto-expand collapsible sections when cloned inputs carry non-default values
     if (clonePending.inputs.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
+    if (clonePending.inputs.ctcGoldPct !== 0 || clonePending.inputs.nonCtcPct !== 0) setJurisdictionOpen(true);
     setClonePending(null);
   }, [clonePending, customSeed]);
 
@@ -1049,7 +1080,7 @@ export default function Scenarios() {
 
   const tabs = isExecutiveMode
     ? EXEC_SCENARIO_TABS
-    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Lease Pricing"];
+    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Lease Pricing"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2290,6 +2321,151 @@ export default function Scenarios() {
                     );
                   })()}
 
+                  {/* ── Jurisdiction Risk — collapsible ── */}
+                  {(() => {
+                    const goldPct  = formInputs.ctcGoldPct;
+                    const nonCtcP  = formInputs.nonCtcPct;
+                    const modPct   = Math.max(0, 1 - goldPct - nonCtcP);
+                    const isActive = goldPct !== 0 || nonCtcP !== 0;
+
+                    // Impact values relative to liveBaseECL
+                    const modImpact    = modPct   * 0.06 * liveBaseECL;
+                    const nonCtcImpact = nonCtcP  * 0.15 * liveBaseECL;
+                    const totalUplift  = modImpact + nonCtcImpact;
+
+                    return (
+                      <div style={{ margin: "1rem 0", border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
+                        {/* Section header */}
+                        <button
+                          onClick={() => setJurisdictionOpen((o) => !o)}
+                          style={{
+                            width: "100%", display: "flex", alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "0.625rem 0.875rem",
+                            background: jurisdictionOpen ? "rgba(0,33,71,0.03)" : "#FAFAFA",
+                            border: "none", cursor: "pointer",
+                            borderBottom: jurisdictionOpen ? "1px solid #E2E8F0" : "none",
+                            transition: "background 150ms",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                              Jurisdiction Risk
+                            </span>
+                            {isActive ? (
+                              <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.5rem", borderRadius: "9999px", background: "#002147", color: "#FFFFFF" }}>
+                                Mod {(modPct * 100).toFixed(0)}%
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.6875rem", color: "#CBD5E1" }}>None (CTC Gold baseline)</span>
+                            )}
+                          </div>
+                          <svg
+                            width="12" height="12" viewBox="0 0 12 12" fill="none"
+                            style={{ transform: jurisdictionOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms cubic-bezier(0.23,1,0.32,1)", color: "#94A3B8" }}
+                          >
+                            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+
+                        {/* Collapsible body */}
+                        <AnimatePresence initial={false}>
+                          {jurisdictionOpen && (
+                            <motion.div
+                              key="jurisdiction-body"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                              style={{ overflow: "hidden" }}
+                            >
+                              <div style={{ padding: "0.875rem" }}>
+                                {/* CTC Gold slider */}
+                                <SliderRow
+                                  label="CTC Gold"
+                                  min={0} max={1} step={0.05}
+                                  value={goldPct}
+                                  onChange={(v) => updateFormInputs({ ctcGoldPct: v })}
+                                  fmt={(v) => `${(v * 100).toFixed(0)}%`}
+                                />
+
+                                {/* Non-CTC slider — clamped so gold + nonCtc ≤ 1 */}
+                                <SliderRow
+                                  label="Non-CTC"
+                                  min={0} max={1} step={0.05}
+                                  value={nonCtcP}
+                                  onChange={(v) =>
+                                    updateFormInputs({
+                                      nonCtcPct: Math.min(v, Math.max(0, 1 - goldPct)),
+                                    })
+                                  }
+                                  fmt={(v) => `${(v * 100).toFixed(0)}%`}
+                                />
+
+                                {/* Derived CTC Moderate read-only label */}
+                                <div style={{ fontSize: "0.8125rem", color: "#B45309", fontWeight: 500, marginBottom: "0.75rem" }}>
+                                  CTC Moderate: {(modPct * 100).toFixed(0)}%
+                                </div>
+
+                                {/* "From portfolio" button */}
+                                <button
+                                  onClick={() =>
+                                    updateFormInputs({
+                                      ctcGoldPct: portfolioJurisdictionMix.ctcGoldPct,
+                                      nonCtcPct:  portfolioJurisdictionMix.nonCtcPct,
+                                    })
+                                  }
+                                  title="Computed from your portfolio's lessee country mix, weighted by monthly rental."
+                                  style={{
+                                    display: "flex", alignItems: "center", gap: "0.375rem",
+                                    background: "transparent", color: "#475569",
+                                    border: "1px solid #E2E8F0", borderRadius: "9999px",
+                                    padding: "0.375rem 0.75rem", fontSize: "0.8125rem",
+                                    fontWeight: 500, cursor: "pointer", marginBottom: "0.75rem",
+                                  }}
+                                >
+                                  From portfolio
+                                </button>
+
+                                {/* Net impact line — only when active and portfolio ECL loaded */}
+                                {isActive && liveBaseECL > 0 && (
+                                  <div style={{
+                                    padding: "0.625rem 0.75rem",
+                                    background: "#F8FAFC", borderRadius: "0.375rem",
+                                    border: "1px solid #E2E8F0",
+                                    fontSize: "0.75rem", color: "#475569",
+                                    display: "flex", gap: "0.75rem", flexWrap: "wrap",
+                                  }}>
+                                    <span>
+                                      CTC Moderate{" "}
+                                      <span style={{ fontWeight: 700, color: "#B91C1C", fontVariantNumeric: "tabular-nums" }}>
+                                        +${modImpact.toFixed(1)}M
+                                      </span>
+                                    </span>
+                                    <span style={{ color: "#CBD5E1" }}>·</span>
+                                    <span>
+                                      Non-CTC{" "}
+                                      <span style={{ fontWeight: 700, color: "#B91C1C", fontVariantNumeric: "tabular-nums" }}>
+                                        +${nonCtcImpact.toFixed(1)}M
+                                      </span>
+                                    </span>
+                                    <span style={{ color: "#CBD5E1" }}>·</span>
+                                    <span>
+                                      Total uplift{" "}
+                                      <span style={{ fontWeight: 700, color: totalUplift > 0 ? "#B91C1C" : "#94A3B8", fontVariantNumeric: "tabular-nums" }}>
+                                        +${totalUplift.toFixed(1)}M
+                                      </span>
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
+
                   {/* Live ECL preview */}
                   <div style={{ marginTop: "1rem", padding: "0.875rem", background: "rgba(0,33,71,0.04)", border: "1px solid rgba(0,33,71,0.1)", borderRadius: "0.375rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2325,6 +2501,7 @@ export default function Scenarios() {
                         setDslText(generateDSL(ZERO_INPUTS, customName, customMode, customPaths, customSeed));
                         setDistressOpen(false);
                         setInsolvencyOpen(false);
+                        setJurisdictionOpen(false);
                       }}
                       style={{ ...BTN_OUTLINE, fontSize: "0.8125rem" }}
                     >
@@ -2682,6 +2859,17 @@ export default function Scenarios() {
 
       {/* ══ INSOLVENCY REGIMES TAB ══════════════════════════════════════ */}
       {activeTab === "Insolvency Regimes" && <InsolvencyTab />}
+
+      {/* ══ JURISDICTION RISK TAB ═══════════════════════════════════════ */}
+      {activeTab === "Jurisdiction Risk" && (
+        <JurisdictionRiskTab
+          onUseInCustomBuilder={(gold, nonCtc) => {
+            updateFormInputs({ ctcGoldPct: gold, nonCtcPct: nonCtc });
+            setJurisdictionOpen(true);
+            setActiveTab("Custom Builder");
+          }}
+        />
+      )}
 
       {/* ══ LEASE PRICING TAB ═══════════════════════════════════════════ */}
       {activeTab === "Lease Pricing" && <LeasePricingTab />}
