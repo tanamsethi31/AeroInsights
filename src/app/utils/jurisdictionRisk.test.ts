@@ -121,3 +121,43 @@ describe("computePortfolioJurisdictionMix", () => {
     expect(result.rows).toHaveLength(0);
   });
 });
+
+describe("avgRepossP50Months (Sprint 19)", () => {
+  it("empty input → avgRepossP50Months = 0", () => {
+    const result = computePortfolioJurisdictionMix([], []);
+    expect(result.avgRepossP50Months).toBe(0);
+  });
+
+  it("single lessee in United States → repossP50 = 3", () => {
+    const result = computePortfolioJurisdictionMix(
+      [makeLessee("l1", "US Air", "United States")],
+      [makeLease("l1", 1_000_000)],
+    );
+    // US has repossP50 = 3 months
+    expect(result.avgRepossP50Months).toBeCloseTo(3, 0);
+  });
+
+  it("two lessees — rental-weighted average, not simple average", () => {
+    // Ireland repossP50 = 4 mo, Indonesia = 16 mo (from jurisdictionData)
+    // Rental: Ireland $4M, Indonesia $1M → weighted = (4×4 + 16×1) / 5 = 32/5 = 6.4
+    const lessees = [
+      makeLessee("l1", "Aer Lingus", "Ireland"),
+      makeLessee("l2", "Garuda",     "Indonesia"),
+    ];
+    const leases = [makeLease("l1", 4_000_000), makeLease("l2", 1_000_000)];
+    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const expected = (4 * 4_000_000 + 16 * 1_000_000) / 5_000_000;  // 6.4
+    expect(result.avgRepossP50Months).toBeCloseTo(expected, 1);
+  });
+
+  it("lessee in unknown country → excluded from weighted average (UNKNOWN_REPOSS_P50 guard)", () => {
+    const lessees = [
+      makeLessee("l1", "Known",   "Ireland"),
+      makeLessee("l2", "Unknown", "Fictional Land"),
+    ];
+    const leases = [makeLease("l1", 1_000_000), makeLease("l2", 1_000_000)];
+    const result = computePortfolioJurisdictionMix(lessees, leases);
+    // Only Ireland contributes (repossP50 = 4 months); Fictional Land excluded
+    expect(result.avgRepossP50Months).toBeCloseTo(4, 0);
+  });
+});

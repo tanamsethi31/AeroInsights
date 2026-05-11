@@ -23,15 +23,23 @@ export interface ScenarioInputs {
 
   // ── Insolvency regime ─────────────────────────────────────────────────────
   bankruptcyScenarioType: string | null; // null = no regime selected (zero ECL impact)
+  leaseAssumptionPct: number; // 0–1: fraction of leases debtor elects to assume (keep paying).
+  // §1110 election: assumed leases → airline continues paying → lessor takes no loss on those leases.
+  // 0 = all leases rejected (worst case). 1 = all leases assumed (full rent recovery).
+  // Only active when bankruptcyScenarioType is non-null. Guard: 0 → no benefit.
 
   // ── Jurisdiction risk ─────────────────────────────────────────────────────
   ctcGoldPct: number;    // 0–1: share of fleet in CTC Gold jurisdictions (ctcScore≥80 AND ctcParty:true)
   nonCtcPct: number;     // 0–1: share of fleet in Non-CTC jurisdictions (ctcParty:false AND ctcScore<50)
   // Derived: ctcModeratePct = max(0, 1 − ctcGoldPct − nonCtcPct). Not stored — computed on use.
   // Both default to 0 (feature inactive = all fleet assumed CTC Gold). Backward-compatible with ZERO_INPUTS.
+  repossWeightedMonths: number; // 0 = feature inactive. Rental-weighted P50 repossession timeline (months).
+  // Calibrated against US §1110 benchmark (3 months). Each extra month costs ~2.5% of baseECL.
 
-  // ── Security deposits ─────────────────────────────────────────────────────────
-  depositCoverage: number; // 0–1: recommended deposits as fraction of ECL baseline (0 = no deposits)
+  // ── Security deposits & maintenance reserves ────────────────────────────────
+  depositCoverage: number;          // 0–1: cash security deposits as fraction of ECL baseline
+  maintenanceReserveCoverage: number; // 0–1: maintenance reserves held by lessor as fraction of ECL baseline
+  // MR recovery factor 0.35 (lower than deposits: earmarked for redelivery condition, not rent default)
 
   // ── Payment behaviour ─────────────────────────────────────────────────────────
   payBehaviourCoopPct: number; // 0–1: share of fleet in Cooperative tier (score ≥ 70)
@@ -86,9 +94,12 @@ export const ZERO_INPUTS: ScenarioInputs = {
   etpRate: 0,
   lecRate: 0,
   bankruptcyScenarioType: null,
+  leaseAssumptionPct: 0,
   ctcGoldPct: 0,
   nonCtcPct: 0,
+  repossWeightedMonths: 0,
   depositCoverage: 0,
+  maintenanceReserveCoverage: 0,
   payBehaviourCoopPct: 0,
   payBehaviourAdvPct: 0,
   restructuringType: null,
@@ -136,6 +147,16 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
     ? (LGD_DELTAS[inputs.bankruptcyScenarioType] ?? 0) * baseECL
     : 0;
 
+  // §1110 / lease assumption benefit.
+  // When the airline elects to assume leases (keep paying), ECL on those leases approaches zero.
+  // Each 1% of fleet assumed → −0.25% of baseECL (empirically: assumed aircraft carry ~full rent;
+  // the base LGD_DELTA already reflects the cure window on rejected leases).
+  // Guard: inactive when no bankruptcy type selected, or when leaseAssumptionPct = 0.
+  const assumptionBenefit =
+    inputs.bankruptcyScenarioType !== null && inputs.leaseAssumptionPct > 0
+      ? inputs.leaseAssumptionPct * 0.25 * baseECL
+      : 0;
+
   // Jurisdiction LGD uplift.
   // Guard: when both are 0, feature is inactive (all fleet assumed CTC Gold → 0 uplift).
   // This preserves backward compatibility with ZERO_INPUTS.
@@ -146,10 +167,26 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
       ? 0
       : (ctcModeratePct * 0.06 + inputs.nonCtcPct * 0.15) * baseECL;
 
+  // Repossession timeline LGD uplift.
+  // Guard: 0 = feature inactive (all fleet on US §1110 3-month benchmark).
+  // Per extra month beyond benchmark: 2.5% of baseECL
+  //   (≈ 1.5% aircraft depreciation + 1% foregone rent during proceeding).
+  // Rental-weighted fleet average P50 timeline is computed by computePortfolioJurisdictionMix
+  // and passed in as repossWeightedMonths; benchmarkMonths = 3 (US §1110 gold standard).
+  const REPOSS_BENCHMARK_MONTHS = 3;
+  const repossLGDDelta = inputs.repossWeightedMonths > 0
+    ? Math.max(0, inputs.repossWeightedMonths - REPOSS_BENCHMARK_MONTHS) * 0.025 * baseECL
+    : 0;
+
   // Security deposit benefit — cash collateral reduces LGD on default events.
   // 0.50 factor: deposits drawn at high-PD events; expected recovery ≈ 50 cents per dollar held.
   // depositCoverage = total_deposits / ECL_baseline (not fleet EAD — see creditDeposit.ts).
   const depositBenefit = inputs.depositCoverage * baseECL * 0.50;
+
+  // Maintenance reserve benefit — earmarked pool held by lessor, applied against redelivery
+  // condition shortfall on default. 0.35 factor (lower than deposits): MRs are not freely
+  // drawable against rent arrears — they offset specific maintenance-event costs only.
+  const mrBenefit = inputs.maintenanceReserveCoverage * baseECL * 0.35;
 
   // Payment behaviour delta — regional payment culture adjustment to effective LGD.
   // Adversarial: +12% of baseECL (contested recoveries, high DPD, govt interference).
@@ -161,7 +198,7 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
       ? 0
       : (inputs.payBehaviourAdvPct * 0.12 - inputs.payBehaviourCoopPct * 0.07) * baseECL;
 
-  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta + jurisdictionLGDDelta - depositBenefit + payBehaviourDelta;
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta - assumptionBenefit + jurisdictionLGDDelta + repossLGDDelta - depositBenefit - mrBenefit + payBehaviourDelta;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 

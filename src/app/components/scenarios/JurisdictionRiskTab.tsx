@@ -27,8 +27,8 @@ const TIER_PILL_COLOR: Record<CtcTier, string> = {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function KpiCard({
-  label, value, color, bg,
-}: { label: string; value: string; color: string; bg: string }) {
+  label, value, color, bg, note,
+}: { label: string; value: string; color: string; bg: string; note?: string }) {
   return (
     <div style={{
       background: bg, borderRadius: "0.5rem",
@@ -40,6 +40,7 @@ function KpiCard({
       <div style={{ fontSize: "1.375rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </div>
+      {note && <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>{note}</div>}
     </div>
   );
 }
@@ -62,14 +63,14 @@ function TierPill({ tier }: { tier: CtcTier }) {
 
 interface Props {
   /** Called when user clicks "Use in Custom Builder" — switches tab and pre-fills sliders. */
-  onUseInCustomBuilder: (ctcGoldPct: number, nonCtcPct: number) => void;
+  onUseInCustomBuilder: (ctcGoldPct: number, nonCtcPct: number, repossWeightedMonths: number) => void;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
   const { lessees, leases } = usePortfolioData();
-  const { ctcGoldPct, nonCtcPct, rows } = computePortfolioJurisdictionMix(lessees, leases);
+  const { ctcGoldPct, nonCtcPct, avgRepossP50Months, rows } = computePortfolioJurisdictionMix(lessees, leases);
   const ctcModeratePct = Math.max(0, 1 - ctcGoldPct - nonCtcPct);
 
   // LGD uplift using BASE_ECL (47.2) — consistent with spec calibration.
@@ -89,7 +90,7 @@ export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
       {/* ── KPI row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1rem" }}>
         <KpiCard
           label="CTC Gold"
           value={`${(ctcGoldPct * 100).toFixed(1)}%`}
@@ -113,6 +114,13 @@ export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
           value={uplift > 0 ? `+$${uplift.toFixed(1)}M` : "$0"}
           color={upliftColor}
           bg={upliftBg}
+        />
+        <KpiCard
+          label="Avg Reposs P50"
+          value={avgRepossP50Months > 0 ? `${avgRepossP50Months.toFixed(1)} mo` : "—"}
+          color={avgRepossP50Months > 8 ? "#B91C1C" : avgRepossP50Months > 4 ? "#B45309" : "#15803D"}
+          bg={avgRepossP50Months > 8 ? "#FEE2E2" : avgRepossP50Months > 4 ? "#FEF3C7" : "#DCFCE7"}
+          note="rental-weighted fleet timeline"
         />
       </div>
 
@@ -201,7 +209,7 @@ export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
       {/* ── "Use in Custom Builder" button ── */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
-          onClick={() => onUseInCustomBuilder(ctcGoldPct, nonCtcPct)}
+          onClick={() => onUseInCustomBuilder(ctcGoldPct, nonCtcPct, avgRepossP50Months)}
           disabled={rows.length === 0}
           style={{
             display: "flex", alignItems: "center", gap: "0.375rem",

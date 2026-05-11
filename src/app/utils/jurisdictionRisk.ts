@@ -53,9 +53,9 @@ export function ctcTier(j: Jurisdiction | undefined): CtcTier {
 export function computePortfolioJurisdictionMix(
   lessees: Lessee[],
   leases: Lease[],
-): { ctcGoldPct: number; nonCtcPct: number; rows: JurisdictionRow[] } {
+): { ctcGoldPct: number; nonCtcPct: number; avgRepossP50Months: number; rows: JurisdictionRow[] } {
   if (lessees.length === 0 || leases.length === 0) {
-    return { ctcGoldPct: 0, nonCtcPct: 0, rows: [] };
+    return { ctcGoldPct: 0, nonCtcPct: 0, avgRepossP50Months: 0, rows: [] };
   }
 
   // Build lessee_id → first matching lease with positive rental
@@ -97,23 +97,36 @@ export function computePortfolioJurisdictionMix(
     totalRental += rental;
   }
 
-  if (totalRental === 0) return { ctcGoldPct: 0, nonCtcPct: 0, rows: [] };
+  if (totalRental === 0) return { ctcGoldPct: 0, nonCtcPct: 0, avgRepossP50Months: 0, rows: [] };
 
-  // Second pass: compute weights and tier aggregates
+  // Second pass: compute weights, tier aggregates, and rental-weighted repossession timeline.
+  // Rows with UNKNOWN_REPOSS_P50 (no jurisdiction data) are excluded from the weighted average —
+  // treating them as Non-CTC (worst case) is already reflected in the tier uplift.
   let goldRental = 0;
   let nonCtcRental = 0;
+  let weightedRepossSum = 0;
+  let weightedRepossRental = 0;
 
   for (const row of rawRows) {
     row.weightPct = row.monthlyRental / totalRental;
     if (row.tier === "gold")   goldRental   += row.monthlyRental;
     if (row.tier === "nonCtc") nonCtcRental += row.monthlyRental;
+    if (row.repossP50 < UNKNOWN_REPOSS_P50) {
+      weightedRepossSum    += row.repossP50 * row.monthlyRental;
+      weightedRepossRental += row.monthlyRental;
+    }
   }
 
   rawRows.sort((a, b) => b.weightPct - a.weightPct);
 
+  const avgRepossP50Months = weightedRepossRental > 0
+    ? weightedRepossSum / weightedRepossRental
+    : 0;
+
   return {
-    ctcGoldPct: goldRental / totalRental,
-    nonCtcPct: nonCtcRental / totalRental,
-    rows: rawRows,
+    ctcGoldPct:          goldRental / totalRental,
+    nonCtcPct:           nonCtcRental / totalRental,
+    avgRepossP50Months,
+    rows:                rawRows,
   };
 }

@@ -329,3 +329,103 @@ describe("payment behaviour delta", () => {
     ).not.toThrow();
   });
 });
+
+describe("repossession timeline LGD uplift (Sprint 19)", () => {
+  it("repossWeightedMonths = 0 → feature inactive, ECL unchanged", () => {
+    expect(computeECLFromBase(47.2, ZERO_INPUTS)).toBeCloseTo(47.2, 5);
+  });
+
+  it("repossWeightedMonths = 3 (US benchmark) → no uplift (0 extra months)", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, repossWeightedMonths: 3 });
+    expect(result).toBeCloseTo(47.2, 5);
+  });
+
+  it("repossWeightedMonths = 7 → uplift = (7-3) × 0.025 × 47.2 = 4.72", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, repossWeightedMonths: 7 });
+    expect(result).toBeCloseTo(47.2 + (7 - 3) * 0.025 * 47.2, 4);
+  });
+
+  it("repossWeightedMonths = 14 (Indonesia PKPU) → uplift = 11 × 0.025 × 47.2 = 12.98", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, repossWeightedMonths: 14 });
+    expect(result).toBeCloseTo(47.2 + (14 - 3) * 0.025 * 47.2, 4);
+  });
+
+  it("repossWeightedMonths = 1 (below benchmark) → no uplift (max(0, …) guard)", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, repossWeightedMonths: 1 });
+    expect(result).toBeCloseTo(47.2, 5);
+  });
+
+  it("reposs uplift stacks additively with macro stress", () => {
+    const noReposs = computeECLFromBase(47.2, { ...ZERO_INPUTS, rpkDelta: -0.25 });
+    const withReposs = computeECLFromBase(47.2, { ...ZERO_INPUTS, rpkDelta: -0.25, repossWeightedMonths: 10 });
+    expect(withReposs - noReposs).toBeCloseTo((10 - 3) * 0.025 * 47.2, 4);
+  });
+
+  it("scales with baseECL", () => {
+    const base = 80;
+    const result = computeECLFromBase(base, { ...ZERO_INPUTS, repossWeightedMonths: 8 });
+    expect(result).toBeCloseTo(base + (8 - 3) * 0.025 * base, 4);
+  });
+});
+
+describe("§1110 lease assumption benefit (Sprint 20)", () => {
+  it("leaseAssumptionPct = 0 → no benefit regardless of bankruptcy type", () => {
+    expect(computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: "chapter11", leaseAssumptionPct: 0 }))
+      .toBeCloseTo(47.2 + LGD_DELTAS.chapter11 * 47.2, 4);
+  });
+
+  it("leaseAssumptionPct > 0 with no bankruptcy type → no benefit (guard)", () => {
+    expect(computeECLFromBase(47.2, { ...ZERO_INPUTS, leaseAssumptionPct: 0.5 }))
+      .toBeCloseTo(47.2, 5);
+  });
+
+  it("chapter11, leaseAssumptionPct=0.5 → ECL reduced by 0.5 × 0.25 × 47.2 vs baseline rejection", () => {
+    const rejection  = computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: "chapter11", leaseAssumptionPct: 0 });
+    const assumption = computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: "chapter11", leaseAssumptionPct: 0.5 });
+    expect(rejection - assumption).toBeCloseTo(0.5 * 0.25 * 47.2, 4);
+  });
+
+  it("chapter11, leaseAssumptionPct=1.0 → maximum benefit; ECL = max(floor, base + delta - 0.25×base)", () => {
+    const base = 47.2;
+    const result = computeECLFromBase(base, { ...ZERO_INPUTS, bankruptcyScenarioType: "chapter11", leaseAssumptionPct: 1.0 });
+    const expectedDelta = LGD_DELTAS.chapter11 * base - 1.0 * 0.25 * base;
+    expect(result).toBeCloseTo(Math.max(base * 0.3, base + expectedDelta), 4);
+  });
+
+  it("floor still applies with full assumption + worst-case bankruptcy", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, bankruptcyScenarioType: "generic_liquidation", leaseAssumptionPct: 1.0 });
+    expect(result).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
+  });
+});
+
+describe("maintenance reserve benefit (Sprint 21)", () => {
+  it("maintenanceReserveCoverage = 0 → no benefit", () => {
+    expect(computeECLFromBase(47.2, ZERO_INPUTS)).toBeCloseTo(47.2, 5);
+  });
+
+  it("maintenanceReserveCoverage = 0.10 → reduces ECL by 3.5% of baseECL (factor 0.35)", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, maintenanceReserveCoverage: 0.10 });
+    expect(result).toBeCloseTo(47.2 * (1 - 0.10 * 0.35), 4);
+  });
+
+  it("MR benefit lower than equivalent deposit coverage (0.35 vs 0.50 factor)", () => {
+    const withMR      = computeECLFromBase(47.2, { ...ZERO_INPUTS, maintenanceReserveCoverage: 0.20 });
+    const withDeposit = computeECLFromBase(47.2, { ...ZERO_INPUTS, depositCoverage: 0.20 });
+    expect(withDeposit).toBeLessThan(withMR); // deposits recover more per dollar
+  });
+
+  it("MR and deposit benefits stack additively (combined delta = sum of individual deltas)", () => {
+    const base        = 47.2;
+    const mrOnly      = computeECLFromBase(base, { ...ZERO_INPUTS, maintenanceReserveCoverage: 0.10 });
+    const depositOnly = computeECLFromBase(base, { ...ZERO_INPUTS, depositCoverage: 0.10 });
+    const both        = computeECLFromBase(base, { ...ZERO_INPUTS, maintenanceReserveCoverage: 0.10, depositCoverage: 0.10 });
+    // Additive: delta(both) = delta(mr) + delta(deposit)
+    expect((mrOnly - base) + (depositOnly - base)).toBeCloseTo(both - base, 4);
+  });
+
+  it("scales with baseECL", () => {
+    const base = 80;
+    const result = computeECLFromBase(base, { ...ZERO_INPUTS, maintenanceReserveCoverage: 0.15 });
+    expect(result).toBeCloseTo(base * (1 - 0.15 * 0.35), 4);
+  });
+});

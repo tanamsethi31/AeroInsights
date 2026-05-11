@@ -255,7 +255,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4, category: "macro" as const,
     lastRun: "28 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Mild aviation demand shock. RPK −25%, fuel +15%, 3 stage-2 migrations, no bankruptcies.",
-    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
+    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−25%)", contribution: 38, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.4", contribution: 27, direction: "up" },
@@ -270,7 +270,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7, category: "macro" as const,
     lastRun: "27 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "Severe demand shock. RPK −55%, fuel −30%, 8+ bankruptcies, mass deferral requests.",
-    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
+    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 41, direction: "up" },
       { driver: "PD — Stage 3 Multiplier ×2.1", contribution: 28, direction: "up" },
@@ -285,7 +285,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Sustained fuel price increase of 40% vs baseline. Low-cost carriers most exposed.",
-    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
+    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0 },
     shapley: [
       { driver: "Fuel Price Shock (+40%)", contribution: 43, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.6", contribution: 30, direction: "up" },
@@ -300,7 +300,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
     description: "EM sovereign stress. India, Brazil, Indonesia CDS widen +250bps. FX pressure −15%.",
-    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
+    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0 },
     shapley: [
       { driver: "Sovereign CDS Widening (+250bps)", contribution: 36, direction: "up" },
       { driver: "FX Basket Move (−15%)", contribution: 29, direction: "up" },
@@ -315,7 +315,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5, category: "macro" as const,
     lastRun: "22 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "EM currency basket −35% vs USD. Rent-to-revenue ratios spike. 6+ lessee distress events.",
-    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
+    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0 },
     shapley: [
       { driver: "FX Basket Move (−35%)", contribution: 48, direction: "up" },
       { driver: "Rent-to-Revenue Ratio Spike", contribution: 27, direction: "up" },
@@ -330,7 +330,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8, category: "macro" as const,
     lastRun: "14 Jan 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.08)",
     description: "Sudden fleet detention in 2 jurisdictions. Repossession impossible. Full LGD on 12 aircraft.",
-    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
+    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0 },
     shapley: [
       { driver: "Jurisdiction: Full LGD (100%)", contribution: 52, direction: "up" },
       { driver: "Aircraft Detention (12 assets)", contribution: 29, direction: "up" },
@@ -361,6 +361,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 42, direction: "up" as const },
@@ -390,6 +391,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Multiplier ×2.0", contribution: 45, direction: "up" as const },
@@ -419,6 +421,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 2 PD Multiplier ×1.8", contribution: 38, direction: "up" as const },
@@ -449,6 +452,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 55, direction: "up" as const },
@@ -476,6 +480,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 48, direction: "up" as const },
@@ -503,6 +508,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×1.8)", contribution: 52, direction: "up" as const },
@@ -530,6 +536,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 44, direction: "up" as const },
@@ -557,6 +564,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 38, direction: "up" as const },
@@ -584,6 +592,7 @@ const TEMPLATES: Template[] = [
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
       restructuringType: null,
+      leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×3.5)", contribution: 40, direction: "up" as const },
@@ -674,13 +683,21 @@ function generateDSL(
         pbh_conversion_pct: inputs.pbhConversionPct,
         etp_rate: inputs.etpRate,
         lec_rate: inputs.lecRate,
-        // Jurisdiction risk — omitted when both are 0 (feature inactive = CTC Gold baseline)
-        ...(inputs.ctcGoldPct !== 0 || inputs.nonCtcPct !== 0
-          ? { ctc_gold_pct: inputs.ctcGoldPct, non_ctc_pct: inputs.nonCtcPct }
+        // Jurisdiction risk — omitted when all are 0 (feature inactive = CTC Gold baseline)
+        ...(inputs.ctcGoldPct !== 0 || inputs.nonCtcPct !== 0 || inputs.repossWeightedMonths > 0
+          ? { ctc_gold_pct: inputs.ctcGoldPct, non_ctc_pct: inputs.nonCtcPct, reposs_weighted_months: inputs.repossWeightedMonths }
           : {}),
         // Security deposits — omitted when 0 (feature inactive)
         ...(inputs.depositCoverage !== 0
           ? { deposit_coverage: inputs.depositCoverage }
+          : {}),
+        // Maintenance reserves — omitted when 0 (feature inactive)
+        ...(inputs.maintenanceReserveCoverage !== 0
+          ? { maintenance_reserve_coverage: inputs.maintenanceReserveCoverage }
+          : {}),
+        // Lease assumption pct — omitted when 0 or no regime selected
+        ...(inputs.bankruptcyScenarioType !== null && inputs.leaseAssumptionPct > 0
+          ? { lease_assumption_pct: inputs.leaseAssumptionPct }
           : {}),
         // Payment behaviour — omitted when both are 0 (feature inactive = neutral baseline)
         ...(inputs.payBehaviourCoopPct !== 0 || inputs.payBehaviourAdvPct !== 0
@@ -761,6 +778,15 @@ function parseDSL(text: string): { ok: boolean; inputs?: ScenarioInputs; name?: 
         restructuringType: typeof parsed.restructuring_type === "string" && parsed.restructuring_type in RESTRUCTURING_TYPES
           ? parsed.restructuring_type
           : null,
+        repossWeightedMonths: typeof s.reposs_weighted_months === "number"
+          ? Math.max(0, s.reposs_weighted_months)
+          : 0,
+        leaseAssumptionPct: typeof s.lease_assumption_pct === "number"
+          ? Math.min(1, Math.max(0, s.lease_assumption_pct))
+          : 0,
+        maintenanceReserveCoverage: typeof s.maintenance_reserve_coverage === "number"
+          ? Math.min(1, Math.max(0, s.maintenance_reserve_coverage))
+          : 0,
       },
     };
   } catch {
@@ -1106,8 +1132,8 @@ export default function Scenarios() {
       next.etpRate !== 0 || next.lecRate !== 0 || next.restructuringType !== null;
     if (hasDistress) setDistressOpen(true);
     if (next.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
-    if (next.ctcGoldPct !== 0 || next.nonCtcPct !== 0) setJurisdictionOpen(true);
-    if (next.depositCoverage !== 0) setDepositOpen(true);
+    if (next.ctcGoldPct !== 0 || next.nonCtcPct !== 0 || next.repossWeightedMonths !== 0) setJurisdictionOpen(true);
+    if (next.depositCoverage !== 0 || next.maintenanceReserveCoverage !== 0) setDepositOpen(true);
     if (next.payBehaviourCoopPct !== 0 || next.payBehaviourAdvPct !== 0) setPayBehaviourOpen(true);
   }, [customName, customMode, customPaths, customSeed, setDistressOpen, setInsolvencyOpen, setJurisdictionOpen, setDepositOpen, setPayBehaviourOpen]);
 
@@ -1175,8 +1201,8 @@ export default function Scenarios() {
     setActiveTab("Custom Builder");
     // Auto-expand collapsible sections when cloned inputs carry non-default values
     if (clonePending.inputs.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
-    if (clonePending.inputs.ctcGoldPct !== 0 || clonePending.inputs.nonCtcPct !== 0) setJurisdictionOpen(true);
-    if (clonePending.inputs.depositCoverage !== 0) setDepositOpen(true);
+    if (clonePending.inputs.ctcGoldPct !== 0 || clonePending.inputs.nonCtcPct !== 0 || clonePending.inputs.repossWeightedMonths !== 0) setJurisdictionOpen(true);
+    if (clonePending.inputs.depositCoverage !== 0 || clonePending.inputs.maintenanceReserveCoverage !== 0) setDepositOpen(true);
     if (clonePending.inputs.payBehaviourCoopPct !== 0 || clonePending.inputs.payBehaviourAdvPct !== 0) setPayBehaviourOpen(true);
     setClonePending(null);
   }, [clonePending, customSeed]);
@@ -2505,21 +2531,53 @@ export default function Scenarios() {
                                   </p>
                                 )}
 
-                                {/* LGD impact line — only when a regime is selected and portfolio ECL is loaded */}
-                                {selectedRegime !== null && liveBaseECL > 0 && (
-                                  <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.75rem", background: "#F8FAFC", borderRadius: "0.375rem", border: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#475569", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-                                    <span>
-                                      LGD adjustment{" "}
-                                      <span style={{ fontWeight: 700, color: isLgdPositive ? "#B91C1C" : "#15803D", fontVariantNumeric: "tabular-nums" }}>
-                                        {isLgdPositive ? "+" : "−"}${Math.abs(lgdImpact).toFixed(1)}M
-                                      </span>
-                                    </span>
-                                    <span style={{ color: "#CBD5E1" }}>·</span>
-                                    <span style={{ color: "#64748B" }}>
-                                      {isLgdPositive ? "LGD deterioration" : "Recovery premium"}
-                                    </span>
+                                {/* §1110 Lease Assumption slider — only when regime is selected */}
+                                {selectedRegime !== null && (
+                                  <div style={{ marginTop: "0.875rem" }}>
+                                    <SliderRow
+                                      label="Lease Assumption %"
+                                      min={0} max={1} step={0.05}
+                                      value={formInputs.leaseAssumptionPct}
+                                      onChange={(v) => updateFormInputs({ leaseAssumptionPct: v })}
+                                      fmt={(v) => v === 0 ? "0% (all rejected)" : `${(v * 100).toFixed(0)}% assumed`}
+                                    />
+                                    <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginBottom: "0.75rem", marginTop: "-0.25rem" }}>
+                                      Share of leases the debtor elects to keep (§1110). Each 1% assumed → −0.25% of base ECL.
+                                    </div>
                                   </div>
                                 )}
+
+                                {/* LGD impact line — only when a regime is selected and portfolio ECL is loaded */}
+                                {selectedRegime !== null && liveBaseECL > 0 && (() => {
+                                  const assumptionBenefit = formInputs.leaseAssumptionPct > 0
+                                    ? formInputs.leaseAssumptionPct * 0.25 * liveBaseECL
+                                    : 0;
+                                  return (
+                                    <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.75rem", background: "#F8FAFC", borderRadius: "0.375rem", border: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#475569", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                                      <span>
+                                        LGD adjustment{" "}
+                                        <span style={{ fontWeight: 700, color: isLgdPositive ? "#B91C1C" : "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                          {isLgdPositive ? "+" : "−"}${Math.abs(lgdImpact).toFixed(1)}M
+                                        </span>
+                                      </span>
+                                      {assumptionBenefit > 0 && (
+                                        <>
+                                          <span style={{ color: "#CBD5E1" }}>·</span>
+                                          <span>
+                                            Assumption benefit{" "}
+                                            <span style={{ fontWeight: 700, color: "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                              −${assumptionBenefit.toFixed(1)}M
+                                            </span>
+                                          </span>
+                                        </>
+                                      )}
+                                      <span style={{ color: "#CBD5E1" }}>·</span>
+                                      <span style={{ color: "#64748B" }}>
+                                        {isLgdPositive ? "LGD deterioration" : "Recovery premium"}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </motion.div>
                           )}
@@ -2530,15 +2588,17 @@ export default function Scenarios() {
 
                   {/* ── Jurisdiction Risk — collapsible ── */}
                   {(() => {
-                    const goldPct  = formInputs.ctcGoldPct;
-                    const nonCtcP  = formInputs.nonCtcPct;
-                    const modPct   = Math.max(0, 1 - goldPct - nonCtcP);
-                    const isActive = goldPct !== 0 || nonCtcP !== 0;
+                    const goldPct      = formInputs.ctcGoldPct;
+                    const nonCtcP      = formInputs.nonCtcPct;
+                    const repossMonths = formInputs.repossWeightedMonths;
+                    const modPct       = Math.max(0, 1 - goldPct - nonCtcP);
+                    const isActive     = goldPct !== 0 || nonCtcP !== 0 || repossMonths !== 0;
 
                     // Impact values relative to liveBaseECL
                     const modImpact    = modPct   * 0.06 * liveBaseECL;
                     const nonCtcImpact = nonCtcP  * 0.15 * liveBaseECL;
-                    const totalUplift  = modImpact + nonCtcImpact;
+                    const repossImpact = Math.max(0, repossMonths - 3) * 0.025 * liveBaseECL;
+                    const totalUplift  = modImpact + nonCtcImpact + repossImpact;
 
                     return (
                       <div style={{ margin: "1rem 0", border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
@@ -2614,12 +2674,25 @@ export default function Scenarios() {
                                   CTC Moderate: {(modPct * 100).toFixed(0)}%
                                 </div>
 
+                                {/* Repossession Timeline slider */}
+                                <SliderRow
+                                  label="Reposs P50 (months)"
+                                  min={0} max={24} step={1}
+                                  value={repossMonths}
+                                  onChange={(v) => updateFormInputs({ repossWeightedMonths: v })}
+                                  fmt={(v) => v === 0 ? "Off (US §1110 baseline)" : `${v} mo`}
+                                />
+                                <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginBottom: "0.75rem", marginTop: "-0.25rem" }}>
+                                  Rental-weighted P50 repossession timeline. Benchmark: 3 mo (US §1110). Each extra month +2.5% of base ECL.
+                                </div>
+
                                 {/* "From portfolio" button */}
                                 <button
                                   onClick={() =>
                                     updateFormInputs({
-                                      ctcGoldPct: portfolioJurisdictionMix.ctcGoldPct,
-                                      nonCtcPct:  portfolioJurisdictionMix.nonCtcPct,
+                                      ctcGoldPct:           portfolioJurisdictionMix.ctcGoldPct,
+                                      nonCtcPct:            portfolioJurisdictionMix.nonCtcPct,
+                                      repossWeightedMonths: Math.round(portfolioJurisdictionMix.avgRepossP50Months),
                                     })
                                   }
                                   title="Computed from your portfolio's lessee country mix, weighted by monthly rental."
@@ -2656,6 +2729,17 @@ export default function Scenarios() {
                                         +${nonCtcImpact.toFixed(1)}M
                                       </span>
                                     </span>
+                                    {repossImpact > 0 && (
+                                      <>
+                                        <span style={{ color: "#CBD5E1" }}>·</span>
+                                        <span>
+                                          Reposs timeline{" "}
+                                          <span style={{ fontWeight: 700, color: "#B91C1C", fontVariantNumeric: "tabular-nums" }}>
+                                            +${repossImpact.toFixed(1)}M
+                                          </span>
+                                        </span>
+                                      </>
+                                    )}
                                     <span style={{ color: "#CBD5E1" }}>·</span>
                                     <span>
                                       Total uplift{" "}
@@ -2673,11 +2757,14 @@ export default function Scenarios() {
                     );
                   })()}
 
-                  {/* ── Security Deposits — collapsible ── */}
+                  {/* ── Security Deposits & Maintenance Reserves — collapsible ── */}
                   {(() => {
                     const covPct   = formInputs.depositCoverage;
-                    const isActive = covPct !== 0;
-                    const benefit  = covPct * 0.50 * liveBaseECL;
+                    const mrPct    = formInputs.maintenanceReserveCoverage;
+                    const isActive = covPct !== 0 || mrPct !== 0;
+                    const depositBenefit = covPct * 0.50 * liveBaseECL;
+                    const mrBenefit      = mrPct  * 0.35 * liveBaseECL;
+                    const totalBenefit   = depositBenefit + mrBenefit;
 
                     return (
                       <div style={{ margin: "1rem 0", border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
@@ -2696,14 +2783,14 @@ export default function Scenarios() {
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                             <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                              Security Deposits
+                              Security Deposits &amp; Maint. Reserves
                             </span>
                             {isActive ? (
                               <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.5rem", borderRadius: "9999px", background: "#002147", color: "#FFFFFF" }}>
-                                {(covPct * 100).toFixed(1)}% coverage
+                                −${totalBenefit.toFixed(1)}M benefit
                               </span>
                             ) : (
-                              <span style={{ fontSize: "0.6875rem", color: "#CBD5E1" }}>None (no deposit benefit)</span>
+                              <span style={{ fontSize: "0.6875rem", color: "#CBD5E1" }}>None (no mitigation benefit)</span>
                             )}
                           </div>
                           <svg
@@ -2735,6 +2822,18 @@ export default function Scenarios() {
                                   fmt={(v) => `${(v * 100).toFixed(1)}% of ECL`}
                                 />
 
+                                {/* Maintenance Reserve slider */}
+                                <SliderRow
+                                  label="Maint. Reserve Coverage"
+                                  min={0} max={0.30} step={0.005}
+                                  value={mrPct}
+                                  onChange={(v) => updateFormInputs({ maintenanceReserveCoverage: v })}
+                                  fmt={(v) => `${(v * 100).toFixed(1)}% of ECL`}
+                                />
+                                <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginBottom: "0.75rem", marginTop: "-0.25rem" }}>
+                                  Earmarked for redelivery condition. 0.35× recovery factor (vs 0.50× for cash deposits).
+                                </div>
+
                                 {/* "From portfolio" button */}
                                 <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                   <button
@@ -2756,24 +2855,40 @@ export default function Scenarios() {
                                 </div>
 
                                 {/* Net impact */}
-                                <div style={{
-                                  marginTop: "0.875rem", fontSize: "0.8125rem",
-                                  color: isActive ? "#15803D" : "#94A3B8",
-                                  fontVariantNumeric: "tabular-nums",
-                                }}>
-                                  Deposit Benefit{" "}
-                                  <span style={{ fontWeight: 700 }}>
-                                    {isActive ? `−$${benefit.toFixed(1)}M` : "$0"}
-                                  </span>
-                                  {isActive && (
-                                    <>
-                                      <span style={{ color: "#CBD5E1", margin: "0 0.5rem" }}>·</span>
-                                      <span style={{ color: "#64748B" }}>
-                                        Coverage {(covPct * 100).toFixed(1)}% of ECL baseline
+                                {isActive && liveBaseECL > 0 && (
+                                  <div style={{
+                                    marginTop: "0.875rem", padding: "0.625rem 0.75rem",
+                                    background: "#F0FDF4", borderRadius: "0.375rem",
+                                    border: "1px solid #BBF7D0",
+                                    fontSize: "0.75rem", color: "#475569",
+                                    display: "flex", gap: "0.75rem", flexWrap: "wrap",
+                                  }}>
+                                    {covPct > 0 && (
+                                      <span>
+                                        Deposits{" "}
+                                        <span style={{ fontWeight: 700, color: "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                          −${depositBenefit.toFixed(1)}M
+                                        </span>
                                       </span>
-                                    </>
-                                  )}
-                                </div>
+                                    )}
+                                    {covPct > 0 && mrPct > 0 && <span style={{ color: "#CBD5E1" }}>·</span>}
+                                    {mrPct > 0 && (
+                                      <span>
+                                        Maint. Reserves{" "}
+                                        <span style={{ fontWeight: 700, color: "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                          −${mrBenefit.toFixed(1)}M
+                                        </span>
+                                      </span>
+                                    )}
+                                    <span style={{ color: "#CBD5E1" }}>·</span>
+                                    <span>
+                                      Total{" "}
+                                      <span style={{ fontWeight: 700, color: "#15803D", fontVariantNumeric: "tabular-nums" }}>
+                                        −${totalBenefit.toFixed(1)}M
+                                      </span>
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </motion.div>
                           )}
@@ -3395,8 +3510,8 @@ export default function Scenarios() {
       {/* ══ JURISDICTION RISK TAB ═══════════════════════════════════════ */}
       {activeTab === "Jurisdiction Risk" && (
         <JurisdictionRiskTab
-          onUseInCustomBuilder={(gold, nonCtc) => {
-            updateFormInputs({ ctcGoldPct: gold, nonCtcPct: nonCtc });
+          onUseInCustomBuilder={(gold, nonCtc, repossMonths) => {
+            updateFormInputs({ ctcGoldPct: gold, nonCtcPct: nonCtc, repossWeightedMonths: repossMonths });
             setJurisdictionOpen(true);
             setActiveTab("Custom Builder");
           }}
