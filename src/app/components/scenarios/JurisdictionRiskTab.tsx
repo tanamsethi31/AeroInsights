@@ -1,6 +1,6 @@
 // src/app/components/scenarios/JurisdictionRiskTab.tsx
 import { usePortfolioData } from "../../hooks/usePortfolioData";
-import { computePortfolioJurisdictionMix, type CtcTier } from "../../utils/jurisdictionRisk";
+import { computePortfolioJurisdictionMix, type CtcTier, UNKNOWN_REPOSS_P50 } from "../../utils/jurisdictionRisk";
 import { BASE_ECL } from "../../utils/eclCalculator";
 import { Card } from "../ui/Card";
 
@@ -73,10 +73,9 @@ export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
   const ctcModeratePct = Math.max(0, 1 - ctcGoldPct - nonCtcPct);
 
   // LGD uplift using BASE_ECL (47.2) — consistent with spec calibration.
-  const uplift =
-    ctcGoldPct === 0 && nonCtcPct === 0
-      ? 0
-      : (ctcModeratePct * 0.06 + nonCtcPct * 0.15) * BASE_ECL;
+  const uplift = rows.length === 0
+    ? 0
+    : (ctcModeratePct * 0.06 + nonCtcPct * 0.15) * BASE_ECL;
 
   // Non-CTC card thresholds: red >20%, amber >10%, green otherwise
   const nonCtcColor = nonCtcPct > 0.2 ? "#B91C1C" : nonCtcPct > 0.1 ? "#B45309" : "#15803D";
@@ -133,7 +132,7 @@ export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
-                    {["Airline", "Country", "Enforcement Tier", "CTC Score", "Reposs P50", "Weight %"].map((h) => (
+                    {["Airline", "Country", "CTC Tier", "CTC Score", "Reposs P50", "Weight %"].map((h) => (
                       <th key={h} style={{
                         textAlign: h === "Airline" || h === "Country" ? "left" : "right",
                         padding: "0.5rem 0.75rem",
@@ -168,7 +167,7 @@ export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
                         {row.ctcScore > 0 ? row.ctcScore : "—"}
                       </td>
                       <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", color: "#475569", fontVariantNumeric: "tabular-nums" }}>
-                        {row.repossP50 < 99 ? `${row.repossP50} mo` : "—"}
+                        {row.repossP50 < UNKNOWN_REPOSS_P50 ? `${row.repossP50} mo` : "—"}
                       </td>
                       <td style={{ padding: "0.625rem 0.75rem", textAlign: "right", fontWeight: 600, color: "#0F172A", fontVariantNumeric: "tabular-nums" }}>
                         {(row.weightPct * 100).toFixed(1)}%

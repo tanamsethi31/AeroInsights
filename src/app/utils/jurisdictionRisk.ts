@@ -6,7 +6,7 @@ import { jurisdictions, type Jurisdiction } from "../components/jurisdictions/ju
 import type { Lessee, Lease } from "../types/portfolio";
 
 /** Sentinel value for repossP50 when the jurisdiction is not found in jurisdictionData. */
-const UNKNOWN_REPOSS_P50 = 99;
+export const UNKNOWN_REPOSS_P50 = 99;
 
 export type CtcTier = "gold" | "moderate" | "nonCtc";
 
