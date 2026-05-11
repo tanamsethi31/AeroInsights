@@ -36,6 +36,15 @@ export interface ScenarioInputs {
   repossWeightedMonths: number; // 0 = feature inactive. Rental-weighted P50 repossession timeline (months).
   // Calibrated against US §1110 benchmark (3 months). Each extra month costs ~2.5% of baseECL.
 
+  // ── Asset risk (Sprint 22) ────────────────────────────────────────────────
+  /** 0 = feature inactive. Rental-weighted P50 months from repossession to first day of next
+   *  lease. Benchmark: 3 months (baked into base LGD). Each extra month costs ~1.5% of baseECL. */
+  remarketingMonths: number;
+  /** 0 = feature inactive. Rental-weighted LGD adjustment fraction from fleet vintage:
+   *  0 = all young (<10yr), 0.04 = mid-aged mix (10–15yr), 0.10 = aged (>15yr).
+   *  Computed by computePortfolioAssetRisk; passed directly as fraction of baseECL. */
+  vintageAdjFactor: number;
+
   // ── Security deposits & maintenance reserves ────────────────────────────────
   depositCoverage: number;          // 0–1: cash security deposits as fraction of ECL baseline
   maintenanceReserveCoverage: number; // 0–1: maintenance reserves held by lessor as fraction of ECL baseline
@@ -98,6 +107,8 @@ export const ZERO_INPUTS: ScenarioInputs = {
   ctcGoldPct: 0,
   nonCtcPct: 0,
   repossWeightedMonths: 0,
+  remarketingMonths: 0,
+  vintageAdjFactor: 0,
   depositCoverage: 0,
   maintenanceReserveCoverage: 0,
   payBehaviourCoopPct: 0,
@@ -178,6 +189,21 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
     ? Math.max(0, inputs.repossWeightedMonths - REPOSS_BENCHMARK_MONTHS) * 0.025 * baseECL
     : 0;
 
+  // Remarketing timeline LGD uplift (Sprint 22).
+  // Guard: 0 = feature inactive. Benchmark: 3 months (baked into base 45% LGD).
+  // Each extra month: 1.5% of baseECL (≈ $75k storage + foregone rent per WB-equivalent per month).
+  const REMARKETING_BENCHMARK_MONTHS = 3;
+  const remarketingLGDDelta = inputs.remarketingMonths > 0
+    ? Math.max(0, inputs.remarketingMonths - REMARKETING_BENCHMARK_MONTHS) * 0.015 * baseECL
+    : 0;
+
+  // Vintage / aircraft age LGD uplift (Sprint 22).
+  // Guard: 0 = feature inactive. vintageAdjFactor is the rental-weighted adjustment fraction
+  // from computePortfolioAssetRisk; tiers: young=0, mid(10–15yr)=+4%, aged(>15yr)=+10%.
+  const vintageAdjDelta = inputs.vintageAdjFactor > 0
+    ? inputs.vintageAdjFactor * baseECL
+    : 0;
+
   // Security deposit benefit — cash collateral reduces LGD on default events.
   // 0.50 factor: deposits drawn at high-PD events; expected recovery ≈ 50 cents per dollar held.
   // depositCoverage = total_deposits / ECL_baseline (not fleet EAD — see creditDeposit.ts).
@@ -198,7 +224,7 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
       ? 0
       : (inputs.payBehaviourAdvPct * 0.12 - inputs.payBehaviourCoopPct * 0.07) * baseECL;
 
-  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta - assumptionBenefit + jurisdictionLGDDelta + repossLGDDelta - depositBenefit - mrBenefit + payBehaviourDelta;
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta - assumptionBenefit + jurisdictionLGDDelta + repossLGDDelta - depositBenefit - mrBenefit + payBehaviourDelta + remarketingLGDDelta + vintageAdjDelta;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 
