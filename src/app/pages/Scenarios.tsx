@@ -13,6 +13,8 @@ import { CreditDepositTab } from "../components/scenarios/CreditDepositTab";
 import { computePortfolioDepositCoverage } from "../utils/creditDeposit";
 import { PaymentBehaviourTab } from "../components/scenarios/PaymentBehaviourTab";
 import { computePortfolioPaymentBehaviourMix } from "../utils/paymentBehaviour";
+import { DeferralRiskTab } from "../components/scenarios/DeferralRiskTab";
+import { RESTRUCTURING_TYPES } from "../utils/deferralRisk";
 import { StatusPill } from "../components/ui/StatusPill";
 import {
   Play,
@@ -250,7 +252,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4, category: "macro" as const,
     lastRun: "28 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Mild aviation demand shock. RPK −25%, fuel +15%, 3 stage-2 migrations, no bankruptcies.",
-    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0 },
+    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
     shapley: [
       { driver: "RPK / Traffic Shock (−25%)", contribution: 38, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.4", contribution: 27, direction: "up" },
@@ -265,7 +267,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7, category: "macro" as const,
     lastRun: "27 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "Severe demand shock. RPK −55%, fuel −30%, 8+ bankruptcies, mass deferral requests.",
-    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0 },
+    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 41, direction: "up" },
       { driver: "PD — Stage 3 Multiplier ×2.1", contribution: 28, direction: "up" },
@@ -280,7 +282,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Sustained fuel price increase of 40% vs baseline. Low-cost carriers most exposed.",
-    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0 },
+    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
     shapley: [
       { driver: "Fuel Price Shock (+40%)", contribution: 43, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.6", contribution: 30, direction: "up" },
@@ -295,7 +297,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
     description: "EM sovereign stress. India, Brazil, Indonesia CDS widen +250bps. FX pressure −15%.",
-    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0 },
+    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
     shapley: [
       { driver: "Sovereign CDS Widening (+250bps)", contribution: 36, direction: "up" },
       { driver: "FX Basket Move (−15%)", contribution: 29, direction: "up" },
@@ -310,7 +312,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5, category: "macro" as const,
     lastRun: "22 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "EM currency basket −35% vs USD. Rent-to-revenue ratios spike. 6+ lessee distress events.",
-    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0 },
+    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
     shapley: [
       { driver: "FX Basket Move (−35%)", contribution: 48, direction: "up" },
       { driver: "Rent-to-Revenue Ratio Spike", contribution: 27, direction: "up" },
@@ -325,7 +327,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8, category: "macro" as const,
     lastRun: "14 Jan 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.08)",
     description: "Sudden fleet detention in 2 jurisdictions. Repossession impossible. Full LGD on 12 aircraft.",
-    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0 },
+    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null },
     shapley: [
       { driver: "Jurisdiction: Full LGD (100%)", contribution: 52, direction: "up" },
       { driver: "Aircraft Detention (12 assets)", contribution: 29, direction: "up" },
@@ -355,6 +357,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 42, direction: "up" as const },
@@ -383,6 +386,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Multiplier ×2.0", contribution: 45, direction: "up" as const },
@@ -411,6 +415,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 2 PD Multiplier ×1.8", contribution: 38, direction: "up" as const },
@@ -440,6 +445,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 55, direction: "up" as const },
@@ -466,6 +472,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 48, direction: "up" as const },
@@ -492,6 +499,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×1.8)", contribution: 52, direction: "up" as const },
@@ -518,6 +526,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 44, direction: "up" as const },
@@ -544,6 +553,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 38, direction: "up" as const },
@@ -570,6 +580,7 @@ const TEMPLATES: Template[] = [
       depositCoverage: 0,
       payBehaviourCoopPct: 0,
       payBehaviourAdvPct: 0,
+      restructuringType: null,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×3.5)", contribution: 40, direction: "up" as const },
@@ -680,6 +691,10 @@ function generateDSL(
       // or "generic_liquidation" to layer insolvency-specific recovery adjustments.
       // See Insolvency Regimes tab.
       bankruptcy_scenario_type: inputs.bankruptcyScenarioType,
+      // Restructuring type — omitted from DSL when null (no preset selected)
+      ...(inputs.restructuringType !== null
+        ? { restructuring_type: inputs.restructuringType }
+        : {}),
     },
     null, 2
   );
@@ -738,6 +753,9 @@ function parseDSL(text: string): { ok: boolean; inputs?: ScenarioInputs; name?: 
           const raw  = typeof s.pay_behaviour_adv_pct  === "number" ? Math.min(1, Math.max(0, s.pay_behaviour_adv_pct))  : 0;
           return Math.min(raw, Math.max(0, 1 - coop));
         })(),
+        restructuringType: typeof parsed.restructuring_type === "string" && parsed.restructuring_type in RESTRUCTURING_TYPES
+          ? parsed.restructuring_type
+          : null,
       },
     };
   } catch {
@@ -1039,7 +1057,7 @@ export default function Scenarios() {
     const hasDistress =
       next.deferralMonths !== 0 || next.govtSupportProb !== 0 ||
       next.forgivenessRate !== 0 || next.pbhConversionPct !== 0 ||
-      next.etpRate !== 0 || next.lecRate !== 0;
+      next.etpRate !== 0 || next.lecRate !== 0 || next.restructuringType !== null;
     if (hasDistress) setDistressOpen(true);
     if (next.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
     if (next.ctcGoldPct !== 0 || next.nonCtcPct !== 0) setJurisdictionOpen(true);
@@ -1150,7 +1168,7 @@ export default function Scenarios() {
 
   const tabs = isExecutiveMode
     ? EXEC_SCENARIO_TABS
-    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Security Deposits", "Payment Behaviour", "Lease Pricing"];
+    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Security Deposits", "Deferral Risk", "Payment Behaviour", "Lease Pricing"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2170,7 +2188,9 @@ export default function Scenarios() {
                             </span>
                             {activeLevers > 0 && (
                               <span style={{ fontSize: "0.6875rem", fontWeight: 600, padding: "0.125rem 0.5rem", borderRadius: "9999px", background: "#002147", color: "#FFFFFF" }}>
-                                {activeLevers} active levers
+                                {formInputs.restructuringType !== null
+                                  ? `${RESTRUCTURING_TYPES[formInputs.restructuringType].label} · ${activeLevers} lever${activeLevers !== 1 ? "s" : ""}`
+                                  : `${activeLevers} active levers`}
                               </span>
                             )}
                             {activeLevers === 0 && (
@@ -2197,6 +2217,53 @@ export default function Scenarios() {
                               style={{ overflow: "hidden" }}
                             >
                               <div style={{ padding: "0.875rem" }}>
+                                {/* Quick preset pills */}
+                                <div style={{ marginBottom: "0.875rem" }}>
+                                  <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+                                    Quick preset
+                                  </div>
+                                  <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+                                    {Object.entries(RESTRUCTURING_TYPES).map(([key, preset]) => (
+                                      <button
+                                        key={key}
+                                        onClick={() => updateFormInputs({
+                                          restructuringType: key,
+                                          deferralMonths:    preset.deferralMonths,
+                                          govtSupportProb:   preset.govtSupportProb,
+                                          forgivenessRate:   preset.forgivenessRate,
+                                        })}
+                                        style={{
+                                          padding:      "0.25rem 0.625rem",
+                                          fontSize:     "0.75rem",
+                                          fontWeight:   600,
+                                          borderRadius: "9999px",
+                                          border:       formInputs.restructuringType === key ? "none" : "1px solid #E2E8F0",
+                                          background:   formInputs.restructuringType === key ? "#002147" : "#FFFFFF",
+                                          color:        formInputs.restructuringType === key ? "#FFFFFF" : "#475569",
+                                          cursor:       "pointer",
+                                        }}
+                                      >
+                                        {preset.label}
+                                      </button>
+                                    ))}
+                                    <button
+                                      onClick={() => updateFormInputs({ restructuringType: null, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0 })}
+                                      style={{
+                                        padding:      "0.25rem 0.625rem",
+                                        fontSize:     "0.75rem",
+                                        fontWeight:   500,
+                                        borderRadius: "9999px",
+                                        border:       "1px solid #E2E8F0",
+                                        background:   "#FFFFFF",
+                                        color:        "#94A3B8",
+                                        cursor:       "pointer",
+                                      }}
+                                    >
+                                      Clear
+                                    </button>
+                                  </div>
+                                </div>
+
                                 {/* Sub-group: Deferral & Forgiveness */}
                                 <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.625rem" }}>
                                   Deferral &amp; Forgiveness
@@ -3186,6 +3253,21 @@ export default function Scenarios() {
           onUseInCustomBuilder={(cov) => {
             setActiveTab("Custom Builder");
             updateFormInputs({ depositCoverage: cov });
+          }}
+        />
+      )}
+
+      {/* ══ DEFERRAL RISK TAB ════════════════════════════════════════════ */}
+      {activeTab === "Deferral Risk" && (
+        <DeferralRiskTab
+          onUseInCustomBuilder={(type, months, govtProb, forgiveness) => {
+            setActiveTab("Custom Builder");
+            updateFormInputs({
+              restructuringType: type,
+              deferralMonths:    months,
+              govtSupportProb:   govtProb,
+              forgivenessRate:   forgiveness,
+            });
           }}
         />
       )}
