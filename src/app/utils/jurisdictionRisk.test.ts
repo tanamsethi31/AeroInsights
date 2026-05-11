@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ctcTier, computePortfolioJurisdictionMix } from "./jurisdictionRisk";
+import { ctcTier, computePortfolioJurisdictionMix, UNKNOWN_REPOSS_P50 } from "./jurisdictionRisk";
 import type { Jurisdiction } from "../components/jurisdictions/jurisdictionData";
 import type { Lessee, Lease } from "../types/portfolio";
 
@@ -72,12 +72,13 @@ describe("computePortfolioJurisdictionMix", () => {
     expect(result.nonCtcPct).toBeCloseTo(1.0, 5);
   });
 
-  it("unknown country → treated as Non-CTC", () => {
+  it("unknown country → treated as Non-CTC with UNKNOWN_REPOSS_P50 sentinel", () => {
     const lessees = [makeLessee("l1", "Mystery Airline", "Neverland")];
     const leases  = [makeLease("l1", 100000)];
     const result = computePortfolioJurisdictionMix(lessees, leases);
     expect(result.nonCtcPct).toBeCloseTo(1.0, 5);
     expect(result.rows[0].tier).toBe("nonCtc");
+    expect(result.rows[0].repossP50).toBe(UNKNOWN_REPOSS_P50);
   });
 
   it("equal mix: Gold + NonCTC → each 50%", () => {

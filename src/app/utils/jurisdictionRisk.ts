@@ -5,8 +5,13 @@
 import { jurisdictions, type Jurisdiction } from "../components/jurisdictions/jurisdictionData";
 import type { Lessee, Lease } from "../types/portfolio";
 
-/** Sentinel value for repossP50 when the jurisdiction is not found in jurisdictionData. */
-export const UNKNOWN_REPOSS_P50 = 99;
+/**
+ * Sentinel value for repossP50 when the lessee's country is not present in jurisdictionData.
+ * Using Number.MAX_SAFE_INTEGER ensures it cannot collide with any real month value,
+ * including the 999 used internally by jurisdictionData for unenforceable jurisdictions.
+ * Display logic: `row.repossP50 < UNKNOWN_REPOSS_P50 ? "${N} mo" : "—"`.
+ */
+export const UNKNOWN_REPOSS_P50 = Number.MAX_SAFE_INTEGER;
 
 export type CtcTier = "gold" | "moderate" | "nonCtc";
 
