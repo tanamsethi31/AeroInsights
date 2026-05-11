@@ -3,7 +3,8 @@ import { AlertTriangle } from "lucide-react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
-import { MR_ADEQUACY, mrFlagColor, mrFlagBg, mrFlagBorder, type MRAdeqFlag } from "../../data/maintenanceHeuristics";
+import { MR_ADEQUACY, mrFlagColor, mrFlagBg, mrFlagBorder, TYPE_HEURISTICS, type MRAdeqFlag, type ComponentName } from "../../data/maintenanceHeuristics";
+import { type CreditDepositTier } from "../../utils/creditDeposit";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,19 @@ export interface LeaseSDMR {
   sd: SDRecord;
   mrComponents: MRComponent[];
   returnCondition: "half-life" | "full-life";
+  /** Populated by buildLiveSDMRData — absent in the static demo dataset */
+  leaseEnd?: string;
+  stage?: number;
+  /** Credit tier derived from lessee watchlist_status */
+  creditTier?: CreditDepositTier;
 }
+
+// ─── Minimal structural types for live portfolio data ─────────────────────────
+
+type PAAsset = { id: string; msn: string; type: string; vintage?: number };
+type PALessee = { id: string; name: string; country?: string; watchlist_status?: "green" | "amber" | "red" | null };
+type PALease  = { id: string; asset_id: string; lessee_id: string; start_date?: string | null; end_date?: string | null; monthly_rental?: number | null };
+type PAProvision = { asset_id: string; ead?: number | null; lgd_rate?: number | null; stage?: number | null };
 
 // ─── Synthetic Dataset ────────────────────────────────────────────────────────
 
@@ -196,6 +209,154 @@ export const sdmrData: LeaseSDMR[] = [
     returnCondition: "full-life",
   },
 ];
+
+// ─── Credit Tier Pill Constants ──────────────────────────────────────────────
+
+const SDMR_TIER_LABEL: Record<CreditDepositTier, string> = {
+  investmentGrade:    "IG",
+  subInvestmentGrade: "Sub-IG",
+  distressed:         "Distressed",
+};
+
+const SDMR_TIER_BG: Record<CreditDepositTier, string> = {
+  investmentGrade:    "#DCFCE7",
+  subInvestmentGrade: "#FEF3C7",
+  distressed:         "#FEE2E2",
+};
+
+const SDMR_TIER_COLOR: Record<CreditDepositTier, string> = {
+  investmentGrade:    "#15803D",
+  subInvestmentGrade: "#B45309",
+  distressed:         "#B91C1C",
+};
+
+// ─── Static Credit Tier Mapping ───────────────────────────────────────────────
+
+const STATIC_CREDIT_TIER: Record<string, CreditDepositTier> = {
+  "IndiGo Airlines":    "subInvestmentGrade",
+  "Aeromexico":         "subInvestmentGrade",
+  "Emirates":           "investmentGrade",
+  "SriLankan Airlines": "distressed",
+  "Air Transat":        "subInvestmentGrade",
+  "Air France":         "investmentGrade",
+};
+// Apply credit tiers to static data after definition
+sdmrData.forEach((r) => { r.creditTier = STATIC_CREDIT_TIER[r.lessee] ?? "subInvestmentGrade"; });
+
+// ─── Live data adapter ────────────────────────────────────────────────────────
+
+const _COMPONENT_NAMES: ComponentName[] = ["Airframe HSI", "Engine PR", "LLPs", "Landing Gear", "APU"];
+const _NOW = new Date(2026, 4, 1);
+const _FALLBACK_TYPE = "A320neo";
+
+function _monthsBetween(a: Date, b: Date): number {
+  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+}
+
+function _tierFromWatchlist(w: "green" | "amber" | "red" | null | undefined): CreditDepositTier {
+  if (w === "green") return "investmentGrade";
+  if (w === "red")   return "distressed";
+  return "subInvestmentGrade";
+}
+
+/** Build heuristic-estimated LeaseSDMR records from live portfolio data.
+ *  MR rates come from TYPE_HEURISTICS; SD amount estimated at 1× monthly rent.
+ *  Values are labelled as heuristic in the UI disclaimer. */
+export function buildLiveSDMRData(
+  assets: PAAsset[],
+  lessees: PALessee[],
+  leases: PALease[],
+  provisions: PAProvision[],
+): LeaseSDMR[] {
+  const lesseeById = new Map(lessees.map((l) => [l.id, l]));
+  const assetById  = new Map(assets.map((a) => [a.id, a]));
+
+  const eadByAsset   = new Map<string, number>();
+  const lgdByAsset   = new Map<string, number>();
+  const stageByAsset = new Map<string, number>();
+  for (const p of provisions) {
+    eadByAsset.set(p.asset_id, (eadByAsset.get(p.asset_id) ?? 0) + (p.ead ?? 0));
+    if (p.lgd_rate != null) lgdByAsset.set(p.asset_id, p.lgd_rate);
+    if (p.stage    != null) stageByAsset.set(p.asset_id, p.stage);
+  }
+
+  return leases
+    .filter((l) => assetById.has(l.asset_id) && lesseeById.has(l.lessee_id))
+    .map((lease): LeaseSDMR => {
+      const asset   = assetById.get(lease.asset_id)!;
+      const lessee  = lesseeById.get(lease.lessee_id)!;
+      const ead     = (eadByAsset.get(lease.asset_id) ?? 0) / 1_000_000;
+      const lgdRate = lgdByAsset.get(lease.asset_id) ?? 0.45;
+      const stage   = stageByAsset.get(lease.asset_id) ?? 1;
+
+      const startDate    = lease.start_date ? new Date(lease.start_date) : new Date(_NOW.getFullYear() - 4, 0, 1);
+      const elapsedMonths = Math.max(0, _monthsBetween(startDate, _NOW));
+
+      const heuristic = TYPE_HEURISTICS[asset.type] ?? TYPE_HEURISTICS[_FALLBACK_TYPE];
+      const monthlyFH = heuristic.utilizationFH / 12;
+      const monthlyCy = heuristic.utilizationCy / 12;
+      const totalFH   = elapsedMonths * monthlyFH;
+      const totalCy   = elapsedMonths * monthlyCy;
+
+      const mrComponents: MRComponent[] = _COMPONENT_NAMES.map((name): MRComponent => {
+        const h           = heuristic.components[name];
+        const isCycle     = h.basis === "cycle";
+        const interval    = isCycle ? h.intervalCy : h.intervalFH;
+        const rateAmount  = Math.round(h.costUSD / interval);
+        const accumulated = Math.round(isCycle ? totalCy : totalFH);
+        const posInInterval = accumulated % interval;
+        const remaining   = interval - posInInterval;
+        const balance     = rateAmount * accumulated;
+
+        const capRule = isCycle
+          ? "Non-refundable — lessor retains"
+          : name === "Landing Gear"
+          ? "Max 24 months' contributions"
+          : name === "Airframe HSI"
+          ? "Max 18 months' contributions"
+          : "Max 12 months' contributions";
+
+        return {
+          component:         name,
+          rateBasis:         isCycle ? "$/cycle" : "$/FH",
+          rateAmount,
+          unitsAccumulated:  accumulated,
+          cumulativeBalance: balance,
+          refundable:        !isCycle,
+          capRule,
+          evidencedCost:     !isCycle ? Math.round(h.costUSD * 0.88) : 0,
+          fullIntervalUnits: interval,
+          remainingUnits:    remaining,
+        };
+      });
+
+      return {
+        leaseId:         lease.id,
+        lessee:          lessee.name,
+        aircraft:        asset.type,
+        eadNum:          Math.max(ead, 0),
+        baseLGD:         Math.round(lgdRate * 100),
+        sd: {
+          type:           "Cash",
+          amount:         Math.round((lease.monthly_rental ?? 0) * 1),
+          currency:       "USD",
+          refundTriggers: [
+            "No payment default in preceding 12 months",
+            "Aircraft returned per agreed maintenance return conditions",
+            "All outstanding maintenance claims settled at return",
+          ],
+          governingLaw:   lessee.country
+            ? `${lessee.country} — Cape Town Convention`
+            : "Ireland — Cape Town Convention",
+        },
+        mrComponents,
+        returnCondition: "half-life",
+        leaseEnd:        lease.end_date ?? undefined,
+        stage,
+        creditTier:      _tierFromWatchlist(lessee.watchlist_status),
+      };
+    });
+}
 
 // ─── Computed Functions ───────────────────────────────────────────────────────
 
@@ -400,8 +561,12 @@ function ExpandedPanel({ lease, condition }: { lease: LeaseSDMR; condition: "hal
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function SDMRTab() {
+export function SDMRTab({ data }: { data?: LeaseSDMR[] }) {
+  const displayData = data ?? sdmrData;
+  const isLive = Boolean(data);
+
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Conditions keyed by leaseId; live leases fall back to lease.returnCondition on first render
   const [conditions, setConditions] = useState<Record<string, "half-life" | "full-life">>(
     Object.fromEntries(sdmrData.map((l) => [l.leaseId, l.returnCondition]))
   );
@@ -414,23 +579,24 @@ export function SDMRTab() {
     });
   }
 
-  function toggleCondition(id: string) {
+  function toggleCondition(id: string, current: "half-life" | "full-life") {
     setConditions((prev) => ({
       ...prev,
-      [id]: prev[id] === "half-life" ? "full-life" : "half-life",
+      [id]: current === "half-life" ? "full-life" : "half-life",
     }));
   }
 
-  const totalSD = sdmrData.reduce((s, l) => s + l.sd.amount, 0);
-  const totalMR = sdmrData.reduce((s, l) => s + totalMRBalance(l), 0);
-  const totalEAD = sdmrData.reduce((a, x) => a + x.eadNum, 0);
-  const wtdLGDReduction = sdmrData.reduce((s, l) => {
+  const totalSD = displayData.reduce((s, l) => s + l.sd.amount, 0);
+  const totalMR = displayData.reduce((s, l) => s + totalMRBalance(l), 0);
+  const totalEAD = displayData.reduce((a, x) => a + x.eadNum, 0);
+  const wtdLGDReduction = displayData.reduce((s, l) => {
     const w = l.eadNum / totalEAD;
     return s + (l.baseLGD - adjustedLGD(l)) * w;
   }, 0);
 
   // ── Portfolio MR adequacy summary ──────────────────────────────────────────
-  const shortfallLeases = sdmrData.filter((l) => {
+  // In live mode MR_ADEQUACY keys won't match live leaseIds, so flag is derived directly from projections
+  const shortfallLeases = displayData.filter((l) => {
     const a = MR_ADEQUACY[l.leaseId];
     return a && a.eolShortfall > 0;
   });
@@ -460,7 +626,7 @@ export function SDMRTab() {
 
       {/* KPI Strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-        <KpiCard label="Total SD Posted" value={fmtUSD(totalSD)} subtitle="Across 6 active leases" />
+        <KpiCard label="Total SD Posted" value={fmtUSD(totalSD)} subtitle={`Across ${displayData.length} active lease${displayData.length !== 1 ? "s" : ""}`} />
         <KpiCard label="Total MR Reserves" value={fmtUSD(totalMR)} subtitle="Cumulative balances held" />
         <KpiCard label="Wtd Avg LGD Reduction" value={`${wtdLGDReduction.toFixed(1)} pp`} subtitle="Conservative offset applied" deltaType="positive" />
       </div>
@@ -476,11 +642,14 @@ export function SDMRTab() {
                     {h}
                   </th>
                 ))}
+                <th style={{ textAlign: "right", padding: "0.5rem 0.75rem", fontWeight: 600, color: "#64748B", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                  Credit Tier
+                </th>
               </tr>
             </thead>
             <tbody>
-              {sdmrData.map((lease, i) => {
-                const cond = conditions[lease.leaseId];
+              {displayData.map((lease, i) => {
+                const cond = conditions[lease.leaseId] ?? lease.returnCondition;
                 const isOpen = expanded.has(lease.leaseId);
                 const eol = eolCompensation(lease, cond);
                 const lgdOff = conservativeOffset(lease) * 100;
@@ -529,7 +698,7 @@ export function SDMRTab() {
                           );
                         })()}
                       </td>
-                      <td style={{ padding: "0.75rem 1rem" }} onClick={(e) => { e.stopPropagation(); toggleCondition(lease.leaseId); }}>
+                      <td style={{ padding: "0.75rem 1rem" }} onClick={(e) => { e.stopPropagation(); toggleCondition(lease.leaseId, cond); }}>
                         <button style={{
                           display: "inline-flex", alignItems: "center", gap: "0.25rem",
                           fontSize: "0.75rem", fontWeight: 600, border: "1px solid #E2E8F0",
@@ -548,14 +717,27 @@ export function SDMRTab() {
                         <span style={{ fontWeight: 600, color: "#002147" }}>{lgdOff.toFixed(1)} pp</span>
                         <span style={{ fontSize: "0.6875rem", color: "#94A3B8", display: "block" }}>up to {optOff.toFixed(1)} pp</span>
                       </td>
+                      <td style={{ padding: "0.625rem 0.75rem", textAlign: "right" }}>
+                        {lease.creditTier ? (
+                          <span style={{
+                            background: SDMR_TIER_BG[lease.creditTier],
+                            color: SDMR_TIER_COLOR[lease.creditTier],
+                            fontWeight: 600, fontSize: "0.6875rem",
+                            padding: "0.125rem 0.45rem", borderRadius: "9999px",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {SDMR_TIER_LABEL[lease.creditTier]}
+                          </span>
+                        ) : "—"}
+                      </td>
                       <td style={{ padding: "0.75rem 1rem", color: "#94A3B8", fontSize: "1rem" }}>
                         {isOpen ? "▲" : "▶"}
                       </td>
                     </tr>
                     {isOpen && (
                       <tr key={`${lease.leaseId}-detail`} style={{ borderBottom: "1px solid #E2E8F0" }}>
-                        <td colSpan={11} style={{ padding: "0", background: "#FAFAFA" }}>
-                          <ExpandedPanel lease={lease} condition={conditions[lease.leaseId]} />
+                        <td colSpan={12} style={{ padding: "0", background: "#FAFAFA" }}>
+                          <ExpandedPanel lease={lease} condition={cond} />
                         </td>
                       </tr>
                     )}
@@ -583,7 +765,7 @@ export function SDMRTab() {
               </tr>
             </thead>
             <tbody>
-              {sdmrData.map((lease, i) => {
+              {displayData.map((lease, i) => {
                 const adjLGD = adjustedLGD(lease);
                 const optLGD = Math.max(0, lease.baseLGD - optimisticOffset(lease) * 100);
                 const eclBase = lease.eadNum * (lease.baseLGD / 100);
@@ -606,6 +788,12 @@ export function SDMRTab() {
             </tbody>
           </table>
         </div>
+        {isLive && (
+          <div style={{ padding: "0.625rem 1rem", borderTop: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#B45309", background: "rgba(180,83,9,0.04)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <AlertTriangle size={12} style={{ flexShrink: 0 }} />
+            MR rates estimated from type-level heuristics — actual maintenance ledger data not yet in portfolio schema.
+          </div>
+        )}
         <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid #E2E8F0", fontSize: "0.75rem", color: "#94A3B8", background: "#F8FAFC" }}>
           SD/MR LGD adjustments shown for reference. Full integration into probability-weighted ECL computation delivered in Sprint 12 (F09 — Risk Mitigation Action Simulator).
         </div>
