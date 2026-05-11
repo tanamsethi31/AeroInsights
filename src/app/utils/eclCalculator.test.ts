@@ -83,6 +83,7 @@ describe("distress inputs", () => {
     expect(ZERO_INPUTS.depositCoverage).toBe(0);
     expect(ZERO_INPUTS.payBehaviourCoopPct).toBe(0);
     expect(ZERO_INPUTS.payBehaviourAdvPct).toBe(0);
+    expect(ZERO_INPUTS.restructuringType).toBeNull();
   });
 
   it("deferral with full forgiveness and no govt support increases ECL", () => {
@@ -265,6 +266,18 @@ describe("security deposit benefit", () => {
   it("floor still holds under max deposit coverage + no stress", () => {
     const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, depositCoverage: 0.90 });
     expect(result).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
+  });
+});
+
+describe("restructuringType (DSL metadata)", () => {
+  it("ZERO_INPUTS.restructuringType is null (feature inactive by default)", () => {
+    expect(ZERO_INPUTS.restructuringType).toBeNull();
+  });
+
+  it("restructuringType does not affect ECL — it is DSL metadata only", () => {
+    const withType    = computeECLFromBase(BASE_ECL, { ...ZERO_INPUTS, restructuringType: "standstill" });
+    const withoutType = computeECLFromBase(BASE_ECL, { ...ZERO_INPUTS, restructuringType: null });
+    expect(withType).toBe(withoutType);
   });
 });
 

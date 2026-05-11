@@ -38,6 +38,11 @@ export interface ScenarioInputs {
   payBehaviourAdvPct: number; // 0–1: share of fleet in Adversarial tier (score < 40)
   // Derived: neutralPct = max(0, 1 − coopPct − advPct). Not stored.
   // Both default to 0 (feature inactive = neutral baseline, 0 ECL adjustment). Backward-compatible.
+
+  // ── Restructuring type ────────────────────────────────────────────────────────
+  restructuringType: string | null; // null = no preset selected (raw slider values).
+  // DSL metadata only — ECL driven by deferralMonths, govtSupportProb, forgivenessRate.
+  // Does NOT affect computeECLFromBase directly. Backward-compatible: null = pre-Sprint 14 behaviour.
 }
 
 export interface StageDistribution {
@@ -86,6 +91,7 @@ export const ZERO_INPUTS: ScenarioInputs = {
   depositCoverage: 0,
   payBehaviourCoopPct: 0,
   payBehaviourAdvPct: 0,
+  restructuringType: null,
 };
 
 export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
