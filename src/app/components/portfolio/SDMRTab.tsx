@@ -237,7 +237,7 @@ const STATIC_CREDIT_TIER: Record<string, CreditDepositTier> = {
   "Aeromexico":         "subInvestmentGrade",
   "Emirates":           "investmentGrade",
   "SriLankan Airlines": "distressed",
-  "Air Transat":        "subInvestmentGrade",
+  "Ryanair":            "investmentGrade",
   "Air France":         "investmentGrade",
 };
 // Apply credit tiers to static data after definition
@@ -637,14 +637,11 @@ export function SDMRTab({ data }: { data?: LeaseSDMR[] }) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
             <thead>
               <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-                {["Lease ID", "Lessee", "Aircraft", "SD Type", "SD Amount", "MR Balance", "MR Adequacy", "Return Condition", "EOL Compensation", "LGD Offset", "Expand"].map((h) => (
+                {["Lease ID", "Lessee", "Aircraft", "SD Type", "SD Amount", "MR Balance", "MR Adequacy", "Return Condition", "EOL Compensation", "LGD Offset", "Credit Tier", "Expand"].map((h) => (
                   <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
                     {h}
                   </th>
                 ))}
-                <th style={{ textAlign: "right", padding: "0.5rem 0.75rem", fontWeight: 600, color: "#64748B", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
-                  Credit Tier
-                </th>
               </tr>
             </thead>
             <tbody>
