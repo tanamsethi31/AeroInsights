@@ -78,6 +78,8 @@ describe("distress inputs", () => {
     expect(ZERO_INPUTS.pbhConversionPct).toBe(0);
     expect(ZERO_INPUTS.etpRate).toBe(0);
     expect(ZERO_INPUTS.lecRate).toBe(0);
+    expect(ZERO_INPUTS.ctcGoldPct).toBe(0);
+    expect(ZERO_INPUTS.nonCtcPct).toBe(0);
   });
 
   it("deferral with full forgiveness and no govt support increases ECL", () => {
