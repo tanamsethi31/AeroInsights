@@ -95,8 +95,13 @@ export const ZERO_INPUTS: ScenarioInputs = {
 };
 
 export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
-  // Macro + credit delta (unchanged)
-  const macroDelta =
+  // Scale factor: macro coefficients were calibrated against BASE_ECL=$47.2M.
+  // For portfolios of different sizes, the absolute dollar impact scales proportionally.
+  // When baseECL = BASE_ECL (demo portfolio), scaleFactor = 1.0 — no change in behaviour.
+  const scaleFactor = baseECL / BASE_ECL;
+
+  // Macro + credit delta — scaled to actual portfolio size.
+  const macroDelta = scaleFactor * (
     Math.min(0, inputs.gdpDelta) * -250 +
     Math.min(0, inputs.rpkDelta) * -48 +
     Math.max(0, inputs.fuelDelta) * 28 +
@@ -104,7 +109,8 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
     Math.max(0, inputs.rateDelta) * 14 +
     Math.min(0, inputs.assetValueDelta) * -52 +
     (inputs.pdS2Multi - 1.0) * 8.5 +
-    (inputs.pdS3Multi - 1.0) * 18.2;
+    (inputs.pdS3Multi - 1.0) * 18.2
+  );
 
   // Deferral penalty: months × (1 − govt support) × forgiveness × monthly rent.
   // Intentional simplification: when forgivenessRate = 0 (full repayment expected),
@@ -125,7 +131,7 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
   // LGD regime adjustment — null = no adjustment; unknown key = 0 (graceful fallback).
   // Note: like the mitigation benefits above, lgdDelta scales with baseECL (not absolute).
   // This is intentional: LGD adjustments represent a % of base exposure, not a fixed $ amount.
-  // In contrast, macroDelta uses fixed coefficients and does NOT scale with baseECL.
+  // macroDelta also scales with baseECL via scaleFactor above.
   const lgdDelta = inputs.bankruptcyScenarioType !== null
     ? (LGD_DELTAS[inputs.bankruptcyScenarioType] ?? 0) * baseECL
     : 0;

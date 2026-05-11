@@ -13,9 +13,11 @@ import { CreditDepositTab } from "../components/scenarios/CreditDepositTab";
 import { computePortfolioDepositCoverage } from "../utils/creditDeposit";
 import { PaymentBehaviourTab } from "../components/scenarios/PaymentBehaviourTab";
 import { computePortfolioPaymentBehaviourMix } from "../utils/paymentBehaviour";
+import { exportScenarioRunPDF } from "../utils/scenarioExport";
 import { DeferralRiskTab } from "../components/scenarios/DeferralRiskTab";
 import { RESTRUCTURING_TYPES } from "../utils/deferralRisk";
 import { LessorMitigationTab } from "../components/scenarios/LessorMitigationTab";
+import { ConcentrationStressTab } from "../components/scenarios/ConcentrationStressTab";
 import { StatusPill } from "../components/ui/StatusPill";
 import {
   Play,
@@ -598,17 +600,19 @@ const TEMPLATES: Template[] = [
 
 function buildTemplateRun(
   id: string, tpl: Template, mode: RunMode, paths: number | null,
-  seed: number, dateStr: string, durStr: string
+  seed: number, dateStr: string, durStr: string,
+  baseECL: number = BASE_ECL,
 ): ScenarioRunResult {
-  const { p5, p95 } = computeMCRange(tpl.ecl, seed);
-  const stages = computeStages(tpl.ecl, tpl.inputs);
+  const computedECL = computeECLFromBase(baseECL, tpl.inputs);
+  const { p5, p95 } = computeMCRange(computedECL, seed);
+  const stages = computeStages(computedECL, tpl.inputs);
   return {
     id, templateId: tpl.id, name: tpl.name, mode,
     paths: mode === "montecarlo" ? (paths ?? 10000) : null,
     seed, runDate: dateStr, durationSec: durStr,
-    ecl: tpl.ecl,
-    p5: mode === "montecarlo" ? tpl.ecl * tpl.p5Factor : null,
-    p95: mode === "montecarlo" ? tpl.ecl * tpl.p95Factor : null,
+    ecl: computedECL,
+    p5: mode === "montecarlo" ? computedECL * tpl.p5Factor : null,
+    p95: mode === "montecarlo" ? computedECL * tpl.p95Factor : null,
     s1: stages.s1, s2: stages.s2, s3: stages.s3,
     shapley: tpl.shapley, keyFinding: tpl.keyFinding,
     scenarioHash: hashFromSeed(seed).slice(0, 12),
@@ -920,7 +924,16 @@ export default function Scenarios() {
       setActiveTab("Library");
     }
   }, [isExecutiveMode, activeTab]);
-  const [runs, setRuns] = useState<ScenarioRunResult[]>(INITIAL_RUNS);
+  const [runs, setRuns] = useState<ScenarioRunResult[]>(() => {
+    try {
+      const s = localStorage.getItem("aero_run_history");
+      if (s) {
+        const p = JSON.parse(s);
+        if (Array.isArray(p) && p.length > 0) return p as ScenarioRunResult[];
+      }
+    } catch { /* ignore corrupt storage */ }
+    return INITIAL_RUNS;
+  });
 
   // ── Library card state machine ──
   const [cardStates, setCardStates] = useState<Record<string, CardState>>(
@@ -938,8 +951,9 @@ export default function Scenarios() {
 
     const duration = cs.mode === "deterministic" ? 1800 : 3200;
     setTimeout(() => {
-      const { p5, p95 } = computeMCRange(tpl.ecl, seed);
-      const stages = computeStages(tpl.ecl, tpl.inputs);
+      const computedECL = computeECLFromBase(liveBaseECL, tpl.inputs);
+      const { p5, p95 } = computeMCRange(computedECL, seed);
+      const stages = computeStages(computedECL, tpl.inputs);
       const newRun: ScenarioRunResult = {
         id: nextRunId(),
         templateId: tpl.id,
@@ -951,9 +965,9 @@ export default function Scenarios() {
         durationSec: cs.mode === "deterministic"
           ? `${(1.4 + seededRand(seed, 9) * 1.4).toFixed(1)}s`
           : `${Math.round(28 + seededRand(seed, 11) * 20)}s`,
-        ecl: tpl.ecl,
-        p5: cs.mode === "montecarlo" ? tpl.ecl * tpl.p5Factor : null,
-        p95: cs.mode === "montecarlo" ? tpl.ecl * tpl.p95Factor : null,
+        ecl: computedECL,
+        p5: cs.mode === "montecarlo" ? computedECL * tpl.p5Factor : null,
+        p95: cs.mode === "montecarlo" ? computedECL * tpl.p95Factor : null,
         s1: stages.s1, s2: stages.s2, s3: stages.s3,
         shapley: tpl.shapley,
         keyFinding: tpl.keyFinding,
@@ -970,9 +984,26 @@ export default function Scenarios() {
   const [prefillSource, setPrefillSource] = useState<string | null>(null);
   const [calBannerDismissed, setCalBannerDismissed] = useState(false);
   const [customName, setCustomName] = useState("My Custom Scenario");
-  const [formInputs, setFormInputs] = useState<ScenarioInputs>(ZERO_INPUTS);
+  const [formInputs, setFormInputs] = useState<ScenarioInputs>(() => {
+    try {
+      const s = localStorage.getItem("aero_custom_inputs");
+      if (s) return { ...ZERO_INPUTS, ...JSON.parse(s) } as ScenarioInputs;
+    } catch { /* ignore corrupt storage */ }
+    return ZERO_INPUTS;
+  });
   const formInputsRef = useRef<ScenarioInputs>(ZERO_INPUTS);
   formInputsRef.current = formInputs;
+
+  // ── Persistence: save custom inputs whenever they change ──
+  useEffect(() => {
+    try { localStorage.setItem("aero_custom_inputs", JSON.stringify(formInputs)); } catch { /* quota */ }
+  }, [formInputs]);
+
+  // ── Persistence: save run history (last 50) whenever runs change ──
+  useEffect(() => {
+    try { localStorage.setItem("aero_run_history", JSON.stringify(runs.slice(0, 50))); } catch { /* quota */ }
+  }, [runs]);
+
   const [customMode, setCustomMode] = useState<RunMode>("deterministic");
   const [customPaths, setCustomPaths] = useState(10000);
   const [customSeed] = useState(42);
@@ -998,6 +1029,20 @@ export default function Scenarios() {
     },
     [assets, lessees, provisions]
   );
+
+  // ── Probability-weighted ECL (IFRS 9 §5.5.17a) ──
+  // Only templates with numeric weights contribute. Weight strings like "60%" are parsed to 0.60.
+  const weightedECL = React.useMemo(() => {
+    let sumW = 0; let sumWE = 0;
+    for (const tpl of TEMPLATES) {
+      if (tpl.weight === "—") continue;
+      const w = parseFloat(tpl.weight) / 100;
+      if (isNaN(w) || w <= 0) continue;
+      sumW += w;
+      sumWE += w * computeECLFromBase(liveBaseECL, tpl.inputs);
+    }
+    return sumW > 0 ? sumWE / sumW : null;
+  }, [liveBaseECL]);
 
   // Derive live Stage 3 lessees from uploaded portfolio for scenario narrative
   const liveStage3Lessees = React.useMemo(() => {
@@ -1146,6 +1191,16 @@ export default function Scenarios() {
 
   // ── Run History state ──
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const toggleCompare = useCallback((id: string) => {
+    setCompareIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : prev.length >= 2
+          ? [prev[1], id]   // replace oldest when already 2 selected
+          : [...prev, id]
+    );
+  }, []);
 
   // ── Result lookup ──
   const findRun = (id: string) => runs.find((r) => r.id === id);
@@ -1169,7 +1224,7 @@ export default function Scenarios() {
 
   const tabs = isExecutiveMode
     ? EXEC_SCENARIO_TABS
-    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Security Deposits", "Deferral Risk", "Lessor Mitigation", "Payment Behaviour", "Lease Pricing"];
+    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Security Deposits", "Deferral Risk", "Lessor Mitigation", "Payment Behaviour", "Concentration Stress", "Lease Pricing"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1220,6 +1275,20 @@ export default function Scenarios() {
       {/* ══ LIBRARY TAB ══════════════════════════════════════════════════════ */}
       {activeTab === "Library" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", alignItems: "start" }}>
+          {/* ── IFRS 9 Probability-Weighted ECL banner ── */}
+          {weightedECL !== null && (
+            <div style={{ gridColumn: "1 / -1", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "0.5rem", padding: "0.875rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+              <div>
+                <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.05em" }}>IFRS 9 Probability-Weighted ECL</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1E40AF", fontVariantNumeric: "tabular-nums", marginTop: "0.125rem" }}>
+                  ${weightedECL.toFixed(1)}M
+                </div>
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#3B82F6", maxWidth: "28rem", lineHeight: 1.5, textAlign: "right" }}>
+                Weighted average across 6 probability-weighted macro scenarios (IFRS 9 §5.5.17a). Weights: Baseline 60%, COVID-Mild 15%, COVID-Severe 10%, Fuel Spike 7%, Sovereign Stress 5%, Currency Collapse 3%.
+              </div>
+            </div>
+          )}
           {/* ── Macro Scenarios label ── */}
           <div style={{ gridColumn: "1 / -1", fontSize: "0.6875rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", paddingBottom: "0.25rem", borderBottom: "1px solid #F1F5F9" }}>
             Macro Scenarios
@@ -1261,7 +1330,7 @@ export default function Scenarios() {
                         fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
                       }}
                     >
-                      ECL ${tpl.ecl.toFixed(1)}M
+                      ECL ${computeECLFromBase(liveBaseECL, tpl.inputs).toFixed(1)}M
                     </div>
                   </div>
 
@@ -1490,7 +1559,7 @@ export default function Scenarios() {
                         fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
                       }}
                     >
-                      ECL ${tpl.ecl.toFixed(1)}M
+                      ECL ${computeECLFromBase(liveBaseECL, tpl.inputs).toFixed(1)}M
                     </div>
                   </div>
 
@@ -1721,7 +1790,7 @@ export default function Scenarios() {
                         fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
                       }}
                     >
-                      ECL ${tpl.ecl.toFixed(1)}M
+                      ECL ${computeECLFromBase(liveBaseECL, tpl.inputs).toFixed(1)}M
                     </div>
                   </div>
 
@@ -2867,6 +2936,12 @@ export default function Scenarios() {
                     <div style={{ marginTop: "0.5rem", fontSize: "0.6875rem", color: "#94A3B8" }}>
                       Portfolio base ECL: <span style={{ fontWeight: 600, color: "#475569" }}>${liveBaseECL.toFixed(1)}M</span>
                     </div>
+                    {computeECLFromBase(liveBaseECL, formInputs) <= liveBaseECL * 0.3 + 0.001 && (
+                      <div style={{ marginTop: "0.375rem", fontSize: "0.6875rem", color: "#B45309", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                        <span>⚠</span>
+                        <span>30% IFRS 9 ECL floor active — scenario inputs imply greater reduction than model permits</span>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
@@ -3083,6 +3158,7 @@ export default function Scenarios() {
 
       {/* ══ RUN HISTORY TAB ══════════════════════════════════════════════════ */}
       {activeTab === "Run History" && (
+        <>
         <Card
           title="All Scenario Runs"
           subtitle="Immutable audit records — every run reproducible to exact inputs and seed"
@@ -3097,7 +3173,7 @@ export default function Scenarios() {
             >
               <thead>
                 <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-                  {["expand", "Run ID", "Scenario", "Mode", "Paths", "Run Date", "Portfolio ECL", "Duration", "Status", "actions"].map((h) => (
+                  {["expand", "Compare", "Run ID", "Scenario", "Mode", "Paths", "Run Date", "Portfolio ECL", "Duration", "Status", "actions"].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -3106,7 +3182,11 @@ export default function Scenarios() {
                         letterSpacing: "0.05em", whiteSpace: "nowrap",
                       }}
                     >
-                      {h === "expand" || h === "actions" ? "" : h}
+                      {h === "expand" || h === "actions" || h === "Compare" ? (h === "Compare" ? (
+                        <span style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>
+                          Compare{compareIds.length > 0 ? ` (${compareIds.length}/2)` : ""}
+                        </span>
+                      ) : "") : h}
                     </th>
                   ))}
                 </tr>
@@ -3151,6 +3231,16 @@ export default function Scenarios() {
                           >
                             {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                           </button>
+                        </td>
+                        {/* Compare checkbox */}
+                        <td style={{ padding: "0.75rem 0.5rem", textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={compareIds.includes(run.id)}
+                            onChange={() => toggleCompare(run.id)}
+                            style={{ cursor: "pointer", accentColor: "#002147" }}
+                            title="Select for comparison"
+                          />
                         </td>
                         <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569", whiteSpace: "nowrap" }}>
                           {isChild && (
@@ -3205,7 +3295,11 @@ export default function Scenarios() {
                             >
                               <GitBranch size={10} /> Branch
                             </button>
-                            <button style={{ ...BTN_OUTLINE, fontSize: "0.75rem", padding: "0.25rem 0.4rem" }}>
+                            <button
+                              title="Export run as PDF"
+                              onClick={() => exportScenarioRunPDF(run)}
+                              style={{ ...BTN_OUTLINE, fontSize: "0.75rem", padding: "0.25rem 0.4rem" }}
+                            >
                               <Download size={10} />
                             </button>
                           </div>
@@ -3215,7 +3309,7 @@ export default function Scenarios() {
                       {isExpanded && (
                         <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
                           <td />
-                          <td colSpan={9} style={{ padding: "0 1rem 1rem" }}>
+                          <td colSpan={10} style={{ padding: "0 1rem 1rem" }}>
                             <RunResultPanel
                               run={run}
                               narrative={getNarrative(run.id)}
@@ -3232,6 +3326,67 @@ export default function Scenarios() {
             </table>
           </div>
         </Card>
+
+        {/* ── Run Comparison Panel ── */}
+        {compareIds.length === 2 && (() => {
+          const [runA, runB] = compareIds.map((id) => runs.find((r) => r.id === id)!).filter(Boolean);
+          if (!runA || !runB) return null;
+          const rows: Array<{ label: string; a: string; b: string; highlight?: "a" | "b" | "neither" }> = [
+            { label: "Scenario", a: runA.name, b: runB.name },
+            { label: "Run Date", a: runA.runDate, b: runB.runDate },
+            { label: "Mode", a: runA.mode === "deterministic" ? "Deterministic" : "Monte Carlo", b: runB.mode === "deterministic" ? "Deterministic" : "Monte Carlo" },
+            { label: "Portfolio ECL", a: `$${runA.ecl.toFixed(1)}M`, b: `$${runB.ecl.toFixed(1)}M`, highlight: runA.ecl < runB.ecl ? "a" : runA.ecl > runB.ecl ? "b" : "neither" },
+            { label: "ECL Delta A→B", a: "", b: `${runB.ecl >= runA.ecl ? "+" : ""}$${(runB.ecl - runA.ecl).toFixed(1)}M (${runB.ecl >= runA.ecl ? "+" : ""}${(((runB.ecl - runA.ecl) / runA.ecl) * 100).toFixed(0)}%)` },
+            { label: "P5 (MC only)", a: runA.p5 != null ? `$${runA.p5.toFixed(1)}M` : "—", b: runB.p5 != null ? `$${runB.p5.toFixed(1)}M` : "—" },
+            { label: "P95 (MC only)", a: runA.p95 != null ? `$${runA.p95.toFixed(1)}M` : "—", b: runB.p95 != null ? `$${runB.p95.toFixed(1)}M` : "—" },
+            { label: "Stage 1 ($M)", a: `$${runA.s1.toFixed(1)}M`, b: `$${runB.s1.toFixed(1)}M` },
+            { label: "Stage 2 ($M)", a: `$${runA.s2.toFixed(1)}M`, b: `$${runB.s2.toFixed(1)}M` },
+            { label: "Stage 3 ($M)", a: `$${runA.s3.toFixed(1)}M`, b: `$${runB.s3.toFixed(1)}M`, highlight: runA.s3 < runB.s3 ? "a" : runA.s3 > runB.s3 ? "b" : "neither" },
+            { label: "Seed", a: String(runA.seed), b: String(runB.seed) },
+          ];
+          return (
+            <Card title="Run Comparison" subtitle="Side-by-side diff of two selected runs">
+              <div style={{ padding: "0 1.25rem 1.25rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                  <div style={{ background: "#EFF6FF", borderRadius: "0.375rem", padding: "0.625rem 0.875rem" }}>
+                    <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.04em" }}>Run A</div>
+                    <div style={{ fontWeight: 600, color: "#0F172A" }}>{runA.name}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748B", fontFamily: "monospace" }}>{runA.id}</div>
+                  </div>
+                  <div style={{ background: "#F5F3FF", borderRadius: "0.375rem", padding: "0.625rem 0.875rem" }}>
+                    <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#7C3AED", textTransform: "uppercase", letterSpacing: "0.04em" }}>Run B</div>
+                    <div style={{ fontWeight: 600, color: "#0F172A" }}>{runB.name}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748B", fontFamily: "monospace" }}>{runB.id}</div>
+                  </div>
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid #E2E8F0" }}>
+                      <th style={{ textAlign: "left", padding: "0.4rem 0.75rem", color: "#64748B", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Field</th>
+                      <th style={{ textAlign: "left", padding: "0.4rem 0.75rem", color: "#1D4ED8", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Run A</th>
+                      <th style={{ textAlign: "left", padding: "0.4rem 0.75rem", color: "#7C3AED", fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Run B</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => (
+                      <tr key={r.label} style={{ borderBottom: i < rows.length - 1 ? "1px solid #F1F5F9" : "none", background: i % 2 === 0 ? "#FFFFFF" : "#FAFAFA" }}>
+                        <td style={{ padding: "0.5rem 0.75rem", color: "#64748B", fontWeight: 500 }}>{r.label}</td>
+                        <td style={{ padding: "0.5rem 0.75rem", fontWeight: r.highlight === "a" ? 700 : 400, color: r.highlight === "a" ? "#15803D" : "#0F172A", fontVariantNumeric: "tabular-nums" }}>{r.a}</td>
+                        <td style={{ padding: "0.5rem 0.75rem", fontWeight: r.highlight === "b" ? 700 : 400, color: r.highlight === "b" ? "#B91C1C" : "#0F172A", fontVariantNumeric: "tabular-nums" }}>{r.b}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: "0.875rem", textAlign: "right" }}>
+                  <button onClick={() => setCompareIds([])} style={{ ...BTN_OUTLINE, fontSize: "0.75rem" }}>
+                    Clear Comparison
+                  </button>
+                </div>
+              </div>
+            </Card>
+          );
+        })()}
+        </>
       )}
 
       {/* ══ INSOLVENCY REGIMES TAB ══════════════════════════════════════ */}
@@ -3293,6 +3448,17 @@ export default function Scenarios() {
           onUseInCustomBuilder={(coop, adv) => {
             setActiveTab("Custom Builder");
             updateFormInputs({ payBehaviourCoopPct: coop, payBehaviourAdvPct: adv });
+          }}
+        />
+      )}
+
+      {/* ══ CONCENTRATION STRESS TAB ════════════════════════════════════ */}
+      {activeTab === "Concentration Stress" && (
+        <ConcentrationStressTab
+          onUseInCustomBuilder={(pdS3Multi) => {
+            setActiveTab("Custom Builder");
+            updateFormInputs({ pdS3Multi });
+            setDistressOpen(true);
           }}
         />
       )}
