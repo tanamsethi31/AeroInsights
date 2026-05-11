@@ -29,6 +29,9 @@ export interface ScenarioInputs {
   nonCtcPct: number;     // 0–1: share of fleet in Non-CTC jurisdictions (ctcParty:false AND ctcScore<50)
   // Derived: ctcModeratePct = max(0, 1 − ctcGoldPct − nonCtcPct). Not stored — computed on use.
   // Both default to 0 (feature inactive = all fleet assumed CTC Gold). Backward-compatible with ZERO_INPUTS.
+
+  // ── Security deposits ─────────────────────────────────────────────────────────
+  depositCoverage: number; // 0–1: recommended deposits as fraction of ECL baseline (0 = no deposits)
 }
 
 export interface StageDistribution {
@@ -74,6 +77,7 @@ export const ZERO_INPUTS: ScenarioInputs = {
   bankruptcyScenarioType: null,
   ctcGoldPct: 0,
   nonCtcPct: 0,
+  depositCoverage: 0,
 };
 
 export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
@@ -122,7 +126,12 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
       ? 0
       : (ctcModeratePct * 0.06 + inputs.nonCtcPct * 0.15) * baseECL;
 
-  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta + jurisdictionLGDDelta;
+  // Security deposit benefit — cash collateral reduces LGD on default events.
+  // 0.50 factor: deposits drawn at high-PD events; expected recovery ≈ 50 cents per dollar held.
+  // depositCoverage = total_deposits / ECL_baseline (not fleet EAD — see creditDeposit.ts).
+  const depositBenefit = inputs.depositCoverage * baseECL * 0.50;
+
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta + jurisdictionLGDDelta - depositBenefit;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 

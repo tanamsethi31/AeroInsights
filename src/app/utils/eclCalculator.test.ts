@@ -80,6 +80,7 @@ describe("distress inputs", () => {
     expect(ZERO_INPUTS.lecRate).toBe(0);
     expect(ZERO_INPUTS.ctcGoldPct).toBe(0);
     expect(ZERO_INPUTS.nonCtcPct).toBe(0);
+    expect(ZERO_INPUTS.depositCoverage).toBe(0);
   });
 
   it("deferral with full forgiveness and no govt support increases ECL", () => {
@@ -230,5 +231,37 @@ describe("jurisdiction LGD adjustment", () => {
       ...ZERO_INPUTS, rpkDelta: -0.25, ctcGoldPct: 0, nonCtcPct: 0.5,
     });
     expect(withJurisdiction).toBeGreaterThan(noJurisdiction);
+  });
+});
+
+describe("security deposit benefit", () => {
+  it("ZERO_INPUTS has depositCoverage as 0", () => {
+    expect(ZERO_INPUTS.depositCoverage).toBe(0);
+  });
+
+  it("depositCoverage = 0 → no benefit, backward-compatible with ZERO_INPUTS", () => {
+    expect(computeECLFromBase(47.2, ZERO_INPUTS)).toBeCloseTo(47.2, 5);
+  });
+
+  it("depositCoverage = 0.10 → reduces ECL by 5% of baseECL (factor 0.50)", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, depositCoverage: 0.10 });
+    expect(result).toBeCloseTo(47.2 * (1 - 0.10 * 0.50), 4);
+  });
+
+  it("depositCoverage = 1.0 → reduces ECL by 50% of baseECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, depositCoverage: 1.0 });
+    expect(result).toBeCloseTo(47.2 * 0.50, 4);
+  });
+
+  it("deposit benefit stacks with macro stress (additive delta)", () => {
+    const noDeposit = computeECLFromBase(47.2, { ...ZERO_INPUTS, rpkDelta: -0.25 });
+    const withDeposit = computeECLFromBase(47.2, { ...ZERO_INPUTS, rpkDelta: -0.25, depositCoverage: 0.10 });
+    expect(withDeposit).toBeLessThan(noDeposit);
+    expect(withDeposit).toBeCloseTo(noDeposit - 47.2 * 0.10 * 0.50, 4);
+  });
+
+  it("floor still holds under max deposit coverage + no stress", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, depositCoverage: 0.90 });
+    expect(result).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
   });
 });
