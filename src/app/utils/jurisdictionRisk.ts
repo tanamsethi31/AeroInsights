@@ -5,6 +5,9 @@
 import { jurisdictions, type Jurisdiction } from "../components/jurisdictions/jurisdictionData";
 import type { Lessee, Lease } from "../types/portfolio";
 
+/** Sentinel value for repossP50 when the jurisdiction is not found in jurisdictionData. */
+const UNKNOWN_REPOSS_P50 = 99;
+
 export type CtcTier = "gold" | "moderate" | "nonCtc";
 
 export interface JurisdictionRow {
@@ -76,16 +79,17 @@ export function computePortfolioJurisdictionMix(
     const jEntry = jurisMap.get(country.toLowerCase());
     const tier = ctcTier(jEntry);
 
+    const rental = lease.monthly_rental; // narrowed to number — null/zero excluded by guard above
     rawRows.push({
       lesseeName: lessee.name,
       country,
       tier,
       ctcScore: jEntry?.ctcScore ?? 0,
-      repossP50: jEntry?.repossP50 ?? 99,
+      repossP50: jEntry?.repossP50 ?? UNKNOWN_REPOSS_P50,
       weightPct: 0,          // filled in second pass
-      monthlyRental: lease.monthly_rental,
+      monthlyRental: rental,
     });
-    totalRental += lease.monthly_rental;
+    totalRental += rental;
   }
 
   if (totalRental === 0) return { ctcGoldPct: 0, nonCtcPct: 0, rows: [] };
