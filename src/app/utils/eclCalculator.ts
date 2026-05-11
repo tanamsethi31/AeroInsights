@@ -32,6 +32,12 @@ export interface ScenarioInputs {
 
   // ── Security deposits ─────────────────────────────────────────────────────────
   depositCoverage: number; // 0–1: recommended deposits as fraction of ECL baseline (0 = no deposits)
+
+  // ── Payment behaviour ─────────────────────────────────────────────────────────
+  payBehaviourCoopPct: number; // 0–1: share of fleet in Cooperative tier (score ≥ 70)
+  payBehaviourAdvPct: number; // 0–1: share of fleet in Adversarial tier (score < 40)
+  // Derived: neutralPct = max(0, 1 − coopPct − advPct). Not stored.
+  // Both default to 0 (feature inactive = neutral baseline, 0 ECL adjustment). Backward-compatible.
 }
 
 export interface StageDistribution {
@@ -78,6 +84,8 @@ export const ZERO_INPUTS: ScenarioInputs = {
   ctcGoldPct: 0,
   nonCtcPct: 0,
   depositCoverage: 0,
+  payBehaviourCoopPct: 0,
+  payBehaviourAdvPct: 0,
 };
 
 export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
@@ -131,7 +139,17 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
   // depositCoverage = total_deposits / ECL_baseline (not fleet EAD — see creditDeposit.ts).
   const depositBenefit = inputs.depositCoverage * baseECL * 0.50;
 
-  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta + jurisdictionLGDDelta - depositBenefit;
+  // Payment behaviour delta — regional payment culture adjustment to effective LGD.
+  // Adversarial: +12% of baseECL (contested recoveries, high DPD, govt interference).
+  // Cooperative: −7% of baseECL (fast workouts, low DPD, strong payment culture).
+  // Guard: both 0 → feature inactive → 0 delta (neutral baseline, not optimistic).
+  // Note: callers must ensure coopPct + advPct ≤ 1; parseDSL enforces this at parse time.
+  const payBehaviourDelta =
+    inputs.payBehaviourCoopPct === 0 && inputs.payBehaviourAdvPct === 0
+      ? 0
+      : (inputs.payBehaviourAdvPct * 0.12 - inputs.payBehaviourCoopPct * 0.07) * baseECL;
+
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta + jurisdictionLGDDelta - depositBenefit + payBehaviourDelta;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 

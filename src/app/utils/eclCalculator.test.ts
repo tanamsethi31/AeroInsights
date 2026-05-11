@@ -81,6 +81,8 @@ describe("distress inputs", () => {
     expect(ZERO_INPUTS.ctcGoldPct).toBe(0);
     expect(ZERO_INPUTS.nonCtcPct).toBe(0);
     expect(ZERO_INPUTS.depositCoverage).toBe(0);
+    expect(ZERO_INPUTS.payBehaviourCoopPct).toBe(0);
+    expect(ZERO_INPUTS.payBehaviourAdvPct).toBe(0);
   });
 
   it("deferral with full forgiveness and no govt support increases ECL", () => {
@@ -263,5 +265,54 @@ describe("security deposit benefit", () => {
   it("floor still holds under max deposit coverage + no stress", () => {
     const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, depositCoverage: 0.90 });
     expect(result).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
+  });
+});
+
+describe("payment behaviour delta", () => {
+  it("ZERO_INPUTS has payBehaviourCoopPct and payBehaviourAdvPct as 0", () => {
+    expect(ZERO_INPUTS.payBehaviourCoopPct).toBe(0);
+    expect(ZERO_INPUTS.payBehaviourAdvPct).toBe(0);
+  });
+
+  it("both 0 → feature inactive, no ECL adjustment (backward-compatible)", () => {
+    expect(computeECLFromBase(47.2, ZERO_INPUTS)).toBeCloseTo(47.2, 5);
+  });
+
+  it("100% adversarial → ECL increases by 12% of baseECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, payBehaviourAdvPct: 1.0 });
+    expect(result).toBeCloseTo(47.2 * (1 + 0.12), 4);
+  });
+
+  it("100% cooperative → ECL decreases by 7% of baseECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, payBehaviourCoopPct: 1.0 });
+    expect(result).toBeCloseTo(47.2 * (1 - 0.07), 4);
+  });
+
+  it("demo fleet mix: 52.2% coop + 19.9% adv → net ~−$0.30M", () => {
+    const result = computeECLFromBase(47.2, {
+      ...ZERO_INPUTS,
+      payBehaviourCoopPct: 0.522,
+      payBehaviourAdvPct: 0.199,
+    });
+    // delta = (0.199 × 0.12 − 0.522 × 0.07) × 47.2 ≈ −0.303M
+    expect(result).toBeCloseTo(47.2 + (0.199 * 0.12 - 0.522 * 0.07) * 47.2, 2);
+  });
+
+  it("floor still holds under 100% adversarial + heavy macro stress", () => {
+    const result = computeECLFromBase(47.2, {
+      ...ZERO_INPUTS,
+      payBehaviourCoopPct: 0,
+      payBehaviourAdvPct: 1.0,
+      rpkDelta: -0.80,
+    });
+    expect(result).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
+  });
+
+  it("over-specified inputs (coopPct + advPct > 1) do not crash — formula runs with raw values", () => {
+    // parseDSL clamps coopPct + advPct ≤ 1, but a direct API caller could pass invalid inputs.
+    // The formula runs without throwing — this documents the behaviour (no implicit clamp).
+    expect(() =>
+      computeECLFromBase(47.2, { ...ZERO_INPUTS, payBehaviourCoopPct: 0.7, payBehaviourAdvPct: 0.7 })
+    ).not.toThrow();
   });
 });
