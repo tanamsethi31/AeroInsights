@@ -15,6 +15,7 @@ import { PaymentBehaviourTab } from "../components/scenarios/PaymentBehaviourTab
 import { computePortfolioPaymentBehaviourMix } from "../utils/paymentBehaviour";
 import { DeferralRiskTab } from "../components/scenarios/DeferralRiskTab";
 import { RESTRUCTURING_TYPES } from "../utils/deferralRisk";
+import { LessorMitigationTab } from "../components/scenarios/LessorMitigationTab";
 import { StatusPill } from "../components/ui/StatusPill";
 import {
   Play,
@@ -1168,7 +1169,7 @@ export default function Scenarios() {
 
   const tabs = isExecutiveMode
     ? EXEC_SCENARIO_TABS
-    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Security Deposits", "Deferral Risk", "Payment Behaviour", "Lease Pricing"];
+    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Security Deposits", "Deferral Risk", "Lessor Mitigation", "Payment Behaviour", "Lease Pricing"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3267,6 +3268,20 @@ export default function Scenarios() {
               deferralMonths:    months,
               govtSupportProb:   govtProb,
               forgivenessRate:   forgiveness,
+            });
+          }}
+        />
+      )}
+
+      {/* ══ LESSOR MITIGATION TAB ═══════════════════════════════════════ */}
+      {activeTab === "Lessor Mitigation" && (
+        <LessorMitigationTab
+          onUseInCustomBuilder={(pbh, etp, lec) => {
+            setActiveTab("Custom Builder");
+            updateFormInputs({
+              pbhConversionPct: pbh,
+              etpRate:          etp,
+              lecRate:          lec,
             });
           }}
         />
