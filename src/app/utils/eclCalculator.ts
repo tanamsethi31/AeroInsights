@@ -23,6 +23,12 @@ export interface ScenarioInputs {
 
   // ── Insolvency regime ─────────────────────────────────────────────────────
   bankruptcyScenarioType: string | null; // null = no regime selected (zero ECL impact)
+
+  // ── Jurisdiction risk ─────────────────────────────────────────────────────
+  ctcGoldPct: number;    // 0–1: share of fleet in CTC Gold jurisdictions (ctcScore≥80 AND ctcParty:true)
+  nonCtcPct: number;     // 0–1: share of fleet in Non-CTC jurisdictions (ctcParty:false AND ctcScore<50)
+  // Derived: ctcModeratePct = max(0, 1 − ctcGoldPct − nonCtcPct). Not stored — computed on use.
+  // Both default to 0 (feature inactive = all fleet assumed CTC Gold). Backward-compatible with ZERO_INPUTS.
 }
 
 export interface StageDistribution {
@@ -66,6 +72,8 @@ export const ZERO_INPUTS: ScenarioInputs = {
   etpRate: 0,
   lecRate: 0,
   bankruptcyScenarioType: null,
+  ctcGoldPct: 0,
+  nonCtcPct: 0,
 };
 
 export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): number {
@@ -104,7 +112,17 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
     ? (LGD_DELTAS[inputs.bankruptcyScenarioType] ?? 0) * baseECL
     : 0;
 
-  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta;
+  // Jurisdiction LGD uplift.
+  // Guard: when both are 0, feature is inactive (all fleet assumed CTC Gold → 0 uplift).
+  // This preserves backward compatibility with ZERO_INPUTS.
+  // When active: CTC Moderate = +6% of baseECL, Non-CTC = +15% of baseECL.
+  const ctcModeratePct = Math.max(0, 1 - inputs.ctcGoldPct - inputs.nonCtcPct);
+  const jurisdictionLGDDelta =
+    inputs.ctcGoldPct === 0 && inputs.nonCtcPct === 0
+      ? 0
+      : (ctcModeratePct * 0.06 + inputs.nonCtcPct * 0.15) * baseECL;
+
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta + jurisdictionLGDDelta;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 

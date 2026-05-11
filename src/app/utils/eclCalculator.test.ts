@@ -168,3 +168,65 @@ describe("insolvency regime LGD adjustment", () => {
     }
   );
 });
+
+describe("jurisdiction LGD adjustment", () => {
+  it("ZERO_INPUTS has ctcGoldPct and nonCtcPct as 0", () => {
+    expect(ZERO_INPUTS.ctcGoldPct).toBe(0);
+    expect(ZERO_INPUTS.nonCtcPct).toBe(0);
+  });
+
+  it("both 0 → no uplift, backward-compatible with ZERO_INPUTS", () => {
+    expect(computeECLFromBase(47.2, ZERO_INPUTS)).toBeCloseTo(47.2, 5);
+  });
+
+  it("both 0 → no uplift even when named explicitly", () => {
+    expect(
+      computeECLFromBase(47.2, { ...ZERO_INPUTS, ctcGoldPct: 0, nonCtcPct: 0 })
+    ).toBeCloseTo(47.2, 5);
+  });
+
+  it("pure non-CTC (nonCtcPct = 1.0) → +15% of baseECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, ctcGoldPct: 0, nonCtcPct: 1.0 });
+    expect(result).toBeCloseTo(47.2 * 1.15, 4);
+  });
+
+  it("pure CTC Gold (ctcGoldPct = 1.0) → 0 uplift", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, ctcGoldPct: 1.0, nonCtcPct: 0 });
+    expect(result).toBeCloseTo(47.2, 5);
+  });
+
+  it("ctcGoldPct=0.5, nonCtcPct=0 → Moderate=50%, uplift = 0.5×0.06×baseECL", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, ctcGoldPct: 0.5, nonCtcPct: 0 });
+    const expectedUplift = 0.5 * 0.06 * 47.2;
+    expect(result).toBeCloseTo(47.2 + expectedUplift, 4);
+  });
+
+  it("mixed portfolio: 70% Gold, 20% NonCTC → Moderate=10%, uplift correct", () => {
+    // ctcModeratePct = max(0, 1 - 0.7 - 0.2) = 0.1
+    // jurisdictionLGDDelta = (0.1 × 0.06 + 0.2 × 0.15) × 47.2 = 0.036 × 47.2 = 1.6992
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, ctcGoldPct: 0.7, nonCtcPct: 0.2 });
+    const expectedDelta = (0.1 * 0.06 + 0.2 * 0.15) * 47.2;
+    expect(result).toBeCloseTo(47.2 + expectedDelta, 4);
+  });
+
+  it("over-specified (gold + nonCtc > 1) clamps moderate to 0", () => {
+    // ctcGoldPct=0.7, nonCtcPct=0.5 → ctcModeratePct = max(0, -0.2) = 0
+    // jurisdictionLGDDelta = 0.5 × 0.15 × 47.2 = 3.54
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, ctcGoldPct: 0.7, nonCtcPct: 0.5 });
+    const expectedDelta = 0.5 * 0.15 * 47.2;
+    expect(result).toBeCloseTo(47.2 + expectedDelta, 4);
+  });
+
+  it("floor still holds with max non-CTC (nonCtcPct=1.0)", () => {
+    const result = computeECLFromBase(47.2, { ...ZERO_INPUTS, ctcGoldPct: 0, nonCtcPct: 1.0 });
+    expect(result).toBeGreaterThanOrEqual(47.2 * 0.3 - 0.001);
+  });
+
+  it("jurisdiction uplift stacks additively with macro stress", () => {
+    const noJurisdiction = computeECLFromBase(47.2, { ...ZERO_INPUTS, rpkDelta: -0.25 });
+    const withJurisdiction = computeECLFromBase(47.2, {
+      ...ZERO_INPUTS, rpkDelta: -0.25, ctcGoldPct: 0, nonCtcPct: 0.5,
+    });
+    expect(withJurisdiction).toBeGreaterThan(noJurisdiction);
+  });
+});
