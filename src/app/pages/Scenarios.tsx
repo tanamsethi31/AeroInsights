@@ -683,9 +683,11 @@ function parseDSL(text: string): { ok: boolean; inputs?: ScenarioInputs; name?: 
         ctcGoldPct: typeof s.ctc_gold_pct === "number"
           ? Math.min(1, Math.max(0, s.ctc_gold_pct))
           : 0,
-        nonCtcPct: typeof s.non_ctc_pct === "number"
-          ? Math.min(1, Math.max(0, s.non_ctc_pct))
-          : 0,
+        nonCtcPct: (() => {
+          const gold = typeof s.ctc_gold_pct === "number" ? Math.min(1, Math.max(0, s.ctc_gold_pct)) : 0;
+          const raw  = typeof s.non_ctc_pct  === "number" ? Math.min(1, Math.max(0, s.non_ctc_pct))  : 0;
+          return Math.min(raw, Math.max(0, 1 - gold));
+        })(),
       },
     };
   } catch {
@@ -2380,12 +2382,12 @@ export default function Scenarios() {
                               style={{ overflow: "hidden" }}
                             >
                               <div style={{ padding: "0.875rem" }}>
-                                {/* CTC Gold slider */}
+                                {/* CTC Gold slider — clamped so gold + nonCtc ≤ 1 */}
                                 <SliderRow
                                   label="CTC Gold"
                                   min={0} max={1} step={0.05}
                                   value={goldPct}
-                                  onChange={(v) => updateFormInputs({ ctcGoldPct: v })}
+                                  onChange={(v) => updateFormInputs({ ctcGoldPct: Math.min(v, Math.max(0, 1 - nonCtcP)) })}
                                   fmt={(v) => `${(v * 100).toFixed(0)}%`}
                                 />
 
