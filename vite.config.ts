@@ -25,10 +25,14 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
-    alias: {
-      // Alias @ to the src directory
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      {
+        // Use a regex so the alias only matches @/ (imports like @/components/…)
+        // and does NOT match scoped npm packages like @supabase/… or @radix-ui/…
+        find: /^@\//,
+        replacement: path.resolve(__dirname, './src') + '/',
+      },
+    ],
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
