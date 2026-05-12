@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "npm run build",
+  "buildCommand": "ls -la node_modules/@supabase/ && ls -la node_modules/@supabase/supabase-js/dist/ 2>&1 || echo 'SUPABASE MISSING' && npm run build",
   "installCommand": "rm -rf node_modules && npm ci",
   "outputDirectory": "dist",
   "rewrites": [
