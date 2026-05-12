@@ -9,6 +9,7 @@ import { InsolvencyTab } from "../components/scenarios/InsolvencyTab";
 import { LeasePricingTab } from "../components/scenarios/LeasePricingTab";
 import { JurisdictionRiskTab } from "../components/scenarios/JurisdictionRiskTab";
 import { AssetRiskTab } from "../components/scenarios/AssetRiskTab";
+import { RatingPDTab } from "../components/scenarios/RatingPDTab";
 import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { computePortfolioAssetRisk } from "../utils/assetRisk";
 import { CreditDepositTab } from "../components/scenarios/CreditDepositTab";
@@ -1281,7 +1282,7 @@ export default function Scenarios() {
 
   const tabs = isExecutiveMode
     ? EXEC_SCENARIO_TABS
-    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Asset Risk", "Security Deposits", "Deferral Risk", "Lessor Mitigation", "Payment Behaviour", "Concentration Stress", "Lease Pricing"];
+    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Asset Risk", "Rating / PD", "Security Deposits", "Deferral Risk", "Lessor Mitigation", "Payment Behaviour", "Concentration Stress", "Lease Pricing"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3699,6 +3700,16 @@ export default function Scenarios() {
           onUseInCustomBuilder={(months, adj) => {
             updateFormInputs({ remarketingMonths: months, vintageAdjFactor: adj });
             setAssetRiskOpen(true);
+            setActiveTab("Custom Builder");
+          }}
+        />
+      )}
+
+      {/* ══ RATING / PD TAB ════════════════════════════════════════════ */}
+      {activeTab === "Rating / PD" && (
+        <RatingPDTab
+          onUseInCustomBuilder={(s2Multi, s3Multi) => {
+            updateFormInputs({ pdS2Multi: s2Multi, pdS3Multi: s3Multi });
             setActiveTab("Custom Builder");
           }}
         />
