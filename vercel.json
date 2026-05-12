@@ -1,7 +1,7 @@
 {
   "framework": "vite",
-  "buildCommand": "ls node_modules/@supabase/supabase-js/dist/index.mjs && npm run build",
-  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "installCommand": "rm -rf node_modules && npm ci",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
