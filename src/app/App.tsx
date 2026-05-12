@@ -1,5 +1,6 @@
 // src/app/App.tsx
 import { RouterProvider } from "react-router";
+import { Analytics } from "@vercel/analytics/react";
 import { router } from "./routes";
 import { PortfolioProvider } from "./contexts/PortfolioContext";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
@@ -13,6 +14,7 @@ export default function App() {
         <PortfolioProvider>
           <ViewModeProvider>
             <RouterProvider router={router} />
+            <Analytics />
           </ViewModeProvider>
         </PortfolioProvider>
       </DataProvider>
