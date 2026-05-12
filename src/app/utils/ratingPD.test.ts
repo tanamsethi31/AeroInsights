@@ -236,6 +236,13 @@ describe("computePortfolioRatingPD", () => {
     expect(result.rows).toHaveLength(0);
   });
 
+  it("lessee with zero monthly_rental is excluded", () => {
+    const lessees = [makeLessee("l1", "Zero Rental", 0.05, null)];
+    const leases  = [makeLease("l1", 0)]; // zero rental — excluded
+    const result = computePortfolioRatingPD(lessees, leases);
+    expect(result.rows).toHaveLength(0);
+  });
+
   it("rows sorted by weightPct descending", () => {
     const lessees = [
       makeLessee("l1", "Small", 0.05, null),
