@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { Auth0Provider } from "@auth0/auth0-react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 import App from "./app/App.tsx";
 import "./styles/index.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -31,5 +32,6 @@ createRoot(document.getElementById("root")!).render(
   >
     <App />
     <SpeedInsights />
+    <Analytics />
   </Auth0Provider>
 );
