@@ -32,6 +32,7 @@ export const BASELINE_S2_PD = 0.05;  // 5%
 export const BASELINE_S3_PD = 0.30;  // 30%
 
 export interface RatingPDRow {
+  lesseeId:        string;
   lesseeName:      string;
   creditRating:    string | null;
   pdEstimate:      number | null;     // null = not populated in portfolio data
@@ -133,6 +134,7 @@ export function computePortfolioRatingPD(
       pdStage !== null && watchlistStage !== null && pdStage !== watchlistStage;
 
     rawRows.push({
+      lesseeId:        lessee.id,
       lesseeName:      lessee.name,
       creditRating:    lessee.credit_rating,
       pdEstimate:      lessee.pd_estimate,

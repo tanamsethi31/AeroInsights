@@ -1,5 +1,5 @@
 // src/app/components/scenarios/RatingPDTab.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import {
   computePortfolioRatingPD,
@@ -157,7 +157,7 @@ export function RatingPDTab({ onUseInCustomBuilder }: Props) {
 
   // ── Pill style helper ──
 
-  function presetPillStyle(active: boolean): React.CSSProperties {
+  function presetPillStyle(active: boolean) {
     return {
       padding: "0.25rem 0.75rem",
       borderRadius: "9999px",
@@ -285,7 +285,7 @@ export function RatingPDTab({ onUseInCustomBuilder }: Props) {
                 <tbody>
                   {rows.map((row, i) => (
                     <tr
-                      key={row.lesseeName}
+                      key={row.lesseeId}
                       style={{
                         borderBottom: i < rows.length - 1 ? "1px solid #F1F5F9" : "none",
                         background: i % 2 === 0 ? "#FFFFFF" : "#FAFAFA",
