@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { Auth0Provider } from "@auth0/auth0-react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import App from "./app/App.tsx";
 import "./styles/index.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -29,5 +30,6 @@ createRoot(document.getElementById("root")!).render(
     onRedirectCallback={onRedirectCallback}
   >
     <App />
+    <SpeedInsights />
   </Auth0Provider>
 );
