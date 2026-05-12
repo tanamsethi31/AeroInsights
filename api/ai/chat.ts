@@ -153,7 +153,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   // Rate limit check.
   const limit = await checkAndIncrementLimits(userId);
-  if (!limit.allowed) {
+  if (limit.allowed === false) {
     return json({ error: limit.reason, code: "RATE_LIMITED" }, 429);
   }
 
