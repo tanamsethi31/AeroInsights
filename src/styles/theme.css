@@ -252,3 +252,9 @@
     transform: none !important;
   }
 }
+
+/* ─── PillTabs scroll wrapper — hide scrollbar in WebKit (Chrome/Safari) ─────── */
+
+.pill-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
