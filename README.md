@@ -1,7 +1,7 @@
 
   # Aeroinsights
 
-  This is a code bundle for Aeroinsights. The original project is available at https://www.figma.com/design/2ESNlxDkQKLPMX5FFTFbf0/Aeroinsights.
+  This is a code bundle for Aeroinsights.
 
   ## Running the code
 
