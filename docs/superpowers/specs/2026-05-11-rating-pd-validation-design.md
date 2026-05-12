@@ -63,6 +63,7 @@ Implied multiplier derivation:
 
 ```typescript
 export interface RatingPDRow {
+  lesseeId:        string;
   lesseeName:      string;
   creditRating:    string | null;
   pdEstimate:      number | null;     // null = not populated in portfolio data
@@ -122,8 +123,8 @@ export function computePortfolioRatingPD(
   pctS1:               number;   // 0–1 rental share, PD-implied stage
   pctS2:               number;
   pctS3:               number;
-  impliedPdS2Multi:    number;   // ≥ 1.0 (1.0 = S2 bucket empty or at baseline)
-  impliedPdS3Multi:    number;   // ≥ 1.0 (1.0 = S3 bucket empty or at baseline)
+  impliedPdS2Multi:    number;   // [0.5, 5.0] clamped (1.0 = S2 bucket empty or at baseline)
+  impliedPdS3Multi:    number;   // [0.5, 5.0] clamped (1.0 = S3 bucket empty or at baseline)
   divergenceCount:     number;   // lessees where pdStage ≠ watchlistStage (both non-null)
 }
 ```
@@ -226,7 +227,7 @@ No auto-expand needed — `pdS2Multi`/`pdS3Multi` are in the top-level macro sec
 - PD = 0.21 → Stage 3
 
 **`watchlistImpliedStage`:**
-- null → 1; "green" → 1; "amber" → 2; "red" → 3
+- null → null; "green" → 1; "amber" → 2; "red" → 3
 
 **`computePortfolioRatingPD`:**
 - Empty inputs → all zeros, empty rows
