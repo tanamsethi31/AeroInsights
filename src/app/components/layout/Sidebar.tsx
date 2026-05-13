@@ -37,9 +37,11 @@ import {
   FileSpreadsheet,
   Zap,
   Activity,
+  FolderOpen,
 } from "lucide-react";
 
 import { useViewMode } from "../../contexts/ViewModeContext";
+import { usePortfolio } from "../../contexts/PortfolioContext";
 import { WATCHLIST_DATA } from "../counterparties/watchlistEngine";
 
 import {
@@ -285,6 +287,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate();
   const { logout } = useAuth0();
   const { isExecutiveMode, setIsExecutiveMode } = useViewMode();
+  const { setActivePortfolio } = usePortfolio();
 
   /** Count of non-green lessees — shown as badge on the Counterparties nav item */
   const alertCount = React.useMemo(
@@ -357,6 +360,21 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       {/* Footer / Controls */}
       <SidebarFooter>
         <SidebarMenu>
+          {/* Back to portfolios */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => {
+                setActivePortfolio(null);
+                navigate("/portfolios");
+              }}
+              className="cursor-pointer"
+              tooltip="Switch Portfolio"
+            >
+              <FolderOpen size={18} />
+              <span>Switch Portfolio</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
           {/* Executive Mode toggle */}
           <SidebarMenuItem>
             <SidebarMenuButton

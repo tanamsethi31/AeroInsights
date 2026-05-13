@@ -3,6 +3,7 @@ import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router";
 import { useAuth0 } from "@auth0/auth0-react";
+import { ArrowLeft } from "lucide-react";
 import { OrgSetupStep } from "./OrgSetupStep";
 import { InviteTeamStep } from "./InviteTeamStep";
 import { UploadStep } from "./UploadStep";
@@ -70,13 +71,31 @@ export function OnboardingWizard() {
       >
         {/* Header */}
         <div style={{ background: "#002147", padding: "24px 28px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-            <div style={{ fontWeight: 800, fontSize: "1.25rem", color: "#FFFFFF", letterSpacing: "-0.02em" }}>
-              Aeroinsights
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ fontWeight: 800, fontSize: "1.25rem", color: "#FFFFFF", letterSpacing: "-0.02em" }}>
+                Aeroinsights
+              </div>
+              <div style={{ fontSize: "0.6875rem", background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", borderRadius: "10px", padding: "2px 8px", fontWeight: 600 }}>
+                Setup
+              </div>
             </div>
-            <div style={{ fontSize: "0.6875rem", background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.85)", borderRadius: "10px", padding: "2px 8px", fontWeight: 600 }}>
-              Setup
-            </div>
+            <button
+              onClick={() => navigate("/portfolios")}
+              style={{
+                display: "flex", alignItems: "center", gap: "5px",
+                background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: "6px", padding: "5px 10px",
+                fontSize: "0.75rem", fontWeight: 500, color: "rgba(255,255,255,0.85)",
+                cursor: "pointer", flexShrink: 0,
+                transition: "background 150ms",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.10)")}
+            >
+              <ArrowLeft size={12} />
+              Portfolios
+            </button>
           </div>
           <div style={{ fontWeight: 600, fontSize: "1.0625rem", color: "#FFFFFF", marginBottom: "4px" }}>
             {STEP_LABELS[step]}

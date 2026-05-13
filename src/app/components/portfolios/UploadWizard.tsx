@@ -1080,6 +1080,20 @@ export function UploadWizard({ onClose }: UploadWizardProps) {
 
         {/* Wizard title */}
         <div style={{ marginBottom: "1.75rem" }}>
+          <button
+            onClick={onClose}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "5px",
+              background: "none", border: "none", padding: "0 0 10px",
+              fontSize: "0.8125rem", fontWeight: 500, color: "#64748B",
+              cursor: "pointer",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#002147")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#64748B")}
+          >
+            <ArrowLeft size={14} />
+            Back to Portfolios
+          </button>
           <p style={{ margin: 0, fontSize: "0.75rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.07em" }}>
             New Portfolio
           </p>
