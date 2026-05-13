@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useAuth0 } from "@auth0/auth0-react";
 import { motion } from "framer-motion";
@@ -100,6 +100,7 @@ export default function PortfolioHub() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const sampleBgRef = useRef<HTMLDivElement>(null);
 
   // Fetch user's custom portfolios
   useEffect(() => {
@@ -226,7 +227,7 @@ export default function PortfolioHub() {
             padding: "4rem 2rem",
           }}
         >
-          <div style={{ width: "100%", maxWidth: "720px" }}>
+          <div style={{ width: "100%", maxWidth: "1100px" }}>
             {/* Greeting */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -326,8 +327,8 @@ export default function PortfolioHub() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                  gap: "1.25rem",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: "1.5rem",
                 }}
               >
                 {/* Card 1 — Sample portfolio */}
@@ -336,6 +337,101 @@ export default function PortfolioHub() {
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.38, delay: 0.08, ease: [0.23, 1, 0.32, 1] }}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    background: "#001529",
+                    border: "none",
+                    borderRadius: "1rem",
+                    padding: "2rem",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    minHeight: "260px",
+                    overflow: "hidden",
+                    transition: "box-shadow 220ms cubic-bezier(0.23,1,0.32,1), transform 220ms cubic-bezier(0.23,1,0.32,1)",
+                    boxShadow: "0 4px 20px rgba(0,33,71,0.25)",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                      "0 12px 32px rgba(0,33,71,0.30)";
+                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "translateY(-22px) scale(1.10)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                      "0 4px 20px rgba(0,33,71,0.25)";
+                    (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "translateY(0) scale(1)";
+                  }}
+                >
+                  {/* Rising background image */}
+                  <div
+                    ref={sampleBgRef}
+                    style={{
+                      position: "absolute",
+                      inset: "-28px",
+                      backgroundImage: "url('/sample-portfolio-bg.png')",
+                      backgroundSize: "cover",
+                      backgroundPosition: "center top",
+                      borderRadius: "1.5rem",
+                      transform: "translateY(0) scale(1)",
+                      transition: "transform 500ms cubic-bezier(0.23,1,0.32,1)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  {/* Gradient overlay for text legibility */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "linear-gradient(160deg, rgba(0,21,47,0.78) 0%, rgba(0,33,71,0.60) 50%, rgba(0,10,30,0.35) 100%)",
+                      borderRadius: "1rem",
+                      pointerEvents: "none",
+                    }}
+                  />
+
+                  {/* Content sits above overlay */}
+                  <div style={{ position: "relative", zIndex: 1 }}>
+                    <div
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        background: "rgba(255,255,255,0.15)",
+                        backdropFilter: "blur(6px)",
+                        borderRadius: "0.625rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: "1.5rem",
+                        border: "1px solid rgba(255,255,255,0.20)",
+                      }}
+                    >
+                      <BarChart3 size={22} style={{ color: "#FFFFFF" }} />
+                    </div>
+                    <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.625rem" }}>
+                      Explore Sample Portfolio
+                    </div>
+                    <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.75)", lineHeight: 1.6 }}>
+                      10-aircraft global fleet · Pre-built IFRS 9 ECL data · No setup required
+                    </div>
+                  </div>
+
+                  <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "2rem" }}>
+                    <span style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#FFFFFF" }}>
+                      Launch now
+                    </span>
+                    <ArrowRight size={16} style={{ color: "#FFFFFF" }} />
+                  </div>
+                </motion.button>
+
+                {/* Card 2 — Upload real portfolio */}
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.12, duration: 0.38, ease: [0.23, 1, 0.32, 1] }}
+                  onClick={() => navigate("/onboarding")}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -346,6 +442,7 @@ export default function PortfolioHub() {
                     padding: "2rem",
                     cursor: "pointer",
                     textAlign: "left",
+                    color: "#FFFFFF",
                     minHeight: "260px",
                     transition: "box-shadow 160ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1)",
                     boxShadow: "0 4px 16px rgba(0,33,71,0.20)",
@@ -374,49 +471,21 @@ export default function PortfolioHub() {
                         marginBottom: "1.5rem",
                       }}
                     >
-                      <BarChart3 size={22} style={{ color: "#FFFFFF" }} />
+                      <Database size={22} style={{ color: "#FFFFFF" }} />
                     </div>
                     <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.625rem" }}>
-                      Explore Sample Portfolio
+                      Upload Your Portfolio
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>
-                      10-aircraft global fleet · Pre-built IFRS 9 ECL data · No
-                      setup required
+                      Import your real fleet, leases, and lessees to unlock full platform capabilities.
                     </div>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "2rem" }}>
                     <span style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#FFFFFF" }}>
-                      Launch now
+                      Import now
                     </span>
                     <ArrowRight size={16} style={{ color: "#FFFFFF" }} />
-                  </div>
-                </motion.button>
-
-                {/* Card 2 — Upload real portfolio */}
-                <motion.button
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.12, duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                  onClick={() => navigate("/onboarding")}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    gap: "8px",
-                    background: "#002147",
-                    border: "none",
-                    borderRadius: "12px",
-                    padding: "20px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    color: "#FFFFFF",
-                  }}
-                >
-                  <Database size={24} style={{ color: "rgba(255,255,255,0.8)" }} />
-                  <div style={{ fontWeight: 700, fontSize: "1rem" }}>Upload your portfolio</div>
-                  <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.4 }}>
-                    Import your real fleet, leases, and lessees to unlock full platform capabilities.
                   </div>
                 </motion.button>
 
