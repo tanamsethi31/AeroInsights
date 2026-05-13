@@ -47,10 +47,11 @@ import { toPaymentSchedule } from "../lib/paymentAdapters";
 import { AnimatePresence } from "framer-motion";
 import { LeaseEditDrawer } from "../components/portfolio/LeaseEditDrawer";
 import { useData } from "../contexts/DataContext";
+import { ModelParametersTab } from "../components/portfolio/ModelParametersTab";
 
 
 
-const tabs = ["Leases", "Aircraft", "Lessees", "Concentration", "SD / MR", "Performance vs. Plan", "Payments", "Key Dates"];
+const tabs = ["Leases", "Aircraft", "Lessees", "Model Parameters", "Concentration", "SD / MR", "Performance vs. Plan", "Payments", "Key Dates"];
 const EXEC_TABS = ["Leases", "Aircraft"];
 
 function fmtM(m: number): string {
@@ -671,6 +672,19 @@ export default function Portfolio() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Model Parameters Tab */}
+      {activeTab === "Model Parameters" && (
+        <ModelParametersTab
+          leases={leaseData}
+          assets={assets}
+          lessees={lesseeData}
+          provisions={provisions}
+          orgId={orgId ?? ""}
+          isDemo={isDemo}
+          onSaved={refetch}
+        />
       )}
 
       {/* Concentration Tab */}
