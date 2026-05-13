@@ -6,7 +6,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar,
   AreaChart, Area,
 } from "recharts";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, Pencil } from "lucide-react";
 import { WatchlistTab } from "./WatchlistTab";
 import { WATCHLIST_DATA } from "./watchlistEngine";
 import { MitigationsTab } from "./MitigationsTab";
@@ -17,6 +17,7 @@ import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
 import { ExpandableCell } from "../ui/ExpandableCell";
 import { CountryFlag } from "../ui/CountryFlag";
+import { updateLessee } from "../../lib/portfolioMutations";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1298,10 +1299,46 @@ function BehaviourTab({ meta, behaviourEvidence, scoreHistory }: {
 
 // ─── LesseeProfilePanel ───────────────────────────────────────────────────────
 
-export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
+interface LesseeProfilePanelProps {
+  lesseeId: LesseeId;
+  liveLessee?: import("../../types/portfolio").Lessee;
+  onSaved?: () => void;
+}
+
+export function LesseeProfilePanel({ lesseeId, liveLessee, onSaved }: LesseeProfilePanelProps) {
   const { isExecutiveMode } = useViewMode();
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const { meta, leases, eclRows, monthlyDPD, events, scenarios, behaviourEvidence, scoreHistory } = PROFILE_DATA[lesseeId];
+
+  // ── Edit-in-place state ──────────────────────────────────────────────────────
+  type EditField = "credit_rating" | "pd_estimate" | "watchlist_status" | null;
+  const [editingField, setEditingField] = useState<EditField>(null);
+  const [draftRating, setDraftRating] = useState(liveLessee?.credit_rating ?? "");
+  const [draftPd, setDraftPd] = useState<number | null>(liveLessee?.pd_estimate ?? null);
+  const [draftWatchlist, setDraftWatchlist] = useState<"green" | "amber" | "red" | null>(
+    liveLessee?.watchlist_status ?? null
+  );
+  const [editSaving, setEditSaving] = useState(false);
+
+  const canEdit = !!liveLessee && !!onSaved;
+
+  async function handleFieldSave() {
+    if (!liveLessee || !onSaved) return;
+    setEditSaving(true);
+    try {
+      await updateLessee(liveLessee.id, {
+        credit_rating: draftRating || null,
+        pd_estimate: draftPd,
+        watchlist_status: draftWatchlist,
+      });
+      onSaved();
+      setEditingField(null);
+    } catch (err) {
+      console.error("[LesseeProfilePanel] save error:", err);
+    } finally {
+      setEditSaving(false);
+    }
+  }
 
   // Merge watchlist audit events into the Timeline credit-event log
   const mergedEvents: PaymentEvent[] = useMemo(() => {
@@ -1332,11 +1369,103 @@ export function LesseeProfilePanel({ lesseeId }: { lesseeId: LesseeId }) {
           <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.25rem" }}>{meta.name}</div>
           <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
             <CountryFlag country={meta.country} size={13} />
-            {meta.country} · {meta.rating} · {meta.leaseCount} leases · {fmtM(meta.exposure)} exposure
+            {meta.country} ·{" "}
+            {editingField === "credit_rating" ? (
+              <input
+                autoFocus
+                value={draftRating}
+                onChange={e => setDraftRating(e.target.value)}
+                onBlur={handleFieldSave}
+                onKeyDown={e => {
+                  if (e.key === "Enter") handleFieldSave();
+                  if (e.key === "Escape") setEditingField(null);
+                }}
+                style={{ fontSize: "inherit", padding: "2px 6px", borderRadius: "5px", border: "1px solid #CBD5E1", outline: "none", width: "80px", color: "#0F172A" }}
+              />
+            ) : (
+              <span
+                onClick={() => canEdit && setEditingField("credit_rating")}
+                title={canEdit ? "Click to edit" : undefined}
+                style={{ cursor: canEdit ? "pointer" : "default", display: "inline-flex", alignItems: "center", gap: "4px" }}
+              >
+                {liveLessee?.credit_rating ?? meta.rating}
+                {canEdit && <Pencil size={11} style={{ color: "rgba(255,255,255,0.5)" }} />}
+              </span>
+            )}
+            {" "}· {meta.leaseCount} leases · {fmtM(meta.exposure)} exposure
           </div>
         </div>
         <StatusPill stage={meta.stage} label={`Stage ${meta.stage}`} />
       </div>
+
+      {/* Live-data edit strip — only shown when liveLessee is provided */}
+      {canEdit && (
+        <div style={{ background: "#F0F4FF", borderLeft: "1px solid #E2E8F0", borderRight: "1px solid #E2E8F0", borderBottom: "1px solid #E2E8F0", padding: "0.5rem 1.5rem", display: "flex", alignItems: "center", gap: "1.5rem", fontSize: "0.8125rem", color: "#475569" }}>
+          <span style={{ fontWeight: 600, color: "#002147" }}>Live fields:</span>
+
+          {/* PD Estimate */}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+            <span style={{ color: "#64748B" }}>PD Estimate:</span>
+            {editingField === "pd_estimate" ? (
+              <input
+                autoFocus
+                type="number" min={0} max={1} step={0.001}
+                value={draftPd ?? ""}
+                onChange={e => setDraftPd(e.target.value === "" ? null : Number(e.target.value))}
+                onBlur={handleFieldSave}
+                onKeyDown={e => {
+                  if (e.key === "Enter") handleFieldSave();
+                  if (e.key === "Escape") setEditingField(null);
+                }}
+                style={{ fontSize: "inherit", padding: "2px 6px", borderRadius: "5px", border: "1px solid #CBD5E1", outline: "none", width: "80px" }}
+              />
+            ) : (
+              <span
+                onClick={() => setEditingField("pd_estimate")}
+                title="Click to edit"
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", fontWeight: 600, color: "#0F172A" }}
+              >
+                {liveLessee.pd_estimate != null ? `${(liveLessee.pd_estimate * 100).toFixed(1)}%` : "—"}
+                <Pencil size={11} style={{ color: "#94A3B8" }} />
+              </span>
+            )}
+          </span>
+
+          {/* Watchlist Status */}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+            <span style={{ color: "#64748B" }}>Watchlist:</span>
+            {editingField === "watchlist_status" ? (
+              <select
+                autoFocus
+                value={draftWatchlist ?? ""}
+                onChange={e => setDraftWatchlist((e.target.value || null) as "green" | "amber" | "red" | null)}
+                onBlur={handleFieldSave}
+                onKeyDown={e => {
+                  if (e.key === "Enter") handleFieldSave();
+                  if (e.key === "Escape") setEditingField(null);
+                }}
+                style={{ fontSize: "inherit", padding: "2px 6px", borderRadius: "5px", border: "1px solid #CBD5E1", outline: "none" }}
+              >
+                <option value="">— none —</option>
+                <option value="green">Green</option>
+                <option value="amber">Amber</option>
+                <option value="red">Red</option>
+              </select>
+            ) : (
+              <span
+                onClick={() => setEditingField("watchlist_status")}
+                title="Click to edit"
+                style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", fontWeight: 600, color: liveLessee.watchlist_status === "red" ? "#B91C1C" : liveLessee.watchlist_status === "amber" ? "#B45309" : liveLessee.watchlist_status === "green" ? "#15803D" : "#0F172A" }}
+              >
+                {liveLessee.watchlist_status ?? "—"}
+                <Pencil size={11} style={{ color: "#94A3B8" }} />
+              </span>
+            )}
+          </span>
+
+          {editSaving && <span style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Saving…</span>}
+        </div>
+      )}
 
       {/* Tab nav */}
       <div style={{ background: "#FFFFFF", borderLeft: "1px solid #E2E8F0", borderRight: "1px solid #E2E8F0", display: "flex", gap: 0, borderBottom: "1px solid #E2E8F0", overflowX: "auto" }}>
