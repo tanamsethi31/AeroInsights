@@ -10,6 +10,8 @@ import { supabase } from "./supabase";
 //
 // remainingYears = max(0, (leaseEndDate − today) / 365.25)
 // If stage is null, falls back to Stage 1 formula.
+// Stage 2 requires leaseEndDate to compute remaining years.
+// If omitted, defaults to 1 year as a conservative estimate.
 
 export function computeEcl(
   pd: number | null,
@@ -70,6 +72,14 @@ export interface ProvisionUpdate {
   auto_ecl?: boolean;
 }
 
+/**
+ * Update a provision row.
+ *
+ * When `auto_ecl` is true (or omitted), ECL is recomputed only if ALL of
+ * `pd`, `lgd`, and `ead` are present in `updates`. For a partial patch
+ * (e.g. only updating `lgd`), pass the current values of the other fields
+ * too, otherwise ECL will not be recalculated.
+ */
 export async function updateProvision(
   provisionId: string,
   updates: ProvisionUpdate,
@@ -137,13 +147,18 @@ export async function applyPdToAllLesseeProvisions(
   if (pErr) throw new Error(pErr.message);
   if (!provs?.length) return;
 
+  const errors: string[] = [];
   for (const prov of provs) {
     const endDate = leaseEndDateById[prov.lease_id] ?? null;
-    const eclPayload: Record<string, unknown> = { pd };
+    const eclPayload: { pd: number; ecl_amount?: number } = { pd };
     if (prov.auto_ecl) {
       const ecl = computeEcl(pd, prov.lgd, prov.ead, prov.stage as 1 | 2 | 3 | null, endDate);
       if (ecl != null) eclPayload.ecl_amount = ecl;
     }
-    await supabase.from("provisions").update(eclPayload).eq("id", prov.id);
+    const { error } = await supabase.from("provisions").update(eclPayload).eq("id", prov.id);
+    if (error) errors.push(`provision ${prov.id}: ${error.message}`);
+  }
+  if (errors.length > 0) {
+    throw new Error(`Failed to update ${errors.length} provision(s): ${errors.join("; ")}`);
   }
 }
