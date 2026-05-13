@@ -60,9 +60,43 @@ alter table provisions
 import { supabase } from "./supabase";
 
 // ── ECL formula ───────────────────────────────────────────────────────────────
+//
+// IFRS 9 stage-aware calculation:
+//   Stage 1 — 12-month ECL:  PD × LGD × EAD
+//   Stage 2 — Lifetime ECL:  (1 − (1 − PD)^remainingYears) × LGD × EAD
+//   Stage 3 — Credit-impaired: LGD × EAD  (PD assumed = 1)
+//
+// remainingYears = max(0, (leaseEndDate − today) / 365.25)
+// If stage is null, falls back to Stage 1 formula.
 
-export function computeEcl(pd: number | null, lgd: number | null, ead: number | null): number | null {
-  if (pd == null || lgd == null || ead == null) return null;
+export function computeEcl(
+  pd: number | null,
+  lgd: number | null,
+  ead: number | null,
+  stage: 1 | 2 | 3 | null = 1,
+  leaseEndDate?: string | null,
+): number | null {
+  if (lgd == null || ead == null) return null;
+
+  if (stage === 3) {
+    // Stage 3: full lifetime loss, PD = 1
+    return lgd * ead;
+  }
+
+  if (pd == null) return null;
+
+  if (stage === 2) {
+    // Stage 2: lifetime PD using compound formula
+    const today = new Date();
+    const end = leaseEndDate ? new Date(leaseEndDate) : null;
+    const remainingYears = end
+      ? Math.max(0, (end.getTime() - today.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : 1; // default 1 year if no date
+    const lifetimePd = 1 - Math.pow(1 - pd, remainingYears);
+    return lifetimePd * lgd * ead;
+  }
+
+  // Stage 1 (default): 12-month ECL
   return pd * lgd * ead;
 }
 
@@ -98,15 +132,18 @@ export interface ProvisionUpdate {
 
 export async function updateProvision(
   provisionId: string,
-  updates: ProvisionUpdate
+  updates: ProvisionUpdate,
+  leaseEndDate?: string | null,
 ): Promise<void> {
-  // Auto-compute ECL if flag is set and all three inputs are present
+  // Auto-compute ECL if flag is set and all inputs are present
   const payload = { ...updates };
   if (payload.auto_ecl !== false) {
     const ecl = computeEcl(
       payload.pd ?? null,
       payload.lgd ?? null,
-      payload.ead ?? null
+      payload.ead ?? null,
+      (payload.stage ?? null) as 1 | 2 | 3 | null,
+      leaseEndDate,
     );
     if (ecl != null) payload.ecl_amount = ecl;
   }
@@ -142,29 +179,31 @@ export async function applyPdToAllLesseeProvisions(
   lesseeId: string,
   pd: number
 ): Promise<void> {
-  // Get all leases for this lessee
+  // Get all leases for this lessee (include end_date for lifetime ECL)
   const { data: leases, error: lErr } = await supabase
     .from("leases")
-    .select("id")
+    .select("id, end_date")
     .eq("org_id", orgId)
     .eq("lessee_id", lesseeId);
   if (lErr) throw new Error(lErr.message);
   if (!leases?.length) return;
 
+  const leaseEndDateById = Object.fromEntries(leases.map((l) => [l.id, l.end_date]));
   const leaseIds = leases.map((l) => l.id);
 
   // Update all provisions linked to those leases
   const { data: provs, error: pErr } = await supabase
     .from("provisions")
-    .select("id, lgd, ead, auto_ecl")
+    .select("id, lgd, ead, auto_ecl, stage, lease_id")
     .eq("org_id", orgId)
     .in("lease_id", leaseIds);
   if (pErr) throw new Error(pErr.message);
   if (!provs?.length) return;
 
   for (const prov of provs) {
+    const endDate = leaseEndDateById[prov.lease_id] ?? null;
     const ecl = prov.auto_ecl
-      ? computeEcl(pd, prov.lgd, prov.ead)
+      ? computeEcl(pd, prov.lgd, prov.ead, prov.stage as 1|2|3|null, endDate)
       : null;
     const payload: Record<string, unknown> = { pd };
     if (ecl != null) payload.ecl_amount = ecl;
