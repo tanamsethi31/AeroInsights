@@ -48,6 +48,7 @@ export interface Provision {
   pd: number | null;
   lgd: number | null;
   ead: number | null;
+  auto_ecl: boolean;
   reporting_date: string | null;
   created_at: string;
 }
@@ -59,4 +60,5 @@ export interface PortfolioData {
   provisions: Provision[];
   isLoading: boolean;
   isDemo: boolean;
+  refetch: () => Promise<void>;
 }
