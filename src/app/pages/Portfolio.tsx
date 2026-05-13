@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { usePortfolioData } from "../hooks/usePortfolioData";
@@ -32,10 +32,11 @@ import { KpiCard } from "../components/ui/KpiCard";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
-import { Download, Filter, Search, ChevronDown, Plus } from "lucide-react";
+import { Download, Filter, Search, ChevronDown, Plus, FileSpreadsheet } from "lucide-react";
 import { AddAircraftModal } from "../components/portfolios/AddAircraftModal";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
-import { SDMRTab } from "../components/portfolio/SDMRTab";
+import { PillTabs } from "../components/ui/PillTabs";
+import { SDMRTab, buildLiveSDMRData, type LeaseSDMR } from "../components/portfolio/SDMRTab";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
 import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForecastTab";
 import { PerformanceVsPlan } from "../components/portfolio/PerformanceVsPlan";
@@ -43,6 +44,9 @@ import { KeyDatesTab } from "../components/portfolio/KeyDatesTab";
 import { toKeyDateRows, toKeyDateKPIs } from "../lib/keyDatesAdapters";
 import { PaymentsTab } from "../components/portfolio/PaymentsTab";
 import { toPaymentSchedule } from "../lib/paymentAdapters";
+import { AnimatePresence } from "framer-motion";
+import { LeaseEditDrawer } from "../components/portfolio/LeaseEditDrawer";
+import { useData } from "../contexts/DataContext";
 
 
 
@@ -52,6 +56,12 @@ const EXEC_TABS = ["Leases", "Aircraft"];
 function fmtM(m: number): string {
   if (m >= 1000) return `$${(m / 1000).toFixed(2)}B`;
   return `$${m.toFixed(0)}M`;
+}
+
+/** Format a monthly-rent figure (value in $M) → "$2.9M" or "$285K" */
+function fmtRent(m: number): string {
+  if (m >= 1) return `$${m.toFixed(1)}M`;
+  return `$${Math.round(m * 1000).toLocaleString("en-US")}K`;
 }
 
 
@@ -73,7 +83,10 @@ export default function Portfolio() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount-only — do not re-run on locationState change
-  const { assets, lessees: lesseeData, leases: leaseData, provisions, isLoading } = usePortfolioData();
+  const { assets, lessees: lesseeData, leases: leaseData, provisions, isLoading, isDemo, refetch } = usePortfolioData();
+  const { orgId } = useData();
+  const [editingLeaseId, setEditingLeaseId] = useState<string | null>(null);
+  const editingLease = editingLeaseId ? leaseData.find(l => l.id === editingLeaseId) ?? null : null;
   const leases = toLeaseTableRows(leaseData, assets, lesseeData);
   const aircraft = toAircraftTableRows(assets, leaseData, lesseeData);
   const lessees = toLesseeTableRows(lesseeData, leaseData, provisions);
@@ -81,6 +94,23 @@ export default function Portfolio() {
   const keyDateKPIs = toKeyDateKPIs(keyDateRows);
   const paymentSchedule = toPaymentSchedule(leaseData, assets, lesseeData);
   const portfolioKPIs = toPortfolioKPIs(assets, leaseData, provisions);
+
+  // Live SDMR data — built once and shared with SDMRTab + MaintenanceForecastTab
+  const liveSDMRData = useMemo<LeaseSDMR[] | undefined>(() => {
+    if (isDemo || assets.length === 0) return undefined;
+    return buildLiveSDMRData(assets, lesseeData, leaseData, provisions);
+  }, [isDemo, assets, lesseeData, leaseData, provisions]);
+
+  // Index by MSN for O(1) lookup inside aircraft accordion rows
+  const liveSDMRByMsn = useMemo<Map<string, LeaseSDMR>>(() => {
+    const map = new Map<string, LeaseSDMR>();
+    if (!liveSDMRData) return map;
+    for (const record of liveSDMRData) {
+      const asset = assets.find((a) => a.id === leaseData.find((l) => l.id === record.leaseId)?.asset_id);
+      if (asset) map.set(asset.msn, record);
+    }
+    return map;
+  }, [liveSDMRData, assets, leaseData]);
 
   const leaseAccessors = {
     lessee:   (l: LeaseTableRow) => l.lessee,
@@ -94,11 +124,11 @@ export default function Portfolio() {
   const lesseeAccessors = {
     name:          (l: LesseeRow) => l.name,
     country:       (l: LesseeRow) => l.country,
-    behaviorScore: (l: LesseeRow) => l.behaviorScore,
+    behaviorScore: (l: LesseeRow) => l.behaviorScore ?? -1,
     stage:         (l: LesseeRow) => parseInt(l.stage),
     leases:        (l: LesseeRow) => l.leases,
     exposure:      (l: LesseeRow) => parseFloat(l.exposure.replace(/[$M]/g, "")) || 0,
-    paymentDays:   (l: LesseeRow) => l.paymentDays,
+    paymentDays:   (l: LesseeRow) => l.paymentDays ?? -1,
   };
 
   const [stageFilter, setStageFilter] = useState("All");
@@ -244,34 +274,116 @@ export default function Portfolio() {
 
       {/* KPI Strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-        <KpiCard label="Fleet" value={`${portfolioKPIs.fleetCount} aircraft`} />
-        <KpiCard label="Book Value (EAD)" value={fmtM(portfolioKPIs.bookValueM)} />
-        <KpiCard label="Total ECL" value={fmtM(portfolioKPIs.totalECLM)} deltaType="negative" />
-        <KpiCard label="Avg Remaining Term" value={`${portfolioKPIs.avgRemainingTermYrs.toFixed(1)} yrs`} />
+        <KpiCard
+          label="Book Value"
+          value={fmtM(portfolioKPIs.bookValueM)}
+          subtitle={`${portfolioKPIs.fleetCount} aircraft · Total EAD`}
+          staggerIndex={0}
+        />
+        <KpiCard
+          label="Monthly Rent Roll"
+          value={fmtRent(portfolioKPIs.monthlyRentRollM)}
+          subtitle={`${portfolioKPIs.leasedCount} leases · Contracted / mo`}
+          staggerIndex={1}
+        />
+        <KpiCard
+          label="Expected Loss"
+          value={fmtM(portfolioKPIs.totalECLM)}
+          subtitle={`ECL rate ${portfolioKPIs.eclRatePct.toFixed(2)}%`}
+          deltaType="negative"
+          staggerIndex={2}
+        />
+        <KpiCard
+          label="Avg Lease Term"
+          value={`${portfolioKPIs.avgRemainingTermYrs.toFixed(1)} yrs`}
+          subtitle="Remaining weighted avg"
+          staggerIndex={3}
+        />
+        {/* Excel Add-in shortcut — custom image-background card */}
+        <div
+          onClick={() => navigate("/settings/excel")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && navigate("/settings/excel")}
+          style={{
+            position: "relative",
+            borderRadius: "var(--radius-lg)",
+            overflow: "hidden",
+            cursor: "pointer",
+            minHeight: "110px",
+            backgroundImage: "url('/excel-addin-bg.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "right center",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            transition: "box-shadow 160ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1)",
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLDivElement;
+            el.style.boxShadow = "0 6px 20px rgba(0,0,0,0.18)";
+            el.style.transform = "translateY(-2px)";
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLDivElement;
+            el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+            el.style.transform = "translateY(0)";
+          }}
+          onMouseDown={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "scale(0.97)"; }}
+          onMouseUp={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
+        >
+          {/* Semi-transparent dark overlay on left so text is legible */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(to right, rgba(0,0,0,0.32) 0%, rgba(0,0,0,0.08) 60%, transparent 100%)",
+          }} />
+          <div style={{
+            position: "relative", zIndex: 1,
+            padding: "1.25rem 1.5rem",
+            display: "flex", flexDirection: "column", gap: "0.25rem",
+            height: "100%", boxSizing: "border-box",
+          }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: "rgba(255,255,255,0.75)" }}>
+              Excel Add-in
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1 }}>
+              Available
+            </div>
+            <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.80)", marginTop: "0.125rem" }}>
+              Live portfolio data in Excel →
+            </div>
+          </div>
+        </div>
       </div>
+      {/* Excel add-in banner — shown once per session */}
+      {!sessionStorage.getItem("excel-banner-dismissed") && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "0.75rem",
+          background: "rgba(0,33,71,0.04)", border: "1px solid rgba(0,33,71,0.12)",
+          borderLeft: "3px solid #002147", borderRadius: "0.625rem",
+          padding: "0.75rem 1rem", fontSize: "0.8125rem",
+        }}>
+          <FileSpreadsheet size={16} style={{ color: "#002147", flexShrink: 0 }} />
+          <span style={{ flex: 1, color: "#475569" }}>
+            <strong style={{ color: "#0F172A" }}>Excel Add-in available</strong> — pull live portfolio data, ECL figures and KPIs directly into Excel.{" "}
+            <button onClick={() => navigate("/settings/excel")} style={{ color: "#002147", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
+              Set up →
+            </button>
+          </span>
+          <button
+            onClick={() => { sessionStorage.setItem("excel-banner-dismissed", "1"); document.getElementById("excel-banner")?.remove(); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: "2px", fontSize: "1rem", lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", width: "fit-content" }}>
-        {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: "7px 20px", borderRadius: "9999px", border: "none",
-              background: activeTab === tab ? "#002147" : "transparent",
-              color: activeTab === tab ? "#FFFFFF" : "#64748B",
-              fontSize: "13px", fontWeight: activeTab === tab ? 600 : 500,
-              cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
-              boxShadow: activeTab === tab ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
-            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <PillTabs
+        tabs={isExecutiveMode ? EXEC_TABS : tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
 
       {/* Leases Tab */}
       {activeTab === "Leases" && (
@@ -280,8 +392,8 @@ export default function Portfolio() {
           headerRight={
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
-                <Filter size={14} style={{ color: "#94A3B8" }} />
-                <span style={{ fontSize: "0.8125rem", color: "#475569" }}>Stage:</span>
+                <Filter size={14} style={{ color: "rgba(255,255,255,0.55)" }} />
+                <span style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.65)" }}>Stage:</span>
                 {["All", "1", "2", "3"].map((s) => (
                   <button
                     key={s}
@@ -293,9 +405,10 @@ export default function Portfolio() {
                       border: "1px solid",
                       borderRadius: "1rem",
                       cursor: "pointer",
-                      background: stageFilter === s ? "#002147" : "transparent",
-                      color: stageFilter === s ? "#FFFFFF" : "#475569",
-                      borderColor: stageFilter === s ? "#002147" : "#E2E8F0",
+                      background: stageFilter === s ? "rgba(255,255,255,0.18)" : "transparent",
+                      color: stageFilter === s ? "#FFFFFF" : "rgba(255,255,255,0.65)",
+                      borderColor: stageFilter === s ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)",
+                      transition: "background 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out",
                     }}
                   >
                     {s}
@@ -334,7 +447,11 @@ export default function Portfolio() {
               </thead>
               <tbody>
                 {sortedLeases.map((lease, i) => (
-                  <tr key={lease.id} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7", cursor: "pointer" }}
+                  <tr
+                    key={lease.id}
+                    onClick={() => { if (!isDemo) setEditingLeaseId(lease.id); }}
+                    style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7", cursor: isDemo ? "default" : "pointer" }}
+                    title={isDemo ? "Editing is available for uploaded portfolios only" : undefined}
                     onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = "#FAFAFA")}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = i % 2 === 0 ? "#FFFFFF" : "#F4F5F7")}
                   >
@@ -466,6 +583,7 @@ export default function Portfolio() {
                                 msn={a.msn}
                                 aircraftType={a.type}
                                 vintage={a.vintage}
+                                liveRecord={liveSDMRByMsn.get(a.msn)}
                               />
                             )}
                           </td>
@@ -538,15 +656,15 @@ export default function Portfolio() {
                     <td style={{ padding: "0.75rem 1rem" }}>
                       <div className="flex items-center gap-2">
                         <div style={{ flex: 1, height: "6px", background: "#E2E8F0", borderRadius: "3px", minWidth: "60px" }}>
-                          <div style={{ width: `${l.behaviorScore}%`, height: "100%", borderRadius: "3px", background: l.behaviorScore >= 80 ? "#15803D" : l.behaviorScore >= 60 ? "#B45309" : "#B91C1C" }} />
+                          <div style={{ width: `${l.behaviorScore ?? 0}%`, height: "100%", borderRadius: "3px", background: (l.behaviorScore ?? 0) >= 80 ? "#15803D" : (l.behaviorScore ?? 0) >= 60 ? "#B45309" : "#B91C1C" }} />
                         </div>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0F172A" }}>{l.behaviorScore}</span>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0F172A" }}>{l.behaviorScore ?? "—"}</span>
                       </div>
                     </td>
                     <td style={{ padding: "0.75rem 1rem" }}><StatusPill stage={l.stage} label={`Stage ${l.stage}`} /></td>
                     <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{l.leases}</td>
                     <td style={{ padding: "0.75rem 1rem", fontWeight: 500, color: "#0F172A" }}>{l.exposure}</td>
-                    <td style={{ padding: "0.75rem 1rem", color: l.paymentDays > 30 ? "#B91C1C" : l.paymentDays > 5 ? "#B45309" : "#15803D", fontWeight: 500 }}>{l.paymentDays.toFixed(1)} days</td>
+                    <td style={{ padding: "0.75rem 1rem", color: l.paymentDays == null ? "#64748B" : l.paymentDays > 30 ? "#B91C1C" : l.paymentDays > 5 ? "#B45309" : "#15803D", fontWeight: 500 }}>{l.paymentDays != null ? `${l.paymentDays.toFixed(1)} days` : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -559,7 +677,7 @@ export default function Portfolio() {
       {activeTab === "Concentration" && <ConcentrationTab />}
 
       {/* SD / MR Tab */}
-      {activeTab === "SD / MR" && <SDMRTab />}
+      {activeTab === "SD / MR" && <SDMRTab data={liveSDMRData} />}
 
       {/* Performance vs. Plan Tab */}
       {activeTab === "Performance vs. Plan" && <PerformanceVsPlan />}
@@ -574,6 +692,27 @@ export default function Portfolio() {
         <KeyDatesTab rows={keyDateRows} kpis={keyDateKPIs} />
       )}
     </div>
+
+    <AnimatePresence>
+      {editingLease && (() => {
+        const drawerAsset = assets.find(a => a.id === editingLease.asset_id);
+        const drawerLessee = lesseeData.find(l => l.id === editingLease.lessee_id);
+        const drawerProvision = provisions.find(p => p.lease_id === editingLease.id) ?? null;
+        if (!drawerAsset || !drawerLessee) return null;
+        return (
+          <LeaseEditDrawer
+            key={editingLease.id}
+            lease={editingLease}
+            asset={drawerAsset}
+            lessee={drawerLessee}
+            provision={drawerProvision}
+            orgId={orgId ?? ""}
+            onClose={() => setEditingLeaseId(null)}
+            onSaved={refetch}
+          />
+        );
+      })()}
+    </AnimatePresence>
     </>
   );
 }
