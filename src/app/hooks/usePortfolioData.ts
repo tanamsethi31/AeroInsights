@@ -1,5 +1,5 @@
 // src/app/hooks/usePortfolioData.ts
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useData } from "../contexts/DataContext";
 import { supabase } from "../lib/supabase";
 import { MOCK_ASSETS, MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS } from "../data/mockPortfolioData";
@@ -13,7 +13,7 @@ export function usePortfolioData(): PortfolioData {
   const [provisions, setProvisions] = useState<Provision[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchAll = useCallback(async () => {
     if (!hasUpload || !orgId) {
       setAssets([]);
       setLessees([]);
@@ -21,31 +21,28 @@ export function usePortfolioData(): PortfolioData {
       setProvisions([]);
       return;
     }
-
-    let cancelled = false;
     setIsLoading(true);
-    Promise.all([
-      supabase.from("assets").select("*").eq("org_id", orgId),
-      supabase.from("lessees").select("*").eq("org_id", orgId),
-      supabase.from("leases").select("*").eq("org_id", orgId),
-      supabase.from("provisions").select("*").eq("org_id", orgId),
-    ])
-      .then(([a, l, ls, p]) => {
-        if (cancelled) return;
-        setAssets((a.data as Asset[]) ?? []);
-        setLessees((l.data as Lessee[]) ?? []);
-        setLeases((ls.data as Lease[]) ?? []);
-        setProvisions((p.data as Provision[]) ?? []);
-      })
-      .catch((err) => {
-        if (!cancelled) console.error("[usePortfolioData] fetch error:", err);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
+    try {
+      const [a, l, ls, p] = await Promise.all([
+        supabase.from("assets").select("*").eq("org_id", orgId),
+        supabase.from("lessees").select("*").eq("org_id", orgId),
+        supabase.from("leases").select("*").eq("org_id", orgId),
+        supabase.from("provisions").select("*").eq("org_id", orgId),
+      ]);
+      setAssets((a.data as Asset[]) ?? []);
+      setLessees((l.data as Lessee[]) ?? []);
+      setLeases((ls.data as Lease[]) ?? []);
+      setProvisions((p.data as Provision[]) ?? []);
+    } catch (err) {
+      console.error("[usePortfolioData] fetch error:", err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [orgId, hasUpload]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   if (!hasUpload) {
     return {
@@ -55,8 +52,9 @@ export function usePortfolioData(): PortfolioData {
       provisions: MOCK_PROVISIONS,
       isLoading: false,
       isDemo: true,
+      refetch: async () => {},
     };
   }
 
-  return { assets, lessees, leases, provisions, isLoading, isDemo: false };
+  return { assets, lessees, leases, provisions, isLoading, isDemo: false, refetch: fetchAll };
 }
