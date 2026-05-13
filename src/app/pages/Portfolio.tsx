@@ -54,13 +54,15 @@ import { ModelParametersTab } from "../components/portfolio/ModelParametersTab";
 const tabs = ["Leases", "Aircraft", "Lessees", "Model Parameters", "Concentration", "SD / MR", "Performance vs. Plan", "Payments", "Key Dates"];
 const EXEC_TABS = ["Leases", "Aircraft"];
 
-function fmtM(m: number): string {
+function fmtM(m: number | null | undefined): string {
+  if (m == null || isNaN(m)) return "$0M";
   if (m >= 1000) return `$${(m / 1000).toFixed(2)}B`;
   return `$${m.toFixed(0)}M`;
 }
 
 /** Format a monthly-rent figure (value in $M) → "$2.9M" or "$285K" */
-function fmtRent(m: number): string {
+function fmtRent(m: number | null | undefined): string {
+  if (m == null || isNaN(m)) return "$0M";
   if (m >= 1) return `$${m.toFixed(1)}M`;
   return `$${Math.round(m * 1000).toLocaleString("en-US")}K`;
 }
@@ -290,13 +292,13 @@ export default function Portfolio() {
         <KpiCard
           label="Expected Loss"
           value={fmtM(portfolioKPIs.totalECLM)}
-          subtitle={`ECL rate ${portfolioKPIs.eclRatePct.toFixed(2)}%`}
+          subtitle={`ECL rate ${(portfolioKPIs.eclRatePct ?? 0).toFixed(2)}%`}
           deltaType="negative"
           staggerIndex={2}
         />
         <KpiCard
           label="Avg Lease Term"
-          value={`${portfolioKPIs.avgRemainingTermYrs.toFixed(1)} yrs`}
+          value={`${(portfolioKPIs.avgRemainingTermYrs ?? 0).toFixed(1)} yrs`}
           subtitle="Remaining weighted avg"
           staggerIndex={3}
         />

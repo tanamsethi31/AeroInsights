@@ -275,10 +275,10 @@ export interface LesseeTableRow {
   country: string;
   rating: string;
   stage: "1" | "2" | "3";
-  behaviorScore: number;
+  behaviorScore: number | null;
   leases: number;
   exposure: string;
-  paymentDays: number;
+  paymentDays: number | null;
 }
 
 function deriveStage(lessee: Lessee): "1" | "2" | "3" {
@@ -325,10 +325,10 @@ export function toLesseeTableRows(
       country: l.country ?? "—",
       rating: l.credit_rating ?? "—",
       stage: deriveStage(l),
-      behaviorScore: 0,
+      behaviorScore: null,
       leases: leaseCount.get(l.id) ?? 0,
       exposure,
-      paymentDays: 0,
+      paymentDays: null,
     };
   });
 }
@@ -338,7 +338,10 @@ export function toLesseeTableRows(
 export interface PortfolioKPIs {
   fleetCount: number;          // assets.length
   bookValueM: number;          // sum of provision.ead / 1_000_000
+  leasedCount: number;         // number of assets with at least one active lease
+  monthlyRentRollM: number;    // sum of monthly_rental across all leases / 1_000_000
   totalECLM: number;           // sum of provision.ecl_amount / 1_000_000
+  eclRatePct: number;          // totalECLM / bookValueM × 100
   avgRemainingTermYrs: number; // average remaining lease term in years (floored at 0)
 }
 
@@ -352,6 +355,10 @@ export function toPortfolioKPIs(
 
   const bookValueM = provisions.reduce((s, p) => s + (p.ead ?? 0), 0) / 1_000_000;
   const totalECLM  = provisions.reduce((s, p) => s + (p.ecl_amount ?? 0), 0) / 1_000_000;
+
+  const leasedCount = new Set(leases.map((l) => l.asset_id)).size;
+  const monthlyRentRollM = leases.reduce((s, l) => s + (l.monthly_rental ?? 0), 0) / 1_000_000;
+
   const avgRemainingTermYrs = leases.length > 0
     ? leases.reduce((s, l) => {
         const end = new Date(l.end_date).getTime();
@@ -362,7 +369,10 @@ export function toPortfolioKPIs(
   return {
     fleetCount: assets.length,
     bookValueM,
+    leasedCount,
+    monthlyRentRollM,
     totalECLM,
+    eclRatePct: bookValueM > 0 ? (totalECLM / bookValueM) * 100 : 0,
     avgRemainingTermYrs,
   };
 }
@@ -451,7 +461,7 @@ export function toEclTableRows(
 export interface PortfolioExportData {
   eclRows: Array<{ id: string; lessee: string; aircraft: string; ead: number; pd12m: number; lgd: number; ecl12m: number; eclLT: number; stage: string }>;
   leaseRows: Array<{ id: string; lessee: string; aircraft: string; msn: string; start: string; end: string; rent: string; stage: string }>;
-  lesseeRows: Array<{ name: string; country: string; rating: string; stage: string; behavior: number; leases: number; exposure: string; daysLate: number }>;
+  lesseeRows: Array<{ name: string; country: string; rating: string; stage: string; behavior: number | null; leases: number; exposure: string; daysLate: number | null }>;
   aircraftRows: Array<{ msn: string; type: string; reg: string; vintage: number; nbv: string; mv: string; mvAdj: string; lessee: string }>;
 }
 
@@ -502,10 +512,10 @@ export function toExportData(assets: Asset[], lessees: Lessee[], leases: Lease[]
     country: l.country ?? "—",
     rating: l.credit_rating ?? "—",
     stage: deriveStage(l),
-    behavior: 0,
+    behavior: null,
     leases: leaseCountMap.get(l.id) ?? 0,
     exposure: "—",
-    daysLate: 0,
+    daysLate: null,
   }));
 
   const assetLesseeName = new Map<string, string>();
