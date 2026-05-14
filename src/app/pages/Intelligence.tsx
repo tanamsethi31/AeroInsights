@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
+import { PillTabs } from "../components/ui/PillTabs";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import {
   MACRO_SIGNALS,
@@ -742,7 +743,8 @@ function LesseeRadarView({ lesseeIdByName, liveExposure }: {
           overflow: "hidden",
         }}
       >
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: "900px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
           <thead>
             <tr style={{ background: T.bg }}>
               {[
@@ -978,6 +980,7 @@ function LesseeRadarView({ lesseeIdByName, liveExposure }: {
             })}
           </tbody>
         </table>
+        </div>{/* end scroll wrapper */}
 
         {/* Footer */}
         <div
@@ -1630,43 +1633,33 @@ export default function Intelligence() {
       </PageHeader>
 
       {/* Sub-tab nav */}
-      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginBottom: "1.5rem", width: "fit-content" }}>
-        {TABS.map((tab) => {
-          const active = activeTab === tab.id;
-          const badge  = badges[tab.id];
+      <PillTabs
+        tabs={TABS.map((t) => t.id)}
+        activeTab={activeTab}
+        onChange={(id) => navigate(`/intelligence/${id}`)}
+        style={{ marginBottom: "1.5rem" }}
+        renderTab={(id, isActive) => {
+          const t = TABS.find((x) => x.id === id)!;
+          const badge = badges[id as IntelTab];
           return (
-            <button
-              key={tab.id}
-              onClick={() => navigate(`/intelligence/${tab.id}`)}
-              style={{
-                padding: "7px 20px", borderRadius: "9999px", border: "none",
-                background: active ? "#002147" : "transparent",
-                color: active ? "#FFFFFF" : "#64748B",
-                fontSize: "13px", fontWeight: active ? 600 : 500,
-                cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
-                boxShadow: active ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
-                whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "0.4rem",
-              }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
-            >
-              {tab.label}
+            <>
+              {t.label}
               {badge > 0 && (
                 <span
                   style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     minWidth: "18px", height: "18px", borderRadius: "9999px",
-                    background: active ? "rgba(255,255,255,0.25)" : T.red,
+                    background: isActive ? "rgba(255,255,255,0.25)" : T.red,
                     color: "#FFFFFF", fontSize: "0.65rem", fontWeight: 800, padding: "0 0.3rem",
                   }}
                 >
                   {badge}
                 </span>
               )}
-            </button>
+            </>
           );
-        })}
-      </div>
+        }}
+      />
 
       {/* View */}
       <AnimatePresence mode="wait">

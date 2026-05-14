@@ -11,9 +11,10 @@ const PATH_TAB: Record<string, string> = {
 };
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Download, FileText, Table, FileJson, File, Mail, Clock, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe } from "lucide-react";
+import { Download, FileText, Table, FileJson, File, Mail, Clock, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe, Trash2, Pause, Play, Pencil, Check, X } from "lucide-react";
 import { ReportFormatModal } from "../components/reports/ReportFormatModal";
 import { BoardPackModal } from "../components/reports/BoardPackModal";
+import { PillTabs } from "../components/ui/PillTabs";
 
 const REPORT_ICON_MAP: Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>> = {
   search:       Search,
@@ -87,7 +88,18 @@ const reportTemplates = [
   },
 ];
 
-const scheduledReports = [
+interface ScheduledReport {
+  id: string;
+  name: string;
+  frequency: string;
+  day: string;
+  time: string;
+  recipients: string[];
+  status: "active" | "paused";
+  nextRun: string;
+}
+
+const INITIAL_SCHEDULES: ScheduledReport[] = [
   { id: "SCHED-001", name: "Weekly Watchlist Digest", frequency: "Weekly", day: "Monday", time: "07:00", recipients: ["risk@firm.com", "cfo@firm.com"], status: "active", nextRun: "4 May 2026" },
   { id: "SCHED-002", name: "Monthly ECL Summary", frequency: "Monthly", day: "1st", time: "08:00", recipients: ["accounting@firm.com", "audit@firm.com"], status: "active", nextRun: "1 May 2026" },
   { id: "SCHED-003", name: "Quarterly Board Pack", frequency: "Quarterly", day: "Last Friday", time: "09:00", recipients: ["board@firm.com", "cfo@firm.com", "cro@firm.com"], status: "active", nextRun: "30 Jun 2026" },
@@ -119,6 +131,48 @@ export default function Reports() {
   const [formatModal, setFormatModal] = React.useState<{ id: string; name: string } | null>(null);
   const [boardPackModal, setBoardPackModal] = React.useState<{ id: string; name: string } | null>(null);
 
+  // Scheduled reports state + actions
+  const [schedules, setSchedules] = useState<ScheduledReport[]>(INITIAL_SCHEDULES);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<Partial<ScheduledReport>>({});
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newDraft, setNewDraft] = useState<Partial<ScheduledReport>>({
+    name: "", frequency: "Weekly", day: "Monday", time: "08:00", recipients: [], status: "active", nextRun: "TBD",
+  });
+
+  function toggleStatus(id: string) {
+    setSchedules((prev) =>
+      prev.map((s) => s.id === id
+        ? { ...s, status: s.status === "active" ? "paused" : "active", nextRun: s.status === "active" ? "Paused" : "TBD" }
+        : s
+      )
+    );
+  }
+
+  function deleteSchedule(id: string) {
+    setSchedules((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function startEdit(s: ScheduledReport) {
+    setEditingId(s.id);
+    setEditDraft({ name: s.name, recipients: [...s.recipients] });
+  }
+
+  function commitEdit(id: string) {
+    setSchedules((prev) =>
+      prev.map((s) => s.id === id ? { ...s, ...editDraft } : s)
+    );
+    setEditingId(null);
+    setEditDraft({});
+  }
+
+  function addSchedule() {
+    const id = `SCHED-${String(schedules.length + 1).padStart(3, "0")}`;
+    setSchedules((prev) => [...prev, { ...newDraft, id } as ScheduledReport]);
+    setNewDraft({ name: "", frequency: "Weekly", day: "Monday", time: "08:00", recipients: [], status: "active", nextRun: "TBD" });
+    setShowNewForm(false);
+  }
+
   const categories = ["All", "Audit", "Board", "Portfolio", "Risk", "Jurisdiction"];
   const filtered = categoryFilter === "All" ? reportTemplates : reportTemplates.filter(r => r.category === categoryFilter);
 
@@ -130,27 +184,12 @@ export default function Reports() {
       />
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", marginTop: "-1.5rem", width: "fit-content" }}>
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: "7px 20px", borderRadius: "9999px", border: "none",
-              background: activeTab === tab ? "#002147" : "transparent",
-              color: activeTab === tab ? "#FFFFFF" : "#64748B",
-              fontSize: "13px", fontWeight: activeTab === tab ? 600 : 500,
-              cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
-              boxShadow: activeTab === tab ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
-            onMouseLeave={e => { if (activeTab !== tab) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <PillTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        style={{ marginTop: "-1.5rem" }}
+      />
 
       {/* Tab content */}
       <AnimatePresence mode="wait">
@@ -239,45 +278,170 @@ export default function Reports() {
       {activeTab === "Scheduled Reports" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "9999px", padding: "0.625rem 1.25rem", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>
-              <Calendar size={14} /> New Schedule
+            <button
+              onClick={() => setShowNewForm((v) => !v)}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "9999px", padding: "0.625rem 1.25rem", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", transition: "background 140ms ease-out" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#003068"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#002147"; }}
+            >
+              <Calendar size={14} /> {showNewForm ? "Cancel" : "New Schedule"}
             </button>
           </div>
 
+          {/* New Schedule inline form */}
+          <AnimatePresence>
+            {showNewForm && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                style={{ background: "#FFFFFF", border: "1px solid #002147", borderRadius: "1rem", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}
+              >
+                <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0F172A" }}>New Scheduled Report</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "#64748B", display: "block", marginBottom: "0.25rem" }}>Name</label>
+                    <input
+                      value={newDraft.name ?? ""}
+                      onChange={(e) => setNewDraft((d) => ({ ...d, name: e.target.value }))}
+                      placeholder="e.g. Monthly Risk Digest"
+                      style={{ width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "#64748B", display: "block", marginBottom: "0.25rem" }}>Frequency</label>
+                    <select
+                      value={newDraft.frequency}
+                      onChange={(e) => setNewDraft((d) => ({ ...d, frequency: e.target.value }))}
+                      style={{ width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem" }}
+                    >
+                      {["Daily", "Weekly", "Monthly", "Quarterly"].map((f) => <option key={f}>{f}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "#64748B", display: "block", marginBottom: "0.25rem" }}>Time (UTC)</label>
+                    <input
+                      type="time"
+                      value={newDraft.time ?? "08:00"}
+                      onChange={(e) => setNewDraft((d) => ({ ...d, time: e.target.value }))}
+                      style={{ width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.75rem", fontWeight: 500, color: "#64748B", display: "block", marginBottom: "0.25rem" }}>Recipients (comma-separated)</label>
+                    <input
+                      value={(newDraft.recipients ?? []).join(", ")}
+                      onChange={(e) => setNewDraft((d) => ({ ...d, recipients: e.target.value.split(",").map((r) => r.trim()).filter(Boolean) }))}
+                      placeholder="email@firm.com, other@firm.com"
+                      style={{ width: "100%", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", boxSizing: "border-box" }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                  <button onClick={() => setShowNewForm(false)} style={{ padding: "0.5rem 1rem", borderRadius: "9999px", border: "1px solid #E2E8F0", background: "transparent", color: "#475569", fontSize: "0.8125rem", cursor: "pointer" }}>Cancel</button>
+                  <button
+                    onClick={addSchedule}
+                    disabled={!newDraft.name}
+                    style={{ padding: "0.5rem 1.25rem", borderRadius: "9999px", border: "none", background: newDraft.name ? "#002147" : "#CBD5E1", color: "#FFFFFF", fontSize: "0.8125rem", fontWeight: 500, cursor: newDraft.name ? "pointer" : "not-allowed" }}
+                  >
+                    Create Schedule
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {scheduledReports.map((sched, si) => (
+            <AnimatePresence initial={false}>
+            {schedules.map((sched, si) => (
               <motion.div
                 key={sched.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.28, delay: si * 0.07, ease: [0.23, 1, 0.32, 1] }}
-                style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "1rem", padding: "1.25rem", display: "flex", alignItems: "center", gap: "1.5rem" }}>
-                <div style={{ width: "48px", height: "48px", background: sched.status === "active" ? "rgba(21,128,61,0.08)" : "#F4F5F7", borderRadius: "1rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Mail size={20} style={{ color: sched.status === "active" ? "#15803D" : "#94A3B8" }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                    <span style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#0F172A" }}>{sched.name}</span>
-                    <StatusPill stage={sched.status === "active" ? "green" : "neutral"} label={sched.status === "active" ? "Active" : "Paused"} />
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.28, delay: si * 0.04, ease: [0.23, 1, 0.32, 1] }}
+                style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "1rem", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+
+                {/* Main row */}
+                <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+                  <div style={{ width: "48px", height: "48px", background: sched.status === "active" ? "rgba(21,128,61,0.08)" : "#F4F5F7", borderRadius: "1rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 200ms ease-out" }}>
+                    <Mail size={20} style={{ color: sched.status === "active" ? "#15803D" : "#94A3B8", transition: "color 200ms ease-out" }} />
                   </div>
-                  <div style={{ fontSize: "0.8125rem", color: "#475569" }}>
-                    {sched.frequency} · {sched.day} at {sched.time} · Recipients: {sched.recipients.join(", ")}
+                  <div style={{ flex: 1 }}>
+                    {editingId === sched.id ? (
+                      <input
+                        value={editDraft.name ?? sched.name}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
+                        style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#0F172A", border: "1px solid #CBD5E1", borderRadius: "0.375rem", padding: "0.25rem 0.5rem", width: "100%", boxSizing: "border-box", marginBottom: "0.25rem" }}
+                        autoFocus
+                      />
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                        <span style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#0F172A" }}>{sched.name}</span>
+                        <StatusPill stage={sched.status === "active" ? "green" : "neutral"} label={sched.status === "active" ? "Active" : "Paused"} />
+                      </div>
+                    )}
+                    {editingId === sched.id ? (
+                      <input
+                        value={(editDraft.recipients ?? sched.recipients).join(", ")}
+                        onChange={(e) => setEditDraft((d) => ({ ...d, recipients: e.target.value.split(",").map((r) => r.trim()).filter(Boolean) }))}
+                        placeholder="Recipients (comma-separated)"
+                        style={{ fontSize: "0.8125rem", color: "#475569", border: "1px solid #CBD5E1", borderRadius: "0.375rem", padding: "0.25rem 0.5rem", width: "100%", boxSizing: "border-box" }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: "0.8125rem", color: "#475569" }}>
+                        {sched.frequency} · {sched.day} at {sched.time} · {sched.recipients.join(", ")}
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>Next run</div>
-                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0F172A" }}>{sched.nextRun}</div>
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                  <button style={{ fontSize: "0.8125rem", fontWeight: 500, color: "#002147", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.375rem 0.75rem", cursor: "pointer" }}>
-                    Edit
-                  </button>
-                  <button style={{ fontSize: "0.8125rem", fontWeight: 500, color: sched.status === "active" ? "#B45309" : "#15803D", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.375rem 0.75rem", cursor: "pointer" }}>
-                    {sched.status === "active" ? "Pause" : "Resume"}
-                  </button>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>Next run</div>
+                    <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#0F172A" }}>{sched.nextRun}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0, alignItems: "center" }}>
+                    {editingId === sched.id ? (
+                      <>
+                        <button onClick={() => commitEdit(sched.id)} style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.8125rem", fontWeight: 500, color: "#15803D", background: "rgba(21,128,61,0.08)", border: "1px solid rgba(21,128,61,0.25)", borderRadius: "9999px", padding: "0.375rem 0.75rem", cursor: "pointer" }}>
+                          <Check size={13} /> Save
+                        </button>
+                        <button onClick={() => setEditingId(null)} style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.8125rem", color: "#94A3B8", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.375rem 0.625rem", cursor: "pointer" }}>
+                          <X size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEdit(sched)}
+                          title="Edit"
+                          style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.8125rem", fontWeight: 500, color: "#002147", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.375rem 0.75rem", cursor: "pointer" }}
+                        >
+                          <Pencil size={12} /> Edit
+                        </button>
+                        <button
+                          onClick={() => toggleStatus(sched.id)}
+                          title={sched.status === "active" ? "Pause" : "Resume"}
+                          style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.8125rem", fontWeight: 500, color: sched.status === "active" ? "#B45309" : "#15803D", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.375rem 0.75rem", cursor: "pointer" }}
+                        >
+                          {sched.status === "active" ? <Pause size={12} /> : <Play size={12} />}
+                          {sched.status === "active" ? "Pause" : "Resume"}
+                        </button>
+                        <button
+                          onClick={() => deleteSchedule(sched.id)}
+                          title="Delete schedule"
+                          style={{ display: "flex", alignItems: "center", padding: "0.375rem", color: "#94A3B8", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", cursor: "pointer", transition: "color 120ms ease-out, border-color 120ms ease-out" }}
+                          onMouseEnter={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.color = "#B91C1C"; b.style.borderColor = "rgba(185,28,28,0.3)"; }}
+                          onMouseLeave={(e) => { const b = e.currentTarget as HTMLButtonElement; b.style.color = "#94A3B8"; b.style.borderColor = "#E2E8F0"; }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             ))}
+            </AnimatePresence>
           </div>
         </div>
       )}

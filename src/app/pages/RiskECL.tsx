@@ -52,6 +52,7 @@ import {
   computeECLFromBase,
   type ScenarioInputs,
 } from "../utils/eclCalculator";
+import { PillTabs } from "../components/ui/PillTabs";
 
 const tornadoData = [
   { input: "PD Multiplier (Stage 3)", impact: 8.4, dir: "positive" },
@@ -1268,8 +1269,9 @@ export default function RiskECL() {
                   padding: "1.25rem",
                   border: `1px solid ${enabled ? "#002147" : "#E2E8F0"}`,
                   borderRadius: "0.75rem",
-                  background: enabled ? "rgba(0,33,71,0.03)" : "#FFFFFF",
-                  transition: "border-color 0.15s ease",
+                  background: enabled ? "rgba(0,33,71,0.04)" : "#FFFFFF",
+                  boxShadow: enabled ? "0 0 0 3px rgba(0,33,71,0.06)" : "none",
+                  transition: "border-color 220ms cubic-bezier(0.23,1,0.32,1), background 220ms cubic-bezier(0.23,1,0.32,1), box-shadow 220ms cubic-bezier(0.23,1,0.32,1)",
                 }}
               >
                 <div
@@ -1303,29 +1305,33 @@ export default function RiskECL() {
                     onClick={() =>
                       handleSicrChange(card.enabledKey, !enabled)
                     }
+                    aria-checked={enabled}
+                    role="switch"
                     style={{
                       width: "42px",
                       height: "24px",
                       borderRadius: "9999px",
-                      background: enabled ? "#002147" : "#E2E8F0",
+                      background: enabled ? "#002147" : "#CBD5E1",
                       border: "none",
                       cursor: "pointer",
                       position: "relative",
                       flexShrink: 0,
-                      transition: "background 0.15s ease",
+                      transition: "background 200ms cubic-bezier(0.23,1,0.32,1)",
+                      boxShadow: enabled ? "0 0 0 3px rgba(0,33,71,0.15)" : "none",
                     }}
                   >
                     <span
                       style={{
                         position: "absolute",
                         top: "3px",
-                        left: enabled ? "21px" : "3px",
+                        left: "3px",
                         width: "18px",
                         height: "18px",
                         borderRadius: "50%",
                         background: "#FFFFFF",
-                        transition: "left 0.15s ease",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
+                        transform: enabled ? "translateX(18px)" : "translateX(0px)",
+                        transition: "transform 200ms cubic-bezier(0.23,1,0.32,1)",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.20)",
                       }}
                     />
                   </button>
@@ -1342,13 +1348,18 @@ export default function RiskECL() {
                   {card.description}
                 </p>
 
-                {card.valueKey && enabled && (
+                {card.valueKey && (
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: "0.625rem",
                       marginBottom: "0.75rem",
+                      opacity: enabled ? 1 : 0,
+                      maxHeight: enabled ? "60px" : "0px",
+                      overflow: "hidden",
+                      pointerEvents: enabled ? "auto" : "none",
+                      transition: "opacity 200ms cubic-bezier(0.23,1,0.32,1), max-height 220ms cubic-bezier(0.23,1,0.32,1)",
                     }}
                   >
                     <span
@@ -1804,31 +1815,17 @@ export default function RiskECL() {
       )}
 
       {/* Tabs — filtered in Executive Mode to headline views only */}
-      <div style={{ display: "flex", gap: "4px", background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "4px", width: "fit-content" }}>
-        {(isExecutiveMode ? EXEC_TABS : tabs).map((tab) => {
-          const active = activeTab === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                padding: "7px 20px", borderRadius: "9999px", border: "none",
-                background: active ? "#002147" : "transparent",
-                color: active ? "#FFFFFF" : "#64748B",
-                fontSize: "13px", fontWeight: active ? 600 : 500,
-                cursor: "pointer", transition: "all 180ms cubic-bezier(0.23,1,0.32,1)",
-                boxShadow: active ? "0 1px 4px rgba(0,33,71,0.18)" : "none",
-                whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "0.375rem",
-              }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#002147"; }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = "#64748B"; }}
-            >
-              {tab === "SICR Config" && <SlidersHorizontal size={13} />}
-              {tab}
-            </button>
-          );
-        })}
-      </div>
+      <PillTabs
+        tabs={isExecutiveMode ? EXEC_TABS : tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        renderTab={(tab) => (
+          <>
+            {tab === "SICR Config" && <SlidersHorizontal size={13} />}
+            {tab}
+          </>
+        )}
+      />
 
       {/* Tab content */}
       <AnimatePresence mode="wait">
