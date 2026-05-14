@@ -1600,7 +1600,12 @@ export default function Intelligence() {
   };
 
   return (
-    <div style={{ padding: "1.5rem 2rem", maxWidth: "1400px", margin: "0 auto" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+      style={{ padding: "1.5rem 2rem", maxWidth: "1400px", margin: "0 auto" }}
+    >
       {/* Page header */}
       <PageHeader
         title="Aero Intelligence"
@@ -1676,6 +1681,6 @@ export default function Intelligence() {
           {activeTab === "jx-watch"     && <JurisdictionWatchView lesseeIdByName={lesseeIdByName} liveTotalExposure={liveTotalExposure} />}
         </motion.div>
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

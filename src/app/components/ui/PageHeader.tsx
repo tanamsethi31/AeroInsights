@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
@@ -6,7 +8,12 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4 mb-6">
+    <motion.div
+      className="flex items-start justify-between gap-4 mb-6"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+    >
       <div>
         <h1
           style={{
@@ -33,6 +40,6 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         )}
       </div>
       {children && <div className="flex items-center gap-2 flex-shrink-0">{children}</div>}
-    </div>
+    </motion.div>
   );
 }

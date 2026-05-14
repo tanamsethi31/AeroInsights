@@ -44,7 +44,7 @@ import { KeyDatesTab } from "../components/portfolio/KeyDatesTab";
 import { toKeyDateRows, toKeyDateKPIs } from "../lib/keyDatesAdapters";
 import { PaymentsTab } from "../components/portfolio/PaymentsTab";
 import { toPaymentSchedule } from "../lib/paymentAdapters";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { LeaseEditDrawer } from "../components/portfolio/LeaseEditDrawer";
 import { useData } from "../contexts/DataContext";
 import { ModelParametersTab } from "../components/portfolio/ModelParametersTab";
@@ -209,7 +209,12 @@ export default function Portfolio() {
         <AddAircraftModal onClose={() => setShowAddAircraft(false)} />
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+        style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
+      >
       <PageHeader
         title="Portfolio"
         subtitle="173 leases · 48 lessees · 12 aircraft types"
@@ -707,7 +712,7 @@ export default function Portfolio() {
       {activeTab === "Key Dates" && (
         <KeyDatesTab rows={keyDateRows} kpis={keyDateKPIs} />
       )}
-    </div>
+    </motion.div>
 
     <AnimatePresence>
       {editingLease && (() => {

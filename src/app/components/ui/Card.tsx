@@ -1,5 +1,6 @@
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CardProps {
   children: React.ReactNode;
@@ -104,7 +105,7 @@ export function Card({
                   size={15}
                   style={{
                     transform: collapsed ? "rotate(0deg)" : "rotate(180deg)",
-                    transition: "transform 200ms ease",
+                    transition: "transform 220ms cubic-bezier(0.23,1,0.32,1)",
                   }}
                 />
               </button>
@@ -113,9 +114,21 @@ export function Card({
         </div>
       )}
 
-      {!collapsed && (
-        <div style={noPadding ? {} : { padding: "1.5rem" }}>{children}</div>
-      )}
+      {/* Animated collapse — overflow:hidden on wrapper clips height smoothly */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="card-body"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            <div style={noPadding ? {} : { padding: "1.5rem" }}>{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

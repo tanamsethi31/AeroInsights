@@ -1,6 +1,30 @@
 import { TrendingUp, TrendingDown, Minus, ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
 
+export function ScenarioKpiCard({
+  label, value, color, bg, note,
+}: { label: string; value: string; color: string; bg: string; note?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+      style={{
+        background: bg, borderRadius: "0.5rem",
+        padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem",
+      }}
+    >
+      <div style={{ fontSize: "0.75rem", fontWeight: 600, color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "1.375rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
+        {value}
+      </div>
+      {note && <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>{note}</div>}
+    </motion.div>
+  );
+}
+
 interface KpiCardProps {
   label: string;
   value: string;

@@ -42,7 +42,12 @@ export default function Deals() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+      style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
+    >
 
       <PageHeader
         title="Deals"
@@ -71,6 +76,6 @@ export default function Deals() {
           {activeTab === "exit-npv"   && <PortfolioExitNPV />}
         </motion.div>
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
