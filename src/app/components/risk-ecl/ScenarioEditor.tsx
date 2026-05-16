@@ -68,14 +68,16 @@ export function ScenarioEditor({ label, color, inputs, defaults, onChange }: Sce
         const isNegative = rawVal < 0;
         const isPositive = rawVal > 0;
         const valueColor = isNegative ? "#B91C1C" : isPositive ? "#15803D" : "#0F172A";
+        const inputId = `scenario-editor-${String(field.key)}`;
 
         return (
           <div key={String(field.key)} style={{ display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-            <label style={{ fontSize: "0.6875rem", color: "#94A3B8", fontWeight: 500, lineHeight: 1.2 }}>
+            <label htmlFor={inputId} style={{ fontSize: "0.6875rem", color: "#94A3B8", fontWeight: 500, lineHeight: 1.2 }}>
               {field.label}
             </label>
             <div style={{ position: "relative" }}>
               <input
+                id={inputId}
                 type="number"
                 step={field.step}
                 value={displayVal}
