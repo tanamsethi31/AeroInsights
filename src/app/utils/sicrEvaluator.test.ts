@@ -99,10 +99,24 @@ describe("evaluateSICR", () => {
     expect(evaluateSICR([lease], DEFAULT_CONFIG)).toHaveLength(0);
   });
 
-  it("eclDeltaM is positive for every recommendation", () => {
+  it("eclDeltaM is correct for S1→S2 migration (1.8× multiplier)", () => {
     const lease = { ...BASE_LEASE, dpdDays: 35, baseECLm: 2.5 };
     const result = evaluateSICR([lease], DEFAULT_CONFIG);
-    expect(result[0].eclDeltaM).toBeGreaterThan(0);
+    expect(result[0].eclDeltaM).toBeCloseTo(2.5 * 0.8, 5); // 2.5 * (1.8 - 1) = 2.0
+  });
+
+  it("eclDeltaM is correct for S1→S3 migration (3.2× multiplier)", () => {
+    const lease = { ...BASE_LEASE, insolvencyFiled: true, baseECLm: 1.0 };
+    const result = evaluateSICR([lease], DEFAULT_CONFIG);
+    expect(result[0].recommendedStage).toBe("3");
+    expect(result[0].eclDeltaM).toBeCloseTo(1.0 * 2.2, 5); // 1.0 * (3.2 - 1) = 2.2
+  });
+
+  it("eclDeltaM is correct for S2→S3 migration (1.6× multiplier)", () => {
+    const lease = { ...BASE_LEASE, currentStage: "2" as const, insolvencyFiled: true, baseECLm: 3.0 };
+    const result = evaluateSICR([lease], DEFAULT_CONFIG);
+    expect(result[0].recommendedStage).toBe("3");
+    expect(result[0].eclDeltaM).toBeCloseTo(3.0 * 0.6, 5); // 3.0 * (1.6 - 1) = 1.8
   });
 
   it("handles empty lease array without error", () => {
