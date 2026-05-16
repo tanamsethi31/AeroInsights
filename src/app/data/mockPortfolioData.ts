@@ -64,6 +64,10 @@ export const MOCK_PROVISIONS: Provision[] = [
 // ratingNotchesDown    : notches downgraded vs. prior assessment period
 // onCountryWatchlist   : true if operating country is on the sovereign watchlist
 // insolvencyFiled      : true if formal insolvency petition has been filed
+//
+// NOTE: mock-l5 and mock-l6 are intentionally left at Stage 1 in MOCK_LEASES even though
+// their SICR data would trigger a Stage 2 migration. This is deliberate — it is the demo
+// scenario where "Run SICR Evaluation" detects and recommends the migrations.
 
 export interface SICRLesseeData {
   dpdDays: number;
@@ -77,8 +81,8 @@ export const MOCK_SICR_DATA: Record<string, SICRLesseeData> = {
   "mock-l2":  { dpdDays: 89, ratingNotchesDown: 3, onCountryWatchlist: false, insolvencyFiled: true  }, // Aeromexico           — Stage 3 (correctly staged, insolvency)
   "mock-l3":  { dpdDays: 0,  ratingNotchesDown: 0, onCountryWatchlist: false, insolvencyFiled: false }, // Emirates             — Stage 1 (clean)
   "mock-l4":  { dpdDays: 12, ratingNotchesDown: 2, onCountryWatchlist: true,  insolvencyFiled: false }, // SriLankan Airlines   — Stage 2 (correctly staged)
-  "mock-l5":  { dpdDays: 32, ratingNotchesDown: 0, onCountryWatchlist: false, insolvencyFiled: false }, // Ryanair              — Stage 1, DPD 32 → RECOMMEND Stage 2
-  "mock-l6":  { dpdDays: 0,  ratingNotchesDown: 2, onCountryWatchlist: false, insolvencyFiled: false }, // Air France           — Stage 1, downgrade ≥2 → RECOMMEND Stage 2
+  "mock-l5":  { dpdDays: 32, ratingNotchesDown: 0, onCountryWatchlist: false, insolvencyFiled: false }, // Ryanair    — intentionally Stage 1 with DPD 32: demo SICR alert → S1→S2 recommendation
+  "mock-l6":  { dpdDays: 0,  ratingNotchesDown: 2, onCountryWatchlist: false, insolvencyFiled: false }, // Air France — intentionally Stage 1 with 2-notch downgrade: demo SICR alert → S1→S2 recommendation
   "mock-l7":  { dpdDays: 38, ratingNotchesDown: 1, onCountryWatchlist: false, insolvencyFiled: false }, // Azul Brazilian       — Stage 2 (correctly staged)
   "mock-l8":  { dpdDays: 35, ratingNotchesDown: 0, onCountryWatchlist: false, insolvencyFiled: false }, // Air Transat          — Stage 2 (correctly staged)
   "mock-l9":  { dpdDays: 0,  ratingNotchesDown: 0, onCountryWatchlist: false, insolvencyFiled: false }, // Singapore Airlines   — Stage 1 (clean)
