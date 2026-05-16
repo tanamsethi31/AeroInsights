@@ -44,6 +44,7 @@ import {
 } from "../components/risk-ecl/ECLDrilldownPanel";
 import { IAS36Tab } from "../components/risk-ecl/IAS36Tab";
 import { StageMigrationTab } from "../components/risk-ecl/StageMigrationTab";
+import { ScenarioEditor } from "../components/risk-ecl/ScenarioEditor";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
 import {
@@ -70,8 +71,10 @@ const eclTrendByStage = [
   { quarter: "Q1 '26", s1: 8.4, s2: 21.6, s3: 17.2 },
 ];
 
-// Predefined scenario stress inputs (replace hardcoded scenarioSummary constants)
-const ADVERSE_INPUTS: ScenarioInputs = {
+// Named defaults for the three forward-looking scenarios (used as initial state and reset targets)
+const DEFAULT_BASE_INPUTS: ScenarioInputs = ZERO_INPUTS;
+
+const DEFAULT_ADVERSE_INPUTS: ScenarioInputs = {
   gdpDelta: -0.02,
   rpkDelta: -0.25,
   fuelDelta: 0.30,
@@ -80,9 +83,17 @@ const ADVERSE_INPUTS: ScenarioInputs = {
   assetValueDelta: -0.10,
   pdS2Multi: 1.5,
   pdS3Multi: 2.0,
+  deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
+  pbhConversionPct: 0, etpRate: 0, lecRate: 0,
+  bankruptcyScenarioType: null, leaseAssumptionPct: 0,
+  ctcGoldPct: 0, nonCtcPct: 0, repossWeightedMonths: 0,
+  remarketingMonths: 0, vintageAdjFactor: 0,
+  depositCoverage: 0, maintenanceReserveCoverage: 0,
+  payBehaviourCoopPct: 0, payBehaviourAdvPct: 0,
+  restructuringType: null,
 };
 
-const UPSIDE_INPUTS: ScenarioInputs = {
+const DEFAULT_UPSIDE_INPUTS: ScenarioInputs = {
   gdpDelta: 0.01,
   rpkDelta: 0.08,
   fuelDelta: -0.15,
@@ -91,6 +102,14 @@ const UPSIDE_INPUTS: ScenarioInputs = {
   assetValueDelta: 0.05,
   pdS2Multi: 0.8,
   pdS3Multi: 0.8,
+  deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
+  pbhConversionPct: 0, etpRate: 0, lecRate: 0,
+  bankruptcyScenarioType: null, leaseAssumptionPct: 0,
+  ctcGoldPct: 0, nonCtcPct: 0, repossWeightedMonths: 0,
+  remarketingMonths: 0, vintageAdjFactor: 0,
+  depositCoverage: 0, maintenanceReserveCoverage: 0,
+  payBehaviourCoopPct: 0, payBehaviourAdvPct: 0,
+  restructuringType: null,
 };
 
 // Default SICR config
@@ -247,6 +266,11 @@ export default function RiskECL() {
   const [sicrConfig, setSicrConfig] = useState({ ...defaultSicrConfig });
   const [sicrDirty, setSicrDirty] = useState(false);
   const [sicrSaved, setSicrSaved] = useState(false);
+  const [scenarioInputs, setScenarioInputs] = useState({
+    base:    DEFAULT_BASE_INPUTS,
+    adverse: DEFAULT_ADVERSE_INPUTS,
+    upside:  DEFAULT_UPSIDE_INPUTS,
+  });
 
   const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
   const eclByLease = toEclTableRows(provisions, assets, lessees, leases);
@@ -271,9 +295,9 @@ export default function RiskECL() {
 
   const scenarioSummary: ScenarioSummaryData = (() => {
     const LIFETIME_RATIO = 80.4 / 44.1; // preserve original ratio (~1.82)
-    const baseECL     = computeECLFromBase(liveBaseECL, ZERO_INPUTS);
-    const adverseECL  = computeECLFromBase(liveBaseECL, ADVERSE_INPUTS);
-    const upsideECL   = computeECLFromBase(liveBaseECL, UPSIDE_INPUTS);
+    const baseECL     = computeECLFromBase(liveBaseECL, scenarioInputs.base);
+    const adverseECL  = computeECLFromBase(liveBaseECL, scenarioInputs.adverse);
+    const upsideECL   = computeECLFromBase(liveBaseECL, scenarioInputs.upside);
     const cov = (ecl: number) => totalEADm > 0 ? (ecl / totalEADm) * 100 : 0;
     return {
       base:    { ecl12m: baseECL,    eclLifetime: baseECL    * LIFETIME_RATIO, coverage: cov(baseECL)    },
@@ -669,6 +693,32 @@ export default function RiskECL() {
             </table>
           </div>
         )}
+
+        {/* Scenario Macro Inputs — collapsed by default */}
+        <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid #E2E8F0" }}>
+          <RiskSection label="Forward-Looking Scenario Inputs" defaultOpen={false}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem", paddingTop: "0.75rem" }}>
+              {(
+                [
+                  { key: "base"    as const, label: "Baseline",           color: "#002147", defaults: DEFAULT_BASE_INPUTS    },
+                  { key: "adverse" as const, label: "Adverse / Downside", color: "#B45309", defaults: DEFAULT_ADVERSE_INPUTS },
+                  { key: "upside"  as const, label: "Upside",             color: "#15803D", defaults: DEFAULT_UPSIDE_INPUTS  },
+                ]
+              ).map((s) => (
+                <ScenarioEditor
+                  key={s.key}
+                  label={s.label}
+                  color={s.color}
+                  inputs={scenarioInputs[s.key]}
+                  defaults={s.defaults}
+                  onChange={(updated) =>
+                    setScenarioInputs((prev) => ({ ...prev, [s.key]: updated }))
+                  }
+                />
+              ))}
+            </div>
+          </RiskSection>
+        </div>
       </Card>
 
       {/* Charts row — collapsible; collapsed by default in Executive Mode */}
