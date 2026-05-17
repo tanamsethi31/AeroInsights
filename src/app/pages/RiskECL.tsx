@@ -57,6 +57,7 @@ import {
   type ScenarioInputs,
 } from "../utils/eclCalculator";
 import { PillTabs } from "../components/ui/PillTabs";
+import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
 
 const tornadoData = [
   { input: "PD Multiplier (Stage 3)", impact: 8.4, dir: "positive" },
@@ -260,6 +261,7 @@ export default function RiskECL() {
     }
   }, [isExecutiveMode, activeTab]);
   const [drilldownLease, setDrilldownLease] = useState<LeaseRow | null>(null);
+  const [auditorPackOpen, setAuditorPackOpen] = useState(false);
   const [weights, setWeights] = useState({ base: 60, adverse: 25, upside: 15 });
   const [weightEdit, setWeightEdit] = useState({
     base: "60",
@@ -1918,6 +1920,7 @@ export default function RiskECL() {
         subtitle="IFRS 9 Expected Credit Loss — F02 Module · Probability-weighted multi-scenario"
       >
         <button
+          onClick={() => setAuditorPackOpen(true)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -1935,6 +1938,7 @@ export default function RiskECL() {
           <Download size={14} /> Auditor Evidence Pack
         </button>
         <button
+          onClick={() => setAuditorPackOpen(true)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -2103,6 +2107,31 @@ export default function RiskECL() {
           onClose={() => setDrilldownLease(null)}
         />
       )}
+
+      <AuditorPackModal
+        open={auditorPackOpen}
+        onClose={() => setAuditorPackOpen(false)}
+        data={{
+          scenarioInputs,
+          weights,
+          weighted,
+          scenarioSummary,
+          eclRows: sortedECL.map((r) => ({
+            id: r.id,
+            lessee: r.lessee,
+            aircraft: r.aircraft,
+            ead: r.eadNum,
+            pd12m: r.pd12m,
+            lgd: r.lgd,
+            ecl12m: r.ecl12m,
+            eclLT: r.eclLifetime,
+            stage: stageOverrides[r.id] ?? r.stage,
+          })),
+          sicrConfig,
+          managementOverlay: "",
+          currency: "USD",
+        }}
+      />
     </motion.div>
   );
 }
