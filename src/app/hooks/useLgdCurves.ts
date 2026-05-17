@@ -18,17 +18,6 @@ export function useLgdCurves(): LgdCurvesState {
   const [isOverridden, setIsOverridden]     = useState(false);
   const [loading, setLoading]               = useState(false);
 
-  const fetchOverride = useCallback(async () => {
-    if (!orgId) return null;
-    const { data, error } = await supabase
-      .from("lgd_recovery_overrides")
-      .select("recovery_factor")
-      .eq("org_id", orgId)
-      .maybeSingle();
-    if (error) throw error;
-    return data;
-  }, [orgId]);
-
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -85,13 +74,18 @@ export function useLgdCurves(): LgdCurvesState {
         { onConflict: "org_id" }
       );
       if (error) throw error;
-      const data = await fetchOverride();
+      // Inline post-save refresh — no fetchOverride callback needed
+      const { data } = await supabase
+        .from("lgd_recovery_overrides")
+        .select("recovery_factor")
+        .eq("org_id", orgId)
+        .maybeSingle();
       if (data) {
         setRecoveryFactor(Number(data.recovery_factor));
         setIsOverridden(true);
       }
     },
-    [orgId, fetchOverride]
+    [orgId]
   );
 
   const resetToDefault = useCallback(async () => {
