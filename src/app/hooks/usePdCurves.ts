@@ -42,6 +42,7 @@ export function usePdCurves(): EffectiveCurves {
     if (!orgId) {
       setCurves(DEFAULT_PD_CURVES);
       setIsOverridden(EMPTY_OVERRIDDEN);
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -87,8 +88,69 @@ export function usePdCurves(): EffectiveCurves {
   }, [orgId]);
 
   useEffect(() => {
-    fetchOverrides();
-  }, [fetchOverrides]);
+    let cancelled = false;
+    const run = async () => {
+      if (!orgId) {
+        if (!cancelled) {
+          setCurves(DEFAULT_PD_CURVES);
+          setIsOverridden(EMPTY_OVERRIDDEN);
+          setLoading(false);
+        }
+        return;
+      }
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("pd_curve_overrides")
+          .select(
+            "segment, pd1yr, pd2yr, pd3yr, pd5yr, pd_lifetime, notes, updated_by, updated_at"
+          )
+          .eq("org_id", orgId);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          if (!cancelled) {
+            setCurves(DEFAULT_PD_CURVES);
+            setIsOverridden(EMPTY_OVERRIDDEN);
+          }
+          return;
+        }
+
+        const overrideMap: Partial<Record<CarrierSegment, Partial<PdTermStructure>>> = {};
+        const overriddenFlags: Record<CarrierSegment, boolean> = { ...EMPTY_OVERRIDDEN };
+
+        for (const row of data) {
+          const seg = row.segment as CarrierSegment;
+          overrideMap[seg] = {
+            pd1yr: Number(row.pd1yr),
+            pd2yr: Number(row.pd2yr),
+            pd3yr: Number(row.pd3yr),
+            pd5yr: Number(row.pd5yr),
+            pdLifetime: Number(row.pd_lifetime),
+          };
+          overriddenFlags[seg] = true;
+        }
+
+        if (!cancelled) {
+          setCurves(mergeCurves(DEFAULT_PD_CURVES, overrideMap));
+          setIsOverridden(overriddenFlags);
+        }
+      } catch (err) {
+        console.error("[usePdCurves] fetchOverrides error:", err);
+        if (!cancelled) {
+          setCurves(DEFAULT_PD_CURVES);
+          setIsOverridden(EMPTY_OVERRIDDEN);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
 
   const saveOverride = useCallback(
     async (
