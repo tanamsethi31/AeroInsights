@@ -51,11 +51,11 @@ export function mergeCurves(
   defaults: PdCurveLibrary,
   overrides: Partial<Record<CarrierSegment, Partial<PdTermStructure>>>,
 ): PdCurveLibrary {
-  const result = { ...defaults };
-  for (const seg of Object.keys(overrides) as CarrierSegment[]) {
-    if (overrides[seg]) {
-      result[seg] = { ...defaults[seg], ...overrides[seg] };
-    }
+  const result = {} as PdCurveLibrary;
+  for (const seg of Object.keys(defaults) as CarrierSegment[]) {
+    result[seg] = overrides[seg]
+      ? { ...defaults[seg], ...overrides[seg] }
+      : { ...defaults[seg] };
   }
   return result;
 }

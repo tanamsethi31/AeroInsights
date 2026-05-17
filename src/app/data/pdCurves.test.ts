@@ -66,6 +66,12 @@ describe("mergeCurves", () => {
       mergeCurves(DEFAULT_PD_CURVES, { charter: { pd1yr: 0.9, pd2yr: 0.1 } })
     ).not.toThrow();
   });
+
+  it("does not mutate the defaults argument", () => {
+    const snapshot = { ...DEFAULT_PD_CURVES.network };
+    mergeCurves(DEFAULT_PD_CURVES, { network: { pd1yr: 0.05 } });
+    expect(DEFAULT_PD_CURVES.network).toEqual(snapshot);
+  });
 });
 
 describe("computeDeviation", () => {
@@ -105,5 +111,17 @@ describe("computeDeviation", () => {
     expect(result.band).toBe("green");
     expect(result.description).toBe("No benchmark");
     expect(result.ratio).toBe(0);
+  });
+
+  it("returns green at exact upper boundary (ratio = 1.25)", () => {
+    // 0.0150 / 0.0120 = 1.25 exactly
+    const { band } = computeDeviation(0.0150, 0.0120, "network");
+    expect(band).toBe("green");
+  });
+
+  it("returns amber at ratio just above upper green boundary (ratio = 1.26)", () => {
+    // 0.0126 / 0.01 = 1.26
+    const { band } = computeDeviation(0.0126, 0.01, "network");
+    expect(band).toBe("amber");
   });
 });
