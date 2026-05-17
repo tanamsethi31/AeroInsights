@@ -56,7 +56,7 @@ export function CurveOverrideDrawer({
     pdLifetime: toDisplay(curve.pdLifetime),
   });
   const [notes, setNotes] = useState("");
-  const [errors, setErrors] = useState<Partial<Record<TenorKey | "monotonicity", string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<TenorKey | "monotonicity" | "submit", string>>>({});
   const [saving, setSaving] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -73,10 +73,10 @@ export function CurveOverrideDrawer({
     setNotes("");
     setErrors({});
     setConfirmReset(false);
-  }, [segment, curves]);
+  }, [segment, curves, isOpen]);
 
   function validate(): boolean {
-    const newErrors: Partial<Record<TenorKey | "monotonicity", string>> = {};
+    const newErrors: Partial<Record<TenorKey | "monotonicity" | "submit", string>> = {};
     const values: Record<TenorKey, number> = {} as Record<TenorKey, number>;
 
     for (const { key } of TENORS) {
@@ -84,7 +84,7 @@ export function CurveOverrideDrawer({
       if (isNaN(v) || v <= 0 || v >= 100) {
         newErrors[key] = "Must be between 0 and 100";
       } else {
-        values[key] = v / 100;
+        values[key] = toDecimal(fields[key]);
       }
     }
 
@@ -104,16 +104,16 @@ export function CurveOverrideDrawer({
     setSaving(true);
     try {
       await onSaveOverride(segment, {
-        pd1yr:      parseFloat(fields.pd1yr) / 100,
-        pd2yr:      parseFloat(fields.pd2yr) / 100,
-        pd3yr:      parseFloat(fields.pd3yr) / 100,
-        pd5yr:      parseFloat(fields.pd5yr) / 100,
-        pdLifetime: parseFloat(fields.pdLifetime) / 100,
+        pd1yr:      toDecimal(fields.pd1yr),
+        pd2yr:      toDecimal(fields.pd2yr),
+        pd3yr:      toDecimal(fields.pd3yr),
+        pd5yr:      toDecimal(fields.pd5yr),
+        pdLifetime: toDecimal(fields.pdLifetime),
         notes:      notes || undefined,
       });
       onClose();
     } catch {
-      setErrors({ monotonicity: "Failed to save. Please try again." });
+      setErrors({ submit: "Failed to save. Please try again." });
     } finally {
       setSaving(false);
     }
@@ -126,7 +126,7 @@ export function CurveOverrideDrawer({
       setConfirmReset(false);
       onClose();
     } catch {
-      setErrors({ monotonicity: "Failed to reset. Please try again." });
+      setErrors({ submit: "Failed to reset. Please try again." });
     } finally {
       setResetting(false);
     }
@@ -196,6 +196,13 @@ export function CurveOverrideDrawer({
               )}
             </div>
           ))}
+
+          {/* Submit error */}
+          {errors.submit && (
+            <p className="text-xs text-red-400 rounded-md bg-red-500/10 border border-red-500/20 px-3 py-2">
+              {errors.submit}
+            </p>
+          )}
 
           {/* Monotonicity error */}
           {errors.monotonicity && (
