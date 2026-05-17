@@ -340,15 +340,13 @@ export default function Counterparties() {
   const [drawerSegment, setDrawerSegment] = useState<CarrierSegment | null>(null);
 
   function effectiveSegment(lessee: CounterpartyRow): CarrierSegment | null {
-    if (isDemo) return segmentOverrides[lessee.id] ?? lessee.carrierSegment ?? null;
-    return lessee.carrierSegment ?? null;
+    return segmentOverrides[lessee.id] ?? lessee.carrierSegment ?? null;
   }
 
   async function handleSegmentChange(lessee: CounterpartyRow, seg: CarrierSegment | null) {
-    if (isDemo) {
-      setSegmentOverrides((prev) => ({ ...prev, [lessee.id]: seg }));
-      return;
-    }
+    // Optimistic update for both modes so UI reflects change immediately
+    setSegmentOverrides((prev) => ({ ...prev, [lessee.id]: seg }));
+    if (isDemo) return;
     await supabase.from("lessees").update({ carrier_segment: seg }).eq("id", lessee.id);
   }
 
@@ -553,21 +551,26 @@ export default function Counterparties() {
             </div>
           )}
           {/* PD Benchmark Panel */}
-          <div className="mt-3">
-            <CarrierSegmentSelector
-              value={effectiveSegment(selectedLessee)}
-              onChange={(seg) => handleSegmentChange(selectedLessee, seg)}
-            />
-            {effectiveSegment(selectedLessee) !== null && (
-              <PdBenchmarkPanel
-                segment={effectiveSegment(selectedLessee)!}
-                pdEstimate={selectedLessee.pdEstimate ?? null}
-                curves={curves}
-                isOverridden={isOverridden[effectiveSegment(selectedLessee)!]}
-                onCustomise={() => setDrawerSegment(effectiveSegment(selectedLessee)!)}
-              />
-            )}
-          </div>
+          {(() => {
+            const seg = effectiveSegment(selectedLessee);
+            return (
+              <div className="mt-3">
+                <CarrierSegmentSelector
+                  value={seg}
+                  onChange={(s) => handleSegmentChange(selectedLessee, s)}
+                />
+                {seg !== null && (
+                  <PdBenchmarkPanel
+                    segment={seg}
+                    pdEstimate={selectedLessee.pdEstimate ?? null}
+                    curves={curves}
+                    isOverridden={isOverridden[seg]}
+                    onCustomise={() => setDrawerSegment(seg)}
+                  />
+                )}
+              </div>
+            );
+          })()}
         </motion.div>
       </div>
 
