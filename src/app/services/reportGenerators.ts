@@ -6,6 +6,36 @@ import {
 } from "docx";
 import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
 import type { PortfolioExportData } from "../lib/portfolioAdapters";
+import type { RefObject } from "react";
+import type { ScenarioInputs } from "../utils/eclCalculator";
+
+export interface AuditorPackData {
+  scenarioInputs: {
+    base:    ScenarioInputs;
+    adverse: ScenarioInputs;
+    upside:  ScenarioInputs;
+  };
+  weights: { base: number; adverse: number; upside: number };
+  weighted: { ecl12m: number; eclLifetime: number; coverage: number };
+  scenarioSummary: {
+    base:    { ecl12m: number; eclLifetime: number; coverage: number };
+    adverse: { ecl12m: number; eclLifetime: number; coverage: number };
+    upside:  { ecl12m: number; eclLifetime: number; coverage: number };
+  };
+  eclRows: Array<{
+    id: string; lessee: string; aircraft: string;
+    ead: number; pd12m: number; lgd: number;
+    ecl12m: number; eclLT: number; stage: string;
+  }>;
+  sicrConfig: {
+    dpdEnabled: boolean; dpdDays: number;
+    upgradeEnabled: boolean; upgradeNotches: number;
+    countryWatchlistEnabled: boolean;
+    insolvencyEnabled: boolean;
+  };
+  managementOverlay: string;
+  currency: CurrencyCode;
+}
 
 // ── Static data (same as exportService) ──────────────────────────────────────
 
@@ -156,7 +186,12 @@ async function saveDocx(doc: Document, slug: string): Promise<void> {
 
 // ── Named DOCX generators ─────────────────────────────────────────────────────
 
-export async function generateReportDOCX(reportId: string, currency: CurrencyCode, data?: PortfolioExportData): Promise<void> {
+export async function generateReportDOCX(
+  reportId: string,
+  currency: CurrencyCode,
+  data?: PortfolioExportData,
+  auditData?: AuditorPackData,
+): Promise<void> {
   const eclRows    = data?.eclRows    ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows ?? LESSEES;
   const leaseRows  = data?.leaseRows  ?? LEASES;
@@ -165,17 +200,136 @@ export async function generateReportDOCX(reportId: string, currency: CurrencyCod
 
   switch (reportId) {
     case "RPT-001": {
-      doc = new Document({ sections: [{ children: [
-        ...docPreamble("Auditor Evidence Pack — IFRS 9 ECL Disclosure", currency),
-        makeTable(
-          ["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m", "LGD", "ECL 12m", "ECL LT", "Stage"],
-          eclRows.map(r => [
-            r.id, r.lessee, r.aircraft,
-            fe(r.ead, currency), `${r.pd12m}%`, `${r.lgd}%`,
-            fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`,
-          ])
-        ),
-      ]}]});
+      if (!auditData) {
+        console.warn("RPT-001: auditData required for full auditor pack");
+        return;
+      }
+
+      const fmtPct = (n: number) => `${n.toFixed(2)}%`;
+      const fmtAmt = (n: number) => fe(n, auditData.currency);
+      const sc = auditData.sicrConfig;
+
+      const METHODOLOGY = `Expected Credit Loss (ECL) is measured under IFRS 9 Financial Instruments using the three-stage impairment model. Stage 1 instruments carry a 12-month ECL allowance; Stage 2 and Stage 3 instruments carry a lifetime ECL allowance. Probability of Default (PD), Loss Given Default (LGD), and Exposure at Default (EAD) inputs are derived from lessee credit assessments, aircraft market valuations, and contractual cash flow schedules. Forward-looking information is incorporated through a minimum of three macro-economic scenarios (Baseline, Adverse, Upside) probability-weighted per IFRS 9 §B5.5.41. Significant Increase in Credit Risk (SICR) is assessed at each reporting date against the trigger framework documented in §7 of this pack.`;
+
+      doc = new Document({
+        sections: [{
+          children: [
+            ...docPreamble("Auditor Evidence Pack — IFRS 9 ECL Disclosure", auditData.currency),
+
+            // §1 Methodology
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§1 — Methodology Statement", bold: true, color: "002147" })] }),
+            new Paragraph({ children: [new TextRun({ text: METHODOLOGY, size: 18 })] }),
+            new Paragraph({ text: "" }),
+
+            // §2 Scenario Definitions
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§2 — Forward-Looking Scenario Definitions", bold: true, color: "002147" })] }),
+            makeTable(
+              ["Scenario (Weight)", "GDP Δ", "RPK Δ", "Fuel Δ", "Asset Value Δ", "PD Mult S2", "PD Mult S3"],
+              [
+                ["Baseline",
+                  `${(auditData.scenarioInputs.base.gdpDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.base.rpkDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.base.fuelDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.base.assetValueDelta * 100).toFixed(1)}%`,
+                  `${auditData.scenarioInputs.base.pdS2Multi.toFixed(1)}×`,
+                  `${auditData.scenarioInputs.base.pdS3Multi.toFixed(1)}×`,
+                ],
+                [`Adverse (${auditData.weights.adverse}%)`,
+                  `${(auditData.scenarioInputs.adverse.gdpDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.adverse.rpkDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.adverse.fuelDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.adverse.assetValueDelta * 100).toFixed(1)}%`,
+                  `${auditData.scenarioInputs.adverse.pdS2Multi.toFixed(1)}×`,
+                  `${auditData.scenarioInputs.adverse.pdS3Multi.toFixed(1)}×`,
+                ],
+                [`Upside (${auditData.weights.upside}%)`,
+                  `${(auditData.scenarioInputs.upside.gdpDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.upside.rpkDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.upside.fuelDelta * 100).toFixed(1)}%`,
+                  `${(auditData.scenarioInputs.upside.assetValueDelta * 100).toFixed(1)}%`,
+                  `${auditData.scenarioInputs.upside.pdS2Multi.toFixed(1)}×`,
+                  `${auditData.scenarioInputs.upside.pdS3Multi.toFixed(1)}×`,
+                ],
+              ]
+            ),
+            new Paragraph({ text: "" }),
+
+            // §3 Weighted ECL
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§3 — Probability Weights & Weighted ECL", bold: true, color: "002147" })] }),
+            makeTable(
+              ["Scenario", "ECL 12-Month", "ECL Lifetime", "Coverage Ratio"],
+              [
+                [`Baseline (${auditData.weights.base}%)`,   fmtAmt(auditData.scenarioSummary.base.ecl12m),    fmtAmt(auditData.scenarioSummary.base.eclLifetime),    fmtPct(auditData.scenarioSummary.base.coverage)],
+                [`Adverse (${auditData.weights.adverse}%)`, fmtAmt(auditData.scenarioSummary.adverse.ecl12m), fmtAmt(auditData.scenarioSummary.adverse.eclLifetime), fmtPct(auditData.scenarioSummary.adverse.coverage)],
+                [`Upside (${auditData.weights.upside}%)`,   fmtAmt(auditData.scenarioSummary.upside.ecl12m),  fmtAmt(auditData.scenarioSummary.upside.eclLifetime),  fmtPct(auditData.scenarioSummary.upside.coverage)],
+                ["Probability-Weighted",                    fmtAmt(auditData.weighted.ecl12m),               fmtAmt(auditData.weighted.eclLifetime),               fmtPct(auditData.weighted.coverage)],
+              ]
+            ),
+            new Paragraph({ text: "" }),
+
+            // §4 ECL by Lease
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§4 — ECL by Lease (Full Schedule)", bold: true, color: "002147" })] }),
+            makeTable(
+              ["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m", "LGD", "ECL 12m", "ECL Lifetime", "Stage"],
+              auditData.eclRows.map((r) => [
+                r.id, r.lessee, r.aircraft,
+                fmtAmt(r.ead), `${r.pd12m}%`, `${r.lgd}%`,
+                fmtAmt(r.ecl12m), fmtAmt(r.eclLT), `S${r.stage}`,
+              ])
+            ),
+            new Paragraph({ text: "" }),
+
+            // §5 IFRS 7 §35H Roll-Forward
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§5 — IFRS 7 §35H ECL Allowance Roll-Forward", bold: true, color: "002147" })] }),
+            makeTable(
+              ["Movement", "Stage 1", "Stage 2", "Stage 3", "Total"],
+              [
+                ["Opening ECL balance",          "$8.10M",  "$20.40M", "$16.30M", "$44.80M"],
+                ["New originations (Stage 1)",   "+$1.20M", "—",       "—",       "+$1.20M"],
+                ["SICR transfers to Stage 2",    "−$0.85M", "+$2.10M", "—",       "+$1.25M"],
+                ["SICR transfers to Stage 3",    "—",       "−$1.40M", "+$2.80M", "+$1.40M"],
+                ["Write-offs",                   "—",       "—",       "−$2.10M", "−$2.10M"],
+                ["Repayments / derecognition",   "−$0.45M", "−$0.85M", "−$0.40M", "−$1.70M"],
+                ["FX and unwinding of discount", "+$0.40M", "+$1.35M", "+$0.60M", "+$2.35M"],
+                ["Closing ECL balance",          "$8.40M",  "$21.60M", "$17.20M", "$47.20M"],
+              ]
+            ),
+            new Paragraph({ text: "" }),
+
+            // §6 IFRS 7 §35I Credit Quality
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§6 — IFRS 7 §35I Credit Quality Distribution", bold: true, color: "002147" })] }),
+            makeTable(
+              ["Rating Grade", "Stage 1 EAD", "Stage 2 EAD", "Stage 3 EAD", "Total EAD", "% Portfolio"],
+              [
+                ["A / A−",        "$412.0M", "—",      "—",      "$412.0M", "45.1%"],
+                ["BBB",           "$185.0M", "$12.0M", "—",      "$197.0M", "21.6%"],
+                ["BB / BB−",      "$142.0M", "$48.0M", "—",      "$190.0M", "20.8%"],
+                ["B+",            "$32.0M",  "$58.0M", "—",      "$90.0M",  "9.9%"],
+                ["B / B−",        "—",       "—",      "$6.6M",  "$6.6M",   "0.7%"],
+                ["CCC and below", "—",       "—",      "$17.6M", "$17.6M",  "1.9%"],
+              ]
+            ),
+            new Paragraph({ text: "" }),
+
+            // §7 SICR Configuration
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§7 — SICR Trigger Configuration", bold: true, color: "002147" })] }),
+            makeTable(
+              ["Trigger", "Status", "Threshold"],
+              [
+                ["30+ DPD Backstop",           sc.dpdEnabled ? "Active" : "Disabled",              sc.dpdEnabled ? `${sc.dpdDays} days` : "—"],
+                ["Credit Downgrade Threshold", sc.upgradeEnabled ? "Active" : "Disabled",          sc.upgradeEnabled ? `${sc.upgradeNotches} notches` : "—"],
+                ["Country Watchlist Event",    sc.countryWatchlistEnabled ? "Active" : "Disabled", "Automatic on watchlist flag"],
+                ["Lessee Insolvency Filing",   sc.insolvencyEnabled ? "Active" : "Disabled",       "Automatic Stage 3"],
+              ]
+            ),
+            new Paragraph({ text: "" }),
+
+            // §8 Key Assumptions
+            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§8 — Key Assumptions & Management Overlays", bold: true, color: "002147" })] }),
+            new Paragraph({ children: [new TextRun({ text: auditData.managementOverlay || "No management overlays documented for this period.", size: 18 })] }),
+          ],
+        }],
+      });
       await saveDocx(doc, "auditor-evidence-pack");
       break;
     }
@@ -245,4 +399,51 @@ export async function generateReportDOCX(reportId: string, currency: CurrencyCod
     default:
       console.warn("Unknown reportId:", reportId);
   }
+}
+
+// ── PDF Generator ─────────────────────────────────────────────────────────────
+// Captures the preview div via html2canvas → jsPDF. Dynamic imports so the
+// libraries are only loaded when the user actually clicks "Download PDF".
+
+export async function generateReportPDF(
+  previewRef: RefObject<HTMLDivElement>,
+): Promise<void> {
+  if (!previewRef.current) return;
+
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
+
+  const canvas = await html2canvas(previewRef.current, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    scrollX: 0,
+    scrollY: 0,
+    windowWidth: previewRef.current.scrollWidth,
+    windowHeight: previewRef.current.scrollHeight,
+  });
+
+  const imgData  = canvas.toDataURL("image/png");
+  const A4_W_MM  = 210;
+  const A4_H_MM  = 297;
+  const pdfWidth  = A4_W_MM;
+  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  let remaining = pdfHeight;
+  let yOffset   = 0;
+  let isFirst   = true;
+
+  while (remaining > 0) {
+    if (!isFirst) pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, yOffset, pdfWidth, pdfHeight);
+    yOffset   -= A4_H_MM;
+    remaining -= A4_H_MM;
+    isFirst    = false;
+  }
+
+  const date = new Date().toISOString().slice(0, 10);
+  pdf.save(`aeroinsights-auditor-evidence-pack-${date}.pdf`);
 }
