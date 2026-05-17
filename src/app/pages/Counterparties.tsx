@@ -20,6 +20,12 @@ import {
   type AircraftSanctionsAlert,
 } from "../data/sanctionsData";
 import { usePortfolioData } from "../hooks/usePortfolioData";
+import { usePdCurves } from "../hooks/usePdCurves";
+import { CarrierSegmentSelector } from "../components/counterparties/CarrierSegmentSelector";
+import { PdBenchmarkPanel } from "../components/counterparties/PdBenchmarkPanel";
+import { CurveOverrideDrawer } from "../components/counterparties/CurveOverrideDrawer";
+import { supabase } from "../lib/supabase";
+import type { CarrierSegment } from "../data/pdCurves";
 
 // ─── SignalFeedPanel ──────────────────────────────────────────────────────────
 
@@ -199,6 +205,8 @@ interface CounterpartyRow {
   daysOverdue: number;
   notes: string;
   watchlistStatus?: "green" | "amber" | "red" | null;
+  carrierSegment?: CarrierSegment | null;
+  pdEstimate?: number | null;
 }
 
 const DEMO_LESSEES: CounterpartyRow[] = [
@@ -210,6 +218,8 @@ const DEMO_LESSEES: CounterpartyRow[] = [
     exposure: "$184M", leases: 6, lastPayment: "2026-03-14", daysOverdue: 45,
     notes: "Payment 45 days overdue. §1110 cure risk elevated. Seeking deferral.",
     watchlistStatus: "red",
+    carrierSegment: "lcc",
+    pdEstimate: 0.042,
   },
   {
     id: "AEROMEX", profileId: "AEROMEX",
@@ -219,6 +229,8 @@ const DEMO_LESSEES: CounterpartyRow[] = [
     exposure: "$122M", leases: 4, lastPayment: "2026-01-31", daysOverdue: 88,
     notes: "Chapter 11 filing. §1110 cure window active. AerCap and Air Lease precedent reviewed.",
     watchlistStatus: "red",
+    carrierSegment: "network",
+    pdEstimate: 0.120,
   },
   {
     id: "SRILNKN", profileId: "SRILNKN",
@@ -228,6 +240,8 @@ const DEMO_LESSEES: CounterpartyRow[] = [
     exposure: "$118M", leases: 4, lastPayment: "2026-04-10", daysOverdue: 12,
     notes: "Downgraded by S&P. Government-owned carrier. High litigation propensity.",
     watchlistStatus: "amber",
+    carrierSegment: "regional",
+    pdEstimate: 0.035,
   },
   {
     id: "AZUL", profileId: "AZUL",
@@ -237,6 +251,8 @@ const DEMO_LESSEES: CounterpartyRow[] = [
     exposure: "$142M", leases: 5, lastPayment: "2026-04-20", daysOverdue: 6,
     notes: "Schedule reductions. Liquidity tightening. Constructive engagement so far.",
     watchlistStatus: "amber",
+    carrierSegment: "lcc",
+    pdEstimate: 0.028,
   },
   {
     id: "TRANSATCA", profileId: "TRANSATCA",
@@ -246,6 +262,8 @@ const DEMO_LESSEES: CounterpartyRow[] = [
     exposure: "$96M", leases: 3, lastPayment: "2026-04-22", daysOverdue: 8,
     notes: "Restructuring discussions initiated. Canadian jurisdiction favorable for lessor.",
     watchlistStatus: "amber",
+    carrierSegment: "charter",
+    pdEstimate: 0.051,
   },
   {
     id: "EMIRATES", profileId: "EMIRATES",
@@ -255,6 +273,8 @@ const DEMO_LESSEES: CounterpartyRow[] = [
     exposure: "$412M", leases: 8, lastPayment: "2026-04-28", daysOverdue: 0,
     notes: "Exemplary payment history. Strong sovereign backing. Low risk.",
     watchlistStatus: "green",
+    carrierSegment: "network",
+    pdEstimate: 0.009,
   },
 ];
 
@@ -303,10 +323,42 @@ export default function Counterparties() {
       daysOverdue: 0,
       notes: "",
       watchlistStatus: l.watchlist_status,
+      carrierSegment: l.carrier_segment ?? null,
+      pdEstimate: l.pd_estimate ?? null,
     }));
   }, [lesseeData, leaseData, provisions, isDemo]);
 
   const [selectedLessee, setSelectedLessee] = useState<CounterpartyRow>(lesseeRows[0] ?? DEMO_LESSEES[0]);
+  // Track which alert details are expanded (collapsed by default)
+  const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
+
+  // PD Curves
+  const { curves, isOverridden, saveOverride, resetToDefault } = usePdCurves();
+  // Demo mode: track segment assignments locally (no Supabase write)
+  const [segmentOverrides, setSegmentOverrides] = useState<Record<string, CarrierSegment | null>>({});
+  // Drawer state
+  const [drawerSegment, setDrawerSegment] = useState<CarrierSegment | null>(null);
+
+  function effectiveSegment(lessee: CounterpartyRow): CarrierSegment | null {
+    if (isDemo) return segmentOverrides[lessee.id] ?? lessee.carrierSegment ?? null;
+    return lessee.carrierSegment ?? null;
+  }
+
+  async function handleSegmentChange(lessee: CounterpartyRow, seg: CarrierSegment | null) {
+    if (isDemo) {
+      setSegmentOverrides((prev) => ({ ...prev, [lessee.id]: seg }));
+      return;
+    }
+    await supabase.from("lessees").update({ carrier_segment: seg }).eq("id", lessee.id);
+  }
+
+  function toggleAlertDetail(reg: string) {
+    setExpandedAlerts((prev) => {
+      const next = new Set(prev);
+      next.has(reg) ? next.delete(reg) : next.add(reg);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -500,6 +552,22 @@ export default function Counterparties() {
               </button>
             </div>
           )}
+          {/* PD Benchmark Panel */}
+          <div className="mt-3">
+            <CarrierSegmentSelector
+              value={effectiveSegment(selectedLessee)}
+              onChange={(seg) => handleSegmentChange(selectedLessee, seg)}
+            />
+            {effectiveSegment(selectedLessee) !== null && (
+              <PdBenchmarkPanel
+                segment={effectiveSegment(selectedLessee)!}
+                pdEstimate={selectedLessee.pdEstimate ?? null}
+                curves={curves}
+                isOverridden={isOverridden[effectiveSegment(selectedLessee)!]}
+                onCustomise={() => setDrawerSegment(effectiveSegment(selectedLessee)!)}
+              />
+            )}
+          </div>
         </motion.div>
       </div>
 
@@ -583,10 +651,37 @@ export default function Counterparties() {
                         <span style={{ fontWeight: 600, color: alertClr, fontSize: "0.8125rem" }}>
                           {alertLabel[aircraft.alert]}
                         </span>
+                        {aircraft.alertDetail && (
+                          <button
+                            onClick={() => toggleAlertDetail(aircraft.reg)}
+                            style={{
+                              background: "none", border: "none", cursor: "pointer", padding: "0 2px",
+                              color: "#94A3B8", display: "flex", alignItems: "center",
+                              transition: "color 120ms ease-out",
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = alertClr; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#94A3B8"; }}
+                            title={expandedAlerts.has(aircraft.reg) ? "Collapse" : "Expand alert detail"}
+                          >
+                            <span style={{
+                              display: "inline-block",
+                              transform: expandedAlerts.has(aircraft.reg) ? "rotate(180deg)" : "rotate(0deg)",
+                              transition: "transform 180ms cubic-bezier(0.23,1,0.32,1)",
+                              fontSize: "0.6rem",
+                            }}>▼</span>
+                          </button>
+                        )}
                       </div>
                       {aircraft.alertDetail && (
-                        <div style={{ fontSize: "0.6875rem", color: "#B45309", marginTop: "0.2rem", maxWidth: "200px", lineHeight: 1.35 }}>
-                          {aircraft.alertDetail}
+                        <div style={{
+                          overflow: "hidden",
+                          maxHeight: expandedAlerts.has(aircraft.reg) ? "120px" : "0px",
+                          opacity: expandedAlerts.has(aircraft.reg) ? 1 : 0,
+                          transition: "max-height 220ms cubic-bezier(0.23,1,0.32,1), opacity 180ms ease-out",
+                        }}>
+                          <div style={{ fontSize: "0.6875rem", color: "#B45309", marginTop: "0.375rem", maxWidth: "200px", lineHeight: 1.45 }}>
+                            {aircraft.alertDetail}
+                          </div>
                         </div>
                       )}
                     </td>
@@ -603,6 +698,18 @@ export default function Counterparties() {
           Screening cadence: OFAC SDN daily · EU Consolidated daily · UKOFSI weekly · UNSC quarterly · Route data sourced from operator-submitted flight schedules · Last full sweep: 2026-05-07 06:02 UTC
         </div>
       </Card>
+
+      {drawerSegment && (
+        <CurveOverrideDrawer
+          isOpen={true}
+          segment={drawerSegment}
+          curves={curves}
+          isOverridden={isOverridden[drawerSegment]}
+          onSaveOverride={saveOverride}
+          onResetToDefault={resetToDefault}
+          onClose={() => setDrawerSegment(null)}
+        />
+      )}
     </div>
   );
 }
