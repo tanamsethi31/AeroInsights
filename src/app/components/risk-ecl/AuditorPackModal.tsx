@@ -147,7 +147,8 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
             style={{
               position: "fixed",
               top: "50%", left: "50%",
-              transform: "translate(-50%, -50%)",
+              marginLeft: "-45vw",
+              marginTop: "-45vh",
               width: "90vw", maxWidth: "1200px",
               height: "90vh",
               background: "#FFFFFF",
@@ -262,9 +263,13 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
                   const container = e.currentTarget;
                   for (const s of [...SECTIONS].reverse()) {
                     const el = document.getElementById(`auditor-${s.id}`);
-                    if (el && el.offsetTop - container.scrollTop <= 120) {
-                      setActiveSection(s.id);
-                      break;
+                    if (el) {
+                      const containerRect = container.getBoundingClientRect();
+                      const elRect = el.getBoundingClientRect();
+                      if (elRect.top - containerRect.top <= 120) {
+                        setActiveSection(s.id);
+                        break;
+                      }
                     }
                   }
                 }}
