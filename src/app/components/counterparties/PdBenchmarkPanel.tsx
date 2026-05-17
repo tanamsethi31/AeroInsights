@@ -7,6 +7,7 @@ import {
   type PdCurveLibrary,
   type DeviationBand,
 } from "../../data/pdCurves";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 interface PdBenchmarkPanelProps {
   segment: CarrierSegment;
@@ -94,12 +95,16 @@ export function PdBenchmarkPanel({
                   <span className="inline-flex items-center gap-1.5">
                     <span className="text-gray-300 tabular-nums">{fmt(pdEstimate)}</span>
                     {deviation && (
-                      <span
-                        className={`text-[10px] font-bold px-1 py-0.5 rounded ${BAND_CLASSES[deviation.band]}`}
-                        title={deviation.description}
-                      >
-                        {BAND_ICONS[deviation.band]}
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={`text-[10px] font-bold px-1 py-0.5 rounded cursor-help ${BAND_CLASSES[deviation.band]}`}>
+                            {BAND_ICONS[deviation.band]}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {deviation.description}
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </span>
                 ) : (
