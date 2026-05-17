@@ -47,6 +47,9 @@ import { StageMigrationTab } from "../components/risk-ecl/StageMigrationTab";
 import { ScenarioEditor } from "../components/risk-ecl/ScenarioEditor";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
+import { evaluateSICR } from "../utils/sicrEvaluator";
+import type { SICRMigrationRecommendation } from "../utils/sicrEvaluator";
+import { MOCK_SICR_DATA } from "../data/mockPortfolioData";
 import {
   BASE_ECL,
   ZERO_INPUTS,
@@ -266,6 +269,10 @@ export default function RiskECL() {
   const [sicrConfig, setSicrConfig] = useState({ ...defaultSicrConfig });
   const [sicrDirty, setSicrDirty] = useState(false);
   const [sicrSaved, setSicrSaved] = useState(false);
+  const [sicrRecommendations, setSicrRecommendations] = useState<SICRMigrationRecommendation[] | null>(null);
+  const [stageOverrides, setStageOverrides] = useState<Record<string, "1" | "2" | "3">>({});
+  const [selectedMigrations, setSelectedMigrations] = useState<Set<string>>(new Set());
+  const [sicrRan, setSicrRan] = useState(false);
   const [scenarioInputs, setScenarioInputs] = useState({
     base:    DEFAULT_BASE_INPUTS,
     adverse: DEFAULT_ADVERSE_INPUTS,
@@ -353,6 +360,28 @@ export default function RiskECL() {
     setSicrConfig({ ...defaultSicrConfig });
     setSicrDirty(false);
     setSicrSaved(false);
+  }
+
+  // ── SICR helper ───────────────────────────────────────────────────────────
+
+  function buildSICRInputs() {
+    return sortedECL.map((row) => {
+      const sicr = MOCK_SICR_DATA[row.lesseeId] ?? {
+        dpdDays: 0, ratingNotchesDown: 0, onCountryWatchlist: false, insolvencyFiled: false,
+      };
+      return {
+        leaseId: row.id,
+        lesseeId: row.lesseeId,
+        lesseeName: row.lessee,
+        aircraft: row.aircraft,
+        currentStage: (stageOverrides[row.id] ?? row.stage) as "1" | "2" | "3",
+        dpdDays: sicr.dpdDays,
+        ratingNotchesDown: sicr.ratingNotchesDown,
+        onCountryWatchlist: sicr.onCountryWatchlist,
+        insolvencyFiled: sicr.insolvencyFiled,
+        baseECLm: row.ecl12m,
+      };
+    });
   }
 
   // ── ECL Overview tab ──────────────────────────────────────────────────────
@@ -1024,7 +1053,25 @@ export default function RiskECL() {
                   ${row.eclLifetime.toFixed(2)}M
                 </td>
                 <td style={{ padding: "0.75rem 1rem" }}>
-                  <StatusPill stage={row.stage} label={`Stage ${row.stage}`} />
+                  {(() => {
+                    const effectiveStage = stageOverrides[row.id] ?? row.stage;
+                    const wasOverridden = stageOverrides[row.id] !== undefined && stageOverrides[row.id] !== row.stage;
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                        <StatusPill stage={effectiveStage} label={`Stage ${effectiveStage}`} />
+                        {wasOverridden && (
+                          <span style={{
+                            fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.04em",
+                            color: "#B45309", background: "rgba(180,83,9,0.1)",
+                            border: "1px solid rgba(180,83,9,0.25)",
+                            padding: "0.1rem 0.35rem", borderRadius: "4px",
+                          }}>
+                            PENDING
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td style={{ padding: "0.75rem 1rem" }}>
                   {(() => {
@@ -1696,6 +1743,154 @@ export default function RiskECL() {
             </div>
           </div>
         </Card>
+
+        {/* Run SICR Evaluation */}
+        <div>
+          <button
+            onClick={() => {
+              const inputs = buildSICRInputs();
+              const recs = evaluateSICR(inputs, sicrConfig);
+              setSicrRecommendations(recs);
+              setSelectedMigrations(new Set(recs.map((r) => r.leaseId)));
+              setSicrRan(true);
+            }}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+              width: "100%",
+              background: "#002147", color: "#FFFFFF", border: "none",
+              borderRadius: "9999px", padding: "0.75rem 1.5rem",
+              fontSize: "0.875rem", fontWeight: 600, cursor: "pointer",
+              transition: "opacity 160ms ease",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+          >
+            Run SICR Evaluation
+          </button>
+        </div>
+
+        {/* Recommendations */}
+        {sicrRan && sicrRecommendations !== null && (
+          <Card
+            title="Recommended Stage Migrations"
+            subtitle={
+              sicrRecommendations.length === 0
+                ? "All leases correctly staged — no migrations recommended"
+                : `${sicrRecommendations.length} migration${sicrRecommendations.length !== 1 ? "s" : ""} recommended based on active SICR triggers`
+            }
+          >
+            {sicrRecommendations.length === 0 ? (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "0.75rem",
+                padding: "1rem 1.25rem",
+                background: "rgba(21,128,61,0.06)",
+                borderRadius: "0.625rem",
+                borderLeft: "3px solid #15803D",
+              }}>
+                <span style={{ fontSize: "0.875rem", color: "#15803D", fontWeight: 500 }}>
+                  ✓ All leases are correctly staged per current SICR configuration
+                </span>
+              </div>
+            ) : (
+              <>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                    <thead>
+                      <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+                        <th style={{ padding: "0.625rem 0.75rem", width: "36px" }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedMigrations.size === sicrRecommendations.length && sicrRecommendations.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedMigrations(new Set(sicrRecommendations.map((r) => r.leaseId)));
+                              } else {
+                                setSelectedMigrations(new Set());
+                              }
+                            }}
+                          />
+                        </th>
+                        {["Lease ID", "Lessee", "Aircraft", "Migration", "Triggers Fired", "ECL Impact"].map((h) => (
+                          <th key={h} style={{ padding: "0.625rem 0.75rem", textAlign: "left", fontSize: "0.75rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sicrRecommendations.map((rec, i) => (
+                        <tr key={rec.leaseId} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#FAFAFA" }}>
+                          <td style={{ padding: "0.75rem" }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedMigrations.has(rec.leaseId)}
+                              onChange={(e) => {
+                                const next = new Set(selectedMigrations);
+                                if (e.target.checked) next.add(rec.leaseId);
+                                else next.delete(rec.leaseId);
+                                setSelectedMigrations(next);
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: "0.75rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#94A3B8", whiteSpace: "nowrap" }}>{rec.leaseId}</td>
+                          <td style={{ padding: "0.75rem", fontWeight: 600, color: "#0F172A" }}>{rec.lesseeName}</td>
+                          <td style={{ padding: "0.75rem", color: "#475569", fontSize: "0.8125rem" }}>{rec.aircraft}</td>
+                          <td style={{ padding: "0.75rem" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+                              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: rec.currentStage === "1" ? "#15803D" : "#B45309", background: rec.currentStage === "1" ? "rgba(21,128,61,0.1)" : "rgba(180,83,9,0.1)", padding: "0.2rem 0.5rem", borderRadius: "4px" }}>S{rec.currentStage}</span>
+                              <span style={{ color: "#94A3B8", fontSize: "0.75rem" }}>→</span>
+                              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: rec.recommendedStage === "3" ? "#B91C1C" : "#B45309", background: rec.recommendedStage === "3" ? "rgba(185,28,28,0.1)" : "rgba(180,83,9,0.1)", padding: "0.2rem 0.5rem", borderRadius: "4px" }}>S{rec.recommendedStage}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: "0.75rem", maxWidth: "240px" }}>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                              {rec.triggersFired.map((t) => (
+                                <span key={t} style={{ fontSize: "0.6875rem", background: "#F4F5F7", color: "#475569", border: "1px solid #E2E8F0", padding: "0.15rem 0.5rem", borderRadius: "9999px", whiteSpace: "nowrap" }}>{t}</span>
+                              ))}
+                            </div>
+                          </td>
+                          <td style={{ padding: "0.75rem", fontWeight: 600, color: "#B91C1C", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                            +${rec.eclDeltaM.toFixed(2)}M
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", paddingTop: "1rem", borderTop: "1px solid #E2E8F0", gap: "0.75rem", marginTop: "1rem" }}>
+                  <span style={{ fontSize: "0.8125rem", color: "#94A3B8" }}>
+                    {selectedMigrations.size} of {sicrRecommendations.length} selected
+                  </span>
+                  <button
+                    disabled={selectedMigrations.size === 0}
+                    onClick={() => {
+                      const overrides: Record<string, "1" | "2" | "3"> = { ...stageOverrides };
+                      for (const rec of sicrRecommendations) {
+                        if (selectedMigrations.has(rec.leaseId)) {
+                          overrides[rec.leaseId] = rec.recommendedStage;
+                        }
+                      }
+                      setStageOverrides(overrides);
+                      setSicrRecommendations(null);
+                      setSicrRan(false);
+                      setSelectedMigrations(new Set());
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.375rem",
+                      padding: "0.5rem 1.125rem",
+                      background: selectedMigrations.size > 0 ? "#002147" : "#CBD5E1",
+                      border: "none", borderRadius: "9999px",
+                      fontSize: "0.875rem", fontWeight: 500,
+                      color: "#FFFFFF",
+                      cursor: selectedMigrations.size > 0 ? "pointer" : "not-allowed",
+                      transition: "background 160ms ease",
+                    }}
+                  >
+                    Apply Selected Migrations
+                  </button>
+                </div>
+              </>
+            )}
+          </Card>
+        )}
       </div>
     );
   };
