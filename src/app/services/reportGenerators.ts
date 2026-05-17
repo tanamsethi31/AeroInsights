@@ -226,7 +226,7 @@ export async function generateReportDOCX(
             makeTable(
               ["Scenario (Weight)", "GDP Δ", "RPK Δ", "Fuel Δ", "Asset Value Δ", "PD Mult S2", "PD Mult S3"],
               [
-                ["Baseline",
+                [`Baseline (${(auditData.weights.base * 100).toFixed(0)}%)`,
                   `${(auditData.scenarioInputs.base.gdpDelta * 100).toFixed(1)}%`,
                   `${(auditData.scenarioInputs.base.rpkDelta * 100).toFixed(1)}%`,
                   `${(auditData.scenarioInputs.base.fuelDelta * 100).toFixed(1)}%`,
@@ -234,7 +234,7 @@ export async function generateReportDOCX(
                   `${auditData.scenarioInputs.base.pdS2Multi.toFixed(1)}×`,
                   `${auditData.scenarioInputs.base.pdS3Multi.toFixed(1)}×`,
                 ],
-                [`Adverse (${auditData.weights.adverse}%)`,
+                [`Adverse (${(auditData.weights.adverse * 100).toFixed(0)}%)`,
                   `${(auditData.scenarioInputs.adverse.gdpDelta * 100).toFixed(1)}%`,
                   `${(auditData.scenarioInputs.adverse.rpkDelta * 100).toFixed(1)}%`,
                   `${(auditData.scenarioInputs.adverse.fuelDelta * 100).toFixed(1)}%`,
@@ -242,7 +242,7 @@ export async function generateReportDOCX(
                   `${auditData.scenarioInputs.adverse.pdS2Multi.toFixed(1)}×`,
                   `${auditData.scenarioInputs.adverse.pdS3Multi.toFixed(1)}×`,
                 ],
-                [`Upside (${auditData.weights.upside}%)`,
+                [`Upside (${(auditData.weights.upside * 100).toFixed(0)}%)`,
                   `${(auditData.scenarioInputs.upside.gdpDelta * 100).toFixed(1)}%`,
                   `${(auditData.scenarioInputs.upside.rpkDelta * 100).toFixed(1)}%`,
                   `${(auditData.scenarioInputs.upside.fuelDelta * 100).toFixed(1)}%`,
@@ -259,9 +259,9 @@ export async function generateReportDOCX(
             makeTable(
               ["Scenario", "ECL 12-Month", "ECL Lifetime", "Coverage Ratio"],
               [
-                [`Baseline (${auditData.weights.base}%)`,   fmtAmt(auditData.scenarioSummary.base.ecl12m),    fmtAmt(auditData.scenarioSummary.base.eclLifetime),    fmtPct(auditData.scenarioSummary.base.coverage)],
-                [`Adverse (${auditData.weights.adverse}%)`, fmtAmt(auditData.scenarioSummary.adverse.ecl12m), fmtAmt(auditData.scenarioSummary.adverse.eclLifetime), fmtPct(auditData.scenarioSummary.adverse.coverage)],
-                [`Upside (${auditData.weights.upside}%)`,   fmtAmt(auditData.scenarioSummary.upside.ecl12m),  fmtAmt(auditData.scenarioSummary.upside.eclLifetime),  fmtPct(auditData.scenarioSummary.upside.coverage)],
+                [`Baseline (${(auditData.weights.base * 100).toFixed(0)}%)`,   fmtAmt(auditData.scenarioSummary.base.ecl12m),    fmtAmt(auditData.scenarioSummary.base.eclLifetime),    fmtPct(auditData.scenarioSummary.base.coverage)],
+                [`Adverse (${(auditData.weights.adverse * 100).toFixed(0)}%)`, fmtAmt(auditData.scenarioSummary.adverse.ecl12m), fmtAmt(auditData.scenarioSummary.adverse.eclLifetime), fmtPct(auditData.scenarioSummary.adverse.coverage)],
+                [`Upside (${(auditData.weights.upside * 100).toFixed(0)}%)`,   fmtAmt(auditData.scenarioSummary.upside.ecl12m),  fmtAmt(auditData.scenarioSummary.upside.eclLifetime),  fmtPct(auditData.scenarioSummary.upside.coverage)],
                 ["Probability-Weighted",                    fmtAmt(auditData.weighted.ecl12m),               fmtAmt(auditData.weighted.eclLifetime),               fmtPct(auditData.weighted.coverage)],
               ]
             ),
@@ -438,7 +438,7 @@ export async function generateReportPDF(
 
   while (remaining > 0) {
     if (!isFirst) pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, yOffset, pdfWidth, pdfHeight);
+    pdf.addImage(imgData, "PNG", 0, yOffset, pdfWidth, A4_H_MM);
     yOffset   -= A4_H_MM;
     remaining -= A4_H_MM;
     isFirst    = false;
