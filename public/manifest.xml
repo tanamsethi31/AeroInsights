@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+
+  <!-- DEVELOPER: Replace this GUID with a freshly generated one before publishing -->
+  <Id>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Aerinsights</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+
+  <DisplayName DefaultValue="Aerinsights Decision Platform"/>
+  <Description DefaultValue="Live aviation finance analytics — ECL, maintenance reserves, counterparty risk, and portfolio KPIs directly in Excel cells."/>
+
+  <IconUrl DefaultValue="https://addin.aerinsights.com/icons/addin-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://addin.aerinsights.com/icons/addin-80.png"/>
+  <SupportUrl DefaultValue="https://app.aerinsights.com/support"/>
+
+  <!--
+    AppDomains: every domain the add-in navigates to must be listed here.
+    The Auth0 domain is needed for the sign-in dialog redirect.
+    DEVELOPER: Replace your-tenant.eu.auth0.com with the real Auth0 domain.
+  -->
+  <AppDomains>
+    <AppDomain>https://addin.aerinsights.com</AppDomain>
+    <AppDomain>https://api.aerinsights.com</AppDomain>
+    <AppDomain>https://your-tenant.eu.auth0.com</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Workbook"/>
+  </Hosts>
+
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="CustomFunctionsRuntime" MinVersion="1.1"/>
+      <Set Name="ExcelApi" MinVersion="1.10"/>
+    </Sets>
+  </Requirements>
+
+  <!-- Fallback source location for hosts that don't support VersionOverrides -->
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://addin.aerinsights.com/taskpane/index.html"/>
+  </DefaultSettings>
+
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <!-- ── VersionOverrides: ribbon + custom functions + shared runtime ── -->
+  <VersionOverrides
+    xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+    xsi:type="VersionOverridesV1_0">
+
+    <Hosts>
+      <Host xsi:type="Workbook">
+
+        <!--
+          SHARED RUNTIME: task pane and custom functions share the same JavaScript
+          context. This is what makes localStorage accessible inside functions.js —
+          both run in the same webview instance.
+        -->
+        <Runtimes>
+          <Runtime resid="Taskpane.Url" lifetime="long"/>
+        </Runtimes>
+
+        <AllFormats>true</AllFormats>
+        <SupportSharedFolders>true</SupportSharedFolders>
+
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="LearnMore.Url"/>
+          </GetStarted>
+
+          <!--
+            FunctionFile: used in environments that don't support shared runtime.
+            When shared runtime IS active, Office uses Taskpane.Url instead.
+          -->
+          <FunctionFile resid="Functions.Url"/>
+
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="Aerinsights.CommandGroup">
+                <Label resid="CommandsGroup.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16x16"/>
+                  <bt:Image size="32" resid="Icon.32x32"/>
+                  <bt:Image size="80" resid="Icon.80x80"/>
+                </Icon>
+
+                <Control xsi:type="Button" id="Aerinsights.OpenTaskpane">
+                  <Label resid="TaskpaneButton.Label"/>
+                  <Supertip>
+                    <Title resid="TaskpaneButton.Label"/>
+                    <Description resid="TaskpaneButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>AerinsightsTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16x16" DefaultValue="https://addin.aerinsights.com/icons/addin-32.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://addin.aerinsights.com/icons/addin-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://addin.aerinsights.com/icons/addin-80.png"/>
+      </bt:Images>
+
+      <bt:Urls>
+        <bt:Url id="Taskpane.Url"   DefaultValue="https://addin.aerinsights.com/taskpane/index.html"/>
+        <bt:Url id="Functions.Url"  DefaultValue="https://addin.aerinsights.com/functions/functions.html"/>
+        <bt:Url id="LearnMore.Url"  DefaultValue="https://app.aerinsights.com/docs/excel-addin"/>
+      </bt:Urls>
+
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title"       DefaultValue="Get started with Aerinsights"/>
+        <bt:String id="CommandsGroup.Label"    DefaultValue="Aerinsights"/>
+        <bt:String id="TaskpaneButton.Label"   DefaultValue="Open Aerinsights"/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open the Aerinsights task pane"/>
+      </bt:ShortStrings>
+
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Access live ECL, maintenance reserves, counterparty risk, and portfolio KPIs directly in Excel via 20 custom AER.* functions."/>
+        <bt:String id="TaskpaneButton.Tooltip"  DefaultValue="Open the Aerinsights task pane for quick reference, formula helpers, and portfolio KPIs."/>
+      </bt:LongStrings>
+    </Resources>
+
+  </VersionOverrides>
+</OfficeApp>

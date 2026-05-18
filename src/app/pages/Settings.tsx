@@ -1309,9 +1309,12 @@ function ExcelAddinTab() {
   };
 
   const downloadManifest = () => {
-    // In production, link to https://addin.aerinsights.com/manifest.xml
-    // In development, trigger browser navigation to the dev server
-    window.open("https://addin.aerinsights.com/manifest.xml", "_blank");
+    const a = document.createElement("a");
+    a.href = "/manifest.xml";
+    a.download = "manifest.xml";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -1364,7 +1367,7 @@ function ExcelAddinTab() {
             <Download size={15}/> Download manifest.xml
           </button>
           <a
-            href="https://app.aerinsights.com/docs/excel-addin"
+            href="/docs/excel-addin"
             target="_blank"
             rel="noreferrer"
             style={{

@@ -16,6 +16,7 @@ import PortfolioHub from "./pages/PortfolioHub";
 import Deals from "./pages/Deals";
 import Intelligence from "./pages/Intelligence";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
+import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 
 /**
  * Guards the dashboard index route.
@@ -44,6 +45,8 @@ export const router = createBrowserRouter([
       { path: "portfolios", Component: PortfolioHub },
       // Onboarding wizard — full-page, no sidebar/header shell
       { path: "onboarding", Component: OnboardingWizard },
+      // Excel add-in documentation — full-page, no sidebar/header shell
+      { path: "docs/excel-addin", Component: ExcelAddinDocs },
 
       // App shell — Layout wraps everything below
       {
