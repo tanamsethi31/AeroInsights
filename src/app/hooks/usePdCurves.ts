@@ -9,6 +9,7 @@ import {
   type PdCurveLibrary,
   type PdTermStructure,
 } from "../data/pdCurves";
+import { logAssumptionChange } from "../utils/assumptionLog";
 
 export interface EffectiveCurves {
   curves: PdCurveLibrary;
@@ -177,9 +178,27 @@ export function usePdCurves(): EffectiveCurves {
         { onConflict: "org_id,segment" }
       );
       if (error) throw error;
+      const user = (await supabase.auth.getUser()).data.user;
+      const prevCurve = curves[segment];
+      await logAssumptionChange(supabase, {
+        orgId,
+        assumptionType:  "pd_curve",
+        segment,
+        action:          "override",
+        previousValue:   isOverridden[segment]
+                           ? { pd1yr: prevCurve.pd1yr, pd2yr: prevCurve.pd2yr,
+                               pd3yr: prevCurve.pd3yr, pd5yr: prevCurve.pd5yr,
+                               pd_lifetime: prevCurve.pdLifetime }
+                           : null,
+        newValue:        { pd1yr: values.pd1yr, pd2yr: values.pd2yr,
+                           pd3yr: values.pd3yr, pd5yr: values.pd5yr,
+                           pd_lifetime: values.pdLifetime },
+        notes:           values.notes ?? null,
+        changedBy:       user?.email ?? "unknown",
+      });
       await fetchOverrides();
     },
-    [orgId, fetchOverrides]
+    [orgId, fetchOverrides, curves, isOverridden]
   );
 
   const resetToDefault = useCallback(
@@ -191,9 +210,23 @@ export function usePdCurves(): EffectiveCurves {
         .eq("org_id", orgId)
         .eq("segment", segment);
       if (error) throw error;
+      const user = (await supabase.auth.getUser()).data.user;
+      const prevCurve = curves[segment];
+      await logAssumptionChange(supabase, {
+        orgId,
+        assumptionType:  "pd_curve",
+        segment,
+        action:          "reset",
+        previousValue:   { pd1yr: prevCurve.pd1yr, pd2yr: prevCurve.pd2yr,
+                           pd3yr: prevCurve.pd3yr, pd5yr: prevCurve.pd5yr,
+                           pd_lifetime: prevCurve.pdLifetime },
+        newValue:        null,
+        notes:           null,
+        changedBy:       user?.email ?? "unknown",
+      });
       await fetchOverrides();
     },
-    [orgId, fetchOverrides]
+    [orgId, fetchOverrides, curves]
   );
 
   return { curves, isOverridden, loading, saveOverride, resetToDefault };
