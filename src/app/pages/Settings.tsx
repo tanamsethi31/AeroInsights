@@ -23,6 +23,7 @@ import {
 } from "../data/concentrationPolicy";
 import { ImportWizard } from "../components/import/ImportWizard";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
+import { useAssumptionLog } from "../hooks/useAssumptionLog";
 
 const tabs = [
   { id: "tenant",     label: "Tenant",        icon: Building2      },
@@ -48,17 +49,6 @@ const dataSources = [
   { id: "DS-003", name: "Aircraft Market Values (Heuristic)", type: "Internal", lastRefresh: "29 Apr 2026, 06:00", status: "ok", records: 173 },
   { id: "DS-004", name: "AWG CTC Index", type: "API", lastRefresh: "01 Apr 2026", status: "stale", records: 80 },
   { id: "DS-005", name: "Cirium Market Data", type: "API (Phase 2)", lastRefresh: "—", status: "not-connected", records: 0 },
-];
-
-const auditLog = [
-  { id: "AUD-9814", timestamp: "29 Apr 2026, 09:20", user: "Alex Johnson", action: "Export: Auditor Evidence Pack", resource: "RUN-2024-0847", ip: "10.0.1.44" },
-  { id: "AUD-9813", timestamp: "29 Apr 2026, 09:14", user: "Alex Johnson", action: "Run Scenario", resource: "Baseline Q1 2026", ip: "10.0.1.44" },
-  { id: "AUD-9812", timestamp: "29 Apr 2026, 09:05", user: "John Williams", action: "Login", resource: "—", ip: "10.0.1.12" },
-  { id: "AUD-9811", timestamp: "28 Apr 2026, 17:22", user: "Sarah Chen", action: "Export: Portfolio Register", resource: "XLSX", ip: "10.0.1.31" },
-  { id: "AUD-9810", timestamp: "28 Apr 2026, 16:32", user: "Alex Johnson", action: "Run Scenario", resource: "Fuel Spike +40%", ip: "10.0.1.44" },
-  { id: "AUD-9809", timestamp: "28 Apr 2026, 14:30", user: "Sarah Chen", action: "Export: ECL Disclosure Pack", resource: "PDF", ip: "10.0.1.31" },
-  { id: "AUD-9808", timestamp: "28 Apr 2026, 11:05", user: "John Williams", action: "Update Model Param", resource: "Scenario weights", ip: "10.0.1.12" },
-  { id: "AUD-9807", timestamp: "27 Apr 2026, 16:00", user: "John Williams", action: "Export: Watchlist Report", resource: "PDF", ip: "10.0.1.12" },
 ];
 
 const roleColors: Record<string, { bg: string; color: string }> = {
@@ -122,6 +112,8 @@ export default function Settings() {
   const [newRuleLabel, setNewRuleLabel] = useState("");
   const [newRuleLimit, setNewRuleLimit] = useState<number>(20);
   const policyRuleIdRef = useRef(200);
+
+  const { entries: auditEntries, isLoading: auditLoading } = useAssumptionLog();
 
   const weightSum = Object.values(signalWeights).reduce((a, b) => a + b, 0);
   const watchlistEntries = getWatchlistSummary();
@@ -757,22 +749,62 @@ export default function Settings() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
                 <thead>
                   <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-                    {["Event ID", "Timestamp", "User", "Action", "Resource", "IP Address"].map(h => (
+                    {["Timestamp", "User", "Action", "Assumption", "Before → After"].map(h => (
                       <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {auditLog.map((entry, i) => (
-                    <tr key={entry.id} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
-                      <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569" }}>{entry.id}</td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#475569", whiteSpace: "nowrap" }}>{entry.timestamp}</td>
-                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{entry.user}</td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{entry.action}</td>
-                      <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569" }}>{entry.resource}</td>
-                      <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#94A3B8" }}>{entry.ip}</td>
+                  {auditLoading && Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
+                      <td colSpan={5} style={{ padding: "0.75rem 1rem" }}>
+                        <div style={{ height: "1rem", background: "#E2E8F0", borderRadius: "0.25rem", width: `${50 + i * 15}%` }} />
+                      </td>
                     </tr>
                   ))}
+                  {!auditLoading && auditEntries.length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#94A3B8", fontSize: "0.875rem" }}>
+                        No assumption changes recorded yet.
+                      </td>
+                    </tr>
+                  )}
+                  {!auditLoading && auditEntries.map((entry, i) => {
+                    const segmentLabel: Record<string, string> = {
+                      network: "Network", lcc: "LCC", regional: "Regional", charter: "Charter",
+                    };
+                    const assumptionLabel = entry.assumptionType === "pd_curve"
+                      ? `PD Curve · ${segmentLabel[entry.segment ?? ""] ?? entry.segment}`
+                      : "LGD Recovery Factor";
+                    const prevStr = entry.previousValue
+                      ? Object.entries(entry.previousValue).map(([k, v]) => `${k}: ${typeof v === "number" ? (v * 100).toFixed(2) + "%" : v}`).join(", ")
+                      : "—";
+                    const newStr = entry.newValue
+                      ? Object.entries(entry.newValue).map(([k, v]) => `${k}: ${typeof v === "number" ? (v * 100).toFixed(2) + "%" : v}`).join(", ")
+                      : "Reset to default";
+                    return (
+                      <tr key={entry.id} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
+                        <td style={{ padding: "0.75rem 1rem", color: "#475569", whiteSpace: "nowrap" }}>
+                          {new Date(entry.changedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                        </td>
+                        <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{entry.changedBy}</td>
+                        <td style={{ padding: "0.75rem 1rem" }}>
+                          <span style={{
+                            background: entry.action === "override" ? "#FEF3C7" : "#F1F5F9",
+                            color:      entry.action === "override" ? "#B45309"  : "#475569",
+                            fontSize: "0.75rem", fontWeight: 600,
+                            padding: "0.2rem 0.5rem", borderRadius: "9999px",
+                          }}>
+                            {entry.action === "override" ? "Override" : "Reset to Default"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{assumptionLabel}</td>
+                        <td style={{ padding: "0.75rem 1rem", fontSize: "0.75rem", color: "#475569", fontFamily: "monospace" }}>
+                          {prevStr} → {newStr}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </Card>
