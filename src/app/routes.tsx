@@ -35,6 +35,7 @@ function PortfolioIndexGuard() {
 export const router = createBrowserRouter([
   // Public
   { path: "/login", Component: Login },
+  { path: "/docs/excel-addin", Component: ExcelAddinDocs },
 
   // Protected — all app routes live under RequireAuth
   {
@@ -45,8 +46,6 @@ export const router = createBrowserRouter([
       { path: "portfolios", Component: PortfolioHub },
       // Onboarding wizard — full-page, no sidebar/header shell
       { path: "onboarding", Component: OnboardingWizard },
-      // Excel add-in documentation — full-page, no sidebar/header shell
-      { path: "docs/excel-addin", Component: ExcelAddinDocs },
 
       // App shell — Layout wraps everything below
       {
