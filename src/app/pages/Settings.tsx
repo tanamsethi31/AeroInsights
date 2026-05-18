@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
@@ -13,7 +13,7 @@ const PATH_TAB: Record<string, string> = {
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
-import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, AlertTriangle, Bell, Mail, X, Upload, FileSpreadsheet, Download, Copy, CheckCheck, ChevronDown, ChevronRight as ChevronRt, ShieldCheck, RefreshCw } from "lucide-react";
+import { Building2, Users, Database, Sliders, ClipboardList, Save, Plus, Trash2, Eye, EyeOff, Check, AlertTriangle, Bell, Mail, X, Upload, FileSpreadsheet, Download, Copy, CheckCheck, ChevronDown, ChevronRight as ChevronRt, ShieldCheck, RefreshCw, History } from "lucide-react";
 import { SANCTIONS_FEEDS, type FeedStatus } from "../data/sanctionsData";
 import {
   type DimKey,
@@ -24,14 +24,19 @@ import {
 import { ImportWizard } from "../components/import/ImportWizard";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 import { useAssumptionLog } from "../hooks/useAssumptionLog";
+import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
+import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
+import { computeRollForward } from "../utils/eclRollForward";
+import { computeCreditQualityMatrix } from "../utils/creditQualityMatrix";
 
 const tabs = [
   { id: "tenant",     label: "Tenant",        icon: Building2      },
   { id: "users",      label: "Users & RBAC",  icon: Users          },
   { id: "datasources",label: "Data Sources",  icon: Database       },
   { id: "model",      label: "Model Params",  icon: Sliders        },
-  { id: "audit",      label: "Audit Log",     icon: ClipboardList  },
-  { id: "alerts",     label: "Alerts",        icon: Bell           },
+  { id: "audit",         label: "Audit Log",      icon: ClipboardList  },
+  { id: "ecl-snapshots", label: "ECL Snapshots",  icon: History        },
+  { id: "alerts",        label: "Alerts",         icon: Bell           },
   { id: "excel",      label: "Excel Add-in",  icon: FileSpreadsheet },
 ];
 
@@ -114,6 +119,27 @@ export default function Settings() {
   const policyRuleIdRef = useRef(200);
 
   const { entries: auditEntries, isLoading: auditLoading } = useAssumptionLog();
+  const { snapshots, isLoading: snapshotsLoading } = useEclSnapshots();
+  const [redownloadSnapshot, setRedownloadSnapshot] = useState<EclSnapshot | null>(null);
+
+  const redownloadData = useMemo(() => {
+    if (!redownloadSnapshot) return null;
+    const idx      = snapshots.findIndex(s => s.id === redownloadSnapshot.id);
+    const prevSnap = idx === -1 ? null : (snapshots[idx + 1] ?? null);
+    return {
+      scenarioInputs:    redownloadSnapshot.scenarioInputs,
+      weights:           redownloadSnapshot.weights,
+      weighted:          redownloadSnapshot.weighted,
+      scenarioSummary:   redownloadSnapshot.scenarioSummary,
+      eclRows:           redownloadSnapshot.eclRows,
+      sicrConfig:        redownloadSnapshot.sicrConfig,
+      managementOverlay: "",
+      currency:          redownloadSnapshot.currency,
+      rollForwardLines:  prevSnap ? computeRollForward(prevSnap.eclRows, redownloadSnapshot.eclRows) : null,
+      creditQualityRows: computeCreditQualityMatrix(redownloadSnapshot.eclRows, []),
+      periodLabel:       redownloadSnapshot.periodLabel,
+    };
+  }, [redownloadSnapshot, snapshots]);
 
   const weightSum = Object.values(signalWeights).reduce((a, b) => a + b, 0);
   const watchlistEntries = getWatchlistSummary();
@@ -810,6 +836,66 @@ export default function Settings() {
             </Card>
           )}
 
+          {/* ECL Snapshots */}
+          {activeTab === "ecl-snapshots" && (
+            <Card title="ECL Period Snapshots" subtitle="Locked reporting periods — re-download Auditor Evidence Pack for any period" noPadding>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                <thead>
+                  <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
+                    {["Period", "Locked", "By", "Total ECL", "Stage 1", "Stage 2", "Stage 3", "Coverage", ""].map(h => (
+                      <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {snapshotsLoading && Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
+                      <td colSpan={9} style={{ padding: "0.75rem 1rem" }}>
+                        <div style={{ height: "1rem", background: "#E2E8F0", borderRadius: "0.25rem", width: `${40 + i * 15}%` }} />
+                      </td>
+                    </tr>
+                  ))}
+                  {!snapshotsLoading && snapshots.length === 0 && (
+                    <tr>
+                      <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#94A3B8", fontSize: "0.875rem" }}>
+                        No periods locked yet. Close a period from the Risk ECL page to create your first snapshot.
+                      </td>
+                    </tr>
+                  )}
+                  {!snapshotsLoading && snapshots.map((snap, i) => (
+                    <tr key={snap.id} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{snap.periodLabel}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#475569", whiteSpace: "nowrap" }}>
+                        {new Date(snap.lockedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{snap.lockedBy}</td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>${snap.totalEcl.toFixed(1)}M</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>${snap.stage1Ecl.toFixed(1)}M</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>${snap.stage2Ecl.toFixed(1)}M</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#B91C1C" }}>${snap.stage3Ecl.toFixed(1)}M</td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{snap.coveragePct.toFixed(2)}%</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        <button
+                          onClick={() => setRedownloadSnapshot(snap)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: "0.25rem",
+                            fontSize: "0.75rem", fontWeight: 500,
+                            color: "#002147", background: "transparent",
+                            border: "1px solid #E2E8F0", borderRadius: "9999px",
+                            padding: "0.3rem 0.75rem", cursor: "pointer",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <Download size={11} /> Re-download
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
           {activeTab === "alerts" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
@@ -1138,6 +1224,13 @@ export default function Settings() {
         </motion.div>
         </AnimatePresence>
       </div>
+      {redownloadData && (
+        <AuditorPackModal
+          open={!!redownloadSnapshot}
+          onClose={() => setRedownloadSnapshot(null)}
+          data={redownloadData}
+        />
+      )}
     </div>
   );
 }
