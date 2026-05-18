@@ -1,5 +1,5 @@
 // src/app/components/transactions/CoverageTestPanel.tsx
-import type { CoverageTestResult, WaterfallResult, NoteClass } from "../../utils/absWaterfall";
+import type { CoverageTestResult, WaterfallResult, NoteClass, SeniorExpenses } from "../../utils/absWaterfall";
 
 interface Props {
   dscrResult: CoverageTestResult;
@@ -7,6 +7,7 @@ interface Props {
   result:     WaterfallResult;
   noteClasses: NoteClass[];
   portfolioAircraftValueM: number;
+  seniorExpenses: SeniorExpenses;
 }
 
 const fmtM = (n: number) => `$${n.toFixed(2)}M`;
@@ -57,14 +58,13 @@ function TestCard({
   );
 }
 
-export function CoverageTestPanel({ dscrResult, ltvResult, result, noteClasses, portfolioAircraftValueM }: Props) {
+export function CoverageTestPanel({ dscrResult, ltvResult, result, noteClasses, portfolioAircraftValueM, seniorExpenses }: Props) {
   const classA = noteClasses.find(n => n.label === "A");
   const totalOutstanding = noteClasses.reduce((s, n) => s + n.outstandingBalance, 0);
 
-  // Infer paymentsPerYear from the dscrResult context — use 4 (quarterly) as default display
-  // The actual computation already happened in runWaterfall; we display derived values
+  const paymentsPerYear = seniorExpenses.paymentFrequency === "monthly" ? 12 : 4;
   const classAInterestDisplay = classA
-    ? fmtM((classA.outstandingBalance * classA.couponRate) / 4)
+    ? fmtM((classA.outstandingBalance * classA.couponRate) / paymentsPerYear)
     : "—";
   const classAPrincipalDisplay = classA ? fmtM(classA.scheduledPrincipal) : "—";
 

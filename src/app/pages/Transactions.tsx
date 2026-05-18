@@ -297,6 +297,7 @@ export default function Transactions() {
                   result={waterfallResult}
                   noteClasses={activeDeal.noteClasses}
                   portfolioAircraftValueM={portfolioAircraftValueM}
+                  seniorExpenses={activeDeal.seniorExpenses}
                 />
               )}
             </div>

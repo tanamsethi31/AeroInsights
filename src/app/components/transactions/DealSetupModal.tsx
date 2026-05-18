@@ -246,6 +246,10 @@ export function DealSetupModal({ open, onClose, onCreate }: Props) {
                       <label style={labelStyle}>LR Target ($M)</label>
                       <input style={inputStyle} type="number" step="0.1" value={form.lrTarget} onChange={e => set("lrTarget", e.target.value)} />
                     </div>
+                    <div>
+                      <label style={labelStyle}>LR Balance ($M)</label>
+                      <input style={inputStyle} type="number" step="0.1" value={form.lrBalance} onChange={e => set("lrBalance", e.target.value)} />
+                    </div>
                   </div>
                 </div>
               </div>
