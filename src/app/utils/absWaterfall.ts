@@ -111,11 +111,13 @@ export function runWaterfall(
   const totalCollections = collections.reduce((s, c) => s + c.actualCollected, 0);
 
   // Step 1: Senior expenses
-  const seniorExpensesTotal =
+  const seniorExpensesDue =
     seniorExpenses.servicerFeePct * totalCollections +
     seniorExpenses.trusteeFee +
     seniorExpenses.adminFee;
-  let remaining = Math.max(0, totalCollections - seniorExpensesTotal);
+  const seniorResult = pay(totalCollections, seniorExpensesDue);
+  const seniorExpensesTotal = seniorResult.paid;
+  let remaining = totalCollections - seniorResult.paid;
 
   // Step 2: Liquidity reserve top-up
   const lrNeeded = Math.max(
