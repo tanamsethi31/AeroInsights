@@ -323,7 +323,7 @@ export default function RiskECL() {
           ...prev.adverse,
           ctcGoldPct:           portfolioJurisdictionMix.ctcGoldPct,
           nonCtcPct:            portfolioJurisdictionMix.nonCtcPct,
-          repossWeightedMonths: portfolioJurisdictionMix.avgRepossP50Months,
+          repossWeightedMonths: portfolioJurisdictionMix.avgRepossP50Months, // ScenarioInputs uses repossWeightedMonths; utility returns avgRepossP50Months
         },
       }));
     }
