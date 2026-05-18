@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "../components/ui/Card";
@@ -14,6 +14,10 @@ import { StatusPill } from "../components/ui/StatusPill";
 import { Download, FileText, Table, FileJson, File, Mail, Clock, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe, Trash2, Pause, Play, Pencil, Check, X } from "lucide-react";
 import { ReportFormatModal } from "../components/reports/ReportFormatModal";
 import { BoardPackModal } from "../components/reports/BoardPackModal";
+import { useEclSnapshots } from "../hooks/useEclSnapshots";
+import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
+import { computeRollForward } from "../utils/eclRollForward";
+import { computeCreditQualityMatrix } from "../utils/creditQualityMatrix";
 import { PillTabs } from "../components/ui/PillTabs";
 
 const REPORT_ICON_MAP: Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>> = {
@@ -130,6 +134,27 @@ export default function Reports() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [formatModal, setFormatModal] = React.useState<{ id: string; name: string } | null>(null);
   const [boardPackModal, setBoardPackModal] = React.useState<{ id: string; name: string } | null>(null);
+  const { snapshots } = useEclSnapshots();
+  const [auditorPackOpen, setAuditorPackOpen] = useState(false);
+
+  const reportsAuditorData = useMemo(() => {
+    if (snapshots.length === 0) return null;
+    const latest = snapshots[0];
+    const prev   = snapshots[1] ?? null;
+    return {
+      scenarioInputs:    latest.scenarioInputs,
+      weights:           latest.weights,
+      weighted:          latest.weighted,
+      scenarioSummary:   latest.scenarioSummary,
+      eclRows:           latest.eclRows,
+      sicrConfig:        latest.sicrConfig,
+      managementOverlay: "",
+      currency:          latest.currency,
+      rollForwardLines:  prev ? computeRollForward(prev.eclRows, latest.eclRows) : null,
+      creditQualityRows: computeCreditQualityMatrix(latest.eclRows, []),
+      periodLabel:       latest.periodLabel,
+    };
+  }, [snapshots]);
 
   // Scheduled reports state + actions
   const [schedules, setSchedules] = useState<ScheduledReport[]>(INITIAL_SCHEDULES);
@@ -238,6 +263,12 @@ export default function Reports() {
 
                 <p style={{ fontSize: "0.8125rem", color: "#475569", lineHeight: 1.6, margin: 0 }}>{report.description}</p>
 
+                {report.id === "RPT-001" && snapshots.length === 0 && (
+                  <p style={{ fontSize: "0.75rem", color: "#B45309", background: "#FEF3C7", borderRadius: "0.5rem", padding: "0.5rem 0.75rem", margin: "0 0 0.5rem" }}>
+                    No periods locked. Close a period from Risk ECL to generate this report.
+                  </p>
+                )}
+
                 <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
                   {report.formats.map(fmt => (
                     <span key={fmt} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 500, color: "#475569", background: "#F4F5F7", padding: "0.25rem 0.5rem", borderRadius: "0.5rem", border: "1px solid #E2E8F0" }}>
@@ -252,7 +283,9 @@ export default function Reports() {
                   </span>
                   <button
                     onClick={() => {
-                      if (report.id === "RPT-002") {
+                      if (report.id === "RPT-001") {
+                        if (snapshots.length > 0) setAuditorPackOpen(true);
+                      } else if (report.id === "RPT-002") {
                         setBoardPackModal({ id: report.id, name: report.name });
                       } else {
                         setFormatModal({ id: report.id, name: report.name });
@@ -262,7 +295,9 @@ export default function Reports() {
                       display: "flex", alignItems: "center", gap: "0.375rem",
                       background: "#002147", color: "#FFFFFF", border: "none",
                       borderRadius: "9999px", padding: "0.5rem 0.875rem",
-                      fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
+                      fontSize: "0.8125rem", fontWeight: 500,
+                      opacity: report.id === "RPT-001" && snapshots.length === 0 ? 0.5 : 1,
+                      cursor: report.id === "RPT-001" && snapshots.length === 0 ? "not-allowed" : "pointer",
                     }}
                   >
                     <Download size={13} /> Generate
@@ -495,6 +530,13 @@ export default function Reports() {
           reportId={boardPackModal.id}
           reportName={boardPackModal.name}
           onClose={() => setBoardPackModal(null)}
+        />
+      )}
+      {reportsAuditorData && (
+        <AuditorPackModal
+          open={auditorPackOpen}
+          onClose={() => setAuditorPackOpen(false)}
+          data={reportsAuditorData}
         />
       )}
     </div>
