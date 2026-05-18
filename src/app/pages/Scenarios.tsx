@@ -12,6 +12,7 @@ import { AssetRiskTab } from "../components/scenarios/AssetRiskTab";
 import { RatingPDTab } from "../components/scenarios/RatingPDTab";
 import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { computePortfolioAssetRisk } from "../utils/assetRisk";
+import { DEFAULT_RECOVERY_FACTOR } from "../data/lgdCurves";
 import { CreditDepositTab } from "../components/scenarios/CreditDepositTab";
 import { computePortfolioDepositCoverage } from "../utils/creditDeposit";
 import { PaymentBehaviourTab } from "../components/scenarios/PaymentBehaviourTab";
@@ -258,7 +259,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-002", name: "COVID-Mild", weight: "15%", ecl: 68.4, category: "macro" as const,
     lastRun: "28 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Mild aviation demand shock. RPK −25%, fuel +15%, 3 stage-2 migrations, no bankruptcies.",
-    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, vintageAdjFactor: 0 },
+    inputs: { gdpDelta: -0.015, rpkDelta: -0.25, fuelDelta: 0.15, fxDelta: -0.05, rateDelta: 0, assetValueDelta: -0.08, pdS2Multi: 1.4, pdS3Multi: 1.15, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, lgdDecayAdjFactor: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−25%)", contribution: 38, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.4", contribution: 27, direction: "up" },
@@ -273,7 +274,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-003", name: "COVID-Severe", weight: "10%", ecl: 124.7, category: "macro" as const,
     lastRun: "27 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "Severe demand shock. RPK −55%, fuel −30%, 8+ bankruptcies, mass deferral requests.",
-    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, vintageAdjFactor: 0 },
+    inputs: { gdpDelta: -0.04, rpkDelta: -0.55, fuelDelta: -0.30, fxDelta: -0.10, rateDelta: -0.005, assetValueDelta: -0.22, pdS2Multi: 2.4, pdS3Multi: 2.1, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, lgdDecayAdjFactor: 0 },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 41, direction: "up" },
       { driver: "PD — Stage 3 Multiplier ×2.1", contribution: 28, direction: "up" },
@@ -288,7 +289,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-004", name: "Fuel Spike (+40%)", weight: "7%", ecl: 71.3, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#B45309", bg: "rgba(180,83,9,0.05)",
     description: "Sustained fuel price increase of 40% vs baseline. Low-cost carriers most exposed.",
-    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, vintageAdjFactor: 0 },
+    inputs: { gdpDelta: -0.005, rpkDelta: -0.08, fuelDelta: 0.40, fxDelta: 0, rateDelta: 0.005, assetValueDelta: -0.06, pdS2Multi: 1.6, pdS3Multi: 1.2, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, lgdDecayAdjFactor: 0 },
     shapley: [
       { driver: "Fuel Price Shock (+40%)", contribution: 43, direction: "up" },
       { driver: "PD — Stage 2 Multiplier ×1.6", contribution: 30, direction: "up" },
@@ -303,7 +304,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-005", name: "Sovereign Stress", weight: "5%", ecl: 89.1, category: "macro" as const,
     lastRun: "25 Apr 2026", color: "#0369A1", bg: "rgba(3,105,161,0.05)",
     description: "EM sovereign stress. India, Brazil, Indonesia CDS widen +250bps. FX pressure −15%.",
-    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, vintageAdjFactor: 0 },
+    inputs: { gdpDelta: -0.02, rpkDelta: -0.12, fuelDelta: 0.05, fxDelta: -0.15, rateDelta: 0.025, assetValueDelta: -0.12, pdS2Multi: 1.7, pdS3Multi: 1.5, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, lgdDecayAdjFactor: 0 },
     shapley: [
       { driver: "Sovereign CDS Widening (+250bps)", contribution: 36, direction: "up" },
       { driver: "FX Basket Move (−15%)", contribution: 29, direction: "up" },
@@ -318,7 +319,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-006", name: "Currency Collapse", weight: "3%", ecl: 103.5, category: "macro" as const,
     lastRun: "22 Apr 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.05)",
     description: "EM currency basket −35% vs USD. Rent-to-revenue ratios spike. 6+ lessee distress events.",
-    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, vintageAdjFactor: 0 },
+    inputs: { gdpDelta: -0.025, rpkDelta: -0.18, fuelDelta: 0.08, fxDelta: -0.35, rateDelta: 0.02, assetValueDelta: -0.15, pdS2Multi: 2.0, pdS3Multi: 1.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, lgdDecayAdjFactor: 0 },
     shapley: [
       { driver: "FX Basket Move (−35%)", contribution: 48, direction: "up" },
       { driver: "Rent-to-Revenue Ratio Spike", contribution: 27, direction: "up" },
@@ -333,7 +334,7 @@ const TEMPLATES: Template[] = [
     id: "TPL-007", name: "Russia-Style Expropriation", weight: "—", ecl: 242.8, category: "macro" as const,
     lastRun: "14 Jan 2026", color: "#B91C1C", bg: "rgba(185,28,28,0.08)",
     description: "Sudden fleet detention in 2 jurisdictions. Repossession impossible. Full LGD on 12 aircraft.",
-    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, vintageAdjFactor: 0 },
+    inputs: { gdpDelta: 0, rpkDelta: -0.20, fuelDelta: 0, fxDelta: -0.20, rateDelta: 0, assetValueDelta: -0.40, pdS2Multi: 1.2, pdS3Multi: 4.8, deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0, pbhConversionPct: 0, etpRate: 0, lecRate: 0, bankruptcyScenarioType: null, ctcGoldPct: 0, nonCtcPct: 0, depositCoverage: 0, payBehaviourCoopPct: 0, payBehaviourAdvPct: 0, restructuringType: null, leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0, remarketingMonths: 0, lgdDecayAdjFactor: 0 },
     shapley: [
       { driver: "Jurisdiction: Full LGD (100%)", contribution: 52, direction: "up" },
       { driver: "Aircraft Detention (12 assets)", contribution: 29, direction: "up" },
@@ -365,7 +366,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "RPK / Traffic Shock (−55%)", contribution: 42, direction: "up" as const },
@@ -396,7 +397,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Multiplier ×2.0", contribution: 45, direction: "up" as const },
@@ -427,7 +428,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 2 PD Multiplier ×1.8", contribution: 38, direction: "up" as const },
@@ -459,7 +460,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 55, direction: "up" as const },
@@ -488,7 +489,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 48, direction: "up" as const },
@@ -517,7 +518,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×1.8)", contribution: 52, direction: "up" as const },
@@ -546,7 +547,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.0)", contribution: 44, direction: "up" as const },
@@ -575,7 +576,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×2.5)", contribution: 38, direction: "up" as const },
@@ -604,7 +605,7 @@ const TEMPLATES: Template[] = [
       payBehaviourAdvPct: 0,
       restructuringType: null,
       leaseAssumptionPct: 0, repossWeightedMonths: 0, maintenanceReserveCoverage: 0,
-      remarketingMonths: 0, vintageAdjFactor: 0,
+      remarketingMonths: 0, lgdDecayAdjFactor: 0,
     },
     shapley: [
       { driver: "Stage 3 PD Stress (×3.5)", contribution: 40, direction: "up" as const },
@@ -716,8 +717,8 @@ function generateDSL(
           ? { pay_behaviour_coop_pct: inputs.payBehaviourCoopPct, pay_behaviour_adv_pct: inputs.payBehaviourAdvPct }
           : {}),
         // Asset risk — omitted when both are 0 (feature inactive)
-        ...(inputs.remarketingMonths > 0 || inputs.vintageAdjFactor > 0
-          ? { remarketing_months: inputs.remarketingMonths, vintage_adj_factor: inputs.vintageAdjFactor }
+        ...(inputs.remarketingMonths > 0 || inputs.lgdDecayAdjFactor > 0
+          ? { remarketing_months: inputs.remarketingMonths, lgd_decay_adj_factor: inputs.lgdDecayAdjFactor }
           : {}),
       },
       run_config: {
@@ -806,8 +807,8 @@ function parseDSL(text: string): { ok: boolean; inputs?: ScenarioInputs; name?: 
         remarketingMonths: typeof s.remarketing_months === "number"
           ? Math.max(0, s.remarketing_months)
           : 0,
-        vintageAdjFactor: typeof s.vintage_adj_factor === "number"
-          ? Math.min(0.5, Math.max(0, s.vintage_adj_factor))
+        lgdDecayAdjFactor: typeof s.lgd_decay_adj_factor === "number"
+          ? Math.min(0.5, Math.max(0, s.lgd_decay_adj_factor))
           : 0,
       },
     };
@@ -1126,7 +1127,7 @@ export default function Scenarios() {
   // Rental-weighted asset risk metrics — used by AssetRiskTab "Use in Custom Builder"
   // handler and the "From portfolio" button in the Custom Builder Asset Risk section.
   const portfolioAssetRisk = React.useMemo(
-    () => computePortfolioAssetRisk(assets, leases),
+    () => computePortfolioAssetRisk(assets, leases, DEFAULT_RECOVERY_FACTOR),
     [assets, leases]
   );
 
@@ -1163,7 +1164,7 @@ export default function Scenarios() {
     if (hasDistress) setDistressOpen(true);
     if (next.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
     if (next.ctcGoldPct !== 0 || next.nonCtcPct !== 0 || next.repossWeightedMonths !== 0) setJurisdictionOpen(true);
-    if (next.remarketingMonths !== 0 || next.vintageAdjFactor !== 0) setAssetRiskOpen(true);
+    if (next.remarketingMonths !== 0 || next.lgdDecayAdjFactor !== 0) setAssetRiskOpen(true);
     if (next.depositCoverage !== 0 || next.maintenanceReserveCoverage !== 0) setDepositOpen(true);
     if (next.payBehaviourCoopPct !== 0 || next.payBehaviourAdvPct !== 0) setPayBehaviourOpen(true);
   }, [customName, customMode, customPaths, customSeed, setDistressOpen, setInsolvencyOpen, setJurisdictionOpen, setDepositOpen, setPayBehaviourOpen]);
@@ -1233,7 +1234,7 @@ export default function Scenarios() {
     // Auto-expand collapsible sections when cloned inputs carry non-default values
     if (clonePending.inputs.bankruptcyScenarioType !== null) setInsolvencyOpen(true);
     if (clonePending.inputs.ctcGoldPct !== 0 || clonePending.inputs.nonCtcPct !== 0 || clonePending.inputs.repossWeightedMonths !== 0) setJurisdictionOpen(true);
-    if (clonePending.inputs.remarketingMonths !== 0 || clonePending.inputs.vintageAdjFactor !== 0) setAssetRiskOpen(true);
+    if (clonePending.inputs.remarketingMonths !== 0 || clonePending.inputs.lgdDecayAdjFactor !== 0) setAssetRiskOpen(true);
     if (clonePending.inputs.depositCoverage !== 0 || clonePending.inputs.maintenanceReserveCoverage !== 0) setDepositOpen(true);
     if (clonePending.inputs.payBehaviourCoopPct !== 0 || clonePending.inputs.payBehaviourAdvPct !== 0) setPayBehaviourOpen(true);
     setClonePending(null);
@@ -2792,7 +2793,7 @@ export default function Scenarios() {
                   {/* ── Asset Risk — collapsible ── */}
                   {(() => {
                     const remMonths = formInputs.remarketingMonths;
-                    const vintAdj   = formInputs.vintageAdjFactor;
+                    const vintAdj   = formInputs.lgdDecayAdjFactor;
                     const isActive  = remMonths !== 0 || vintAdj !== 0;
 
                     const remImpact  = remMonths > 0
@@ -2863,7 +2864,7 @@ export default function Scenarios() {
                                   label="Vintage LGD Adj"
                                   min={0} max={0.15} step={0.005}
                                   value={vintAdj}
-                                  onChange={(v) => updateFormInputs({ vintageAdjFactor: v })}
+                                  onChange={(v) => updateFormInputs({ lgdDecayAdjFactor: v })}
                                   fmt={(v) => v === 0 ? "Off (inactive)" : `${(v * 100).toFixed(1)}% of ECL`}
                                 />
                                 <div style={{ fontSize: "0.6875rem", color: "#94A3B8", marginBottom: "0.875rem", marginTop: "-0.25rem" }}>
@@ -2875,7 +2876,7 @@ export default function Scenarios() {
                                   onClick={() =>
                                     updateFormInputs({
                                       remarketingMonths: portfolioAssetRisk.suggestedRemarketingMonths,
-                                      vintageAdjFactor:  portfolioAssetRisk.vintageAdjFactor,
+                                      lgdDecayAdjFactor:  portfolioAssetRisk.lgdDecayAdjFactor,
                                     })
                                   }
                                   title="Computed from your portfolio's aircraft type (NB/WB) and vintage year, weighted by monthly rental."
@@ -3698,7 +3699,7 @@ export default function Scenarios() {
       {activeTab === "Asset Risk" && (
         <AssetRiskTab
           onUseInCustomBuilder={(months, adj) => {
-            updateFormInputs({ remarketingMonths: months, vintageAdjFactor: adj });
+            updateFormInputs({ remarketingMonths: months, lgdDecayAdjFactor: adj });
             setAssetRiskOpen(true);
             setActiveTab("Custom Builder");
           }}

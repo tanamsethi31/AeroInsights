@@ -465,32 +465,32 @@ describe("remarketing timeline LGD uplift (Sprint 22)", () => {
 // ─── Vintage / aircraft age LGD uplift (Sprint 22) ───────────────────────────
 
 describe("vintage aircraft age LGD uplift (Sprint 22)", () => {
-  it("vintageAdjFactor = 0 → inactive, ECL unchanged from base", () => {
-    const ecl = computeECL({ ...ZERO_INPUTS, vintageAdjFactor: 0 });
+  it("lgdDecayAdjFactor = 0 → inactive, ECL unchanged from base", () => {
+    const ecl = computeECL({ ...ZERO_INPUTS, lgdDecayAdjFactor: 0 });
     expect(ecl).toBeCloseTo(47.2, 4);
   });
 
-  it("vintageAdjFactor = 0.04 (mid-aged fleet) → +4% × $47.2M = +$1.888M", () => {
-    const ecl = computeECL({ ...ZERO_INPUTS, vintageAdjFactor: 0.04 });
+  it("lgdDecayAdjFactor = 0.04 (mid-aged fleet) → +4% × $47.2M = +$1.888M", () => {
+    const ecl = computeECL({ ...ZERO_INPUTS, lgdDecayAdjFactor: 0.04 });
     expect(ecl).toBeCloseTo(47.2 + 1.888, 3);
   });
 
-  it("vintageAdjFactor = 0.10 (aged fleet) → +10% × $47.2M = +$4.72M", () => {
-    const ecl = computeECL({ ...ZERO_INPUTS, vintageAdjFactor: 0.10 });
+  it("lgdDecayAdjFactor = 0.10 (aged fleet) → +10% × $47.2M = +$4.72M", () => {
+    const ecl = computeECL({ ...ZERO_INPUTS, lgdDecayAdjFactor: 0.10 });
     expect(ecl).toBeCloseTo(47.2 + 4.72, 3);
   });
 
-  it("vintageAdjFactor stacks additively with remarketingMonths", () => {
+  it("lgdDecayAdjFactor stacks additively with remarketingMonths", () => {
     // remarketing uplift: (7-3)*0.015*47.2 = 2.832
     // vintage uplift:     0.04*47.2 = 1.888
     // total delta: 2.832 + 1.888 = 4.72 → ECL = 47.2 + 4.72 = 51.92
-    const ecl = computeECL({ ...ZERO_INPUTS, remarketingMonths: 7, vintageAdjFactor: 0.04 });
+    const ecl = computeECL({ ...ZERO_INPUTS, remarketingMonths: 7, lgdDecayAdjFactor: 0.04 });
     expect(ecl).toBeCloseTo(47.2 + 4.72, 3);
   });
 
-  it("vintageAdjFactor scales with baseECL", () => {
-    // baseECL = 94.4, vintageAdjFactor = 0.04 → 0.04 * 94.4 = 3.776
-    const ecl = computeECLFromBase(94.4, { ...ZERO_INPUTS, vintageAdjFactor: 0.04 });
+  it("lgdDecayAdjFactor scales with baseECL", () => {
+    // baseECL = 94.4, lgdDecayAdjFactor = 0.04 → 0.04 * 94.4 = 3.776
+    const ecl = computeECLFromBase(94.4, { ...ZERO_INPUTS, lgdDecayAdjFactor: 0.04 });
     expect(ecl).toBeCloseTo(94.4 + 3.776, 3);
   });
 });

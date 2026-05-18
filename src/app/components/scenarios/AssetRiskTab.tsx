@@ -6,7 +6,9 @@ import {
   WB_REMARKETING_MONTHS,
 } from "../../utils/assetRisk";
 import { BASE_ECL } from "../../utils/eclCalculator";
+import { DEFAULT_RECOVERY_FACTOR } from "../../data/lgdCurves";
 import { Card } from "../ui/Card";
+import { ScenarioKpiCard as KpiCard } from "../ui/KpiCard";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -30,25 +32,6 @@ const TIER_PILL_COLOR: Record<VintageAgeTier, string> = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function KpiCard({
-  label, value, color, bg, note,
-}: { label: string; value: string; color: string; bg: string; note?: string }) {
-  return (
-    <div style={{
-      background: bg, borderRadius: "0.5rem",
-      padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem",
-    }}>
-      <div style={{ fontSize: "0.75rem", fontWeight: 600, color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-        {label}
-      </div>
-      <div style={{ fontSize: "1.375rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
-        {value}
-      </div>
-      {note && <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>{note}</div>}
-    </div>
-  );
-}
-
 function TierPill({ tier }: { tier: VintageAgeTier }) {
   return (
     <span style={{
@@ -67,7 +50,7 @@ function TierPill({ tier }: { tier: VintageAgeTier }) {
 
 interface Props {
   /** Called when user clicks "Use in Custom Builder" — switches tab and pre-fills sliders. */
-  onUseInCustomBuilder: (remarketingMonths: number, vintageAdjFactor: number) => void;
+  onUseInCustomBuilder: (remarketingMonths: number, lgdDecayAdjFactor: number) => void;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -75,11 +58,11 @@ interface Props {
 export function AssetRiskTab({ onUseInCustomBuilder }: Props) {
   const { assets, leases } = usePortfolioData();
   const {
-    suggestedRemarketingMonths, vintageAdjFactor,
+    suggestedRemarketingMonths, lgdDecayAdjFactor,
     avgFleetAgeYears, pctMidAged, pctAged, rows,
-  } = computePortfolioAssetRisk(assets, leases);
+  } = computePortfolioAssetRisk(assets, leases, DEFAULT_RECOVERY_FACTOR);
 
-  const vintageUpliftM = rows.length > 0 ? vintageAdjFactor * BASE_ECL : 0;
+  const vintageUpliftM = rows.length > 0 ? lgdDecayAdjFactor * BASE_ECL : 0;
 
   // Color helpers
   const ageColor = avgFleetAgeYears > 12 ? "#B91C1C" : avgFleetAgeYears > 8 ? "#B45309" : "#15803D";
@@ -225,7 +208,7 @@ export function AssetRiskTab({ onUseInCustomBuilder }: Props) {
       {/* ── "Use in Custom Builder" button ── */}
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
-          onClick={() => onUseInCustomBuilder(suggestedRemarketingMonths, vintageAdjFactor)}
+          onClick={() => onUseInCustomBuilder(suggestedRemarketingMonths, lgdDecayAdjFactor)}
           disabled={rows.length === 0}
           style={{
             display: "flex", alignItems: "center", gap: "0.375rem",

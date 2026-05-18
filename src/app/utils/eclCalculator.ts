@@ -40,10 +40,9 @@ export interface ScenarioInputs {
   /** 0 = feature inactive. Rental-weighted P50 months from repossession to first day of next
    *  lease. Benchmark: 3 months (baked into base LGD). Each extra month costs ~1.5% of baseECL. */
   remarketingMonths: number;
-  /** 0 = feature inactive. Rental-weighted LGD adjustment fraction from fleet vintage:
-   *  0 = all young (<10yr), 0.04 = mid-aged mix (10–15yr), 0.10 = aged (>15yr).
-   *  Computed by computePortfolioAssetRisk; passed directly as fraction of baseECL. */
-  vintageAdjFactor: number;
+  /** 0 = feature inactive. Rental-weighted LGD adjustment fraction from fleet age × decay curves.
+   *  = clamp(fleetWeightedLgd − 0.28, 0, 0.50). Computed by computePortfolioAssetRisk. */
+  lgdDecayAdjFactor: number;
 
   // ── Security deposits & maintenance reserves ────────────────────────────────
   depositCoverage: number;          // 0–1: cash security deposits as fraction of ECL baseline
@@ -108,7 +107,7 @@ export const ZERO_INPUTS: ScenarioInputs = {
   nonCtcPct: 0,
   repossWeightedMonths: 0,
   remarketingMonths: 0,
-  vintageAdjFactor: 0,
+  lgdDecayAdjFactor: 0,
   depositCoverage: 0,
   maintenanceReserveCoverage: 0,
   payBehaviourCoopPct: 0,
@@ -197,11 +196,10 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
     ? Math.max(0, inputs.remarketingMonths - REMARKETING_BENCHMARK_MONTHS) * 0.015 * baseECL
     : 0;
 
-  // Vintage / aircraft age LGD uplift (Sprint 22).
-  // Guard: 0 = feature inactive. vintageAdjFactor is the rental-weighted adjustment fraction
-  // from computePortfolioAssetRisk; tiers: young=0, mid(10–15yr)=+4%, aged(>15yr)=+10%.
-  const vintageAdjDelta = inputs.vintageAdjFactor > 0
-    ? inputs.vintageAdjFactor * baseECL
+  // LGD decay adjustment — calibrated decay curves replace crude 3-tier vintage buckets.
+  // Guard: 0 = feature inactive. lgdDecayAdjFactor = clamp(fleetWeightedLgd − 0.28, 0, 0.50).
+  const lgdDecayDelta = inputs.lgdDecayAdjFactor > 0
+    ? inputs.lgdDecayAdjFactor * baseECL
     : 0;
 
   // Security deposit benefit — cash collateral reduces LGD on default events.
@@ -224,7 +222,7 @@ export function computeECLFromBase(baseECL: number, inputs: ScenarioInputs): num
       ? 0
       : (inputs.payBehaviourAdvPct * 0.12 - inputs.payBehaviourCoopPct * 0.07) * baseECL;
 
-  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta - assumptionBenefit + jurisdictionLGDDelta + repossLGDDelta - depositBenefit - mrBenefit + payBehaviourDelta + remarketingLGDDelta + vintageAdjDelta;
+  const delta = macroDelta + deferralPenalty - pbhBenefit - etpBenefit - lecBenefit + lgdDelta - assumptionBenefit + jurisdictionLGDDelta + repossLGDDelta - depositBenefit - mrBenefit + payBehaviourDelta + remarketingLGDDelta + lgdDecayDelta;
   return Math.max(baseECL * 0.3, baseECL + delta);
 }
 
