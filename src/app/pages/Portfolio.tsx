@@ -48,7 +48,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LeaseEditDrawer } from "../components/portfolio/LeaseEditDrawer";
 import { useData } from "../contexts/DataContext";
 import { ModelParametersTab } from "../components/portfolio/ModelParametersTab";
-
+import { LgdBenchmarkPanel } from "../components/portfolio/LgdBenchmarkPanel";
+import { RecoveryFactorDrawer } from "../components/risk-ecl/RecoveryFactorDrawer";
+import { useLgdCurves } from "../hooks/useLgdCurves";
+import { computePortfolioAssetRisk } from "../utils/assetRisk";
 
 
 const tabs = ["Leases", "Aircraft", "Lessees", "Model Parameters", "Concentration", "SD / MR", "Performance vs. Plan", "Payments", "Key Dates"];
@@ -136,9 +139,17 @@ export default function Portfolio() {
 
   const [stageFilter, setStageFilter] = useState("All");
   const [aircraftExpanded, setAircraftExpanded] = useState<Set<string>>(new Set());
-  const [aircraftSubTab, setAircraftSubTab] = useState<Record<string, "Valuation" | "Maintenance">>({});
+  const [aircraftSubTab, setAircraftSubTab] = useState<Record<string, "Valuation" | "Maintenance" | "LGD">>({});
   const [aircraftOverrides, setAircraftOverrides] = useState<OverrideMap>({});
   const [showAddAircraft, setShowAddAircraft] = useState(false);
+
+  const { recoveryFactor, isOverridden, saveRecoveryOverride, resetToDefault: resetRecovery } = useLgdCurves();
+  const [recoveryDrawerOpen, setRecoveryDrawerOpen] = useState(false);
+
+  const { perAssetLgd } = useMemo(
+    () => computePortfolioAssetRisk(assets, leaseData, recoveryFactor),
+    [assets, leaseData, recoveryFactor]
+  );
 
   function toggleAircraftExpand(msn: string) {
     setAircraftExpanded((prev) => {
@@ -557,13 +568,13 @@ export default function Portfolio() {
                           <td colSpan={11} style={{ padding: 0, background: "#FAFAFA" }}>
                             {/* Sub-tab switcher */}
                             <div style={{ display: "flex", gap: "3px", background: "#EAEFF5", borderBottom: "1px solid #E2E8F0", padding: "5px 5px 5px 1rem" }}>
-                              {(["Valuation", "Maintenance Forecast"] as const).map((st) => {
-                                const key = st === "Maintenance Forecast" ? "Maintenance" : "Valuation";
+                              {(["Valuation", "Maintenance Forecast", "LGD Benchmark"] as const).map((st) => {
+                                const key = st === "Maintenance Forecast" ? "Maintenance" : st === "LGD Benchmark" ? "LGD" : "Valuation";
                                 const active = (aircraftSubTab[a.msn] ?? "Valuation") === key;
                                 return (
                                   <button
                                     key={st}
-                                    onClick={(e) => { e.stopPropagation(); setAircraftSubTab((prev) => ({ ...prev, [a.msn]: key as "Valuation" | "Maintenance" })); }}
+                                    onClick={(e) => { e.stopPropagation(); setAircraftSubTab((prev) => ({ ...prev, [a.msn]: key as "Valuation" | "Maintenance" | "LGD" })); }}
                                     style={{
                                       padding: "4px 14px", fontSize: "0.8125rem", fontWeight: active ? 600 : 500,
                                       cursor: "pointer", border: "none", borderRadius: "9999px",
@@ -586,12 +597,22 @@ export default function Portfolio() {
                                 onOverride={handleOverride}
                                 onRevertOverride={handleRevertOverride}
                               />
-                            ) : (
+                            ) : (aircraftSubTab[a.msn] ?? "Valuation") === "Maintenance" ? (
                               <MaintenanceForecastTab
                                 msn={a.msn}
                                 aircraftType={a.type}
                                 vintage={a.vintage}
                                 liveRecord={liveSDMRByMsn.get(a.msn)}
+                              />
+                            ) : (
+                              <LgdBenchmarkPanel
+                                assetId={a.msn}
+                                aircraftType={a.type}
+                                vintage={a.vintage != null ? Number(a.vintage) : null}
+                                manualLgd={null}
+                                recoveryFactor={recoveryFactor}
+                                isOverridden={isOverridden}
+                                onOpenRecoveryDrawer={() => setRecoveryDrawerOpen(true)}
                               />
                             )}
                           </td>
@@ -733,6 +754,14 @@ export default function Portfolio() {
           />
         );
       })()}
+      <RecoveryFactorDrawer
+        isOpen={recoveryDrawerOpen}
+        currentRecoveryFactor={recoveryFactor}
+        isOverridden={isOverridden}
+        onSave={saveRecoveryOverride}
+        onReset={resetRecovery}
+        onClose={() => setRecoveryDrawerOpen(false)}
+      />
     </AnimatePresence>
     </>
   );
