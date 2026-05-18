@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { DEFAULT_RECOVERY_FACTOR } from "../data/lgdCurves";
+import { logAssumptionChange } from "../utils/assumptionLog";
 
 export interface LgdCurvesState {
   recoveryFactor:       number;
@@ -74,6 +75,17 @@ export function useLgdCurves(): LgdCurvesState {
         { onConflict: "org_id" }
       );
       if (error) throw error;
+      const user = (await supabase.auth.getUser()).data.user;
+      await logAssumptionChange(supabase, {
+        orgId,
+        assumptionType:  "lgd_recovery",
+        segment:         null,
+        action:          "override",
+        previousValue:   isOverridden ? { recovery_factor: recoveryFactor } : null,
+        newValue:        { recovery_factor: factor },
+        notes:           notes ?? null,
+        changedBy:       user?.email ?? "unknown",
+      });
       // Inline post-save refresh — no fetchOverride callback needed
       const { data } = await supabase
         .from("lgd_recovery_overrides")
@@ -85,7 +97,7 @@ export function useLgdCurves(): LgdCurvesState {
         setIsOverridden(true);
       }
     },
-    [orgId]
+    [orgId, recoveryFactor, isOverridden]
   );
 
   const resetToDefault = useCallback(async () => {
@@ -95,9 +107,20 @@ export function useLgdCurves(): LgdCurvesState {
       .delete()
       .eq("org_id", orgId);
     if (error) throw error;
+    const user = (await supabase.auth.getUser()).data.user;
+    await logAssumptionChange(supabase, {
+      orgId,
+      assumptionType:  "lgd_recovery",
+      segment:         null,
+      action:          "reset",
+      previousValue:   { recovery_factor: recoveryFactor },
+      newValue:        null,
+      notes:           null,
+      changedBy:       user?.email ?? "unknown",
+    });
     setRecoveryFactor(DEFAULT_RECOVERY_FACTOR);
     setIsOverridden(false);
-  }, [orgId]);
+  }, [orgId, recoveryFactor]);
 
   return { recoveryFactor, isOverridden, loading, saveRecoveryOverride, resetToDefault };
 }
