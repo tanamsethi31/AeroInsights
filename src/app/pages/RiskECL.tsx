@@ -312,7 +312,11 @@ export default function RiskECL() {
   }, [portfolioLgdRisk.lgdDecayAdjFactor]);
 
   useEffect(() => {
-    if (portfolioJurisdictionMix.ctcGoldPct > 0 || portfolioJurisdictionMix.nonCtcPct > 0) {
+    if (
+      portfolioJurisdictionMix.ctcGoldPct > 0 ||
+      portfolioJurisdictionMix.nonCtcPct > 0 ||
+      portfolioJurisdictionMix.avgRepossP50Months > 0
+    ) {
       setScenarioInputs((prev) => ({
         ...prev,
         adverse: {
