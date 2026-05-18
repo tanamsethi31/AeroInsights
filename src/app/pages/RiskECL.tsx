@@ -46,9 +46,11 @@ import { IAS36Tab } from "../components/risk-ecl/IAS36Tab";
 import { StageMigrationTab } from "../components/risk-ecl/StageMigrationTab";
 import { ScenarioEditor } from "../components/risk-ecl/ScenarioEditor";
 import { LgdDecaySummaryCard } from "../components/risk-ecl/LgdDecaySummaryCard";
+import { JurisdictionRiskSummaryCard } from "../components/risk-ecl/JurisdictionRiskSummaryCard";
 import { RecoveryFactorDrawer } from "../components/risk-ecl/RecoveryFactorDrawer";
 import { useLgdCurves } from "../hooks/useLgdCurves";
 import { computePortfolioAssetRisk } from "../utils/assetRisk";
+import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
 import { evaluateSICR } from "../utils/sicrEvaluator";
@@ -295,6 +297,11 @@ export default function RiskECL() {
     [assets, leases, recoveryFactor, provisions]
   );
 
+  const portfolioJurisdictionMix = useMemo(
+    () => computePortfolioJurisdictionMix(lessees, leases),
+    [lessees, leases]
+  );
+
   useEffect(() => {
     if (portfolioLgdRisk.lgdDecayAdjFactor > 0) {
       setScenarioInputs((prev) => ({
@@ -303,6 +310,24 @@ export default function RiskECL() {
       }));
     }
   }, [portfolioLgdRisk.lgdDecayAdjFactor]);
+
+  useEffect(() => {
+    if (portfolioJurisdictionMix.ctcGoldPct > 0 || portfolioJurisdictionMix.nonCtcPct > 0) {
+      setScenarioInputs((prev) => ({
+        ...prev,
+        adverse: {
+          ...prev.adverse,
+          ctcGoldPct:           portfolioJurisdictionMix.ctcGoldPct,
+          nonCtcPct:            portfolioJurisdictionMix.nonCtcPct,
+          repossWeightedMonths: portfolioJurisdictionMix.avgRepossP50Months,
+        },
+      }));
+    }
+  }, [
+    portfolioJurisdictionMix.ctcGoldPct,
+    portfolioJurisdictionMix.nonCtcPct,
+    portfolioJurisdictionMix.avgRepossP50Months,
+  ]);
 
   const eclByLease = toEclTableRows(provisions, assets, lessees, leases);
 
@@ -420,6 +445,14 @@ export default function RiskECL() {
           isOverridden={isOverridden}
           lgdDecayAdjFactor={portfolioLgdRisk.lgdDecayAdjFactor}
           onOpenRecoveryDrawer={() => setRecoveryDrawerOpen(true)}
+        />
+      )}
+      {assets.length > 0 && (
+        <JurisdictionRiskSummaryCard
+          ctcGoldPct={portfolioJurisdictionMix.ctcGoldPct}
+          nonCtcPct={portfolioJurisdictionMix.nonCtcPct}
+          avgRepossP50Months={portfolioJurisdictionMix.avgRepossP50Months}
+          liveBaseECL={liveBaseECL}
         />
       )}
       {/* Scenario Weight Controller — title simplified in Executive Mode */}
