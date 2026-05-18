@@ -100,7 +100,7 @@ export function RecoveryFactorDrawer({
             <div style={{ fontWeight: 700, fontSize: "1rem", color: "#0F172A" }}>Adjust Recovery Factor</div>
             <div style={{ fontSize: "0.8125rem", color: "#64748B", marginTop: "0.125rem" }}>Firm-level LGD assumption</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "1.25rem", color: "#64748B", cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: "1.25rem", color: "#64748B", cursor: "pointer" }}>✕</button>
         </div>
 
         {/* Body */}

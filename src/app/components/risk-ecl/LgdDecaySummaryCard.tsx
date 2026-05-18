@@ -1,7 +1,6 @@
 // src/app/components/risk-ecl/LgdDecaySummaryCard.tsx
 import { Card } from "../ui/Card";
 import {
-  computeFleetLgdAdjustment,
   computeResidualValuePct,
   computeLgdBenchmark,
   AIRCRAFT_FAMILY_LABELS,
@@ -20,7 +19,7 @@ interface Props {
 }
 
 export function LgdDecaySummaryCard({
-  assets, provisions, recoveryFactor, isOverridden, lgdDecayAdjFactor, onOpenRecoveryDrawer,
+  assets, recoveryFactor, isOverridden, lgdDecayAdjFactor, onOpenRecoveryDrawer,
 }: Props) {
   const currentYear = new Date().getFullYear();
 
@@ -36,11 +35,9 @@ export function LgdDecaySummaryCard({
     })
     .sort((a, b) => b.lgd - a.lgd);
 
-  // EAD-weighted fleet avg LGD (mirrors what ECL engine sees)
-  const { lgdDecayAdjFactor: computedAdj } = computeFleetLgdAdjustment(
-    assets, provisions, recoveryFactor, currentYear
-  );
-  const fleetAvgLgd = computedAdj + DEFAULT_BASELINE_LGD;
+  // Fleet avg LGD: derived directly from the prop so the footer matches what the ECL engine used.
+  // (Re-computing via computeFleetLgdAdjustment could diverge if provisions/reportingYear differ.)
+  const fleetAvgLgd = lgdDecayAdjFactor + DEFAULT_BASELINE_LGD;
   const upliftPp    = (lgdDecayAdjFactor * 100).toFixed(1);
 
   const th = (label: string, align: "left" | "right" = "right") => (
