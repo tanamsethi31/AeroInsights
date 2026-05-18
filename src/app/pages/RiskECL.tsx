@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
 import { useLocation, useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,6 +45,10 @@ import {
 import { IAS36Tab } from "../components/risk-ecl/IAS36Tab";
 import { StageMigrationTab } from "../components/risk-ecl/StageMigrationTab";
 import { ScenarioEditor } from "../components/risk-ecl/ScenarioEditor";
+import { LgdDecaySummaryCard } from "../components/risk-ecl/LgdDecaySummaryCard";
+import { RecoveryFactorDrawer } from "../components/risk-ecl/RecoveryFactorDrawer";
+import { useLgdCurves } from "../hooks/useLgdCurves";
+import { computePortfolioAssetRisk } from "../utils/assetRisk";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
 import { evaluateSICR } from "../utils/sicrEvaluator";
@@ -281,7 +285,25 @@ export default function RiskECL() {
     upside:  DEFAULT_UPSIDE_INPUTS,
   });
 
+  const { recoveryFactor, isOverridden, saveRecoveryOverride, resetToDefault: resetRecovery } = useLgdCurves();
+  const [recoveryDrawerOpen, setRecoveryDrawerOpen] = useState(false);
+
   const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
+
+  const portfolioLgdRisk = useMemo(
+    () => computePortfolioAssetRisk(assets, leases, recoveryFactor, undefined, provisions),
+    [assets, leases, recoveryFactor, provisions]
+  );
+
+  useEffect(() => {
+    if (portfolioLgdRisk.lgdDecayAdjFactor > 0) {
+      setScenarioInputs((prev) => ({
+        ...prev,
+        adverse: { ...prev.adverse, lgdDecayAdjFactor: portfolioLgdRisk.lgdDecayAdjFactor },
+      }));
+    }
+  }, [portfolioLgdRisk.lgdDecayAdjFactor]);
+
   const eclByLease = toEclTableRows(provisions, assets, lessees, leases);
 
   const s1Rows = eclByLease.filter(r => r.stage === "1");
@@ -390,6 +412,16 @@ export default function RiskECL() {
 
   const OverviewTab = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {assets.length > 0 && (
+        <LgdDecaySummaryCard
+          assets={assets}
+          provisions={provisions}
+          recoveryFactor={recoveryFactor}
+          isOverridden={isOverridden}
+          lgdDecayAdjFactor={portfolioLgdRisk.lgdDecayAdjFactor}
+          onOpenRecoveryDrawer={() => setRecoveryDrawerOpen(true)}
+        />
+      )}
       {/* Scenario Weight Controller — title simplified in Executive Mode */}
       <Card
         title={isExecutiveMode ? "ECL Summary" : "Scenario Probability Weights"}
@@ -2131,6 +2163,14 @@ export default function RiskECL() {
           managementOverlay: "",
           currency: "USD",
         }}
+      />
+      <RecoveryFactorDrawer
+        isOpen={recoveryDrawerOpen}
+        currentRecoveryFactor={recoveryFactor}
+        isOverridden={isOverridden}
+        onSave={saveRecoveryOverride}
+        onReset={resetRecovery}
+        onClose={() => setRecoveryDrawerOpen(false)}
       />
     </motion.div>
   );
