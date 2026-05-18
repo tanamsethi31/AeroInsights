@@ -8,6 +8,8 @@ import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
 import type { PortfolioExportData } from "../lib/portfolioAdapters";
 import type { RefObject } from "react";
 import type { ScenarioInputs } from "../utils/eclCalculator";
+import type { RollForwardLine } from "../utils/eclRollForward";
+import type { CreditQualityRow } from "../utils/creditQualityMatrix";
 
 export interface AuditorPackData {
   scenarioInputs: {
@@ -35,6 +37,9 @@ export interface AuditorPackData {
   };
   managementOverlay: string;
   currency: CurrencyCode;
+  rollForwardLines:  RollForwardLine[] | null;
+  creditQualityRows: CreditQualityRow[];
+  periodLabel:       string;
 }
 
 // ── Static data (same as exportService) ──────────────────────────────────────
@@ -281,18 +286,15 @@ export async function generateReportDOCX(
 
             // §5 IFRS 7 §35H Roll-Forward
             new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§5 — IFRS 7 §35H ECL Allowance Roll-Forward", bold: true, color: "002147" })] }),
-            makeTable(
-              ["Movement", "Stage 1", "Stage 2", "Stage 3", "Total"],
-              [
-                ["Opening ECL balance",          "$8.10M",  "$20.40M", "$16.30M", "$44.80M"],
-                ["New originations (Stage 1)",   "+$1.20M", "—",       "—",       "+$1.20M"],
-                ["SICR transfers to Stage 2",    "−$0.85M", "+$2.10M", "—",       "+$1.25M"],
-                ["SICR transfers to Stage 3",    "—",       "−$1.40M", "+$2.80M", "+$1.40M"],
-                ["Write-offs",                   "—",       "—",       "−$2.10M", "−$2.10M"],
-                ["Repayments / derecognition",   "−$0.45M", "−$0.85M", "−$0.40M", "−$1.70M"],
-                ["FX and unwinding of discount", "+$0.40M", "+$1.35M", "+$0.60M", "+$2.35M"],
-                ["Closing ECL balance",          "$8.40M",  "$21.60M", "$17.20M", "$47.20M"],
-              ]
+            ...(auditData.rollForwardLines === null
+              ? [new Paragraph({ children: [new TextRun({ text: "Opening period — no prior snapshot available.", size: 18, color: "64748B" })] })]
+              : [makeTable(
+                  ["Movement", "Stage 1", "Stage 2", "Stage 3", "Total"],
+                  auditData.rollForwardLines.map(l => [
+                    l.label,
+                    fmtAmt(l.stage1), fmtAmt(l.stage2), fmtAmt(l.stage3), fmtAmt(l.total),
+                  ])
+                )]
             ),
             new Paragraph({ text: "" }),
 
@@ -300,14 +302,11 @@ export async function generateReportDOCX(
             new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: "§6 — IFRS 7 §35I Credit Quality Distribution", bold: true, color: "002147" })] }),
             makeTable(
               ["Rating Grade", "Stage 1 EAD", "Stage 2 EAD", "Stage 3 EAD", "Total EAD", "% Portfolio"],
-              [
-                ["A / A−",        "$412.0M", "—",      "—",      "$412.0M", "45.1%"],
-                ["BBB",           "$185.0M", "$12.0M", "—",      "$197.0M", "21.6%"],
-                ["BB / BB−",      "$142.0M", "$48.0M", "—",      "$190.0M", "20.8%"],
-                ["B+",            "$32.0M",  "$58.0M", "—",      "$90.0M",  "9.9%"],
-                ["B / B−",        "—",       "—",      "$6.6M",  "$6.6M",   "0.7%"],
-                ["CCC and below", "—",       "—",      "$17.6M", "$17.6M",  "1.9%"],
-              ]
+              auditData.creditQualityRows.map(r => [
+                r.grade,
+                fmtAmt(r.s1Ead), fmtAmt(r.s2Ead), fmtAmt(r.s3Ead), fmtAmt(r.totalEad),
+                `${r.pctPortfolio.toFixed(1)}%`,
+              ])
             ),
             new Paragraph({ text: "" }),
 

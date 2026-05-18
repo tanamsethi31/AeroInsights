@@ -173,7 +173,7 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
                   IFRS 9 Auditor Evidence Pack
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.55)", marginTop: "0.125rem" }}>
-                  Q1 2026 · Generated {new Date().toLocaleDateString("en-IE", { dateStyle: "long" })}
+                  {data.periodLabel} · Generated {new Date().toLocaleDateString("en-IE", { dateStyle: "long" })}
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -359,19 +359,19 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
                 {/* §5 Roll-Forward */}
                 <section id="auditor-s5" style={{ marginBottom: "2.5rem" }}>
                   <SectionHeading title="§5 — IFRS 7 §35H ECL Allowance Roll-Forward" />
-                  <PreviewTable
-                    headers={["Movement", "Stage 1", "Stage 2", "Stage 3", "Total"]}
-                    rows={[
-                      ["Opening ECL balance",          "$8.10M",  "$20.40M", "$16.30M", "$44.80M"],
-                      ["New originations (Stage 1)",   "+$1.20M", "—",       "—",       "+$1.20M"],
-                      ["SICR transfers to Stage 2",    "−$0.85M", "+$2.10M", "—",       "+$1.25M"],
-                      ["SICR transfers to Stage 3",    "—",       "−$1.40M", "+$2.80M", "+$1.40M"],
-                      ["Write-offs",                   "—",       "—",       "−$2.10M", "−$2.10M"],
-                      ["Repayments / derecognition",   "−$0.45M", "−$0.85M", "−$0.40M", "−$1.70M"],
-                      ["FX and unwinding of discount", "+$0.40M", "+$1.35M", "+$0.60M", "+$2.35M"],
-                      ["Closing ECL balance",          "$8.40M",  "$21.60M", "$17.20M", "$47.20M"],
-                    ]}
-                  />
+                  {data.rollForwardLines === null ? (
+                    <p style={{ fontSize: "0.875rem", color: "#94A3B8", margin: 0 }}>
+                      Opening period — no prior snapshot available. Lock a second period to generate the roll-forward.
+                    </p>
+                  ) : (
+                    <PreviewTable
+                      headers={["Movement", "Stage 1", "Stage 2", "Stage 3", "Total"]}
+                      rows={data.rollForwardLines.map(line => [
+                        line.label,
+                        fmtM(line.stage1), fmtM(line.stage2), fmtM(line.stage3), fmtM(line.total),
+                      ])}
+                    />
+                  )}
                 </section>
 
                 {/* §6 Credit Quality */}
@@ -379,14 +379,11 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
                   <SectionHeading title="§6 — IFRS 7 §35I Credit Quality Distribution" />
                   <PreviewTable
                     headers={["Rating Grade", "Stage 1 EAD", "Stage 2 EAD", "Stage 3 EAD", "Total EAD", "% Portfolio"]}
-                    rows={[
-                      ["A / A−",        "$412.0M", "—",      "—",      "$412.0M", "45.1%"],
-                      ["BBB",           "$185.0M", "$12.0M", "—",      "$197.0M", "21.6%"],
-                      ["BB / BB−",      "$142.0M", "$48.0M", "—",      "$190.0M", "20.8%"],
-                      ["B+",            "$32.0M",  "$58.0M", "—",      "$90.0M",  "9.9%"],
-                      ["B / B−",        "—",       "—",      "$6.6M",  "$6.6M",   "0.7%"],
-                      ["CCC and below", "—",       "—",      "$17.6M", "$17.6M",  "1.9%"],
-                    ]}
+                    rows={data.creditQualityRows.map(r => [
+                      r.grade,
+                      fmtM(r.s1Ead), fmtM(r.s2Ead), fmtM(r.s3Ead), fmtM(r.totalEad),
+                      `${r.pctPortfolio.toFixed(1)}%`,
+                    ])}
                   />
                 </section>
 
