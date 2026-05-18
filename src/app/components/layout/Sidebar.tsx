@@ -37,6 +37,7 @@ import {
   FileSpreadsheet,
   Zap,
   Activity,
+  Landmark,
   FolderOpen,
 } from "lucide-react";
 
@@ -113,6 +114,15 @@ const navGroups: NavGroup[] = [
           { title: "Lease Generator", url: "/deals/generator",  icon: FileSearch  },
           { title: "Rack & Stack",    url: "/deals/rack-stack", icon: Layers2     },
           { title: "Exit NPV",        url: "/deals/exit-npv",   icon: TrendingDown },
+        ],
+      },
+      {
+        title: "Transactions",
+        url: "/transactions",
+        icon: Landmark,
+        items: [
+          { title: "Overview",      url: "/transactions", icon: BarChart2 },
+          { title: "Run Waterfall", url: "/transactions", icon: Play      },
         ],
       },
       {

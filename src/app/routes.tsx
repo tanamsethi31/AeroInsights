@@ -17,6 +17,7 @@ import Deals from "./pages/Deals";
 import Intelligence from "./pages/Intelligence";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import ExcelAddinDocs from "./pages/ExcelAddinDocs";
+import Transactions from "./pages/Transactions";
 
 /**
  * Guards the dashboard index route.
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
           { path: "deals/generator",            Component: Deals },
           { path: "deals/rack-stack",           Component: Deals },
           { path: "deals/exit-npv",             Component: Deals },
+
+          // Transactions
+          { path: "transactions",       Component: Transactions },
+          { path: "transactions/setup", Component: Transactions },
 
           // Risk & ECL
           { path: "risk-ecl",                   Component: RiskECL },
