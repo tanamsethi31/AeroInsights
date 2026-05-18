@@ -263,7 +263,7 @@ const INSTALL_STEPS = [
       "Download manifest.xml from Settings → Excel Add-in.",
       "Open Finder and create a local folder, e.g. ~/AeroinsightsAddin.",
       "Copy manifest.xml into that folder.",
-      "In Excel: Insert → Add-ins → My Add-ins → Shared Folder → select "Aeroinsights Decision Platform".",
+      'In Excel: Insert → Add-ins → My Add-ins → Shared Folder → select "Aeroinsights Decision Platform".',
     ],
   },
   {
