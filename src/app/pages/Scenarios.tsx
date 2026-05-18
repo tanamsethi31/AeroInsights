@@ -2793,13 +2793,13 @@ export default function Scenarios() {
                   {/* ── Asset Risk — collapsible ── */}
                   {(() => {
                     const remMonths = formInputs.remarketingMonths;
-                    const vintAdj   = formInputs.lgdDecayAdjFactor;
-                    const isActive  = remMonths !== 0 || vintAdj !== 0;
+                    const decayAdj  = formInputs.lgdDecayAdjFactor;
+                    const isActive  = remMonths !== 0 || decayAdj !== 0;
 
                     const remImpact  = remMonths > 0
                       ? Math.max(0, remMonths - 3) * 0.015 * liveBaseECL
                       : 0;
-                    const vintImpact = vintAdj > 0 ? vintAdj * liveBaseECL : 0;
+                    const vintImpact = decayAdj > 0 ? decayAdj * liveBaseECL : 0;
                     const totalUplift = remImpact + vintImpact;
 
                     return (
@@ -2863,7 +2863,7 @@ export default function Scenarios() {
                                 <SliderRow
                                   label="Vintage LGD Adj"
                                   min={0} max={0.15} step={0.005}
-                                  value={vintAdj}
+                                  value={decayAdj}
                                   onChange={(v) => updateFormInputs({ lgdDecayAdjFactor: v })}
                                   fmt={(v) => v === 0 ? "Off (inactive)" : `${(v * 100).toFixed(1)}% of ECL`}
                                 />
