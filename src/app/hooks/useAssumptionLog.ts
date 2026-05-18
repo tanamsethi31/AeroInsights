@@ -1,6 +1,7 @@
 // src/app/hooks/useAssumptionLog.ts
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { useData } from "../contexts/DataContext";
 
 export interface AssumptionLogEntry {
   id:             string;
@@ -20,16 +21,19 @@ interface Result {
 }
 
 export function useAssumptionLog(): Result {
+  const { orgId } = useData();
   const [entries, setEntries]     = useState<AssumptionLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      if (!orgId) { setIsLoading(false); return; }
       setIsLoading(true);
       const { data, error } = await supabase
         .from("assumption_change_log")
         .select("*")
+        .eq("org_id", orgId)
         .order("changed_at", { ascending: false })
         .limit(50);
       if (cancelled) return;
@@ -52,7 +56,7 @@ export function useAssumptionLog(): Result {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [orgId]);
 
   return { entries, isLoading };
 }
