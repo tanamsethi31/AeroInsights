@@ -88,4 +88,17 @@ describe("runWaterfall", () => {
     expect(result.noteDistributions[2].interestPaid).toBe(0);
     expect(result.residualToEquity).toBe(0);
   });
+
+  it("throws when a required note class is missing", () => {
+    const incompleteClasses = NOTE_CLASSES.filter(n => n.label !== "C");
+    expect(() =>
+      runWaterfall(makeCollections(3.0), incompleteClasses, RESERVES, COVERAGE, EXPENSES, 200)
+    ).toThrow("noteClasses must include all three tranches");
+  });
+
+  it("throws when portfolioAircraftValueM is zero", () => {
+    expect(() =>
+      runWaterfall(makeCollections(3.0), NOTE_CLASSES, RESERVES, COVERAGE, EXPENSES, 0)
+    ).toThrow("portfolioAircraftValueM must be > 0");
+  });
 });

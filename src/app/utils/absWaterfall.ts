@@ -85,13 +85,14 @@ function pay(available: number, due: number): { paid: number; shortfall: number 
 
 export function computePortfolioAircraftValue(
   aircraftIds: string[],
-  assets: Pick<Asset, "id" | "aircraft_type" | "vintage">[]
+  assets: Pick<Asset, "id" | "aircraft_type" | "vintage">[],
+  referenceYear: number = new Date().getFullYear()
 ): number {
   return aircraftIds.reduce((sum, id) => {
     const asset = assets.find(a => a.id === id);
     if (!asset) return sum;
     const base = (AIRCRAFT_BASE_VALUE[asset.aircraft_type] ?? 25_000_000);
-    const ageYears = new Date().getFullYear() - (asset.vintage ?? 2010);
+    const ageYears = referenceYear - (asset.vintage ?? 2010);
     const haircut = Math.max(0.4, 1 - 0.03 * ageYears);
     return sum + (base * haircut) / 1_000_000; // convert to $M
   }, 0);
@@ -109,6 +110,10 @@ export function runWaterfall(
 ): WaterfallResult {
   const paymentsPerYear = seniorExpenses.paymentFrequency === "monthly" ? 12 : 4;
   const totalCollections = collections.reduce((s, c) => s + c.actualCollected, 0);
+
+  if (portfolioAircraftValueM <= 0) {
+    throw new Error("runWaterfall: portfolioAircraftValueM must be > 0");
+  }
 
   // Step 1: Senior expenses
   const seniorExpensesDue =
@@ -128,9 +133,12 @@ export function runWaterfall(
   remaining -= lrResult.paid;
   const liquidityReserveTopUp = lrResult.paid;
 
-  const classA = noteClasses.find(n => n.label === "A")!;
-  const classB = noteClasses.find(n => n.label === "B")!;
-  const classC = noteClasses.find(n => n.label === "C")!;
+  const classA = noteClasses.find(n => n.label === "A");
+  const classB = noteClasses.find(n => n.label === "B");
+  const classC = noteClasses.find(n => n.label === "C");
+  if (!classA || !classB || !classC) {
+    throw new Error("runWaterfall: noteClasses must include all three tranches (A, B, C)");
+  }
 
   // Steps 3-4: Class A
   const classAInterestDue = (classA.outstandingBalance * classA.couponRate) / paymentsPerYear;
@@ -203,7 +211,7 @@ export function runWaterfall(
       },
       { noteClass: "B", interestPaid: classBIntPaid, principalPaid: classBPrinPaid, shortfall: classBShortfall },
       { noteClass: "C", interestPaid: classCIntPaid, principalPaid: classCPrinPaid, shortfall: classCShortfall },
-    ],
+    ].sort((a, b) => a.noteClass.localeCompare(b.noteClass)),
     dscrResult: { value: dscr, trigger: coverageTests.dscrTrigger, passed: dscrPassed, cashTrapped: dscrCashTrapped },
     ltvResult:  { value: ltv,  trigger: coverageTests.ltvTrigger,  passed: ltvPassed,  cashTrapped: ltvCashTrapped  },
     cashTrapTotal: dscrCashTrapped + ltvCashTrapped,
