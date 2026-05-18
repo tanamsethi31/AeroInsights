@@ -132,6 +132,7 @@ export function JurisdictionRiskSummaryCard({
         {/* ── Footer link ────────────────────────────────────────────── */}
         <button
           onClick={() => navigate("/jurisdictions")}
+          aria-label="View full jurisdiction analysis"
           style={{
             background: "none", border: "none", padding: 0,
             fontSize: "0.8125rem", color: "#1D4ED8",
