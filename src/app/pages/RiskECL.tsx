@@ -37,6 +37,7 @@ import {
   Save,
   TrendingDown,
   TrendingUp,
+  Lock,
 } from "lucide-react";
 import {
   ECLDrilldownPanel,
@@ -64,6 +65,11 @@ import {
 } from "../utils/eclCalculator";
 import { PillTabs } from "../components/ui/PillTabs";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
+import { useCurrency } from "../contexts/CurrencyContext";
+import { useEclSnapshots } from "../hooks/useEclSnapshots";
+import { computeRollForward } from "../utils/eclRollForward";
+import { computeCreditQualityMatrix } from "../utils/creditQualityMatrix";
+import { ClosePeriodModal } from "../components/risk-ecl/ClosePeriodModal";
 
 const tornadoData = [
   { input: "PD Multiplier (Stage 3)", impact: 8.4, dir: "positive" },
@@ -268,6 +274,9 @@ export default function RiskECL() {
   }, [isExecutiveMode, activeTab]);
   const [drilldownLease, setDrilldownLease] = useState<LeaseRow | null>(null);
   const [auditorPackOpen, setAuditorPackOpen] = useState(false);
+  const [closePeriodOpen, setClosePeriodOpen] = useState(false);
+  const { currency } = useCurrency();
+  const { snapshots } = useEclSnapshots();
   const [weights, setWeights] = useState({ base: 60, adverse: 25, upside: 15 });
   const [weightEdit, setWeightEdit] = useState({
     base: "60",
@@ -382,6 +391,38 @@ export default function RiskECL() {
     stage: (r: LeaseRow) => parseInt(r.stage),
   };
   const { sorted: sortedECL, sortState: eclSortState, toggleSort: toggleECLSort } = useSortable(eclByLease, eclAccessors);
+
+  const eclRowsMapped = useMemo(
+    () => sortedECL.map((r) => ({
+      id:       r.id,
+      lessee:   r.lessee,
+      aircraft: r.aircraft,
+      ead:      r.eadNum,
+      pd12m:    r.pd12m,
+      lgd:      r.lgd,
+      ecl12m:   r.ecl12m,
+      eclLT:    r.eclLifetime,
+      stage:    (stageOverrides[r.id] ?? r.stage) as "1" | "2" | "3",
+    })),
+    [sortedECL, stageOverrides]
+  );
+
+  const rollForwardLines = useMemo(() => {
+    const prev = snapshots[0] ?? null;
+    if (!prev) return null;
+    return computeRollForward(prev.eclRows, eclRowsMapped);
+  }, [snapshots, eclRowsMapped]);
+
+  const creditQualityRows = useMemo(
+    () => computeCreditQualityMatrix(eclRowsMapped, lessees),
+    [eclRowsMapped, lessees]
+  );
+
+  const stageSums = useMemo(() => ({
+    stage1Ecl: sortedECL.filter(r => (stageOverrides[r.id] ?? r.stage) === "1").reduce((s, r) => s + r.eclLifetime, 0),
+    stage2Ecl: sortedECL.filter(r => (stageOverrides[r.id] ?? r.stage) === "2").reduce((s, r) => s + r.eclLifetime, 0),
+    stage3Ecl: sortedECL.filter(r => (stageOverrides[r.id] ?? r.stage) === "3").reduce((s, r) => s + r.eclLifetime, 0),
+  }), [sortedECL, stageOverrides]);
 
   function handleWeightChange(
     key: "base" | "adverse" | "upside",
@@ -1989,6 +2030,24 @@ export default function RiskECL() {
         subtitle="IFRS 9 Expected Credit Loss — F02 Module · Probability-weighted multi-scenario"
       >
         <button
+          onClick={() => setClosePeriodOpen(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            background: "#F4F5F7",
+            color: "#0F172A",
+            border: "1px solid #E2E8F0",
+            borderRadius: "9999px",
+            padding: "0.625rem 1.25rem",
+            fontSize: "0.875rem",
+            fontWeight: 500,
+            cursor: "pointer",
+          }}
+        >
+          <Lock size={14} /> Close Period
+        </button>
+        <button
           onClick={() => setAuditorPackOpen(true)}
           style={{
             display: "flex",
@@ -2185,20 +2244,13 @@ export default function RiskECL() {
           weights,
           weighted,
           scenarioSummary,
-          eclRows: sortedECL.map((r) => ({
-            id: r.id,
-            lessee: r.lessee,
-            aircraft: r.aircraft,
-            ead: r.eadNum,
-            pd12m: r.pd12m,
-            lgd: r.lgd,
-            ecl12m: r.ecl12m,
-            eclLT: r.eclLifetime,
-            stage: stageOverrides[r.id] ?? r.stage,
-          })),
+          eclRows: eclRowsMapped,
           sicrConfig,
           managementOverlay: "",
-          currency: "USD",
+          currency,
+          rollForwardLines,
+          creditQualityRows,
+          periodLabel: `Live Preview — Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
         }}
       />
       <RecoveryFactorDrawer
@@ -2208,6 +2260,27 @@ export default function RiskECL() {
         onSave={saveRecoveryOverride}
         onReset={resetRecovery}
         onClose={() => setRecoveryDrawerOpen(false)}
+      />
+      <ClosePeriodModal
+        open={closePeriodOpen}
+        onClose={() => setClosePeriodOpen(false)}
+        onLocked={() => setClosePeriodOpen(false)}
+        liveData={{
+          periodLabel:    `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`,
+          stage1Ecl:      stageSums.stage1Ecl,
+          stage2Ecl:      stageSums.stage2Ecl,
+          stage3Ecl:      stageSums.stage3Ecl,
+          totalEcl:       weighted.eclLifetime,
+          ecl12m:         weighted.ecl12m,
+          coveragePct:    weighted.coverage,
+          scenarioInputs,
+          weights,
+          scenarioSummary,
+          weighted,
+          sicrConfig,
+          eclRows:        eclRowsMapped,
+          currency,
+        }}
       />
     </motion.div>
   );

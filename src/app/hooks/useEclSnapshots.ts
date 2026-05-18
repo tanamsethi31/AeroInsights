@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
+import type { CurrencyCode } from "../contexts/CurrencyContext";
 import type { ScenarioInputs } from "../utils/eclCalculator";
 import type { EclRow } from "../utils/eclRollForward";
 
@@ -37,7 +38,7 @@ export interface EclSnapshot {
   weighted:        { ecl12m: number; eclLifetime: number; coverage: number };
   sicrConfig:      SicrConfig;
   eclRows:         EclRow[];
-  currency:        string;
+  currency:        CurrencyCode;
 }
 
 export type LockPeriodPayload = Omit<EclSnapshot, "id" | "lockedAt" | "lockedBy">;
