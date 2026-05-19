@@ -203,9 +203,16 @@ export default function Reconciliation() {
     setActiveTab("transactions");
     setSelectedStatementId(id);
     setLoadingTx(true);
+    setTransactions([]);
     const txns = await fetchTransactions(id);
-    setTransactions(txns);
-    setLoadingTx(false);
+    // Only update if this statement is still the selected one
+    setSelectedStatementId(current => {
+      if (current === id) {
+        setTransactions(txns);
+        setLoadingTx(false);
+      }
+      return current;
+    });
   };
 
   // Thin adapter: StatementUploadModal.onImport expects ImportPayload (local type),
@@ -344,7 +351,7 @@ export default function Reconciliation() {
                       />
                     ) : (
                       <ReconciliationWorkspace
-                        statementId={selectedStatementId}
+                        statementId={selectedStatementId!}
                         transactions={transactions}
                         currency={selectedStatement.currency}
                       />
