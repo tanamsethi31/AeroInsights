@@ -138,6 +138,20 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: "Reconciliation",
+    items: [
+      {
+        title: "Bank Statements",
+        url: "/reconciliation",
+        icon: FileText,
+        items: [
+          { title: "Statements",   url: "/reconciliation", icon: FileSpreadsheet },
+          { title: "Transactions", url: "/reconciliation", icon: ArrowLeftRight  },
+        ],
+      },
+    ],
+  },
+  {
     label: "Intelligence",
     items: [
       {

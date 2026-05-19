@@ -18,6 +18,7 @@ import Intelligence from "./pages/Intelligence";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 import Transactions from "./pages/Transactions";
+import Reconciliation from "./pages/Reconciliation";
 
 /**
  * Guards the dashboard index route.
@@ -77,6 +78,9 @@ export const router = createBrowserRouter([
           // Transactions
           { path: "transactions",       Component: Transactions },
           { path: "transactions/setup", Component: Transactions },
+
+          // Reconciliation
+          { path: "reconciliation", Component: Reconciliation },
 
           // Risk & ECL
           { path: "risk-ecl",                   Component: RiskECL },
