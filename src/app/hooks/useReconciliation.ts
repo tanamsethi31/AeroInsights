@@ -78,7 +78,7 @@ export function useReconciliation(
         .eq("statement_id", statementId)
         .order("created_at", { ascending: true });
 
-      if (cancelled) return;
+      if (cancelled) { setLoading(false); return; }
       if (error || !data || data.length === 0) {
         setResult(null);
         setLoading(false);
@@ -190,21 +190,29 @@ export function useReconciliation(
     const asset  = lease ? assetMap.get(lease.asset_id)   : undefined;
     const txn    = txnMap.get(transactionId);
 
-    if (lease && lessee && asset && txn) {
-      const bestMatch: LeaseCandidate = { lease, lessee, asset };
-      patchMatch(transactionId, {
-        bestMatch,
-        matchType:   "manual",
-        confirmed:   true,
-        amountDelta: txn.amount - (lease.monthly_rental ?? 0),
-      });
+    if (!lease || !lessee || !asset || !txn) {
+      console.error("[useReconciliation] overrideMatch: lease/txn not found", { leaseId, transactionId });
+      setSaving(false);
+      return;
     }
+
+    const bestMatch: LeaseCandidate = { lease, lessee, asset };
+    patchMatch(transactionId, {
+      bestMatch,
+      matchType:   "manual",
+      confirmed:   true,
+      confidence:  1.0,
+      amountDelta: lease.monthly_rental != null
+        ? txn.amount - lease.monthly_rental
+        : null,
+    });
 
     const { error } = await supabase
       .from("reconciliation_matches")
       .update({
         lease_id:     leaseId,
         match_type:   "manual",
+        confidence:   1.0,
         confirmed:    true,
         confirmed_at: new Date().toISOString(),
       })
