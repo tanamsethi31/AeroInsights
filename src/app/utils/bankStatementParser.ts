@@ -39,18 +39,30 @@ export interface ParseResult {
 const ROLE_KEYWORDS: Record<Exclude<ColumnRole, "ignore">, string[]> = {
   date:        ["date", "value date", "posting date", "trans date", "txn date", "transaction date"],
   description: ["description", "narrative", "details", "particulars", "memo", "remarks"],
-  debit:       ["debit", "dr", "withdrawal", "withdrawals", "out", "paid out", "charge"],
+  debit:       ["debit", "dr", "withdrawal", "withdrawals", "paid out", "charge"],
   credit:      ["credit", "cr", "deposit", "deposits", "received", "paid in"],
   amount:      ["amount", "net amount", "net", "value"],
   balance:     ["balance", "running balance", "closing balance"],
   reference:   ["reference", "ref", "cheque", "check", "voucher", "id"],
 };
 
+/** Match a keyword against a lowercased header.
+ *  Short abbreviations (≤3 chars: dr, cr) require a whole-word match to avoid
+ *  false positives like "Address" → debit. Longer keywords use substring match. */
+function keywordMatches(lower: string, kw: string): boolean {
+  if (kw.length <= 3) {
+    // Whole-word: keyword is the entire header, or delimited by spaces/punctuation
+    const tokens = lower.split(/[\s\/\-_(,)]+/);
+    return tokens.includes(kw);
+  }
+  return lower.includes(kw);
+}
+
 export function detectColumns(headers: string[]): ColumnMapping[] {
   const mappings: ColumnMapping[] = headers.map((header, index) => {
     const lower = header.toLowerCase().trim();
     for (const [role, keywords] of Object.entries(ROLE_KEYWORDS) as [Exclude<ColumnRole, "ignore">, string[]][]) {
-      if (keywords.some(kw => lower.includes(kw))) {
+      if (keywords.some(kw => keywordMatches(lower, kw))) {
         return { index, header, role };
       }
     }
@@ -88,9 +100,12 @@ function parseDate(value: string): string | null {
     if (!isNaN(d4.getTime())) return d4.toISOString().slice(0, 10);
   }
 
-  // Try native JS parse (handles ISO, RFC 2822, etc.)
-  const d1 = new Date(value);
-  if (!isNaN(d1.getTime())) return d1.toISOString().slice(0, 10);
+  // ISO date strings (YYYY-MM-DD) and ISO datetime — parse as UTC to avoid timezone shift
+  const isoDate = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoDate) {
+    const d = new Date(`${isoDate[1]}-${isoDate[2]}-${isoDate[3]}T00:00:00Z`);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  }
 
   return null;
 }
@@ -98,7 +113,12 @@ function parseDate(value: string): string | null {
 // ── Amount parsing ────────────────────────────────────────────────────────────
 
 function parseAmount(value: string): number {
-  return parseFloat(value.replace(/[,$£€\s]/g, "").trim());
+  const cleaned = value.replace(/[,$£€\s]/g, "").trim();
+  // Accounting negatives: (200.00) → -200
+  if (cleaned.startsWith("(") && cleaned.endsWith(")")) {
+    return -parseFloat(cleaned.slice(1, -1));
+  }
+  return parseFloat(cleaned);
 }
 
 // ── Apply mappings ─────────────────────────────────────────────────────────────
@@ -135,8 +155,13 @@ export function applyMappings(
     // Amount
     let amount: number;
     if (debitCol && creditCol) {
-      const credit = parseAmount(row[creditCol.index] ?? "0");
-      const debit  = parseAmount(row[debitCol.index]  ?? "0");
+      const credit = parseAmount(row[creditCol.index] ?? "");
+      const debit  = parseAmount(row[debitCol.index]  ?? "");
+      // Both empty = blank row (header repetition, subtotal row etc.) — skip
+      if (isNaN(credit) && isNaN(debit)) {
+        errors.push(`Row ${rowNum}: both debit and credit cells are empty`);
+        continue;
+      }
       amount = (isNaN(credit) ? 0 : credit) - (isNaN(debit) ? 0 : debit);
     } else if (amountCol) {
       amount = parseAmount(row[amountCol.index] ?? "");
@@ -165,7 +190,8 @@ const MAX_ROWS = 10_000;
 export async function parseFile(file: File): Promise<ParseResult> {
   let workbook: XLSX.WorkBook;
 
-  if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+  const lowerName = file.name.toLowerCase();
+  if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
     const buffer = await file.arrayBuffer();
     workbook = XLSX.read(new Uint8Array(buffer), { type: "array" });
   } else {
