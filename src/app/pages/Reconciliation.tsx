@@ -6,6 +6,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatementUploadModal } from "../components/reconciliation/StatementUploadModal";
 import { useBankStatements } from "../hooks/useBankStatements";
 import type { BankStatement, BankTransaction } from "../hooks/useBankStatements";
+import { ReconciliationWorkspace } from "../components/reconciliation/ReconciliationWorkspace";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -190,13 +191,16 @@ export default function Reconciliation() {
   const [selectedStatementId, setSelectedStatementId] = useState<string | null>(null);
   const [transactions,        setTransactions       ] = useState<BankTransaction[]>([]);
   const [loadingTx,           setLoadingTx          ] = useState(false);
+  const [activeTab, setActiveTab] = useState<"transactions" | "reconcile">("transactions");
 
   const handleSelectStatement = async (id: string) => {
     if (selectedStatementId === id) {
       setSelectedStatementId(null);
       setTransactions([]);
+      setActiveTab("transactions");
       return;
     }
+    setActiveTab("transactions");
     setSelectedStatementId(id);
     setLoadingTx(true);
     const txns = await fetchTransactions(id);
@@ -290,12 +294,62 @@ export default function Reconciliation() {
               />
               <AnimatePresence>
                 {selectedStatementId === stmt.id && selectedStatement && (
-                  <TransactionBrowser
+                  <motion.div
                     key={stmt.id}
-                    transactions={transactions}
-                    loading={loadingTx}
-                    currency={selectedStatement.currency}
-                  />
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                    style={{ marginTop: "0.75rem" }}
+                  >
+                    {/* Tab bar */}
+                    <div style={{
+                      display: "flex",
+                      gap: 0,
+                      background: "#1E293B",
+                      border: "1px solid #334155",
+                      borderRadius: "8px",
+                      padding: "0.25rem",
+                      width: "fit-content",
+                      marginBottom: "0.75rem",
+                    }}>
+                      {(["transactions", "reconcile"] as const).map(tab => (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveTab(tab)}
+                          style={{
+                            padding: "0.375rem 0.875rem",
+                            background: activeTab === tab ? "#0F172A" : "transparent",
+                            border: "none",
+                            borderRadius: "6px",
+                            color: activeTab === tab ? "#F8FAFC" : "#64748B",
+                            fontSize: "0.8rem",
+                            fontWeight: activeTab === tab ? 500 : 400,
+                            cursor: "pointer",
+                            textTransform: "capitalize",
+                            transition: "background 150ms, color 150ms",
+                          }}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Panel */}
+                    {activeTab === "transactions" ? (
+                      <TransactionBrowser
+                        transactions={transactions}
+                        loading={loadingTx}
+                        currency={selectedStatement.currency}
+                      />
+                    ) : (
+                      <ReconciliationWorkspace
+                        statementId={selectedStatementId}
+                        transactions={transactions}
+                        currency={selectedStatement.currency}
+                      />
+                    )}
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
