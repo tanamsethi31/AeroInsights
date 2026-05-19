@@ -40,7 +40,7 @@ const ROLE_KEYWORDS: Record<Exclude<ColumnRole, "ignore">, string[]> = {
   date:        ["date", "value date", "posting date", "trans date", "txn date", "transaction date"],
   description: ["description", "narrative", "details", "particulars", "memo", "remarks"],
   debit:       ["debit", "dr", "withdrawal", "withdrawals", "out", "paid out", "charge"],
-  credit:      ["credit", "cr", "deposit", "deposits", "in", "received", "paid in"],
+  credit:      ["credit", "cr", "deposit", "deposits", "received", "paid in"],
   amount:      ["amount", "net amount", "net", "value"],
   balance:     ["balance", "running balance", "closing balance"],
   reference:   ["reference", "ref", "cheque", "check", "voucher", "id"],
