@@ -45,9 +45,9 @@ export function useReconciliation(
 
   function buildCounts(matches: MatchResult[]) {
     return {
-      autoCount:      matches.filter(m => m.confidence >= 0.8).length,
-      reviewCount:    matches.filter(m => m.confidence >= 0.4 && m.confidence < 0.8).length,
-      unmatchedCount: matches.filter(m => m.confidence < 0.4).length,
+      autoCount:      matches.filter(m => m.matchType !== "unmatched" && m.confidence >= 0.8).length,
+      reviewCount:    matches.filter(m => m.matchType !== "unmatched" && m.confidence >= 0.4 && m.confidence < 0.8).length,
+      unmatchedCount: matches.filter(m => m.confidence < 0.4 || m.matchType === "unmatched").length,
     };
   }
 
