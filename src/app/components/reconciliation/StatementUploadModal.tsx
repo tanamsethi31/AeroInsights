@@ -60,8 +60,12 @@ const selectStyle: React.CSSProperties = {
 
 function validateMappings(mappings: ColumnMapping[]): string | null {
   const roles = mappings.map(m => m.role);
-  if (!roles.includes("date"))        return "Must map a Date column";
-  if (!roles.includes("description")) return "Must map a Description column";
+  const dateCount = roles.filter(r => r === "date").length;
+  const descCount = roles.filter(r => r === "description").length;
+  if (dateCount === 0)        return "Must map a Date column";
+  if (dateCount > 1)          return "Only one Date column allowed — set extras to Ignore";
+  if (descCount === 0)        return "Must map a Description column";
+  if (descCount > 1)          return "Only one Description column allowed — set extras to Ignore";
   const hasDebitCredit = roles.includes("debit") && roles.includes("credit");
   const hasAmount      = roles.includes("amount");
   if (!hasDebitCredit && !hasAmount)  return "Must map either (Debit + Credit) or an Amount column";
@@ -273,6 +277,11 @@ export function StatementUploadModal({ open, onClose, onImport }: Props) {
                     )}
                   </div>
                   <input id="stmt-file-input" type="file" accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={onInputChange} />
+                  {filename && !error && !parsing && (
+                    <div style={{ marginTop: "0.75rem", padding: "0.625rem 0.875rem", borderRadius: "6px", background: "#0F172A", border: "1px solid #334155", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                      <span style={{ color: "#F8FAFC" }}>{filename}</span>
+                    </div>
+                  )}
                   {error && (
                     <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "6px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#F87171", fontSize: "0.875rem" }}>
                       {error}
