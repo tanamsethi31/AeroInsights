@@ -81,6 +81,7 @@ describe("matchTransactions", () => {
     const result = matchTransactions([txn], [lease], [makeLessee()], [makeAsset()], "stmt-1");
     // Max possible: 0.3 (date) + 0.2 (lessee) = 0.5 < 0.8
     expect(result.matches[0].confidence).toBeLessThan(0.8);
+    expect(result.matches[0].amountDelta).toBeNull();
   });
 
   it("autoCount / reviewCount / unmatchedCount are computed correctly", () => {

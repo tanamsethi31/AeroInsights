@@ -9,6 +9,7 @@ export interface LeaseCandidate {
   asset:  Asset;
 }
 
+// "manual" is never produced by matchTransactions — it is set externally when the user overrides a match via the UI
 export type MatchType = "auto" | "manual" | "unmatched";
 
 export interface MatchResult {
@@ -115,9 +116,10 @@ export function matchTransactions(
 
     const isUnmatched = bestScore < 0.4;
     const finalMatch  = isUnmatched ? null : bestCandidate;
-    const amountDelta = finalMatch
-      ? txn.amount - (finalMatch.lease.monthly_rental ?? 0)
-      : null;
+    const amountDelta =
+      finalMatch && finalMatch.lease.monthly_rental != null
+        ? txn.amount - finalMatch.lease.monthly_rental
+        : null;
 
     return {
       transactionId: txn.id,
