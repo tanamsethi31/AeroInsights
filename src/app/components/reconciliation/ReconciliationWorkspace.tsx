@@ -358,7 +358,9 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
   const reviewMatches = result?.matches.filter(
     m => m.confidence >= 0.4 && m.confidence < 0.8 && !m.confirmed,
   ) ?? [];
-  const unmatchedMatches = result?.matches.filter(m => m.confidence < 0.4) ?? [];
+  const unmatchedMatches = result?.matches.filter(
+    m => m.confidence < 0.4 || m.matchType === "unmatched",
+  ) ?? [];
 
   const reconciledCount = result?.matches.filter(m => m.confirmed).length ?? 0;
   const totalCount      = result?.matches.length ?? 0;
