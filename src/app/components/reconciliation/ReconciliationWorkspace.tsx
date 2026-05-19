@@ -5,7 +5,7 @@ import { useReconciliation } from "../../hooks/useReconciliation";
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import type { BankTransaction } from "../../hooks/useBankStatements";
 import type { MatchResult } from "../../utils/reconciliationMatcher";
-import type { Lease } from "../../types/portfolio";
+import type { Lease, Lessee, Asset } from "../../types/portfolio";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -53,15 +53,20 @@ function Chip({ color, children }: { color: string; children: React.ReactNode })
 // ── Override Dropdown ─────────────────────────────────────────────────────────
 
 function OverrideDropdown({
+  leases,
+  lessees,
+  assets,
   onSelect,
   onClose,
   currency,
 }: {
+  leases:   Lease[];
+  lessees:  Lessee[];
+  assets:   Asset[];
   onSelect: (leaseId: string) => void;
   onClose:  () => void;
   currency: string;
 }) {
-  const { leases, lessees, assets } = usePortfolioData();
   const [search, setSearch] = useState("");
 
   const lesseeMap = useMemo(() => new Map(lessees.map(l => [l.id, l])), [lessees]);
@@ -148,12 +153,18 @@ function OverrideDropdown({
 
 function MatchRow({
   match,
+  leases,
+  lessees,
+  assets,
   currency,
   onAccept,
   onOverride,
   onMarkUnmatched,
 }: {
   match:           MatchResult;
+  leases:          Lease[];
+  lessees:         Lessee[];
+  assets:          Asset[];
   currency:        string;
   onAccept:        () => void;
   onOverride:      (leaseId: string) => void;
@@ -228,6 +239,9 @@ function MatchRow({
               </button>
               {overrideOpen && (
                 <OverrideDropdown
+                  leases={leases}
+                  lessees={lessees}
+                  assets={assets}
                   currency={currency}
                   onSelect={onOverride}
                   onClose={() => setOverrideOpen(false)}
@@ -251,6 +265,9 @@ function Section({
   borderColor,
   matches,
   defaultOpen,
+  leases,
+  lessees,
+  assets,
   currency,
   onAccept,
   onOverride,
@@ -260,6 +277,9 @@ function Section({
   borderColor:     string;
   matches:         MatchResult[];
   defaultOpen:     boolean;
+  leases:          Lease[];
+  lessees:         Lessee[];
+  assets:          Asset[];
   currency:        string;
   onAccept:        (txnId: string) => void;
   onOverride:      (txnId: string, leaseId: string) => void;
@@ -320,6 +340,9 @@ function Section({
             <MatchRow
               key={m.transactionId}
               match={m}
+              leases={leases}
+              lessees={lessees}
+              assets={assets}
               currency={currency}
               onAccept={() => onAccept(m.transactionId)}
               onOverride={leaseId => onOverride(m.transactionId, leaseId)}
@@ -346,6 +369,8 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
     runMatching, acceptAll, acceptOne, overrideMatch, markUnmatched, rerun,
   } = useReconciliation(statementId, transactions);
 
+  const { leases, lessees, assets } = usePortfolioData();
+
   const [rerunConfirm, setRerunConfirm] = useState(false);
 
   // Section partitions:
@@ -353,10 +378,12 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
   // Needs Review  = 0.4–0.79 AND unconfirmed
   // Unmatched     = < 0.4 (confirmed ones show tick badge in MatchRow)
   const autoMatches = result?.matches.filter(
-    m => m.confidence >= 0.8 || (m.confirmed && m.confidence >= 0.4 && m.matchType !== "unmatched"),
+    m => m.matchType !== "unmatched" &&
+         (m.confidence >= 0.8 || (m.confirmed && m.confidence >= 0.4)),
   ) ?? [];
   const reviewMatches = result?.matches.filter(
-    m => m.confidence >= 0.4 && m.confidence < 0.8 && !m.confirmed,
+    m => m.matchType !== "unmatched" &&
+         m.confidence >= 0.4 && m.confidence < 0.8 && !m.confirmed,
   ) ?? [];
   const unmatchedMatches = result?.matches.filter(
     m => m.confidence < 0.4 || m.matchType === "unmatched",
@@ -399,13 +426,17 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
           </p>
           <button
             onClick={() => runMatching(statementId, transactions)}
+            disabled={transactions.length === 0}
             style={{
-              background: "#3B82F6", border: "none", color: "#fff",
+              background: transactions.length === 0 ? "#334155" : "#3B82F6",
+              border: "none", color: "#fff",
               borderRadius: "8px", padding: "0.625rem 1.5rem",
-              fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
+              fontSize: "0.875rem", fontWeight: 500,
+              cursor: transactions.length === 0 ? "not-allowed" : "pointer",
+              opacity: transactions.length === 0 ? 0.5 : 1,
             }}
           >
-            Run Matching
+            {transactions.length === 0 ? "No transactions loaded" : "Run Matching"}
           </button>
         </div>
       </div>
@@ -488,6 +519,9 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
         borderColor="#4ADE80"
         matches={autoMatches}
         defaultOpen={true}
+        leases={leases}
+        lessees={lessees}
+        assets={assets}
         currency={currency}
         onAccept={acceptOne}
         onOverride={overrideMatch}
@@ -498,6 +532,9 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
         borderColor="#F59E0B"
         matches={reviewMatches}
         defaultOpen={true}
+        leases={leases}
+        lessees={lessees}
+        assets={assets}
         currency={currency}
         onAccept={acceptOne}
         onOverride={overrideMatch}
@@ -508,6 +545,9 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
         borderColor="#F87171"
         matches={unmatchedMatches}
         defaultOpen={true}
+        leases={leases}
+        lessees={lessees}
+        assets={assets}
         currency={currency}
         onAccept={acceptOne}
         onOverride={overrideMatch}
