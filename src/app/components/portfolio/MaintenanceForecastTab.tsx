@@ -9,7 +9,7 @@ import {
   type MRAdeqFlag,
   type ComponentName,
 } from "../../data/maintenanceHeuristics";
-import { sdmrData, type MRComponent } from "./SDMRTab";
+import { sdmrData, type LeaseSDMR, type MRComponent } from "./SDMRTab";
 
 // ─── Lease context table (mirrors Portfolio.tsx leases[]) ─────────────────────
 const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
@@ -61,18 +61,17 @@ interface ComponentProjection {
   distressedEOLShortfall: number; // conservative: lessee stops paying today
 }
 
-function buildProjections(
-  msn: string,
+export interface UtilOverride {
+  annualFH: number;
+  annualCy: number;
+  componentRemaining: Record<string, number>; // component name → remaining units
+}
+
+export function buildProjections(
+  lease: LeaseSDMR,
   aircraftType: string,
   leaseEndDate: Date,
-  stage: string,
 ): ComponentProjection[] {
-  const ctx = LEASE_CONTEXT[msn];
-  if (!ctx) return [];
-
-  const lease = sdmrData.find((l) => l.leaseId === ctx.leaseId);
-  if (!lease) return [];
-
   const heuristic = TYPE_HEURISTICS[aircraftType] ?? TYPE_HEURISTICS["A320neo"];
   const now = new Date(2026, 4, 1); // May 2026 (app reference date)
   const monthsToEOL = Math.max(0, monthsBetween(now, leaseEndDate));
@@ -129,16 +128,23 @@ interface Props {
   msn: string;
   aircraftType: string;
   vintage: number;
+  liveRecord?: LeaseSDMR;
 }
 
-export function MaintenanceForecastTab({ msn, aircraftType, vintage: _ }: Props) {
+export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveRecord }: Props) {
   const [showDistressed, setShowDistressed] = useState(false);
   const [expandedComp, setExpandedComp] = useState<string | null>(null);
 
-  const ctx = LEASE_CONTEXT[msn];
+  // Prefer live data; fall back to hardcoded LEASE_CONTEXT for demo mode
+  const ctx = liveRecord
+    ? { leaseId: liveRecord.leaseId, leaseEnd: liveRecord.leaseEnd ?? "", stage: String(liveRecord.stage ?? 1) }
+    : LEASE_CONTEXT[msn];
+
+  const leaseRecord: LeaseSDMR | undefined = liveRecord ?? (ctx ? sdmrData.find((l) => l.leaseId === ctx.leaseId) : undefined);
+
   const adeq = ctx ? MR_ADEQUACY[ctx.leaseId] : null;
 
-  if (!ctx) {
+  if (!ctx || !leaseRecord) {
     return (
       <div style={{ padding: "2rem", textAlign: "center", color: "#94A3B8", fontSize: "0.875rem" }}>
         No maintenance data available for MSN {msn}.
@@ -150,7 +156,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _ }: Props)
   const now = new Date(2026, 4, 1);
   const monthsToEOL = Math.max(0, monthsBetween(now, leaseEndDate));
 
-  const projections = buildProjections(msn, aircraftType, leaseEndDate, ctx.stage);
+  const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate);
 
   const totalCurrentBalance  = projections.reduce((s, p) => s + p.currentBalance, 0);
   const totalProjectedAtEOL  = projections.reduce((s, p) => s + p.projectedBalanceAtEOL, 0);
