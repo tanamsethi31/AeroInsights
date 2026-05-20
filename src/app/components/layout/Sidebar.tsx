@@ -359,9 +359,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       {/* Navigation */}
-      <SidebarContent>
+      <SidebarContent className="gap-0">
         {navGroups.map((group) => (
-          <SidebarGroup key={group.label}>
+          <SidebarGroup key={group.label} className="py-1">
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarMenu>
               {group.items.map((item) =>
@@ -385,15 +385,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
       {/* Footer / Controls */}
       <SidebarFooter style={{ borderTop: "1px solid #1e293b", paddingTop: "0.5rem" }}>
-        {/* Control card */}
-        <div style={{
-          margin: "0 0.25rem 0.5rem",
-          padding: "0.625rem",
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: "0.75rem",
-          overflow: "hidden",
-        }}>
           <SidebarMenu>
             {/* Switch Portfolio */}
             <SidebarMenuItem>
@@ -453,7 +444,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-        </div>
       </SidebarFooter>
 
       <SidebarRail />
