@@ -194,7 +194,19 @@ export function AgentPanel() {
     try {
       token = await getAccessTokenSilently();
     } catch {
-      // Non-fatal: proxy will still work on localhost without a token.
+      // In production the proxy requires a Bearer token — if we can't get one
+      // the session has expired.  Show a friendly message rather than letting
+      // the request proceed and hit a 401.
+      const isProduction = typeof window !== "undefined" && window.location.hostname !== "localhost";
+      if (isProduction) {
+        updateMessage(assistantMsgId, {
+          content: "Your session has expired. Please refresh the page and sign in again to use Aero Intelligence.",
+          isStreaming: false,
+        });
+        setIsThinking(false);
+        return;
+      }
+      // Local dev: allow the request through without a token (proxy not used).
     }
 
     try {
