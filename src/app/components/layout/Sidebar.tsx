@@ -149,6 +149,11 @@ const navGroups: NavGroup[] = [
           { title: "Transactions", url: "/reconciliation", icon: ArrowLeftRight  },
         ],
       },
+      {
+        title: "Cash Flow",
+        url:   "/cash-flow",
+        icon:  TrendingUp,
+      },
     ],
   },
   {
