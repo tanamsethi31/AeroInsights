@@ -267,10 +267,10 @@ export function toMRHealthSummary(leases: LeaseTableRow[]): MRHealthSummary {
   for (const l of leases) {
     if (l.mrFlag === "red") {
       redCount++;
-      atRisk.push({ leaseId: l.id, lessee: l.lessee, msn: l.msn, flag: "red", eolShortfall: l.eolShortfall!, eolShortfallPct: l.eolShortfallPct! });
+      atRisk.push({ leaseId: l.id, lessee: l.lessee, msn: l.msn, flag: "red", eolShortfall: l.eolShortfall ?? 0, eolShortfallPct: l.eolShortfallPct ?? 0 });
     } else if (l.mrFlag === "amber") {
       amberCount++;
-      atRisk.push({ leaseId: l.id, lessee: l.lessee, msn: l.msn, flag: "amber", eolShortfall: l.eolShortfall!, eolShortfallPct: l.eolShortfallPct! });
+      atRisk.push({ leaseId: l.id, lessee: l.lessee, msn: l.msn, flag: "amber", eolShortfall: l.eolShortfall ?? 0, eolShortfallPct: l.eolShortfallPct ?? 0 });
     } else if (l.mrFlag === "green") {
       greenCount++;
     }
