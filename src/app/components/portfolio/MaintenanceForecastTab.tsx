@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Info } from "lucide-react";
+import * as React from "react";
+import { Info, ChevronDown, ChevronUp } from "lucide-react";
 import {
   TYPE_HEURISTICS,
   MR_ADEQUACY,
@@ -10,6 +10,8 @@ import {
   type ComponentName,
 } from "../../data/maintenanceHeuristics";
 import { sdmrData, type LeaseSDMR, type MRComponent } from "./SDMRTab";
+import { useServicerReport } from "../../hooks/useServicerReport";
+import type { ServicerReport } from "../../hooks/useServicerReport";
 
 // ─── Lease context table (mirrors Portfolio.tsx leases[]) ─────────────────────
 const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
@@ -124,6 +126,32 @@ export function buildProjections(
   });
 }
 
+// ─── Draft form ───────────────────────────────────────────────────────────────
+
+interface DraftForm {
+  reportDate:         string;
+  annualFH:           string;
+  annualCy:           string;
+  showComponents:     boolean;
+  componentRemaining: Record<string, string>; // component name → string (empty = not overridden)
+}
+
+function emptyDraft(): DraftForm {
+  return { reportDate: "", annualFH: "", annualCy: "", showComponents: false, componentRemaining: {} };
+}
+
+function draftFromReport(r: ServicerReport): DraftForm {
+  return {
+    reportDate:         r.reportDate,
+    annualFH:           String(r.annualFH),
+    annualCy:           String(r.annualCy),
+    showComponents:     Object.keys(r.componentOverrides).length > 0,
+    componentRemaining: Object.fromEntries(
+      Object.entries(r.componentOverrides).map(([k, v]) => [k, String(v)])
+    ),
+  };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -134,8 +162,8 @@ interface Props {
 }
 
 export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveRecord }: Props) {
-  const [showDistressed, setShowDistressed] = useState(false);
-  const [expandedComp, setExpandedComp] = useState<string | null>(null);
+  const [showDistressed, setShowDistressed] = React.useState(false);
+  const [expandedComp, setExpandedComp] = React.useState<string | null>(null);
 
   // Prefer live data; fall back to hardcoded LEASE_CONTEXT for demo mode
   const ctx = liveRecord
@@ -145,6 +173,26 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const leaseRecord: LeaseSDMR | undefined = liveRecord ?? (ctx ? sdmrData.find((l) => l.leaseId === ctx.leaseId) : undefined);
 
   const adeq = ctx ? MR_ADEQUACY[ctx.leaseId] : null;
+
+  // ── Servicer report hook (must be above early return per Rules of Hooks) ──
+  const leaseId = liveRecord?.leaseId ?? ctx?.leaseId ?? null;
+  const { report, saving, saveReport, clearReport } = useServicerReport(leaseId);
+
+  const [panelOpen, setPanelOpen] = React.useState(false);
+  const [draft,     setDraft    ] = React.useState<DraftForm>(emptyDraft);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setDraft(report ? draftFromReport(report) : emptyDraft());
+  }, [report]);
+
+  const utilOverride = report
+    ? {
+        annualFH:           report.annualFH,
+        annualCy:           report.annualCy,
+        componentRemaining: report.componentOverrides,
+      }
+    : undefined;
 
   if (!ctx || !leaseRecord) {
     return (
@@ -158,7 +206,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const now = new Date(2026, 4, 1);
   const monthsToEOL = Math.max(0, monthsBetween(now, leaseEndDate));
 
-  const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate);
+  const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate, utilOverride);
 
   const totalCurrentBalance  = projections.reduce((s, p) => s + p.currentBalance, 0);
   const totalProjectedAtEOL  = projections.reduce((s, p) => s + p.projectedBalanceAtEOL, 0);
@@ -177,8 +225,178 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
     red:   "Shortfall >20% at EOL",
   };
 
+  async function handleSave() {
+    if (!leaseId) return;
+    setSaveError(null);
+
+    const fh = parseInt(draft.annualFH, 10);
+    const cy = parseInt(draft.annualCy, 10);
+    if (!draft.reportDate) { setSaveError("Report date is required."); return; }
+    if (isNaN(fh) || fh < 1 || fh > 8760) { setSaveError("Annual FH must be between 1 and 8760."); return; }
+    if (isNaN(cy) || cy < 1 || cy > 8760) { setSaveError("Annual cycles must be between 1 and 8760."); return; }
+
+    // Build componentOverrides — omit empty fields
+    const componentOverrides: Record<string, number> = {};
+    for (const [comp, val] of Object.entries(draft.componentRemaining)) {
+      if (val === "") continue;
+      const n = parseInt(val, 10);
+      if (!isNaN(n) && n >= 0) componentOverrides[comp] = n;
+    }
+
+    try {
+      await saveReport({
+        leaseId,
+        msn,
+        reportDate:         draft.reportDate,
+        annualFH:           fh,
+        annualCy:           cy,
+        componentOverrides,
+      });
+      setPanelOpen(false);
+    } catch {
+      setSaveError("Failed to save. Please try again.");
+    }
+  }
+
   return (
     <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+      {/* ── Servicer Report Panel ─────────────────────────────────────────── */}
+      <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "0.5rem", overflow: "hidden" }}>
+
+        {/* Collapsed banner — always visible */}
+        <div
+          onClick={() => { setPanelOpen(o => !o); setSaveError(null); }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 0.875rem", cursor: "pointer", userSelect: "none" } as React.CSSProperties}
+        >
+          <span style={{ fontSize: "0.75rem", color: "#475569" }}>
+            {report
+              ? <>
+                  <span style={{ background: "#002147", color: "#fff", fontSize: "0.625rem", fontWeight: 700, borderRadius: "9999px", padding: "1px 6px", marginRight: "0.5rem" }}>LIVE</span>
+                  Servicer report · {new Date(report.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {report.annualFH.toLocaleString()} FH/yr · {report.annualCy.toLocaleString()} cy/yr
+                </>
+              : <span style={{ color: "#94A3B8" }}>Heuristic utilisation · {aircraftType} fleet average · <span style={{ color: "#002147", fontWeight: 600 }}>+ Add servicer data</span></span>
+            }
+          </span>
+          {panelOpen ? <ChevronUp size={14} color="#94A3B8" /> : <ChevronDown size={14} color="#94A3B8" />}
+        </div>
+
+        {/* Expanded form */}
+        {panelOpen && (
+          <div style={{ padding: "0.875rem", borderTop: "1px solid #E2E8F0", display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+
+            {/* Row 1: Report date */}
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
+                Report date
+                <input
+                  type="date"
+                  value={draft.reportDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setDraft(d => ({ ...d, reportDate: e.target.value }))}
+                  style={{ padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                />
+              </label>
+            </div>
+
+            {/* Row 2: Annual FH + cycles */}
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
+                Annual FH
+                <input
+                  type="number"
+                  min={1}
+                  max={8760}
+                  value={draft.annualFH}
+                  placeholder="e.g. 3200"
+                  onChange={e => setDraft(d => ({ ...d, annualFH: e.target.value }))}
+                  style={{ width: "120px", padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
+                Annual cycles
+                <input
+                  type="number"
+                  min={1}
+                  max={8760}
+                  value={draft.annualCy}
+                  placeholder="e.g. 2100"
+                  onChange={e => setDraft(d => ({ ...d, annualCy: e.target.value }))}
+                  style={{ width: "120px", padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                />
+              </label>
+            </div>
+
+            {/* Row 3: Per-component remaining units (optional, collapsible) */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setDraft(d => ({ ...d, showComponents: !d.showComponents }))}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.75rem", color: "#475569", display: "flex", alignItems: "center", gap: "0.25rem" }}
+              >
+                {draft.showComponents ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                Component remaining units <span style={{ color: "#94A3B8" }}>(optional)</span>
+              </button>
+
+              {draft.showComponents && (
+                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "0.625rem" }}>
+                  {leaseRecord.mrComponents.map(comp => (
+                    <label key={comp.component} style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
+                      {comp.component} <span style={{ fontWeight: 400, color: "#94A3B8" }}>({comp.rateBasis === "$/FH" ? "FH" : "cycles"})</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={comp.fullIntervalUnits}
+                        value={draft.componentRemaining[comp.component] ?? ""}
+                        placeholder={String(comp.remainingUnits)}
+                        onChange={e => setDraft(d => ({
+                          ...d,
+                          componentRemaining: { ...d.componentRemaining, [comp.component]: e.target.value },
+                        }))}
+                        style={{ width: "110px", padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Save error */}
+            {saveError && (
+              <div style={{ fontSize: "0.75rem", color: "#B91C1C" }}>{saveError}</div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saving}
+                style={{ padding: "0.375rem 0.875rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+              {report && (
+                <button
+                  type="button"
+                  onClick={() => { void clearReport(); setPanelOpen(false); }}
+                  disabled={saving}
+                  style={{ padding: "0.375rem 0.875rem", background: "transparent", color: "#B91C1C", border: "1px solid #FCA5A5", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+                >
+                  Reset to heuristic
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => { setPanelOpen(false); setSaveError(null); setDraft(report ? draftFromReport(report) : emptyDraft()); }}
+                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#94A3B8" }}
+              >
+                &#x2715; Close
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Top: Adequacy flag + EOL summary ─────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "1rem", alignItems: "start" }}>
@@ -268,8 +486,15 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
             <thead>
               <tr style={{ background: "#F8FAFC" }}>
-                {["Component", "Current MR Balance", "Monthly Accrual", "Next Event", "Proj. Balance @ Event", "Event Cost (Heuristic)", "Shortfall / Surplus @ Event", "Proj. Balance @ EOL", "EOL Obligation", "EOL Position"].map((h) => (
-                  <th key={h} style={{ padding: "0.5rem 0.875rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+                {(["Component", "Current MR Balance", "Monthly Accrual", "Next Event", "Proj. Balance @ Event", "Event Cost (Heuristic)", "Shortfall / Surplus @ Event", "Proj. Balance @ EOL", "EOL Obligation", "EOL Position"] as const).map((h) => (
+                  <th key={h} style={{ padding: "0.5rem 0.875rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                    {h === "Monthly Accrual" && report
+                      ? <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                          Monthly Accrual
+                          <span style={{ background: "#002147", color: "#fff", fontSize: "0.5625rem", fontWeight: 700, borderRadius: "9999px", padding: "1px 5px" }}>LIVE</span>
+                        </span>
+                      : h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -380,10 +605,13 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
       {/* ── Methodology footnote ─────────────────────────────────────── */}
       <div style={{ fontSize: "0.6875rem", color: "#94A3B8", borderTop: "1px solid #F1F5F9", paddingTop: "0.75rem", lineHeight: 1.7 }}>
         <strong>Assumptions:</strong> Heuristic event costs sourced from IATA MCTF & IAWG published cost ranges.
-        Base projection assumes lessee continues MR payments at contracted rate for {monthsToEOL} months until EOL.
+        {report
+          ? <> Utilisation sourced from servicer report dated {new Date(report.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · Annual FH: {report.annualFH.toLocaleString()} · Annual cycles: {report.annualCy.toLocaleString()}.</>
+          : <> Base utilisation: {aircraftType} fleet average ({TYPE_HEURISTICS[aircraftType]?.utilizationFH?.toLocaleString() ?? "N/A"} FH/yr, {TYPE_HEURISTICS[aircraftType]?.utilizationCy?.toLocaleString() ?? "N/A"} cy/yr).</>
+        }
+        {" "}Base projection assumes lessee continues MR payments at contracted rate for {monthsToEOL} months until EOL.
         Conservative projection assumes MR payments cease immediately (applicable to Stage 3 / distress review).
         EOL obligation = cost to restore aircraft to full-life condition at redelivery.
-        Cirium MRO Forecast API adapter planned for Phase 3 to replace heuristics.
       </div>
     </div>
   );
