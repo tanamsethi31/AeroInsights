@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import { GettingStartedPanel } from "../components/dashboard/GettingStartedPanel";
 import { KpiCard } from "../components/ui/KpiCard";
+import { MRHealthCard } from "../components/portfolio/MRHealthCard";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -85,7 +86,7 @@ function DashboardSection({
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { DASHBOARD_SIGNAL_TILES, type SignalSeverity } from "../data/intelligenceData";
 import { usePortfolioData } from "../hooks/usePortfolioData";
-import { toDashboardKPIs } from "../lib/portfolioAdapters";
+import { toDashboardKPIs, toLeaseTableRows, toMRHealthSummary } from "../lib/portfolioAdapters";
 import { toKeyDateRows } from "../lib/keyDatesAdapters";
 import { CalendarClock } from "lucide-react";
 
@@ -211,6 +212,8 @@ export default function Dashboard() {
 
   const { assets, lessees: lesseeData, leases: leaseData, provisions } = usePortfolioData();
   const kpis = toDashboardKPIs(assets, lesseeData, provisions);
+  const leases      = toLeaseTableRows(leaseData, assets, lesseeData);
+  const mrSummary   = toMRHealthSummary(leases);
   const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
   const urgentLeases = keyDateRows
     .filter(r => r.urgency === "critical" || r.urgency === "watch" || r.urgency === "expired")
@@ -464,6 +467,11 @@ export default function Dashboard() {
           subtitle="Last run: 09:14 today"
           staggerIndex={3}
           onClick={() => navigate("/scenarios")}
+        />
+        <MRHealthCard
+          summary={mrSummary}
+          staggerIndex={4}
+          onClick={() => navigate("/portfolio", { state: { tab: "Leases" } })}
         />
       </div>
 

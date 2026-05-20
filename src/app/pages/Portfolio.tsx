@@ -7,6 +7,7 @@ import {
   toAircraftTableRows,
   toLesseeTableRows,
   toPortfolioKPIs,
+  toMRHealthSummary,
   type LeaseTableRow,
   type LesseeTableRow as LesseeRow,
   type AircraftTableRow,
@@ -37,6 +38,7 @@ import { AddAircraftModal } from "../components/portfolios/AddAircraftModal";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { PillTabs } from "../components/ui/PillTabs";
 import { SDMRTab, buildLiveSDMRData, type LeaseSDMR } from "../components/portfolio/SDMRTab";
+import { MRRiskBanner } from "../components/portfolio/MRRiskBanner";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
 import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForecastTab";
 import { PerformanceVsPlan } from "../components/portfolio/PerformanceVsPlan";
@@ -94,6 +96,7 @@ export default function Portfolio() {
   const [editingLeaseId, setEditingLeaseId] = useState<string | null>(null);
   const editingLease = editingLeaseId ? leaseData.find(l => l.id === editingLeaseId) ?? null : null;
   const leases = toLeaseTableRows(leaseData, assets, lesseeData);
+  const mrSummary = toMRHealthSummary(leases);
   const aircraft = toAircraftTableRows(assets, leaseData, lesseeData);
   const lessees = toLesseeTableRows(lesseeData, leaseData, provisions);
   const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
@@ -119,12 +122,13 @@ export default function Portfolio() {
   }, [liveSDMRData, assets, leaseData]);
 
   const leaseAccessors = {
-    lessee:   (l: LeaseTableRow) => l.lessee,
-    aircraft: (l: LeaseTableRow) => l.aircraft,
-    start:    (l: LeaseTableRow) => l.start,
-    end:      (l: LeaseTableRow) => l.end,
-    rent:     (l: LeaseTableRow) => parseInt(l.rentUSD.replace(/,/g, "")) || 0,
-    stage:    (l: LeaseTableRow) => parseInt(l.stage) || 0,
+    lessee:       (l: LeaseTableRow) => l.lessee,
+    aircraft:     (l: LeaseTableRow) => l.aircraft,
+    start:        (l: LeaseTableRow) => l.start,
+    end:          (l: LeaseTableRow) => l.end,
+    rent:         (l: LeaseTableRow) => parseInt(l.rentUSD.replace(/,/g, "")) || 0,
+    stage:        (l: LeaseTableRow) => parseInt(l.stage) || 0,
+    eolShortfall: (l: LeaseTableRow) => l.eolShortfall ?? -Infinity,
   };
 
   const lesseeAccessors = {
@@ -406,7 +410,9 @@ export default function Portfolio() {
 
       {/* Leases Tab */}
       {activeTab === "Leases" && (
-        <Card
+        <>
+          <MRRiskBanner summary={mrSummary} />
+          <Card
           title="Lease Register"
           headerRight={
             <div className="flex items-center gap-2">
@@ -452,6 +458,7 @@ export default function Portfolio() {
                     { label: "Monthly Rent (USD)", key: "rent" },
                     { label: "Stage", key: "stage" },
                     { label: "Status", key: null },
+                    { label: "EOL Shortfall", key: "eolShortfall" },
                   ] as { label: string; key: string | null }[]).map(({ label, key }) => (
                     <th
                       key={label}
@@ -491,12 +498,38 @@ export default function Portfolio() {
                     <td style={{ padding: "0.75rem 1rem" }}>
                       <StatusPill stage="green" label={lease.status} />
                     </td>
+                    <td style={{ padding: "0.75rem 1rem", whiteSpace: "nowrap" }}>
+                      {lease.eolShortfall === null ? (
+                        <span style={{ color: "#CBD5E1" }}>—</span>
+                      ) : lease.eolShortfall <= 0 ? (
+                        <span style={{ color: "#15803D", fontWeight: 500 }}>✓</span>
+                      ) : (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+                          <span style={{ color: lease.mrFlag === "red" ? "#B91C1C" : "#B45309", fontWeight: 600 }}>
+                            -{`$${(lease.eolShortfall / 1_000_000).toFixed(1)}m`}
+                          </span>
+                          <span style={{
+                            background: lease.mrFlag === "red" ? "rgba(185,28,28,0.08)" : "rgba(180,83,9,0.08)",
+                            color: lease.mrFlag === "red" ? "#B91C1C" : "#B45309",
+                            borderRadius: "0.25rem",
+                            padding: "0.125rem 0.375rem",
+                            fontSize: "0.6875rem",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}>
+                            {lease.mrFlag}
+                          </span>
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </Card>
+        </>
       )}
 
       {/* Aircraft Tab */}
