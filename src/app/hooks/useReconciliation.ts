@@ -167,8 +167,32 @@ export function useReconciliation(
       .eq("confirmed", false);
 
     if (error) console.error("[useReconciliation] acceptAll error:", error);
+
+    // Bulk-insert cash events for all newly confirmed high-confidence matches
+    if (orgId && result) {
+      const toInsert = result.matches
+        .filter(m => m.confidence >= 0.8 && !m.confirmed && m.transaction)
+        .map(m => ({
+          org_id:         orgId,
+          lease_id:       m.bestMatch?.lease.id ?? null,
+          event_type:     "rent",
+          amount:         m.transaction.amount,
+          currency:       m.transaction.currency,
+          event_date:     m.transaction.valueDate,
+          is_forecast:    false,
+          source:         "recon",
+          transaction_id: m.transactionId,
+          notes:          null,
+        }));
+      if (toInsert.length > 0) {
+        supabase.from("cash_events").insert(toInsert).then(({ error: ceErr }) => {
+          if (ceErr) console.error("[useReconciliation] acceptAll cash_events error:", ceErr);
+        });
+      }
+    }
+
     setSaving(false);
-  }, []);
+  }, [orgId, result]);
 
   const acceptOne = useCallback(async (transactionId: string) => {
     setSaving(true);
@@ -180,8 +204,30 @@ export function useReconciliation(
       .eq("transaction_id", transactionId);
 
     if (error) console.error("[useReconciliation] acceptOne error:", error);
+
+    // Auto-create cash event for confirmed rent receipt
+    if (orgId) {
+      const match = result?.matches.find(m => m.transactionId === transactionId);
+      if (match?.transaction) {
+        supabase.from("cash_events").insert({
+          org_id:         orgId,
+          lease_id:       match.bestMatch?.lease.id ?? null,
+          event_type:     "rent",
+          amount:         match.transaction.amount,
+          currency:       match.transaction.currency,
+          event_date:     match.transaction.valueDate,
+          is_forecast:    false,
+          source:         "recon",
+          transaction_id: match.transactionId,
+          notes:          null,
+        }).then(({ error: ceErr }) => {
+          if (ceErr) console.error("[useReconciliation] cash_events insert error:", ceErr);
+        });
+      }
+    }
+
     setSaving(false);
-  }, []); // patchMatch uses functional setResult — safe with empty deps
+  }, [orgId, result]);
 
   const overrideMatch = useCallback(async (transactionId: string, leaseId: string) => {
     setSaving(true);
