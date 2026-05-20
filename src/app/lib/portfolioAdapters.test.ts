@@ -8,9 +8,30 @@ import {
   toEclTableRows,
   toConcentrationData,
   toPortfolioKPIs,
+  toMRHealthSummary,
   type PortfolioKPIs,
+  type LeaseTableRow,
 } from "./portfolioAdapters";
+import type { Asset, Lessee, Lease } from "../types/portfolio";
 import { MOCK_ASSETS, MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS } from "../data/mockPortfolioData";
+
+function makeLeaseRow(overrides: Partial<LeaseTableRow> = {}): LeaseTableRow {
+  return {
+    id: "test-001",
+    lessee: "Test Lessee",
+    aircraft: "A320neo",
+    msn: "TEST-001",
+    start: "2019-01-01",
+    end: "2025-01-01",
+    rentUSD: "100,000",
+    stage: "1",
+    status: "Active",
+    mrFlag: null,
+    eolShortfall: null,
+    eolShortfallPct: null,
+    ...overrides,
+  };
+}
 
 describe("indexById", () => {
   it("builds a Map keyed by id", () => {
@@ -197,5 +218,90 @@ describe("toConcentrationData", () => {
   it("peakConcentrations.Lessee has Singapore Airlines as top name", () => {
     expect(result.peakConcentrations.Lessee.name).toBe("Singapore Airlines");
     expect(result.peakConcentrations.Lessee.pct).toBeCloseTo(18.6, 0);
+  });
+});
+
+describe("toLeaseTableRows — MR adequacy fields", () => {
+  const fakeAsset: Asset = {
+    id: "a1", org_id: "test", upload_id: null,
+    registration: "REG1", msn: "TEST-001", aircraft_type: "A320neo",
+    manufacturer: null, vintage: 2019, current_operator: null,
+    created_at: "2024-01-01T00:00:00Z",
+  };
+  const fakeLessee: Lessee = {
+    id: "l1", org_id: "test", name: "Test Lessee", iata_code: null,
+    country: "UAE", credit_rating: null, pd_estimate: null,
+    watchlist_status: null, created_at: "2024-01-01T00:00:00Z",
+  };
+
+  it("populates mrFlag and eolShortfall when lease id matches MR_ADEQUACY entry", () => {
+    // LSE-2019-001 is "amber" in MR_ADEQUACY with eolShortfall 3_130_000, eolShortfallPct 14.1
+    const fakeLease: Lease = {
+      id: "LSE-2019-001", org_id: "test", asset_id: "a1", lessee_id: "l1",
+      start_date: "2019-01-01", end_date: "2025-01-01", monthly_rental: 100000,
+      currency: "USD", stage: 1, created_at: "2024-01-01T00:00:00Z",
+    };
+    const rows = toLeaseTableRows([fakeLease], [fakeAsset], [fakeLessee]);
+    expect(rows[0].mrFlag).toBe("amber");
+    expect(rows[0].eolShortfall).toBe(3_130_000);
+    expect(rows[0].eolShortfallPct).toBe(14.1);
+  });
+
+  it("sets MR fields to null for lease id not in MR_ADEQUACY", () => {
+    // All MOCK_LEASES use "mock-ls*" ids which are not in MR_ADEQUACY
+    const rows = toLeaseTableRows(MOCK_LEASES, MOCK_ASSETS, MOCK_LESSEES);
+    expect(rows.every(r => r.mrFlag === null)).toBe(true);
+    expect(rows.every(r => r.eolShortfall === null)).toBe(true);
+  });
+});
+
+describe("toMRHealthSummary", () => {
+  it("counts red, amber, green flags correctly, ignores null mrFlag", () => {
+    const rows = [
+      makeLeaseRow({ mrFlag: "red",   eolShortfall: 5_000_000, eolShortfallPct: 30 }),
+      makeLeaseRow({ mrFlag: "amber", eolShortfall: 2_000_000, eolShortfallPct: 10 }),
+      makeLeaseRow({ mrFlag: "green", eolShortfall: -3_000_000, eolShortfallPct: -15 }),
+      makeLeaseRow({ mrFlag: null }),
+    ];
+    const summary = toMRHealthSummary(rows);
+    expect(summary.redCount).toBe(1);
+    expect(summary.amberCount).toBe(1);
+    expect(summary.greenCount).toBe(1);
+    expect(summary.worstOffenders).toHaveLength(2);
+  });
+
+  it("sorts worstOffenders: red before amber, then by eolShortfall descending", () => {
+    const rows = [
+      makeLeaseRow({ id: "A", lessee: "AlphaAir", msn: "A01", mrFlag: "amber", eolShortfall: 3_000_000, eolShortfallPct: 15 }),
+      makeLeaseRow({ id: "B", lessee: "BetaAir",  msn: "B01", mrFlag: "red",   eolShortfall: 1_000_000, eolShortfallPct: 5  }),
+      makeLeaseRow({ id: "C", lessee: "GammaAir", msn: "C01", mrFlag: "amber", eolShortfall: 2_000_000, eolShortfallPct: 10 }),
+    ];
+    const summary = toMRHealthSummary(rows);
+    expect(summary.worstOffenders[0].leaseId).toBe("B"); // red first
+    expect(summary.worstOffenders[1].leaseId).toBe("A"); // amber, higher shortfall
+    expect(summary.worstOffenders[2].leaseId).toBe("C"); // amber, lower shortfall
+  });
+
+  it("caps worstOffenders at 3 even when 4 at-risk leases exist", () => {
+    const rows = [
+      makeLeaseRow({ id: "1", mrFlag: "red",   eolShortfall: 5_000_000, eolShortfallPct: 30 }),
+      makeLeaseRow({ id: "2", mrFlag: "red",   eolShortfall: 4_000_000, eolShortfallPct: 25 }),
+      makeLeaseRow({ id: "3", mrFlag: "amber", eolShortfall: 3_000_000, eolShortfallPct: 15 }),
+      makeLeaseRow({ id: "4", mrFlag: "amber", eolShortfall: 2_000_000, eolShortfallPct: 10 }),
+    ];
+    const summary = toMRHealthSummary(rows);
+    expect(summary.worstOffenders).toHaveLength(3);
+  });
+
+  it("returns empty worstOffenders when all leases are green or null", () => {
+    const rows = [
+      makeLeaseRow({ mrFlag: "green", eolShortfall: -1_000_000, eolShortfallPct: -5 }),
+      makeLeaseRow({ mrFlag: null }),
+    ];
+    const summary = toMRHealthSummary(rows);
+    expect(summary.worstOffenders).toHaveLength(0);
+    expect(summary.redCount).toBe(0);
+    expect(summary.amberCount).toBe(0);
+    expect(summary.greenCount).toBe(1);
   });
 });

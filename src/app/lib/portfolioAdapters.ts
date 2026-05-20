@@ -3,6 +3,7 @@
 
 import type { Asset, Lessee, Lease, Provision } from "../types/portfolio";
 import type { LeaseRow } from "../components/risk-ecl/ECLDrilldownPanel";
+import { MR_ADEQUACY, type MRAdeqFlag } from "../data/maintenanceHeuristics";
 
 // ─── Concentration adapter ────────────────────────────────────────────────────
 
@@ -211,6 +212,10 @@ export interface LeaseTableRow {
   rentUSD: string;
   stage: string;
   status: string;
+  // MR adequacy — null when no MR_ADEQUACY entry exists for this lease id
+  mrFlag: MRAdeqFlag | null;
+  eolShortfall: number | null;      // positive = shortfall, negative = surplus
+  eolShortfallPct: number | null;   // shortfall as % of EOL redelivery cost
 }
 
 export function toLeaseTableRows(leases: Lease[], assets: Asset[], lessees: Lessee[]): LeaseTableRow[] {
@@ -219,6 +224,7 @@ export function toLeaseTableRows(leases: Lease[], assets: Asset[], lessees: Less
   return leases.map((l) => {
     const asset = assetMap.get(l.asset_id);
     const lessee = lesseeMap.get(l.lessee_id);
+    const mrData = MR_ADEQUACY[l.id] ?? null;
     return {
       id: l.id,
       lessee: lessee?.name ?? "—",
@@ -229,8 +235,54 @@ export function toLeaseTableRows(leases: Lease[], assets: Asset[], lessees: Less
       rentUSD: l.monthly_rental != null ? fmtWithCommas(l.monthly_rental) : "—",
       stage: l.stage != null ? String(l.stage) : "—",
       status: "Active",
+      mrFlag: mrData ? mrData.flag : null,
+      eolShortfall: mrData ? mrData.eolShortfall : null,
+      eolShortfallPct: mrData ? mrData.eolShortfallPct : null,
     };
   });
+}
+
+// ─── MR Health Summary ────────────────────────────────────────────────────────
+
+export interface MRHealthSummary {
+  redCount: number;
+  amberCount: number;
+  greenCount: number;
+  worstOffenders: Array<{
+    leaseId: string;
+    lessee: string;
+    msn: string;
+    flag: MRAdeqFlag;
+    eolShortfall: number;
+    eolShortfallPct: number;
+  }>;
+}
+
+export function toMRHealthSummary(leases: LeaseTableRow[]): MRHealthSummary {
+  let redCount = 0;
+  let amberCount = 0;
+  let greenCount = 0;
+  const atRisk: MRHealthSummary["worstOffenders"] = [];
+
+  for (const l of leases) {
+    if (l.mrFlag === "red") {
+      redCount++;
+      atRisk.push({ leaseId: l.id, lessee: l.lessee, msn: l.msn, flag: "red", eolShortfall: l.eolShortfall!, eolShortfallPct: l.eolShortfallPct! });
+    } else if (l.mrFlag === "amber") {
+      amberCount++;
+      atRisk.push({ leaseId: l.id, lessee: l.lessee, msn: l.msn, flag: "amber", eolShortfall: l.eolShortfall!, eolShortfallPct: l.eolShortfallPct! });
+    } else if (l.mrFlag === "green") {
+      greenCount++;
+    }
+  }
+
+  // Sort: red before amber, then by eolShortfall descending. Cap at 3.
+  atRisk.sort((a, b) => {
+    if (a.flag !== b.flag) return a.flag === "red" ? -1 : 1;
+    return b.eolShortfall - a.eolShortfall;
+  });
+
+  return { redCount, amberCount, greenCount, worstOffenders: atRisk.slice(0, 3) };
 }
 
 // ─── Portfolio.tsx — Aircraft tab ─────────────────────────────────────────────
