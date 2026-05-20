@@ -508,18 +508,20 @@ export default function Portfolio() {
                           <span style={{ color: lease.mrFlag === "red" ? "#B91C1C" : "#B45309", fontWeight: 600 }}>
                             -{`$${(lease.eolShortfall / 1_000_000).toFixed(1)}m`}
                           </span>
-                          <span style={{
-                            background: lease.mrFlag === "red" ? "rgba(185,28,28,0.08)" : "rgba(180,83,9,0.08)",
-                            color: lease.mrFlag === "red" ? "#B91C1C" : "#B45309",
-                            borderRadius: "0.25rem",
-                            padding: "0.125rem 0.375rem",
-                            fontSize: "0.6875rem",
-                            fontWeight: 600,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.04em",
-                          }}>
-                            {lease.mrFlag}
-                          </span>
+                          {lease.mrFlag && (
+                            <span style={{
+                              background: lease.mrFlag === "red" ? "rgba(185,28,28,0.08)" : "rgba(180,83,9,0.08)",
+                              color: lease.mrFlag === "red" ? "#B91C1C" : "#B45309",
+                              borderRadius: "0.25rem",
+                              padding: "0.125rem 0.375rem",
+                              fontSize: "0.6875rem",
+                              fontWeight: 600,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em",
+                            }}>
+                              {lease.mrFlag}
+                            </span>
+                          )}
                         </span>
                       )}
                     </td>
