@@ -743,7 +743,7 @@ function LesseeRadarView({ lesseeIdByName, liveExposure }: {
           overflow: "hidden",
         }}
       >
-        <div style={{ overflowX: "auto" }}>
+        <div className="dark-scrollbar" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", minWidth: "900px", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
           <thead>
             <tr style={{ background: T.bg }}>

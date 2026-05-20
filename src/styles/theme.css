@@ -284,3 +284,30 @@
   scrollbar-width: thin;
   scrollbar-color: #1e293b transparent;
 }
+
+/* ─── Dark scrollbar — Dashboard & Intelligence scrollable areas ──────────── */
+
+.dark-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+  transition: background 200ms ease;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Firefox */
+.dark-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b transparent;
+}

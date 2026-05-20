@@ -637,14 +637,30 @@ export default function Dashboard() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.32, delay: 0.38 + tileIdx * 0.055, ease: [0.23, 1, 0.32, 1] }}
-                whileHover={{ y: -2, boxShadow: "0 6px 16px rgba(0,0,0,0.10)" }}
                 style={{
                   background: sevBg,
                   border: `1px solid ${sevBorder}`,
                   borderRadius: "0.625rem",
                   overflow: "hidden",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  transition: "box-shadow 160ms ease-out",
+                  // CSS transitions for hover — GPU-accelerated, snappy
+                  transition: "transform 130ms cubic-bezier(0.23,1,0.32,1), box-shadow 130ms cubic-bezier(0.23,1,0.32,1)",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLDivElement;
+                  el.style.transform = "translateY(-3px)";
+                  el.style.boxShadow = "0 6px 16px rgba(0,0,0,0.10)";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLDivElement;
+                  el.style.transform = "translateY(0)";
+                  el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+                }}
+                onMouseDown={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.transform = "scale(0.97)";
+                }}
+                onMouseUp={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
                 }}
               >
                 {/* Clickable metric area → navigate */}
@@ -842,7 +858,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right — Headlines feed */}
-          <div style={{ overflow: "auto", maxHeight: "520px" }}>
+          <div className="dark-scrollbar" style={{ overflow: "auto", maxHeight: "520px" }}>
             {/* Section header */}
             <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
