@@ -80,9 +80,9 @@ export function useServicerReport(leaseId: string | null): UseServicerReportRetu
     if (!orgId || !leaseId) return;
     setSaving(true);
 
-    // Optimistic update
-    const snapshot = report;
-    setReport({ ...data, id: "temp" });
+    // Optimistic update — capture snapshot via functional update
+    let snapshot: ServicerReport | null = null;
+    setReport(prev => { snapshot = prev; return { ...data, id: "temp" }; });
 
     const { data: row, error } = await supabase
       .from("servicer_reports")
@@ -104,19 +104,20 @@ export function useServicerReport(leaseId: string | null): UseServicerReportRetu
 
     if (error) {
       console.error("[useServicerReport] saveReport error:", error);
-      setReport(snapshot); // rollback
+      setReport(snapshot as ServicerReport | null); // rollback
+      throw error;
     } else if (row) {
       setReport(mapRow(row as Record<string, unknown>));
     }
     setSaving(false);
-  }, [orgId, leaseId, report]);
+  }, [orgId, leaseId]);
 
   const clearReport = useCallback(async () => {
     if (!orgId || !leaseId) return;
     setSaving(true);
 
-    const snapshot = report;
-    setReport(null); // optimistic
+    let snapshot: ServicerReport | null = null;
+    setReport(prev => { snapshot = prev; return null; });
 
     const { error } = await supabase
       .from("servicer_reports")
@@ -126,10 +127,11 @@ export function useServicerReport(leaseId: string | null): UseServicerReportRetu
 
     if (error) {
       console.error("[useServicerReport] clearReport error:", error);
-      setReport(snapshot); // rollback
+      setReport(snapshot as ServicerReport | null); // rollback
+      throw error;
     }
     setSaving(false);
-  }, [orgId, leaseId, report]);
+  }, [orgId, leaseId]);
 
   return { report, loading, saving, saveReport, clearReport };
 }
