@@ -246,7 +246,7 @@ function NavGroupItem({ item }: { item: NavItem & { items: SubItem[] } }) {
               <SidebarMenuSubItem key={sub.title}>
                 <SidebarMenuSubButton
                   onClick={() => navigate(sub.url)}
-                  className="cursor-pointer"
+                  className="cursor-pointer h-6 text-xs [&>svg]:size-3"
                 >
                   <sub.icon />
                   <span>{sub.title}</span>
