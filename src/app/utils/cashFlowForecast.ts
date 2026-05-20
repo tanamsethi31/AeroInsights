@@ -50,6 +50,7 @@ function sdCashRefundable(sdmr: LeaseSDMR): number {
 function eolCompensation(sdmr: LeaseSDMR): number {
   // Half-life standard: lessee owes compensation if remaining units < half interval
   return sdmr.mrComponents.reduce((sum, comp) => {
+    if (!comp.fullIntervalUnits || !comp.rateAmount) return sum;
     const halfLife = comp.fullIntervalUnits / 2;
     const shortfall = Math.max(0, halfLife - comp.remainingUnits);
     return sum + shortfall * comp.rateAmount;
@@ -72,10 +73,10 @@ export function forecastCashFlows(
   horizonMonths: number,
 ): CashEvent[] {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
 
   const horizon = new Date(today);
-  horizon.setMonth(horizon.getMonth() + horizonMonths);
+  horizon.setUTCMonth(horizon.getUTCMonth() + horizonMonths);
 
   const sdmrMap = new Map(sdmrData.map(s => [s.leaseId, s]));
   const events: CashEvent[] = [];
@@ -91,12 +92,10 @@ export function forecastCashFlows(
     // ── Rent events (one per calendar month from today → min(endDate, horizon)) ──
 
     if (lease.monthly_rental && lease.monthly_rental > 0) {
-      // Start from first day of next month
-      const cursor = new Date(today.getFullYear(), today.getMonth(), 1);
-      cursor.setMonth(cursor.getMonth() + 1);
+      // Start from first day of next month (UTC)
+      const cursor = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1));
 
-      let count = 0;
-      while (count < horizonMonths && cursor <= endDate && cursor <= horizon) {
+      while (cursor <= endDate && cursor <= horizon) {
         const eventDate = cursor.toISOString().slice(0, 10);
         events.push({
           id:            `rule-${lease.id}-rent-${eventDate}`,
@@ -112,8 +111,7 @@ export function forecastCashFlows(
           notes:         null,
           createdAt:     "",
         });
-        cursor.setMonth(cursor.getMonth() + 1);
-        count++;
+        cursor.setUTCMonth(cursor.getUTCMonth() + 1);
       }
     }
 

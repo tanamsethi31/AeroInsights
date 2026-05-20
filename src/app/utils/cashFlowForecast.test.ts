@@ -9,7 +9,7 @@ import type { LeaseSDMR } from "../components/portfolio/SDMRTab";
 
 function addMonths(base: Date, n: number): string {
   const d = new Date(base);
-  d.setMonth(d.getMonth() + n);
+  d.setUTCMonth(d.getUTCMonth() + n);
   return d.toISOString().slice(0, 10);
 }
 
@@ -75,10 +75,17 @@ function makeSDMR(leaseId = "lease-1", overrides: Partial<LeaseSDMR> = {}): Leas
 
 describe("forecastCashFlows", () => {
   it("generates one rent event per remaining month for an active lease", () => {
-    const lease = makeLease({ end_date: addMonths(TODAY, 3) });
+    // Use a fixed end date 3 months from a stable reference to avoid month-rollover issues
+    const fixedStart = new Date();
+    fixedStart.setUTCHours(0, 0, 0, 0);
+    // Get 3 months out using UTC to match the engine's UTC arithmetic
+    const fixedEnd = new Date(fixedStart);
+    fixedEnd.setUTCMonth(fixedEnd.getUTCMonth() + 3);
+    const endDateStr = fixedEnd.toISOString().slice(0, 10);
+
+    const lease = makeLease({ end_date: endDateStr });
     const result = forecastCashFlows([lease], [], 24);
     const rent = result.filter(e => e.eventType === "rent" && e.leaseId === "lease-1");
-    // 3 full months ahead → 3 rent events
     expect(rent.length).toBe(3);
     rent.forEach(e => {
       expect(e.amount).toBe(500_000);
@@ -114,6 +121,12 @@ describe("forecastCashFlows", () => {
     // No redelivery events — end_date is beyond 24-month horizon
     const draws = result.filter(e => e.eventType === "mr_draw");
     expect(draws.length).toBe(0);
+  });
+
+  it("generates no events for a lease that has already expired", () => {
+    const expiredLease = makeLease({ end_date: addMonths(TODAY, -1) });
+    const result = forecastCashFlows([expiredLease], [], 24);
+    expect(result.filter(e => e.leaseId === "lease-1").length).toBe(0);
   });
 });
 
