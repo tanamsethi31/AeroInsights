@@ -46,6 +46,12 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
 
+/** Parse a YYYY-MM-DD date string as local time (avoids UTC-offset day shift). */
+function parseDateLocal(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 // ─── Projection logic ─────────────────────────────────────────────────────────
 
 interface ComponentProjection {
@@ -273,7 +279,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
             {report
               ? <>
                   <span style={{ background: "#002147", color: "#fff", fontSize: "0.625rem", fontWeight: 700, borderRadius: "9999px", padding: "1px 6px", marginRight: "0.5rem" }}>LIVE</span>
-                  Servicer report · {new Date(report.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {report.annualFH.toLocaleString()} FH/yr · {report.annualCy.toLocaleString()} cy/yr
+                  Servicer report · {parseDateLocal(report.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {report.annualFH.toLocaleString()} FH/yr · {report.annualCy.toLocaleString()} cy/yr
                 </>
               : <span style={{ color: "#94A3B8" }}>Heuristic utilisation · {aircraftType} fleet average · <span style={{ color: "#002147", fontWeight: 600 }}>+ Add servicer data</span></span>
             }
@@ -606,7 +612,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
       <div style={{ fontSize: "0.6875rem", color: "#94A3B8", borderTop: "1px solid #F1F5F9", paddingTop: "0.75rem", lineHeight: 1.7 }}>
         <strong>Assumptions:</strong> Heuristic event costs sourced from IATA MCTF & IAWG published cost ranges.
         {report
-          ? <> Utilisation sourced from servicer report dated {new Date(report.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · Annual FH: {report.annualFH.toLocaleString()} · Annual cycles: {report.annualCy.toLocaleString()}.</>
+          ? <> Utilisation sourced from servicer report dated {parseDateLocal(report.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · Annual FH: {report.annualFH.toLocaleString()} · Annual cycles: {report.annualCy.toLocaleString()}.</>
           : <> Base utilisation: {aircraftType} fleet average ({TYPE_HEURISTICS[aircraftType]?.utilizationFH?.toLocaleString() ?? "N/A"} FH/yr, {TYPE_HEURISTICS[aircraftType]?.utilizationCy?.toLocaleString() ?? "N/A"} cy/yr).</>
         }
         {" "}Base projection assumes lessee continues MR payments at contracted rate for {monthsToEOL} months until EOL.
