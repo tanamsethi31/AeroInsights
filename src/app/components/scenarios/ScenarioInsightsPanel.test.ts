@@ -65,6 +65,13 @@ describe("deriveProvisionData", () => {
     expect(result.fillPct).toBe(100);
     expect(result.adequacy).toBe("adequate");
   });
+
+  it("returns over-provisioned defaults when ecl is 0", () => {
+    const result = deriveProvisionData(0, 47.2);
+    expect(result.gapPct).toBe(-100);
+    expect(result.fillPct).toBe(100);
+    expect(result.adequacy).toBe("over");
+  });
 });
 
 describe("deriveRemainingS3", () => {

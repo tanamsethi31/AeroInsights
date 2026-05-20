@@ -11,6 +11,7 @@ export function deriveProvisionData(ecl: number, baseECL: number): {
   adequacy: "under" | "over" | "adequate";
 } {
   if (baseECL === 0) return { gap: 0, gapPct: 0, fillPct: 100, adequacy: "adequate" as const };
+  if (ecl <= 0) return { gap: -baseECL, gapPct: -100, fillPct: 100, adequacy: "over" as const };
   const gap = ecl - baseECL;
   const gapPct = (gap / baseECL) * 100;
   const fillPct = Math.min(100, (baseECL / ecl) * 100);
