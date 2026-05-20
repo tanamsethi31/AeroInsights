@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useNavigate, useLocation } from "react-router";
-import { useAuth0 } from "@auth0/auth0-react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -28,7 +27,6 @@ import {
   Users,
   DatabaseZap,
   SlidersHorizontal,
-  LogOut,
   Briefcase,
   Banknote,
   FileSearch,
@@ -314,7 +312,6 @@ function NavFlatItem({ item, badge }: { item: NavItem; badge?: number }) {
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate();
-  const { logout } = useAuth0();
   const { isExecutiveMode, setIsExecutiveMode } = useViewMode();
   const { setActivePortfolio } = usePortfolio();
 
@@ -447,18 +444,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() =>
-                logout({ logoutParams: { returnTo: window.location.origin + "/login" } })
-              }
-              className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-              tooltip="Sign Out"
-            >
-              <LogOut size={18} />
-              <span>Sign Out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
 
