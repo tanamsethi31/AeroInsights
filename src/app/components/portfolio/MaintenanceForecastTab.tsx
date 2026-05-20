@@ -71,6 +71,7 @@ export function buildProjections(
   lease: LeaseSDMR,
   aircraftType: string,
   leaseEndDate: Date,
+  utilOverride?: UtilOverride,
 ): ComponentProjection[] {
   const heuristic = TYPE_HEURISTICS[aircraftType] ?? TYPE_HEURISTICS["A320neo"];
   const now = new Date(2026, 4, 1); // May 2026 (app reference date)
@@ -79,15 +80,16 @@ export function buildProjections(
   return lease.mrComponents.map((comp: MRComponent): ComponentProjection => {
     const h = heuristic.components[comp.component];
     const monthlyUtil = comp.rateBasis === "$/FH"
-      ? heuristic.utilizationFH / 12
-      : heuristic.utilizationCy / 12;
+      ? (utilOverride?.annualFH ?? heuristic.utilizationFH) / 12
+      : (utilOverride?.annualCy ?? heuristic.utilizationCy) / 12;
 
+    const remainingUnits    = utilOverride?.componentRemaining[comp.component] ?? comp.remainingUnits;
     const monthlyAccrual    = comp.rateAmount * monthlyUtil;
-    const monthsToNextEvent = comp.remainingUnits / monthlyUtil;
+    const monthsToNextEvent = remainingUnits / monthlyUtil;
     const nextEventDate     = addMonths(now, monthsToNextEvent);
 
     // Projected balance at next event (base: lessee keeps paying)
-    const projectedBalanceAtEvent = comp.cumulativeBalance + comp.remainingUnits * comp.rateAmount;
+    const projectedBalanceAtEvent = comp.cumulativeBalance + remainingUnits * comp.rateAmount;
     const heuristicEventCost      = h ? h.costUSD : comp.fullIntervalUnits * comp.rateAmount;
     const shortfallAtEvent        = heuristicEventCost - projectedBalanceAtEvent;
 
@@ -95,13 +97,13 @@ export function buildProjections(
     const projectedBalanceAtEOL = comp.cumulativeBalance + monthsToEOL * monthlyAccrual;
 
     // EOL obligation: units used from full interval × rate
-    const remainingAtEOL = Math.max(0, comp.remainingUnits - monthsToEOL * monthlyUtil);
+    const remainingAtEOL = Math.max(0, remainingUnits - monthsToEOL * monthlyUtil);
     const usedInInterval = (h?.intervalFH ?? comp.fullIntervalUnits) - remainingAtEOL;
     const eolObligation  = usedInInterval * comp.rateAmount;
 
     // Conservative (distressed: lessee stops paying today)
     const distressedBalance     = comp.cumulativeBalance;
-    const currentUsed           = comp.fullIntervalUnits - comp.remainingUnits;
+    const currentUsed           = comp.fullIntervalUnits - remainingUnits;
     const currentObligation     = currentUsed * comp.rateAmount;
     const distressedEOLShortfall = currentObligation - distressedBalance;
 
