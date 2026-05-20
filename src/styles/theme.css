@@ -258,3 +258,29 @@
 .pill-tabs-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* ─── Sidebar scrollbar — thin, minimal, Oxford Blue ─────────────────────────── */
+
+[data-sidebar="content"]::-webkit-scrollbar {
+  width: 4px;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+  transition: background 200ms ease;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Firefox */
+[data-sidebar="content"] {
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b transparent;
+}
