@@ -58,6 +58,13 @@ describe("deriveProvisionData", () => {
     const result = deriveProvisionData(61.2, 47.2);
     expect(result.fillPct).toBeCloseTo((47.2 / 61.2) * 100, 1);
   });
+
+  it("returns safe defaults when baseECL is 0", () => {
+    const result = deriveProvisionData(0, 0);
+    expect(result.gapPct).toBe(0);
+    expect(result.fillPct).toBe(100);
+    expect(result.adequacy).toBe("adequate");
+  });
 });
 
 describe("deriveRemainingS3", () => {
