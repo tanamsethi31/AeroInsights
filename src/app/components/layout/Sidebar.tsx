@@ -384,67 +384,87 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       {/* Footer / Controls */}
-      <SidebarFooter>
-        <SidebarMenu>
-          {/* Back to portfolios */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => {
-                setActivePortfolio(null);
-                navigate("/portfolios");
-              }}
-              className="cursor-pointer"
-              tooltip="Switch Portfolio"
-            >
-              <FolderOpen size={18} />
-              <span>Switch Portfolio</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+      <SidebarFooter style={{ borderTop: "1px solid #1e293b", paddingTop: "0.5rem" }}>
+        {/* Section label — matches nav group label style */}
+        <div style={{ padding: "0 0.75rem 0.25rem" }}>
+          <span style={{
+            fontSize: "0.625rem",
+            fontWeight: 700,
+            color: "#475569",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+          }}>
+            Workspace
+          </span>
+        </div>
 
-          {/* Executive Mode toggle */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setIsExecutiveMode(!isExecutiveMode)}
-              className="cursor-pointer"
-              tooltip="Executive Mode"
-            >
-              <Briefcase size={18} />
-              <span>Executive Mode</span>
-              {/* Toggle pill */}
-              <div
-                style={{
-                  marginLeft: "auto",
-                  width: "36px",
-                  height: "20px",
-                  borderRadius: "10px",
-                  background: isExecutiveMode ? "#16A34A" : "#94A3B8",
-                  position: "relative",
-                  flexShrink: 0,
-                  transition: "background 200ms cubic-bezier(0.23,1,0.32,1)",
-                  pointerEvents: "none",
-                  boxShadow: isExecutiveMode
-                    ? "0 0 0 2px rgba(22,163,74,0.25)"
-                    : "none",
+        {/* Control card — subtly distinct background */}
+        <div style={{
+          margin: "0 0.5rem 0.5rem",
+          background: "#1e293b",
+          borderRadius: "0.5rem",
+          overflow: "hidden",
+        }}>
+          <SidebarMenu>
+            {/* Switch Portfolio */}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => {
+                  setActivePortfolio(null);
+                  navigate("/portfolios");
                 }}
+                className="cursor-pointer"
+                tooltip="Switch Portfolio"
               >
+                <FolderOpen size={18} />
+                <span>Switch Portfolio</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            {/* Executive Mode toggle */}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => setIsExecutiveMode(!isExecutiveMode)}
+                className="cursor-pointer"
+                tooltip="Executive Mode"
+              >
+                <Briefcase size={18} />
+                <span>Executive Mode</span>
+                {/* Toggle pill */}
                 <div
                   style={{
-                    width: "16px",
-                    height: "16px",
-                    borderRadius: "50%",
-                    background: "#FFFFFF",
-                    position: "absolute",
-                    top: "2px",
-                    left: isExecutiveMode ? "18px" : "2px",
-                    transition: "left 200ms cubic-bezier(0.23,1,0.32,1)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.30)",
+                    marginLeft: "auto",
+                    width: "36px",
+                    height: "20px",
+                    borderRadius: "10px",
+                    background: isExecutiveMode ? "#16A34A" : "#334155",
+                    position: "relative",
+                    flexShrink: 0,
+                    transition: "background 200ms cubic-bezier(0.23,1,0.32,1)",
+                    pointerEvents: "none",
+                    boxShadow: isExecutiveMode
+                      ? "0 0 0 2px rgba(22,163,74,0.25)"
+                      : "none",
                   }}
-                />
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-        </SidebarMenu>
+                >
+                  <div
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      borderRadius: "50%",
+                      background: "#FFFFFF",
+                      position: "absolute",
+                      top: "2px",
+                      left: isExecutiveMode ? "18px" : "2px",
+                      transition: "left 200ms cubic-bezier(0.23,1,0.32,1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.30)",
+                    }}
+                  />
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
       </SidebarFooter>
 
       <SidebarRail />
