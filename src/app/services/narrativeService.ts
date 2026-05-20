@@ -37,13 +37,17 @@ function buildFallbackNarrative(run: ScenarioRunResult): string {
 }
 
 export async function generateNarrative(run: ScenarioRunResult): Promise<string | null> {
-  const endpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined;
-  const apiKey   = import.meta.env.VITE_AZURE_OPENAI_KEY    as string | undefined;
+  const baseEndpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined;
+  const apiKey       = import.meta.env.VITE_AZURE_OPENAI_KEY      as string | undefined;
+  const deployment   = import.meta.env.VITE_AZURE_OPENAI_AGENT_DEPLOYMENT as string | undefined;
 
   // Skip API call when env vars are absent — use rich deterministic fallback
-  if (!endpoint || !apiKey || apiKey === "PLACEHOLDER" || endpoint === "PLACEHOLDER") {
+  if (!baseEndpoint || !apiKey || !deployment || apiKey === "PLACEHOLDER" || baseEndpoint === "PLACEHOLDER") {
     return buildFallbackNarrative(run);
   }
+
+  // Construct full Azure OpenAI chat completions URL from base resource URL + deployment name
+  const endpoint = `${baseEndpoint.replace(/\/$/, "")}/openai/deployments/${deployment}/chat/completions?api-version=2024-08-01-preview`;
 
   // Guard against malformed run data — fall back to deterministic summary
   if (!run.shapley.length || run.topLessees.length < 2) return buildFallbackNarrative(run);
