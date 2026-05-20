@@ -18,7 +18,7 @@ export function MRRiskBanner({ summary }: Props) {
   const borderColour  = hasRed ? "#B91C1C" : "#B45309";
   const bgColour      = hasRed ? "rgba(185,28,28,0.04)" : "rgba(180,83,9,0.04)";
   const iconColour    = hasRed ? "#B91C1C" : "#B45309";
-  const headline = `${atRiskCount} lease${atRiskCount !== 1 ? "s" : ""} have material maintenance reserve shortfall${atRiskCount !== 1 ? "s" : ""}`;
+  const headline = `${atRiskCount} lease${atRiskCount !== 1 ? "s" : ""} ${atRiskCount !== 1 ? "have" : "has"} material maintenance reserve shortfall${atRiskCount !== 1 ? "s" : ""}`;
 
   return (
     <div style={{
@@ -42,7 +42,7 @@ export function MRRiskBanner({ summary }: Props) {
         {/* Offender chips */}
         {worstOffenders.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-            {worstOffenders.map((o) => {
+            {worstOffenders.slice(0, 3).map((o) => {
               const chipColour = o.flag === "red" ? "#B91C1C" : "#B45309";
               const chipBg     = o.flag === "red" ? "rgba(185,28,28,0.08)" : "rgba(180,83,9,0.08)";
               const shortfallM = (o.eolShortfall / 1_000_000).toFixed(1);
