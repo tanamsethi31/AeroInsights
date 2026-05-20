@@ -387,8 +387,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter style={{ borderTop: "1px solid #1e293b", paddingTop: "0.5rem" }}>
         {/* Control card */}
         <div style={{
-          margin: "0 0.5rem 0.5rem",
-          padding: "0.375rem",
+          margin: "0 0.25rem 0.5rem",
+          padding: "0.625rem",
           background: "rgba(255,255,255,0.04)",
           border: "1px solid rgba(255,255,255,0.07)",
           borderRadius: "0.75rem",
