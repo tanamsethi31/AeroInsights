@@ -42,6 +42,7 @@ import {
   RunResultPanel,
   type ScenarioRunResult,
 } from "../components/scenarios/RunResultPanel";
+import { ScenarioInsightsPanel } from "../components/scenarios/ScenarioInsightsPanel";
 import { generateNarrative } from "../services/narrativeService";
 import { SCENARIO_CALIBRATION } from "../data/intelligenceData";
 import {
@@ -1570,6 +1571,7 @@ export default function Scenarios() {
                           narrative={getNarrative(result.id)}
                           onRequestNarrative={handleRequestNarrative}
                         />
+                        <ScenarioInsightsPanel run={result} baseECL={BASE_ECL} compact />
                       </div>
                     </motion.div>
                   )}
@@ -1799,6 +1801,7 @@ export default function Scenarios() {
                           narrative={getNarrative(result.id)}
                           onRequestNarrative={handleRequestNarrative}
                         />
+                        <ScenarioInsightsPanel run={result} baseECL={BASE_ECL} compact />
                       </div>
                     </motion.div>
                   )}
@@ -2030,6 +2033,7 @@ export default function Scenarios() {
                           narrative={getNarrative(result.id)}
                           onRequestNarrative={handleRequestNarrative}
                         />
+                        <ScenarioInsightsPanel run={result} baseECL={BASE_ECL} compact />
                       </div>
                     </motion.div>
                   )}
@@ -3339,12 +3343,15 @@ export default function Scenarios() {
                   </div>
                 ) : (
                   customResultId && findRun(customResultId) && (
-                    <RunResultPanel
-                      run={findRun(customResultId)!}
-                      onClose={() => setCustomResultId(null)}
-                      narrative={getNarrative(customResultId)}
-                      onRequestNarrative={handleRequestNarrative}
-                    />
+                    <>
+                      <RunResultPanel
+                        run={findRun(customResultId)!}
+                        onClose={() => setCustomResultId(null)}
+                        narrative={getNarrative(customResultId)}
+                        onRequestNarrative={handleRequestNarrative}
+                      />
+                      <ScenarioInsightsPanel run={findRun(customResultId)!} baseECL={BASE_ECL} />
+                    </>
                   )
                 )}
               </div>
@@ -3607,6 +3614,7 @@ export default function Scenarios() {
                               narrative={getNarrative(run.id)}
                               onRequestNarrative={handleRequestNarrative}
                             />
+                            <ScenarioInsightsPanel run={run} baseECL={BASE_ECL} />
                           </td>
                         </tr>
                       )}
