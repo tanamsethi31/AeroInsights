@@ -368,39 +368,46 @@ export function ScenarioInsightsPanel({ run, baseECL, compact = false }: Props) 
       <div style={DIVIDER}>
         <span style={SECTION_HDR}>Recommended Actions</span>
 
-        <ol
+        <div
           style={{
             margin: "0 0 0.875rem",
-            padding: "0 0 0 1.25rem",
             display: "flex",
             flexDirection: "column",
             gap: "0.5rem",
           }}
         >
           {gap > 0 && (
-            <li style={{ fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
-              Top up provisions by <strong>${gap.toFixed(1)}M</strong> before next reporting
-              period
-            </li>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+              <span style={{ fontSize: "0.8125rem", color: "#002147", fontWeight: 700, flexShrink: 0 }}>①</span>
+              <span style={{ fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
+                Top up provisions by <strong>${gap.toFixed(1)}M</strong> before next reporting period
+              </span>
+            </div>
           )}
           {run.s3LeaseCount > 0 && (
-            <li style={{ fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
-              Conduct individual assessment on{" "}
-              <strong>
-                {run.s3LeaseCount} Stage 3 lessee
-                {run.s3LeaseCount !== 1 ? "s" : ""}
-              </strong>
-            </li>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+              <span style={{ fontSize: "0.8125rem", color: "#002147", fontWeight: 700, flexShrink: 0 }}>②</span>
+              <span style={{ fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
+                Conduct individual assessment on{" "}
+                <strong>
+                  {run.s3LeaseCount} Stage 3 lessee
+                  {run.s3LeaseCount !== 1 ? "s" : ""}
+                </strong>
+              </span>
+            </div>
           )}
-          <li style={{ fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
-            Present scenario delta (
-            <strong>
-              {gapPct >= 0 ? "+" : ""}
-              {gapPct.toFixed(1)}%
-            </strong>{" "}
-            vs baseline) to credit committee with Shapley attribution
-          </li>
-        </ol>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+            <span style={{ fontSize: "0.8125rem", color: "#002147", fontWeight: 700, flexShrink: 0 }}>③</span>
+            <span style={{ fontSize: "0.8125rem", color: "#0F172A", lineHeight: 1.5 }}>
+              Present scenario delta (
+              <strong>
+                {gapPct >= 0 ? "+" : ""}
+                {gapPct.toFixed(1)}%
+              </strong>{" "}
+              vs baseline) to credit committee with Shapley attribution
+            </span>
+          </div>
+        </div>
 
         {/* Collapsible detail */}
         <button
