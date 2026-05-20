@@ -150,6 +150,9 @@ export function useReconciliation(
     setSaving(true);
     const now = new Date().toISOString();
 
+    // Capture the matches to confirm BEFORE the optimistic update
+    const toConfirm = result?.matches.filter(m => m.confidence >= 0.8 && !m.confirmed) ?? [];
+
     // Optimistic update
     setResult(prev => {
       if (!prev) return prev;
@@ -168,10 +171,10 @@ export function useReconciliation(
 
     if (error) console.error("[useReconciliation] acceptAll error:", error);
 
-    // Bulk-insert cash events for all newly confirmed high-confidence matches
-    if (orgId && result) {
-      const toInsert = result.matches
-        .filter(m => m.confidence >= 0.8 && !m.confirmed && m.transaction)
+    // Bulk-insert cash events using the pre-captured list
+    if (orgId && toConfirm.length > 0) {
+      const insertRows = toConfirm
+        .filter(m => m.transaction)
         .map(m => ({
           org_id:         orgId,
           lease_id:       m.bestMatch?.lease.id ?? null,
@@ -184,9 +187,12 @@ export function useReconciliation(
           transaction_id: m.transactionId,
           notes:          null,
         }));
-      if (toInsert.length > 0) {
-        supabase.from("cash_events").insert(toInsert).then(({ error: ceErr }) => {
-          if (ceErr) console.error("[useReconciliation] acceptAll cash_events error:", ceErr);
+      if (insertRows.length > 0) {
+        supabase.from("cash_events").insert(insertRows).then(({ error: ceErr }) => {
+          // Ignore unique constraint violations (23505) — means events already exist
+          if (ceErr && ceErr.code !== "23505") {
+            console.error("[useReconciliation] acceptAll cash_events error:", ceErr);
+          }
         });
       }
     }
@@ -221,7 +227,10 @@ export function useReconciliation(
           transaction_id: match.transactionId,
           notes:          null,
         }).then(({ error: ceErr }) => {
-          if (ceErr) console.error("[useReconciliation] cash_events insert error:", ceErr);
+          // Ignore unique constraint violations (23505) — means event already exists
+          if (ceErr && ceErr.code !== "23505") {
+            console.error("[useReconciliation] cash_events insert error:", ceErr);
+          }
         });
       }
     }
