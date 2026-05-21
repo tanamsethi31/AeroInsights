@@ -6,12 +6,12 @@ import {
   mrFlagBg,
   type MRAdeqFlag,
 } from "../../data/maintenanceHeuristics";
-import { type LeaseSDMR } from "./SDMRTab";
+import { type LeaseSDMR } from "../portfolio/SDMRTab";
 import {
   buildProjections,
   LEASE_CONTEXT,
   type ComponentProjection,
-} from "./MaintenanceForecastTab";
+} from "../portfolio/MaintenanceForecastTab";
 
 // ─── Reverse lookup: leaseId → { msn, leaseEnd } ─────────────────────────────
 const CONTEXT_BY_LEASE_ID: Record<string, { msn: string; leaseEnd: string }> =
