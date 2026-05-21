@@ -14,7 +14,7 @@ import { useServicerReport } from "../../hooks/useServicerReport";
 import type { ServicerReport } from "../../hooks/useServicerReport";
 
 // ─── Lease context table (mirrors Portfolio.tsx leases[]) ─────────────────────
-const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
+export const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
   "9218":  { leaseId: "LSE-2019-001", leaseEnd: "2028-03-01", stage: "3" },
   "41234": { leaseId: "LSE-2020-014", leaseEnd: "2027-06-15", stage: "3" },
   "62047": { leaseId: "LSE-2021-022", leaseEnd: "2030-01-10", stage: "1" },
@@ -54,7 +54,7 @@ function parseDateLocal(iso: string): Date {
 
 // ─── Projection logic ─────────────────────────────────────────────────────────
 
-interface ComponentProjection {
+export interface ComponentProjection {
   component: ComponentName;
   currentBalance: number;
   monthlyAccrual: number;         // assumes lessee keeps paying
