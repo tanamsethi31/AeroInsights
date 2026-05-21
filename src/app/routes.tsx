@@ -20,6 +20,7 @@ import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 import Transactions from "./pages/Transactions";
 import Reconciliation from "./pages/Reconciliation";
 import CashFlow from "./pages/CashFlow";
+import Maintenance from "./pages/Maintenance";
 
 /**
  * Guards the dashboard index route.
@@ -89,6 +90,11 @@ export const router = createBrowserRouter([
           { path: "risk-ecl/summary",           Component: RiskECL },
           { path: "risk-ecl/migration",         Component: RiskECL },
           { path: "risk-ecl/waterfall",         Component: RiskECL },
+
+          // Maintenance
+          { path: "maintenance",           Component: Maintenance },
+          { path: "maintenance/aircraft",  Component: Maintenance },
+          { path: "maintenance/scenarios", Component: Maintenance },
 
           // Intelligence
           { path: "counterparties",             Component: Counterparties },

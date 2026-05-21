@@ -37,6 +37,7 @@ import {
   Activity,
   Landmark,
   FolderOpen,
+  Wrench,
 } from "lucide-react";
 
 import { useViewMode } from "../../contexts/ViewModeContext";
@@ -131,6 +132,16 @@ const navGroups: NavGroup[] = [
           { title: "ECL Overview",    url: "/risk-ecl/summary",   icon: BarChart2      },
           { title: "Stage Migration", url: "/risk-ecl/migration", icon: ArrowLeftRight },
           { title: "Sensitivity",     url: "/risk-ecl/waterfall", icon: Droplets       },
+        ],
+      },
+      {
+        title: "Maintenance",
+        url: "/maintenance",
+        icon: Wrench,
+        items: [
+          { title: "Overview",           url: "/maintenance",           icon: BarChart2         },
+          { title: "Aircraft Detail",    url: "/maintenance/aircraft",  icon: PlaneTakeoff      },
+          { title: "Scenario Modelling", url: "/maintenance/scenarios", icon: SlidersHorizontal },
         ],
       },
     ],
