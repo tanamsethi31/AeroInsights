@@ -35,6 +35,14 @@ function quarterLabel(date: Date): string {
   return `Q${q} ${date.getFullYear()}`;
 }
 
+function quarterOrdinal(q: string): number {
+  // "Q2 2026" → 2026 * 4 + 1  (0-indexed quarter within the full timeline)
+  const [qPart, yearStr] = q.split(" ");
+  const quarter = parseInt(qPart.slice(1), 10); // 1–4
+  const year = parseInt(yearStr, 10);
+  return year * 4 + (quarter - 1);
+}
+
 function quartersFrom(start: Date, end: Date): string[] {
   const quarters: string[] = [];
   const cur = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
@@ -109,7 +117,7 @@ export function toMRChartData(sdmrData: LeaseSDMR[]): MRChartData {
     projections.forEach((p) => {
       // Inflows: monthly accrual × 3 months per quarter, for every quarter until EOL
       allQuarters.forEach((q) => {
-        if (q <= leaseEndQ) {
+        if (quarterOrdinal(q) <= quarterOrdinal(leaseEndQ)) {
           inflowMap[q] = (inflowMap[q] ?? 0) + p.monthlyAccrual * 3;
         }
       });
