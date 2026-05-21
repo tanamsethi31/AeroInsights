@@ -471,7 +471,7 @@ export default function Dashboard() {
         <MRHealthCard
           summary={mrSummary}
           staggerIndex={4}
-          onClick={() => navigate("/portfolio", { state: { tab: "Leases" } })}
+          onClick={() => navigate("/portfolio", { state: { tab: "SD / MR" } })}
         />
       </div>
 
