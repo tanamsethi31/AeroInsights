@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo, useCallback, Fragment } from "react";
 import { ChevronRight } from "lucide-react";
 import { Card } from "../ui/Card";
 import {
@@ -44,13 +44,13 @@ interface Props {
 export function MRPortfolioGrid({ sdmrData }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  function toggle(leaseId: string) {
+  const toggle = useCallback((leaseId: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       next.has(leaseId) ? next.delete(leaseId) : next.add(leaseId);
       return next;
     });
-  }
+  }, []);
 
   const rows = useMemo(() => {
     return sdmrData
@@ -346,9 +346,7 @@ export function MRPortfolioGrid({ sdmrData }: Props) {
                         <span
                           style={{
                             color:
-                              row.distressedEOLShortfall > row.baseEOLShortfall
-                                ? "#B91C1C"
-                                : "#B45309",
+                              row.overallFlag === "red" ? "#B91C1C" : "#B45309",
                             fontWeight: 600,
                           }}
                         >
@@ -503,7 +501,7 @@ export function MRPortfolioGrid({ sdmrData }: Props) {
                               {p.distressedEOLShortfall <= 0 ? (
                                 <span style={{ color: "#15803D" }}>✓</span>
                               ) : (
-                                <span style={{ color: "#B91C1C" }}>
+                                <span style={{ color: flagColor }}>
                                   -${(p.distressedEOLShortfall / 1_000_000).toFixed(2)}m
                                 </span>
                               )}
