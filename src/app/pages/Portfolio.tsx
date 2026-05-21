@@ -38,7 +38,6 @@ import { AddAircraftModal } from "../components/portfolios/AddAircraftModal";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { PillTabs } from "../components/ui/PillTabs";
 import { SDMRTab, buildLiveSDMRData, type LeaseSDMR } from "../components/portfolio/SDMRTab";
-import { MRPortfolioGrid } from "../components/portfolio/MRPortfolioGrid";
 import { MRRiskBanner } from "../components/portfolio/MRRiskBanner";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
 import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForecastTab";
@@ -755,12 +754,7 @@ export default function Portfolio() {
       {activeTab === "Concentration" && <ConcentrationTab />}
 
       {/* SD / MR Tab */}
-      {activeTab === "SD / MR" && (
-        <>
-          <MRPortfolioGrid sdmrData={liveSDMRData ?? []} />
-          <SDMRTab data={liveSDMRData} />
-        </>
-      )}
+      {activeTab === "SD / MR" && <SDMRTab data={liveSDMRData} />}
 
       {/* Performance vs. Plan Tab */}
       {activeTab === "Performance vs. Plan" && <PerformanceVsPlan />}
