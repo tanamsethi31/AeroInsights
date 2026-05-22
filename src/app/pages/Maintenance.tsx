@@ -33,37 +33,39 @@ export default function Maintenance() {
   );
 
   return (
-    <>
-      <PageHeader title="Maintenance Reserves" />
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <PageHeader
+        title="Maintenance Reserves"
+        subtitle="Track MR balances, forecast cashflows, and model reserve scenarios across your portfolio"
+      />
 
-      <div style={{ padding: "1.5rem 2rem" }}>
-        <PillTabs
-          tabs={TABS}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-        />
+      <PillTabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        style={{ marginTop: "-1.5rem" }}
+      />
 
-        {activeTab === "Overview" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1.5rem" }}>
-            <MRPortfolioGrid sdmrData={sdmrData} />
-            <MRCashflowChart data={chartData.cashflow} />
-            <MREventCalendar
-              data={chartData.events}
-              leaseIds={chartData.leaseIds}
-              leaseColors={chartData.leaseColors}
-              leaseLessees={leaseLessees}
-            />
-          </div>
-        )}
+      {activeTab === "Overview" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <MRPortfolioGrid sdmrData={sdmrData} />
+          <MRCashflowChart data={chartData.cashflow} />
+          <MREventCalendar
+            data={chartData.events}
+            leaseIds={chartData.leaseIds}
+            leaseColors={chartData.leaseColors}
+            leaseLessees={leaseLessees}
+          />
+        </div>
+      )}
 
-        {activeTab === "Aircraft Detail" && (
-          <AircraftDetailTab />
-        )}
+      {activeTab === "Aircraft Detail" && (
+        <AircraftDetailTab />
+      )}
 
-        {activeTab === "Scenario Modelling" && (
-          <ScenarioModellingTab />
-        )}
-      </div>
-    </>
+      {activeTab === "Scenario Modelling" && (
+        <ScenarioModellingTab />
+      )}
+    </div>
   );
 }

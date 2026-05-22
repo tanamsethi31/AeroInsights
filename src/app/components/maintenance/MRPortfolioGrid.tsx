@@ -98,7 +98,7 @@ export function MRPortfolioGrid({ sdmrData }: Props) {
   const greenCount = rows.filter((r) => r.overallFlag === "green").length;
 
   return (
-    <div style={{ marginBottom: "1.5rem" }}>
+    <div>
       <Card noPadding>
         <div style={{ padding: "1.25rem 1.5rem" }}>
           {/* ── Header ─────────────────────────────────────────────────── */}
