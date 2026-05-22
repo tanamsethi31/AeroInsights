@@ -1,5 +1,5 @@
 
-  # Aeroinsights
+  # AeroInsights
 
   This is a code bundle for Aeroinsights.
 
