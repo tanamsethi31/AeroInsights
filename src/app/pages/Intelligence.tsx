@@ -124,13 +124,14 @@ function jxTypeLabel(t: string) {
 
 // ─── Sub-tab nav ─────────────────────────────────────────────────────────────
 
-type IntelTab = "signals" | "lessee-radar" | "deal-feed" | "jx-watch";
+type IntelTab = "signals" | "lessee-radar" | "deal-feed" | "jx-watch" | "rate-outlook";
 
 const TABS: { id: IntelTab; label: string }[] = [
   { id: "signals",      label: "Macro Signals"     },
   { id: "lessee-radar", label: "Lessee Radar"       },
   { id: "deal-feed",    label: "Deal Feed"           },
   { id: "jx-watch",    label: "Jurisdiction Watch"  },
+  { id: "rate-outlook", label: "Rate Outlook" },
 ];
 
 // ─── Chip filter ─────────────────────────────────────────────────────────────
@@ -1546,6 +1547,7 @@ const PATH_TO_TAB: Record<string, IntelTab> = {
   "/intelligence/lessee-radar": "lessee-radar",
   "/intelligence/deal-feed":    "deal-feed",
   "/intelligence/jx-watch":    "jx-watch",
+  "/intelligence/rate-outlook":  "rate-outlook",
 };
 
 export default function Intelligence() {
@@ -1597,6 +1599,7 @@ export default function Intelligence() {
     "lessee-radar": redLessees,
     "deal-feed":    negDeals,
     "jx-watch":     negJx,
+    "rate-outlook": 0,
   };
 
   return (
