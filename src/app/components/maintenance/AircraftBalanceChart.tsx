@@ -1,4 +1,5 @@
 // src/app/components/maintenance/AircraftBalanceChart.tsx
+import { useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
@@ -21,6 +22,7 @@ const NOW = new Date(2026, 4, 1);
 
 interface Props {
   projections:  ComponentProjection[];
+  /** Reserved for future tooltip/display use; chart range is driven by monthsToEOL. */
   leaseEndDate: Date;
   monthsToEOL:  number;
 }
@@ -41,9 +43,9 @@ function buildBalanceSeries(
         point[p.component] = p.currentBalance + p.monthlyAccrual * m;
       } else {
         const balAtEvent  = p.currentBalance + p.monthlyAccrual * p.monthsToNextEvent;
-        const afterDrop   = balAtEvent - p.heuristicEventCost;
+        const afterDrop   = Math.max(0, balAtEvent - p.heuristicEventCost);
         const monthsAfter = m - p.monthsToNextEvent;
-        point[p.component] = Math.max(0, afterDrop + p.monthlyAccrual * monthsAfter);
+        point[p.component] = afterDrop + p.monthlyAccrual * monthsAfter;
       }
     }
     data.push(point);
@@ -67,7 +69,13 @@ function fmtM(v: unknown): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AircraftBalanceChart({ projections, monthsToEOL, leaseEndDate: _leaseEndDate }: Props) {
-  const data = buildBalanceSeries(projections, monthsToEOL);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const data = useMemo(
+    () => buildBalanceSeries(projections, monthsToEOL),
+    [projections, monthsToEOL],
+  );
+  // Show ~6 X-axis ticks. Recharts `interval` is 0-based ("every Nth tick"),
+  // so subtract 1 from the naive data.length/6 ratio.
   const tickInterval = Math.max(0, Math.floor(data.length / 6) - 1);
 
   return (
