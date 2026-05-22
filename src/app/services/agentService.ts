@@ -130,32 +130,16 @@ ${KNOWLEDGE_BASE}
 
 // ─── Endpoint resolution ────────────────────────────────────────────────────────
 //
-// Production: all requests go through /api/ai/chat (Vercel Edge Function).
-// The API key lives server-side and never reaches the browser.
+// All requests — both production and local dev — go through /api/ai/chat
+// (Vercel Edge Function). The Azure key lives server-side and never reaches
+// the browser bundle.
 //
-// Local dev fallback: if VITE_AZURE_OPENAI_ENDPOINT + VITE_AZURE_OPENAI_KEY are
-// set in .env.local, requests go directly to Azure so you can run `npm run dev`
-// without needing `vercel dev`.  Never commit those values.
+// For local development with AI features, run `vercel dev` instead of
+// `npm run dev` so the Edge Function is served locally with server-side env vars.
 
-function getLocalEndpoint(): string | null {
-  const ep  = (import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined) ?? null;
-  const key = (import.meta.env.VITE_AZURE_OPENAI_KEY     as string | undefined) ?? null;
-  const dep = (
-    (import.meta.env.VITE_AZURE_OPENAI_AGENT_DEPLOYMENT as string | undefined) ??
-    (import.meta.env.VITE_AZURE_OPENAI_DEPLOYMENT        as string | undefined) ??
-    null
-  );
-  if (ep && key && dep) {
-    return `${ep}/openai/deployments/${dep}/chat/completions?api-version=2024-02-01`;
-  }
-  return null;
-}
-
-/** Always true in production; false only if local dev vars are also missing. */
+/** Always true — the server proxy is the only path. Server returns 503 if unconfigured. */
 export function isConfigured(): boolean {
-  // In production the proxy is always reachable; server returns 503 if unconfigured.
-  if (typeof window !== "undefined" && window.location.hostname !== "localhost") return true;
-  return getLocalEndpoint() !== null;
+  return true;
 }
 
 // ─── Core streaming fetch ───────────────────────────────────────────────────────
@@ -165,19 +149,11 @@ async function* fetchStream(
   signal?: AbortSignal,
   token?: string,
 ): AsyncGenerator<AgentEvent> {
-  // Prefer the server-side proxy; fall back to direct Azure for local dev.
-  const localUrl = getLocalEndpoint();
-  const url      = localUrl ?? "/api/ai/chat";
-
+  // Always use the server-side proxy — key never touches the browser.
+  const url     = "/api/ai/chat";
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (localUrl) {
-    // Local dev: authenticate directly with Azure key
-    const apiKey = (import.meta.env.VITE_AZURE_OPENAI_KEY as string | undefined) ?? "";
-    headers["api-key"] = apiKey;
-  } else {
-    // Production proxy: forward the Auth0 bearer token for server-side validation
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-  }
+  // Forward the Auth0 bearer token so the proxy can validate the request.
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let res: Response;
   try {

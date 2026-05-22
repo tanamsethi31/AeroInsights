@@ -36,18 +36,16 @@ function buildFallbackNarrative(run: ScenarioRunResult): string {
   );
 }
 
+// ── Endpoint resolution ───────────────────────────────────────────────────────
+//
+// All requests go through /api/ai/narrative (Vercel Edge Function).
+// The Azure key lives server-side and never reaches the browser bundle.
+//
+// For local development with AI narrative features, run `vercel dev` instead
+// of `npm run dev` so the Edge Function is served with server-side env vars.
+
 export async function generateNarrative(run: ScenarioRunResult): Promise<string | null> {
-  const baseEndpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT as string | undefined;
-  const apiKey       = import.meta.env.VITE_AZURE_OPENAI_KEY      as string | undefined;
-  const deployment   = import.meta.env.VITE_AZURE_OPENAI_AGENT_DEPLOYMENT as string | undefined;
-
-  // Skip API call when env vars are absent — use rich deterministic fallback
-  if (!baseEndpoint || !apiKey || !deployment || apiKey === "PLACEHOLDER" || baseEndpoint === "PLACEHOLDER") {
-    return buildFallbackNarrative(run);
-  }
-
-  // Construct full Azure OpenAI chat completions URL from base resource URL + deployment name
-  const endpoint = `${baseEndpoint.replace(/\/$/, "")}/openai/deployments/${deployment}/chat/completions?api-version=2024-08-01-preview`;
+  const endpoint = "/api/ai/narrative";
 
   // Guard against malformed run data — fall back to deterministic summary
   if (!run.shapley.length || run.topLessees.length < 2) return buildFallbackNarrative(run);
@@ -81,10 +79,7 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
     console.log("[narrative] fetching for run", run.id);
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": apiKey,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: [{ role: "user", content: prompt }],
         max_tokens: 220,
