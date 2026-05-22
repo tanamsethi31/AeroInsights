@@ -11,9 +11,9 @@ import type { Lease, Lessee, Asset } from "../../types/portfolio";
 
 const btnBase: React.CSSProperties = {
   padding: "0.3rem 0.6rem",
-  background: "#0F172A",
-  border: "1px solid #334155",
-  color: "#CBD5E1",
+  background: "#F8FAFC",
+  border: "1px solid #E2E8F0",
+  color: "#475569",
   borderRadius: "5px",
   fontSize: "0.75rem",
   cursor: "pointer",
@@ -93,9 +93,9 @@ function OverrideDropdown({
     <div
       style={{
         position: "absolute", zIndex: 50, top: "calc(100% + 4px)", right: 0,
-        background: "#1E293B", border: "1px solid #334155",
+        background: "#FFFFFF", border: "1px solid #E2E8F0",
         borderRadius: "8px", padding: "0.5rem",
-        width: "340px", boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+        width: "340px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
       }}
     >
       <input
@@ -106,8 +106,8 @@ function OverrideDropdown({
         onChange={e => setSearch(e.target.value)}
         style={{
           width: "100%", padding: "0.375rem 0.625rem",
-          background: "#0F172A", border: "1px solid #334155",
-          borderRadius: "6px", color: "#F8FAFC", fontSize: "0.78rem",
+          background: "#F8FAFC", border: "1px solid #E2E8F0",
+          borderRadius: "6px", color: "#0F172A", fontSize: "0.78rem",
           outline: "none", boxSizing: "border-box", marginBottom: "0.375rem",
         }}
       />
@@ -124,10 +124,10 @@ function OverrideDropdown({
               style={{
                 display: "block", width: "100%", textAlign: "left",
                 padding: "0.5rem 0.625rem", background: "transparent",
-                border: "none", color: "#CBD5E1", fontSize: "0.78rem",
+                border: "none", color: "#475569", fontSize: "0.78rem",
                 cursor: "pointer", borderRadius: "4px",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#0F172A"; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#F1F5F9"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
             >
               {label}
@@ -139,8 +139,8 @@ function OverrideDropdown({
         onClick={onClose}
         style={{
           marginTop: "0.375rem", width: "100%", padding: "0.375rem",
-          background: "transparent", border: "1px solid #334155",
-          color: "#64748B", fontSize: "0.75rem", borderRadius: "6px", cursor: "pointer",
+          background: "transparent", border: "1px solid #E2E8F0",
+          color: "#94A3B8", fontSize: "0.75rem", borderRadius: "6px", cursor: "pointer",
         }}
       >
         Cancel
@@ -181,9 +181,9 @@ function MatchRow({
         alignItems: "center",
         gap: "0.5rem",
         padding: "0.625rem 1rem",
-        borderBottom: "1px solid #0F172A",
+        borderBottom: "1px solid #F1F5F9",
         fontSize: "0.8rem",
-        background: confirmed ? "#0A1628" : "transparent",
+        background: confirmed ? "#EFF6FF" : "transparent",
       }}
     >
       {/* Date */}
@@ -191,7 +191,7 @@ function MatchRow({
 
       {/* Description */}
       <span
-        style={{ color: "#F8FAFC", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        style={{ color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
         title={txn.description}
       >
         {txn.description}
@@ -203,7 +203,7 @@ function MatchRow({
       </span>
 
       {/* Lessee · lease ref · delta */}
-      <span style={{ color: "#CBD5E1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <span style={{ color: "#475569", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {bestMatch ? (
           <>
             {bestMatch.lessee.name} · {bestMatch.asset.registration}
@@ -290,7 +290,7 @@ function Section({
 
   return (
     <div style={{
-      border: "1px solid #334155",
+      border: "1px solid #E2E8F0",
       borderLeft: `3px solid ${borderColor}`,
       borderRadius: "8px",
       overflow: "hidden",
@@ -301,10 +301,10 @@ function Section({
         style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           width: "100%", padding: "0.75rem 1rem",
-          background: "#1E293B", border: "none", cursor: "pointer",
+          background: "#F8FAFC", border: "none", cursor: "pointer",
         }}
       >
-        <span style={{ color: "#F8FAFC", fontSize: "0.875rem", fontWeight: 500 }}>
+        <span style={{ color: "#0F172A", fontSize: "0.875rem", fontWeight: 500 }}>
           {title}{" "}
           <span style={{ color: "#64748B", fontWeight: 400 }}>({matches.length})</span>
         </span>
@@ -315,14 +315,14 @@ function Section({
       </button>
 
       {open && (
-        <div style={{ borderTop: "1px solid #334155" }}>
+        <div style={{ borderTop: "1px solid #E2E8F0" }}>
           {/* Column headers */}
           <div style={{
             display: "grid",
             gridTemplateColumns: "90px minmax(0,2fr) 90px minmax(0,2fr) 55px 20px auto",
             gap: "0.5rem",
             padding: "0.375rem 1rem",
-            background: "#0F172A",
+            background: "#F1F5F9",
             fontSize: "0.72rem",
             color: "#64748B",
             fontWeight: 500,
@@ -414,21 +414,21 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
         flexDirection: "column", alignItems: "center",
       }}>
         <div style={{
-          background: "#1E293B", border: "1px solid #334155",
+          background: "#FFFFFF", border: "1px solid #E2E8F0",
           borderRadius: "12px", padding: "2rem 2.5rem",
           maxWidth: "400px", textAlign: "center",
         }}>
-          <p style={{ margin: "0 0 0.5rem", fontWeight: 500, color: "#F8FAFC", fontSize: "1rem" }}>
+          <p style={{ margin: "0 0 0.5rem", fontWeight: 500, color: "#0F172A", fontSize: "1rem" }}>
             No matching run yet
           </p>
-          <p style={{ margin: "0 0 1.5rem", fontSize: "0.875rem", color: "#64748B", lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 1.5rem", fontSize: "0.875rem", color: "#475569", lineHeight: 1.5 }}>
             Automatically scores each bank credit against active leases by amount, date, and lessee name.
           </p>
           <button
             onClick={() => runMatching(statementId, transactions)}
             disabled={transactions.length === 0}
             style={{
-              background: transactions.length === 0 ? "#334155" : "#3B82F6",
+              background: transactions.length === 0 ? "#E2E8F0" : "#3B82F6",
               border: "none", color: "#fff",
               borderRadius: "8px", padding: "0.625rem 1.5rem",
               fontSize: "0.875rem", fontWeight: 500,
@@ -450,13 +450,13 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
         display: "flex", alignItems: "center", flexWrap: "wrap",
         gap: "0.75rem", marginBottom: "1rem",
         padding: "0.875rem 1rem",
-        background: "#1E293B", border: "1px solid #334155", borderRadius: "10px",
+        background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "10px",
       }}>
         {/* Progress pill */}
         <div style={{
           padding: "0.25rem 0.75rem",
-          background: "#0F172A", border: "1px solid #334155",
-          borderRadius: "999px", color: "#F8FAFC",
+          background: "#F1F5F9", border: "1px solid #E2E8F0",
+          borderRadius: "999px", color: "#0F172A",
           fontSize: "0.8rem", fontWeight: 500, whiteSpace: "nowrap",
         }}>
           {reconciledCount} / {totalCount} reconciled
@@ -481,7 +481,7 @@ export function ReconciliationWorkspace({ statementId, transactions, currency }:
                   setRerunConfirm(false);
                   await rerun(statementId, transactions);
                 }}
-                style={{ ...btnBase, color: "#F87171", borderColor: "#7F1D1D" }}
+                style={{ ...btnBase, color: "#EF4444", borderColor: "#FECACA" }}
               >
                 Confirm
               </button>

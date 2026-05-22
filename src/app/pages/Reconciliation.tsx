@@ -39,8 +39,8 @@ function StatementCard({
       layout
       onClick={onClick}
       style={{
-        background:     isSelected ? "#1E3A5F" : "#1E293B",
-        border:         `1px solid ${isSelected ? "#3B82F6" : "#334155"}`,
+        background:     isSelected ? "#EFF6FF" : "#FFFFFF",
+        border:         `1px solid ${isSelected ? "#3B82F6" : "#E2E8F0"}`,
         borderRadius:   "10px",
         padding:        "1rem 1.25rem",
         cursor:         "pointer",
@@ -54,19 +54,19 @@ function StatementCard({
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <div style={{
           width: "36px", height: "36px", borderRadius: "8px",
-          background: "#0F172A", display: "flex", alignItems: "center", justifyContent: "center",
+          background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
         }}>
           <FileSpreadsheet size={18} style={{ color: "#3B82F6" }} />
         </div>
         <div>
-          <p style={{ margin: 0, fontWeight: 500, color: "#F8FAFC", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+          <p style={{ margin: 0, fontWeight: 500, color: "#0F172A", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
             {statement.filename}
             {showDemoBadge && (
               <span style={{
-                background: "#1E293B",
-                border: "1px solid #334155",
-                color: "#64748B",
+                background: "#F1F5F9",
+                border: "1px solid #E2E8F0",
+                color: "#94A3B8",
                 borderRadius: "99px",
                 padding: "0.1rem 0.5rem",
                 fontSize: "0.7rem",
@@ -76,14 +76,14 @@ function StatementCard({
               </span>
             )}
           </p>
-          <p style={{ margin: "0.125rem 0 0", fontSize: "0.775rem", color: "#64748B" }}>
+          <p style={{ margin: "0.125rem 0 0", fontSize: "0.775rem", color: "#94A3B8" }}>
             {statement.periodLabel} · {statement.currency} · {statement.rowCount.toLocaleString()} txns · Uploaded {fmtDate(statement.uploadedAt)}
           </p>
         </div>
       </div>
       {isSelected
-        ? <ChevronUp size={16} style={{ color: "#64748B", flexShrink: 0 }} />
-        : <ChevronDown size={16} style={{ color: "#475569", flexShrink: 0 }} />}
+        ? <ChevronUp size={16} style={{ color: "#94A3B8", flexShrink: 0 }} />
+        : <ChevronDown size={16} style={{ color: "#94A3B8", flexShrink: 0 }} />}
     </motion.div>
   );
 }
@@ -129,13 +129,13 @@ function TransactionBrowser({
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
       style={{
-        background: "#1E293B", border: "1px solid #334155",
+        background: "#FFFFFF", border: "1px solid #E2E8F0",
         borderRadius: "10px", overflow: "hidden", marginTop: "0.75rem",
       }}
     >
       {/* Toolbar */}
       <div style={{
-        padding: "0.75rem 1rem", borderBottom: "1px solid #334155",
+        padding: "0.75rem 1rem", borderBottom: "1px solid #E2E8F0",
         display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem",
       }}>
         <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
@@ -147,8 +147,8 @@ function TransactionBrowser({
             onChange={e => setSearch(e.target.value)}
             style={{
               width: "100%", padding: "0.4rem 0.75rem 0.4rem 2rem",
-              background: "#0F172A", border: "1px solid #334155",
-              borderRadius: "6px", color: "#F8FAFC", fontSize: "0.8rem",
+              background: "#F8FAFC", border: "1px solid #E2E8F0",
+              borderRadius: "6px", color: "#0F172A", fontSize: "0.8rem",
               outline: "none", boxSizing: "border-box",
             }}
           />
@@ -164,10 +164,10 @@ function TransactionBrowser({
       {/* Table */}
       <div style={{ overflowX: "auto", maxHeight: "420px", overflowY: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-          <thead style={{ position: "sticky", top: 0, background: "#0F172A", zIndex: 1 }}>
+          <thead style={{ position: "sticky", top: 0, background: "#F8FAFC", zIndex: 1 }}>
             <tr>
               {["Date", "Description", "Amount", "Reference"].map(h => (
-                <th key={h} style={{ padding: "0.5rem 1rem", textAlign: "left", color: "#64748B", fontWeight: 500, borderBottom: "1px solid #334155" }}>
+                <th key={h} style={{ padding: "0.5rem 1rem", textAlign: "left", color: "#64748B", fontWeight: 500, borderBottom: "1px solid #E2E8F0" }}>
                   {h}
                 </th>
               ))}
@@ -182,9 +182,9 @@ function TransactionBrowser({
               </tr>
             ) : (
               filtered.map(t => (
-                <tr key={t.id} style={{ borderBottom: "1px solid #1E293B" }}>
+                <tr key={t.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
                   <td style={{ padding: "0.5rem 1rem", color: "#94A3B8", whiteSpace: "nowrap" }}>{t.valueDate}</td>
-                  <td style={{ padding: "0.5rem 1rem", color: "#F8FAFC", maxWidth: "280px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.description}</td>
+                  <td style={{ padding: "0.5rem 1rem", color: "#0F172A", maxWidth: "280px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.description}</td>
                   <td style={{ padding: "0.5rem 1rem", color: t.amount >= 0 ? "#4ADE80" : "#F87171", fontWeight: 500, whiteSpace: "nowrap" }}>
                     {t.amount >= 0 ? "+" : ""}{fmtCurrency(t.amount, t.currency)}
                   </td>
@@ -313,8 +313,8 @@ export default function Reconciliation() {
                     <div style={{
                       display: "flex",
                       gap: 0,
-                      background: "#1E293B",
-                      border: "1px solid #334155",
+                      background: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
                       borderRadius: "8px",
                       padding: "0.25rem",
                       width: "fit-content",
@@ -326,10 +326,10 @@ export default function Reconciliation() {
                           onClick={() => setActiveTab(tab)}
                           style={{
                             padding: "0.375rem 0.875rem",
-                            background: activeTab === tab ? "#0F172A" : "transparent",
+                            background: activeTab === tab ? "#FFFFFF" : "transparent",
                             border: "none",
                             borderRadius: "6px",
-                            color: activeTab === tab ? "#F8FAFC" : "#64748B",
+                            color: activeTab === tab ? "#0F172A" : "#94A3B8",
                             fontSize: "0.8rem",
                             fontWeight: activeTab === tab ? 500 : 400,
                             cursor: "pointer",
