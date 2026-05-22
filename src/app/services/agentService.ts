@@ -150,14 +150,13 @@ async function* fetchStream(
   token?: string,
 ): AsyncGenerator<AgentEvent> {
   // Always use the server-side proxy — key never touches the browser.
-  const url     = "/api/ai/chat";
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   // Forward the Auth0 bearer token so the proxy can validate the request.
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let res: Response;
   try {
-    res = await fetch(url, {
+    res = await fetch("/api/ai/chat", {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -330,14 +329,6 @@ export async function* streamAgentResponse(
   /** Auth0 access token — forwarded to the server proxy for validation. */
   token?: string,
 ): AsyncGenerator<AgentEvent> {
-  if (!isConfigured()) {
-    yield {
-      type: "error",
-      msg: "Agent not configured. Set VITE_AZURE_OPENAI_ENDPOINT, VITE_AZURE_OPENAI_KEY, and VITE_AZURE_OPENAI_AGENT_DEPLOYMENT in your .env.local file.",
-    };
-    return;
-  }
-
   const systemMsg: ApiMessage = {
     role: "system",
     content: buildSystemPrompt(pageContext),

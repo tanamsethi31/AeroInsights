@@ -2,7 +2,7 @@
  * Vercel Edge Function — AI chat proxy
  *
  * Enforces:
- *  1. Auth0 bearer token required.
+ *  1. Auth0 bearer token required and signature-verified.
  *  2. Per-user daily limit  — USER_DAILY_LIMIT  queries/day (default 5).
  *  3. Global daily cap      — GLOBAL_DAILY_LIMIT queries/day (default 50).
  *
@@ -13,6 +13,8 @@
  * Server-side env vars (Vercel dashboard, NOT prefixed VITE_):
  *   AZURE_OPENAI_URL          Full Target URI from Azure AI Foundry
  *   AZURE_OPENAI_KEY          Azure OpenAI API key
+ *   AUTH0_DOMAIN              e.g. dev-xxx.eu.auth0.com
+ *   AUTH0_AUDIENCE            e.g. https://api.aeroinsights.io
  *   UPSTASH_REDIS_REST_URL    e.g. https://xxxx.upstash.io
  *   UPSTASH_REDIS_REST_TOKEN  Upstash REST token
  *   AI_USER_DAILY_LIMIT       Per-user cap  (default 5)
@@ -24,14 +26,68 @@ export const config = { runtime: "edge" };
 const USER_DAILY_LIMIT   = parseInt(process.env.AI_USER_DAILY_LIMIT   ?? "5",  10);
 const GLOBAL_DAILY_LIMIT = parseInt(process.env.AI_GLOBAL_DAILY_LIMIT ?? "50", 10);
 
-// ── JWT helpers (decode only — used for rate-limit keying, not auth) ──────────
+// ── JWT verification using Web Crypto + Auth0 JWKS ───────────────────────────
 
-function decodeJwtSub(token: string): string | null {
+let _jwksCache: { keys: JsonWebKey[] } | null = null;
+let _jwksFetchedAt = 0;
+const JWKS_TTL_MS = 3_600_000; // 1 hour
+
+async function getJwks(domain: string): Promise<{ keys: JsonWebKey[] }> {
+  const now = Date.now();
+  if (_jwksCache && now - _jwksFetchedAt < JWKS_TTL_MS) return _jwksCache;
+  const res = await fetch(`https://${domain}/.well-known/jwks.json`);
+  if (!res.ok) throw new Error("JWKS fetch failed");
+  _jwksCache = await res.json() as { keys: JsonWebKey[] };
+  _jwksFetchedAt = now;
+  return _jwksCache;
+}
+
+function b64urlDecode(b64: string): Uint8Array {
+  return Uint8Array.from(atob(b64.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+}
+
+async function verifyJwtSub(token: string): Promise<string | null> {
+  const domain   = process.env.AUTH0_DOMAIN;
+  const audience = process.env.AUTH0_AUDIENCE;
+  // If env vars not configured, skip verification (local dev without Auth0).
+  if (!domain || !audience) {
+    try {
+      const raw = JSON.parse(new TextDecoder().decode(b64urlDecode(token.split(".")[1] ?? "")));
+      return (raw.sub as string) ?? null;
+    } catch { return null; }
+  }
+
   try {
-    const payload = token.split(".")[1];
-    const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const claims  = JSON.parse(decoded) as Record<string, unknown>;
-    return (claims.sub as string) ?? null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [headerB64, payloadB64, sigB64] = parts;
+
+    const payload = JSON.parse(new TextDecoder().decode(b64urlDecode(payloadB64))) as Record<string, unknown>;
+    const now     = Math.floor(Date.now() / 1000);
+
+    if (typeof payload.exp === "number" && payload.exp < now) return null;
+    if (payload.iss !== `https://${domain}/`) return null;
+    const aud = payload.aud;
+    if (Array.isArray(aud) ? !aud.includes(audience) : aud !== audience) return null;
+
+    const header = JSON.parse(new TextDecoder().decode(b64urlDecode(headerB64))) as Record<string, unknown>;
+    const jwks   = await getJwks(domain);
+    const jwk    = jwks.keys.find((k: JsonWebKey) => (k as Record<string, unknown>).kid === header.kid);
+    if (!jwk) return null;
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "jwk",
+      jwk,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+
+    const signed    = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+    const signature = b64urlDecode(sigB64);
+    const valid     = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", cryptoKey, signature, signed);
+
+    return valid ? (payload.sub as string) : null;
   } catch {
     return null;
   }
@@ -61,59 +117,28 @@ async function checkAndIncrementLimits(userId: string): Promise<RateLimitResult>
   const globalKey = `ai:${date}:global`;
   const ttl       = 90000; // 25 hours — safely covers a full UTC day
 
-  // First read current values before incrementing so we can check limits.
-  const readPipeline = [
-    ["GET", userKey],
-    ["GET", globalKey],
+  // Increment-first: a single pipeline eliminates the GET→INCR race condition.
+  // The INCR result IS the post-increment count; reject if it exceeds the cap.
+  const pipeline = [
+    ["INCR", userKey],
+    ["EXPIRE", userKey, ttl],
+    ["INCR", globalKey],
+    ["EXPIRE", globalKey, ttl],
   ];
 
   try {
-    const readRes = await fetch(`${upstashUrl}/pipeline`, {
+    const res = await fetch(`${upstashUrl}/pipeline`, {
       method:  "POST",
       headers: { Authorization: `Bearer ${upstashToken}`, "Content-Type": "application/json" },
-      body:    JSON.stringify(readPipeline),
+      body:    JSON.stringify(pipeline),
     });
 
-    if (readRes.ok) {
-      const readData = await readRes.json() as Array<{ result: string | null }>;
-      const currentUser   = parseInt(readData[0]?.result ?? "0", 10);
-      const currentGlobal = parseInt(readData[1]?.result ?? "0", 10);
+    if (!res.ok) return { allowed: true, userCount: 0, globalCount: 0 };
 
-      if (currentUser >= USER_DAILY_LIMIT) {
-        return {
-          allowed: false,
-          reason: `You have used all ${USER_DAILY_LIMIT} AI queries for today. Resets at midnight UTC.`,
-        };
-      }
-      if (currentGlobal >= GLOBAL_DAILY_LIMIT) {
-        return {
-          allowed: false,
-          reason: "The platform's daily AI capacity has been reached. Please try again tomorrow.",
-        };
-      }
-    }
+    const data        = await res.json() as Array<{ result: number }>;
+    const userCount   = data[0]?.result ?? 0;
+    const globalCount = data[2]?.result ?? 0;
 
-    // Atomically increment both counters and set TTL.
-    const incrPipeline = [
-      ["INCR", userKey],
-      ["EXPIRE", userKey, ttl],
-      ["INCR", globalKey],
-      ["EXPIRE", globalKey, ttl],
-    ];
-
-    const incrRes = await fetch(`${upstashUrl}/pipeline`, {
-      method:  "POST",
-      headers: { Authorization: `Bearer ${upstashToken}`, "Content-Type": "application/json" },
-      body:    JSON.stringify(incrPipeline),
-    });
-
-    if (!incrRes.ok) return { allowed: true, userCount: 0, globalCount: 0 };
-
-    const incrData  = await incrRes.json() as Array<{ result: number }>;
-    const userCount   = incrData[0]?.result ?? 0;
-    const globalCount = incrData[2]?.result ?? 0;
-
-    // Double-check after increment in case of race condition.
     if (userCount > USER_DAILY_LIMIT) {
       return {
         allowed: false,
@@ -141,15 +166,17 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  // Auth guard.
+  // Auth guard — verify JWT signature before trusting any claims.
   const auth  = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
   if (!token) {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  // Extract user ID from JWT sub claim for rate-limit keying.
-  const userId = decodeJwtSub(token) ?? `anon:${token.slice(-16)}`;
+  const userId = await verifyJwtSub(token);
+  if (!userId) {
+    return json({ error: "Unauthorized" }, 401);
+  }
 
   // Rate limit check.
   const limit = await checkAndIncrementLimits(userId);
