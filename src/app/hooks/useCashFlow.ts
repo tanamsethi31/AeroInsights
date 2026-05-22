@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolioData } from "./usePortfolioData";
-import { buildLiveSDMRData } from "../components/portfolio/SDMRTab";
+import { buildLiveSDMRData, sdmrData as staticSdmrData } from "../components/portfolio/SDMRTab";
+import { DEMO_LEASES } from "../data/demoCashFlowLeases";
 import { forecastCashFlows, mergeForecastEvents } from "../utils/cashFlowForecast";
 import type { CashEvent, CashEventType, CashEventSource, NewCashEvent } from "../utils/cashFlowForecast";
 
@@ -54,10 +55,16 @@ export function useCashFlow(): UseCashFlowReturn {
     [assets, lessees, leases, provisions],
   );
 
-  // Rule-based forecast (client-side, never persisted)
+  // Rule-based forecast (client-side, never persisted).
+  // In demo mode (no orgId) fall back to the static SDMR demo portfolio so
+  // the chart shows real platform analytics instead of hard-coded sample events.
   const ruleEvents = useMemo(
-    () => forecastCashFlows(leases, sdmrData, 24),
-    [leases, sdmrData],
+    () => forecastCashFlows(
+      orgId ? leases         : DEMO_LEASES,
+      orgId ? sdmrData       : staticSdmrData,
+      24,
+    ),
+    [orgId, leases, sdmrData],
   );
 
   // Split persisted into actuals and manual forecast overrides

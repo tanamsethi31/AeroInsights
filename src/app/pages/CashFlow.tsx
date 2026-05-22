@@ -9,7 +9,6 @@ import {
 import { PageHeader } from "../components/ui/PageHeader";
 import { KpiCard } from "../components/ui/KpiCard";
 import { useCashFlow } from "../hooks/useCashFlow";
-import { SAMPLE_CASH_EVENTS } from "../data/sampleCashEvents";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import type { CashEvent, CashEventType, NewCashEvent } from "../utils/cashFlowForecast";
 import type { Lease, Lessee } from "../types/portfolio";
@@ -361,8 +360,9 @@ export default function CashFlow() {
   const { events, actuals, loading, saving, addEvent, editEvent, deleteEvent } = useCashFlow();
   const { leases, lessees } = usePortfolioData();
 
+  // isDemoMode: no persisted actuals → rule-based forecasts from DEMO_LEASES are driving the view
   const isDemoMode = !loading && actuals.length === 0;
-  const displayEvents = isDemoMode ? SAMPLE_CASH_EVENTS : events;
+  const displayEvents = events;
 
   const [viewMode,       setViewMode      ] = useState<ViewMode>("both");
   const [rangeMonths,    setRangeMonths   ] = useState<RangeMonths>(12);
@@ -531,7 +531,7 @@ export default function CashFlow() {
             fontSize: "0.75rem",
             fontWeight: 500,
           }}>
-            SAMPLE DATA
+            DEMO DATA
           </span>
         </div>
       )}
