@@ -59,11 +59,10 @@ export function AircraftDetailTab() {
 
   const selected      = AIRCRAFT_LIST.find(a => a.leaseId === selectedLeaseId) ?? AIRCRAFT_LIST[0];
   const selectedLease = sdmrData.find(l => l.leaseId === selectedLeaseId) ?? sdmrData[0];
-  if (!selected || !selectedLease) return null;
 
-  const { projections, leaseEndDate, monthsToEOL } = useMemo(() => {
-    // selectedLease and leaseEndDate are deterministic functions of selectedLeaseId;
-    // listing them in the dep array would be redundant and violates the exhaustive-deps rule.
+  // Hook must be called unconditionally (Rules of Hooks); null-safety checked after.
+  const derived = useMemo(() => {
+    if (!selected || !selectedLease) return null;
     const end = parseDateLocal(selected.leaseEnd);
     return {
       projections:  buildProjections(selectedLease, selectedLease.aircraft, end),
@@ -72,6 +71,10 @@ export function AircraftDetailTab() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLeaseId]);
+
+  if (!selected || !selectedLease || !derived) return null;
+
+  const { projections, leaseEndDate, monthsToEOL } = derived;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", marginTop: "1.5rem" }}>

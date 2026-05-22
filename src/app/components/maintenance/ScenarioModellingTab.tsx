@@ -146,7 +146,8 @@ export function ScenarioModellingTab() {
 
   const rows = useMemo(() => {
     return AIRCRAFT_LIST.map(a => {
-      const lease        = sdmrData.find(l => l.leaseId === a.leaseId) ?? sdmrData[0];
+      const lease = sdmrData.find(l => l.leaseId === a.leaseId);
+      if (!lease) throw new Error(`ScenarioModellingTab: no sdmrData entry for leaseId ${a.leaseId}`);
       const leaseEndDate = parseDateLocal(a.leaseEnd);
 
       const baseProj = buildProjections(lease, lease.aircraft, leaseEndDate);
