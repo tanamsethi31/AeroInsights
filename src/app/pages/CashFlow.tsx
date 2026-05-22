@@ -358,10 +358,10 @@ function ChartTooltip({ active, payload, label }: {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CashFlow() {
-  const { events, loading, saving, addEvent, editEvent, deleteEvent } = useCashFlow();
+  const { events, actuals, loading, saving, addEvent, editEvent, deleteEvent } = useCashFlow();
   const { leases, lessees } = usePortfolioData();
 
-  const isDemoMode = !loading && events.length === 0;
+  const isDemoMode = !loading && actuals.length === 0;
   const displayEvents = isDemoMode ? SAMPLE_CASH_EVENTS : events;
 
   const [viewMode,       setViewMode      ] = useState<ViewMode>("both");
@@ -764,7 +764,7 @@ export default function CashFlow() {
                 ledgerRows.map(event => {
                   const badge = sourceBadge(event.source);
                   const lesseeName = event.leaseId ? (lesseeByLeaseId.get(event.leaseId) ?? "—") : "—";
-                  const canAct = event.source !== "rule";
+                  const canAct = !isDemoMode && event.source !== "rule";
                   return (
                     <tr
                       key={event.id}
