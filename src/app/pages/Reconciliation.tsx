@@ -1,5 +1,5 @@
 // src/app/pages/Reconciliation.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, FileSpreadsheet, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -7,6 +7,7 @@ import { StatementUploadModal } from "../components/reconciliation/StatementUplo
 import { useBankStatements } from "../hooks/useBankStatements";
 import type { BankStatement, BankTransaction } from "../hooks/useBankStatements";
 import { ReconciliationWorkspace } from "../components/reconciliation/ReconciliationWorkspace";
+import { SAMPLE_STATEMENT, SAMPLE_TRANSACTIONS } from "../data/sampleBankStatement";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,10 +27,12 @@ function StatementCard({
   statement,
   isSelected,
   onClick,
+  showDemoBadge = false,
 }: {
-  statement:  BankStatement;
-  isSelected: boolean;
-  onClick:    () => void;
+  statement:     BankStatement;
+  isSelected:    boolean;
+  onClick:       () => void;
+  showDemoBadge?: boolean;
 }) {
   return (
     <motion.div
@@ -57,8 +60,21 @@ function StatementCard({
           <FileSpreadsheet size={18} style={{ color: "#3B82F6" }} />
         </div>
         <div>
-          <p style={{ margin: 0, fontWeight: 500, color: "#F8FAFC", fontSize: "0.875rem" }}>
+          <p style={{ margin: 0, fontWeight: 500, color: "#F8FAFC", fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
             {statement.filename}
+            {showDemoBadge && (
+              <span style={{
+                background: "#1E293B",
+                border: "1px solid #334155",
+                color: "#64748B",
+                borderRadius: "99px",
+                padding: "0.1rem 0.5rem",
+                fontSize: "0.7rem",
+                fontWeight: 500,
+              }}>
+                SAMPLE DATA
+              </span>
+            )}
           </p>
           <p style={{ margin: "0.125rem 0 0", fontSize: "0.775rem", color: "#64748B" }}>
             {statement.periodLabel} · {statement.currency} · {statement.rowCount.toLocaleString()} txns · Uploaded {fmtDate(statement.uploadedAt)}
@@ -202,6 +218,13 @@ export default function Reconciliation() {
     }
     setActiveTab("transactions");
     setSelectedStatementId(id);
+
+    // Demo bypass — skip the Supabase fetch for the sample statement
+    if (id === "demo-stmt-1") {
+      setTransactions(SAMPLE_TRANSACTIONS);
+      return;
+    }
+
     setLoadingTx(true);
     setTransactions([]);
     const txns = await fetchTransactions(id);
@@ -227,50 +250,20 @@ export default function Reconciliation() {
       txns
     );
 
-  const selectedStatement = statements.find(s => s.id === selectedStatementId) ?? null;
+  const isDemoMode = !loading && statements.length === 0;
+  const displayStatements = isDemoMode ? [SAMPLE_STATEMENT] : statements;
 
-  // ── Empty state ────────────────────────────────────────────────────────────
+  // Auto-select demo statement and populate transactions when in demo mode
+  useEffect(() => {
+    if (isDemoMode && selectedStatementId === null) {
+      setSelectedStatementId("demo-stmt-1");
+      setTransactions(SAMPLE_TRANSACTIONS);
+    }
+  }, [isDemoMode]);
 
-  if (!loading && statements.length === 0) {
-    return (
-      <div style={{ padding: "2rem", height: "100%", display: "flex", flexDirection: "column" }}>
-        <PageHeader title="Reconciliation" subtitle="Upload and browse bank statements" />
-        <div style={{
-          flex: 1, display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          gap: "1rem", minHeight: "400px",
-        }}>
-          <div style={{
-            width: "56px", height: "56px", borderRadius: "12px",
-            background: "#1E293B", border: "1px solid #334155",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <FileSpreadsheet size={24} style={{ color: "#3B82F6" }} />
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <p style={{ margin: 0, fontWeight: 500, color: "#F8FAFC", fontSize: "1rem" }}>No bank statements yet</p>
-            <p style={{ margin: "0.375rem 0 0", fontSize: "0.875rem", color: "#64748B" }}>
-              Upload a CSV or XLSX file to get started
-            </p>
-          </div>
-          <button
-            onClick={() => setUploadOpen(true)}
-            style={{
-              display: "flex", alignItems: "center", gap: "0.5rem",
-              background: "#3B82F6", border: "none", color: "#FFFFFF",
-              borderRadius: "8px", padding: "0.625rem 1.25rem",
-              fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
-            }}
-          >
-            <Upload size={16} /> Upload your first bank statement
-          </button>
-        </div>
-        <StatementUploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onImport={handleImport} />
-      </div>
-    );
-  }
+  const selectedStatement = displayStatements.find(s => s.id === selectedStatementId) ?? null;
 
-  // ── Has statements ─────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -292,12 +285,13 @@ export default function Reconciliation() {
         <div style={{ color: "#64748B", fontSize: "0.875rem", padding: "2rem 0" }}>Loading statements…</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-          {statements.map(stmt => (
+          {displayStatements.map(stmt => (
             <div key={stmt.id}>
               <StatementCard
                 statement={stmt}
                 isSelected={selectedStatementId === stmt.id}
                 onClick={() => handleSelectStatement(stmt.id)}
+                showDemoBadge={isDemoMode}
               />
               <AnimatePresence>
                 {selectedStatementId === stmt.id && selectedStatement && (
