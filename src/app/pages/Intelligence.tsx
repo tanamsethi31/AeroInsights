@@ -7,10 +7,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { PillTabs } from "../components/ui/PillTabs";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import {
-  MACRO_SIGNALS,
   LESSEE_RADAR,
-  DEAL_FEED,
-  JURISDICTION_EVENTS,
   type SignalCategory,
   type SignalSeverity,
   type SignalSentiment,
@@ -22,6 +19,8 @@ import {
   type DealItem,
   type JurisdictionEvent,
 } from "../data/intelligenceData";
+import { useMacroSignals } from "../services/useMacroSignals";
+import { useNewsFeed } from "../services/useNewsFeed";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -547,7 +546,11 @@ function SignalCard({ sig, lesseeIdByName, liveExposure }: {
   );
 }
 
-function MacroSignalsView({ lesseeIdByName, liveExposure }: {
+function MacroSignalsView({ signals, loading, lastUpdated, onRefresh, lesseeIdByName, liveExposure }: {
+  signals: MacroSignal[];
+  loading: boolean;
+  lastUpdated: Date | null;
+  onRefresh: () => void;
   lesseeIdByName: Map<string, string>;
   liveExposure: (name: string, fallback: number) => number;
 }) {
@@ -555,25 +558,43 @@ function MacroSignalsView({ lesseeIdByName, liveExposure }: {
 
   const filtered = useMemo(() => {
     const sigs = catFilter === "all"
-      ? MACRO_SIGNALS
-      : MACRO_SIGNALS.filter((s) => s.category === catFilter);
+      ? signals
+      : signals.filter((s) => s.category === catFilter);
     // sort: high first, then medium, then low
     const order: Record<SignalSeverity, number> = { high: 0, medium: 1, low: 2 };
     return [...sigs].sort((a, b) => order[a.severity] - order[b.severity]);
-  }, [catFilter]);
+  }, [catFilter, signals]);
 
   // Count per category
   const counts = useMemo(() => {
     const c: Partial<Record<SignalCategory, number>> = {};
-    for (const s of MACRO_SIGNALS) c[s.category] = (c[s.category] ?? 0) + 1;
+    for (const s of signals) c[s.category] = (c[s.category] ?? 0) + 1;
     return c;
-  }, []);
+  }, [signals]);
 
-  const highCount  = MACRO_SIGNALS.filter((s) => s.severity === "high").length;
-  const medCount   = MACRO_SIGNALS.filter((s) => s.severity === "medium").length;
+  const highCount  = signals.filter((s) => s.severity === "high").length;
+  const medCount   = signals.filter((s) => s.severity === "medium").length;
 
   return (
     <div>
+      {/* Live status strip */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", fontSize: "0.78rem", color: T.muted }}>
+        {loading ? (
+          <span>Refreshing…</span>
+        ) : lastUpdated ? (
+          <span>Live · Updated {lastUpdated.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+        ) : (
+          <span>Static data</span>
+        )}
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          style={{ fontSize: "0.75rem", color: T.blue, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+        >
+          Refresh
+        </button>
+      </div>
+
       {/* KPI strip */}
       <div
         style={{
@@ -586,7 +607,7 @@ function MacroSignalsView({ lesseeIdByName, liveExposure }: {
         {[
           { label: "High-Severity Signals", value: highCount,  color: T.red,   bg: T.redBg   },
           { label: "Medium Signals",         value: medCount,   color: T.amber, bg: T.amberBg },
-          { label: "Signals Monitored",      value: MACRO_SIGNALS.length, color: T.text, bg: T.bg },
+          { label: "Signals Monitored",      value: signals.length, color: T.text, bg: T.bg },
         ].map((k) => (
           <div
             key={k.label}
@@ -611,7 +632,7 @@ function MacroSignalsView({ lesseeIdByName, liveExposure }: {
           <FilterChip
             key={f.id}
             active={catFilter === f.id}
-            label={f.id === "all" ? `All (${MACRO_SIGNALS.length})` : f.label}
+            label={f.id === "all" ? `All (${signals.length})` : f.label}
             count={f.id !== "all" ? counts[f.id as SignalCategory] : undefined}
             onClick={() => setCatFilter(f.id)}
           />
@@ -686,6 +707,17 @@ function LesseeRadarView({ lesseeIdByName, liveExposure }: {
 
   return (
     <div>
+      {/* Simulated data notice */}
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: "0.375rem",
+        background: "#F1F5F9", border: "1px solid #CBD5E1",
+        borderRadius: "9999px", padding: "0.2rem 0.625rem",
+        fontSize: "0.72rem", color: "#64748B", marginBottom: "1rem",
+      }}>
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#94A3B8", flexShrink: 0 }} />
+        Simulated — real payment, schedule &amp; rating APIs not publicly available
+      </div>
+
       {/* KPI strip */}
       <div
         style={{
@@ -1164,32 +1196,55 @@ function DealCard({ item }: { item: DealItem }) {
   );
 }
 
-function DealFeedView() {
+function DealFeedView({ items, loading, lastUpdated, onRefresh }: {
+  items: DealItem[];
+  loading: boolean;
+  lastUpdated: Date | null;
+  onRefresh: () => void;
+}) {
   const [catFilter, setCatFilter] = useState<DealCategory | "all">("all");
 
   const filtered = useMemo(() => {
-    const items = catFilter === "all"
-      ? DEAL_FEED
-      : DEAL_FEED.filter((d) => d.category === catFilter);
+    const feed = catFilter === "all"
+      ? items
+      : items.filter((d) => d.category === catFilter);
     // Sort: high relevance first, then by hoursAgo
     const relOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-    return [...items].sort((a, b) => {
+    return [...feed].sort((a, b) => {
       const rDiff = relOrder[a.relevance] - relOrder[b.relevance];
       if (rDiff !== 0) return rDiff;
       return a.hoursAgo - b.hoursAgo;
     });
-  }, [catFilter]);
+  }, [catFilter, items]);
 
   const counts = useMemo(() => {
     const c: Partial<Record<DealCategory, number>> = {};
-    for (const d of DEAL_FEED) c[d.category] = (c[d.category] ?? 0) + 1;
+    for (const d of items) c[d.category] = (c[d.category] ?? 0) + 1;
     return c;
-  }, []);
+  }, [items]);
 
-  const highRel = DEAL_FEED.filter((d) => d.relevance === "high").length;
+  const highRel = items.filter((d) => d.relevance === "high").length;
 
   return (
     <div>
+      {/* Live status strip */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", fontSize: "0.78rem", color: T.muted }}>
+        {loading ? (
+          <span>Refreshing…</span>
+        ) : lastUpdated ? (
+          <span>Live · Updated {lastUpdated.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+        ) : (
+          <span>Static data</span>
+        )}
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          style={{ fontSize: "0.75rem", color: T.blue, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+        >
+          Refresh
+        </button>
+      </div>
+
       {/* Summary strip */}
       <div
         style={{
@@ -1205,7 +1260,7 @@ function DealFeedView() {
         }}
       >
         <div>
-          <span style={{ fontWeight: 700, color: T.text, fontSize: "1.25rem" }}>{DEAL_FEED.length}</span>
+          <span style={{ fontWeight: 700, color: T.text, fontSize: "1.25rem" }}>{items.length}</span>
           <span style={{ color: T.muted, marginLeft: "0.375rem" }}>total items</span>
         </div>
         <div>
@@ -1214,18 +1269,20 @@ function DealFeedView() {
         </div>
         <div>
           <span style={{ fontWeight: 700, color: T.red, fontSize: "1.25rem" }}>
-            {DEAL_FEED.filter((d) => d.sentiment === "negative").length}
+            {items.filter((d) => d.sentiment === "negative").length}
           </span>
           <span style={{ color: T.muted, marginLeft: "0.375rem" }}>negative signals</span>
         </div>
         <div>
           <span style={{ fontWeight: 700, color: T.green, fontSize: "1.25rem" }}>
-            {DEAL_FEED.filter((d) => d.sentiment === "positive").length}
+            {items.filter((d) => d.sentiment === "positive").length}
           </span>
           <span style={{ color: T.muted, marginLeft: "0.375rem" }}>positive signals</span>
         </div>
         <div style={{ marginLeft: "auto", fontSize: "0.75rem", color: T.muted }}>
-          Last refreshed: 29 Apr 2026
+          {lastUpdated
+            ? `Live · ${lastUpdated.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+            : "Static data"}
         </div>
       </div>
 
@@ -1484,22 +1541,44 @@ function JxCard({ event, lesseeIdByName, liveTotalExposure }: {
   );
 }
 
-function JurisdictionWatchView({ lesseeIdByName, liveTotalExposure }: {
+function JurisdictionWatchView({ events: rawEvents, loading, lastUpdated, onRefresh, lesseeIdByName, liveTotalExposure }: {
+  events: JurisdictionEvent[];
+  loading: boolean;
+  lastUpdated: Date | null;
+  onRefresh: () => void;
   lesseeIdByName: Map<string, string>;
   liveTotalExposure: (names: string[], fallback: number) => number;
 }) {
   const events = useMemo(() => {
     const sentOrder: Record<SignalSentiment, number> = { negative: 0, neutral: 1, positive: 2 };
-    return [...JURISDICTION_EVENTS].sort(
+    return [...rawEvents].sort(
       (a, b) => sentOrder[a.sentiment] - sentOrder[b.sentiment]
     );
-  }, []);
+  }, [rawEvents]);
 
   const negCount  = events.filter((e) => e.sentiment === "negative").length;
   const posCount  = events.filter((e) => e.sentiment === "positive").length;
 
   return (
     <div>
+      {/* Live status strip */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", fontSize: "0.78rem", color: T.muted }}>
+        {loading ? (
+          <span>Refreshing…</span>
+        ) : lastUpdated ? (
+          <span>Live · Updated {lastUpdated.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+        ) : (
+          <span>Static data</span>
+        )}
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          style={{ fontSize: "0.75rem", color: T.blue, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+        >
+          Refresh
+        </button>
+      </div>
+
       {/* KPI strip */}
       <div
         style={{
@@ -1588,11 +1667,15 @@ export default function Intelligence() {
     return found ? total : fallback;
   }
 
+  // Live data hooks
+  const { signals: liveSignals, loading: macroLoading, lastUpdated: macroUpdated, refresh: refreshMacro } = useMacroSignals();
+  const { dealItems: liveDealItems, jxEvents: liveJxEvents, loading: newsLoading, lastUpdated: newsUpdated, refresh: refreshNews } = useNewsFeed();
+
   // Red dot for high-severity signals
-  const highSignals  = MACRO_SIGNALS.filter((s) => s.severity === "high").length;
+  const highSignals  = liveSignals.filter((s) => s.severity === "high").length;
   const redLessees   = LESSEE_RADAR.filter((l) => l.compositeSignal === "red").length;
-  const negDeals     = DEAL_FEED.filter((d) => d.sentiment === "negative" && d.relevance === "high").length;
-  const negJx        = JURISDICTION_EVENTS.filter((e) => e.sentiment === "negative").length;
+  const negDeals     = liveDealItems.filter((d) => d.sentiment === "negative" && d.relevance === "high").length;
+  const negJx        = liveJxEvents.filter((e) => e.sentiment === "negative").length;
 
   const badges: Record<IntelTab, number> = {
     "signals":      highSignals,
@@ -1636,7 +1719,9 @@ export default function Intelligence() {
               flexShrink: 0,
             }}
           />
-          Live · Updated 29 Apr 2026
+          {macroLoading || newsLoading ? "Refreshing…" : macroUpdated
+            ? `Live · Updated ${macroUpdated.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+            : "Static data"}
         </div>
       </PageHeader>
 
@@ -1678,10 +1763,35 @@ export default function Intelligence() {
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
         >
-          {activeTab === "signals"      && <MacroSignalsView lesseeIdByName={lesseeIdByName} liveExposure={liveExposure} />}
+          {activeTab === "signals" && (
+            <MacroSignalsView
+              signals={liveSignals}
+              loading={macroLoading}
+              lastUpdated={macroUpdated}
+              onRefresh={refreshMacro}
+              lesseeIdByName={lesseeIdByName}
+              liveExposure={liveExposure}
+            />
+          )}
           {activeTab === "lessee-radar" && <LesseeRadarView lesseeIdByName={lesseeIdByName} liveExposure={liveExposure} />}
-          {activeTab === "deal-feed"    && <DealFeedView    />}
-          {activeTab === "jx-watch"     && <JurisdictionWatchView lesseeIdByName={lesseeIdByName} liveTotalExposure={liveTotalExposure} />}
+          {activeTab === "deal-feed" && (
+            <DealFeedView
+              items={liveDealItems}
+              loading={newsLoading}
+              lastUpdated={newsUpdated}
+              onRefresh={refreshNews}
+            />
+          )}
+          {activeTab === "jx-watch" && (
+            <JurisdictionWatchView
+              events={liveJxEvents}
+              loading={newsLoading}
+              lastUpdated={newsUpdated}
+              onRefresh={refreshNews}
+              lesseeIdByName={lesseeIdByName}
+              liveTotalExposure={liveTotalExposure}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
     </motion.div>
