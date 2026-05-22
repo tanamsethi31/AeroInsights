@@ -53,18 +53,25 @@ const AIRCRAFT_LIST: AircraftEntry[] = sdmrData.map(lease => {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AircraftDetailTab() {
-  const [selectedLeaseId, setSelectedLeaseId] = useState(AIRCRAFT_LIST[0].leaseId);
-
-  const selected      = AIRCRAFT_LIST.find(a => a.leaseId === selectedLeaseId)!;
-  const selectedLease = sdmrData.find(l => l.leaseId === selectedLeaseId)!;
-  const leaseEndDate  = parseDateLocal(selected.leaseEnd);
-  const monthsToEOL   = Math.max(0, monthsBetween(NOW, leaseEndDate));
-
-  const projections = useMemo(
-    () => buildProjections(selectedLease, selectedLease.aircraft, leaseEndDate),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedLeaseId],
+  const [selectedLeaseId, setSelectedLeaseId] = useState(
+    () => AIRCRAFT_LIST[0]?.leaseId ?? "",
   );
+
+  const selected      = AIRCRAFT_LIST.find(a => a.leaseId === selectedLeaseId) ?? AIRCRAFT_LIST[0];
+  const selectedLease = sdmrData.find(l => l.leaseId === selectedLeaseId) ?? sdmrData[0];
+  if (!selected || !selectedLease) return null;
+
+  const { projections, leaseEndDate, monthsToEOL } = useMemo(() => {
+    // selectedLease and leaseEndDate are deterministic functions of selectedLeaseId;
+    // listing them in the dep array would be redundant and violates the exhaustive-deps rule.
+    const end = parseDateLocal(selected.leaseEnd);
+    return {
+      projections:  buildProjections(selectedLease, selectedLease.aircraft, end),
+      leaseEndDate: end,
+      monthsToEOL:  Math.max(0, monthsBetween(NOW, end)),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLeaseId]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", marginTop: "1.5rem" }}>
