@@ -79,7 +79,7 @@ export function useCashFlow(): UseCashFlowReturn {
   // ── Load on mount / orgId change ──────────────────────────────────────────
 
   useEffect(() => {
-    if (!orgId) { setPersisted([]); return; }
+    if (!orgId) { setPersisted([]); setLoading(false); return; }
 
     let cancelled = false;
     const load = async () => {
