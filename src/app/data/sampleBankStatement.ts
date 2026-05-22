@@ -15,7 +15,7 @@ export const SAMPLE_TRANSACTIONS: BankTransaction[] = [
   // January
   { id: "demo-tx-01", orgId: "demo", statementId: "demo-stmt-1", valueDate: "2026-01-02", description: "WIRE CREDIT REF 8821 - RENTAL INCOME",  amount:  125000, currency: "USD", reference: "REF-882101" },
   { id: "demo-tx-02", orgId: "demo", statementId: "demo-stmt-1", valueDate: "2026-01-05", description: "BANK SERVICE CHARGE JAN",               amount:    -250, currency: "USD", reference: null },
-  { id: "demo-tx-03", orgId: "demo", statementId: "demo-stmt-1", valueDate: "2026-01-07", description: "FEE INCOME - MANAGEMENT FEES",          amount:    8500, currency: "USD", reference: "REF-110105" },
+  { id: "demo-tx-03", orgId: "demo", statementId: "demo-stmt-1", valueDate: "2026-01-07", description: "FEE INCOME - MANAGEMENT FEES",          amount:    8500, currency: "USD", reference: "REF-110101" },
   { id: "demo-tx-04", orgId: "demo", statementId: "demo-stmt-1", valueDate: "2026-01-09", description: "OUTWARD WIRE FEE",                      amount:    -185, currency: "USD", reference: null },
   { id: "demo-tx-05", orgId: "demo", statementId: "demo-stmt-1", valueDate: "2026-01-12", description: "OPERATING EXPENSE - ADMIN",             amount:   -3200, currency: "USD", reference: "REF-201001" },
   { id: "demo-tx-06", orgId: "demo", statementId: "demo-stmt-1", valueDate: "2026-01-15", description: "WIRE CREDIT REF 9104 - RENTAL INCOME",  amount:  162000, currency: "USD", reference: "REF-910401" },
