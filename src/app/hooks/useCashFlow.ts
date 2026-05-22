@@ -45,7 +45,7 @@ export function useCashFlow(): UseCashFlowReturn {
   const { orgId }                               = useData();
   const { assets, lessees, leases, provisions } = usePortfolioData();
   const [persisted, setPersisted]               = useState<CashEvent[]>([]);
-  const [loading,   setLoading  ]               = useState(false);
+  const [loading,   setLoading  ]               = useState(true);
   const [saving,    setSaving   ]               = useState(false);
 
   // Build SDMR records for forecast engine — same call as Portfolio.tsx
