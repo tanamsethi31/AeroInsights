@@ -9,7 +9,6 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const NOW = new Date(2026, 4, 1);
 const DEFAULT_FH = 3200;
 const DEFAULT_CY = 2100;
 
@@ -87,7 +86,7 @@ function MiniProjectionTable({
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
         <thead>
           <tr>
-            {["Component", "/mo Accrual", "EOL Balance", "EOL Oblig.", "EOL Position"].map(h => (
+            {["Component", "Monthly Accrual", "EOL Balance", "EOL Obligation", "EOL Position"].map(h => (
               <th key={h} style={{
                 padding: "0.375rem 0.625rem",
                 textAlign: "left",
@@ -140,12 +139,10 @@ function MiniProjectionTable({
 // ── ScenarioModellingTab ───────────────────────────────────────────────────────
 
 export function ScenarioModellingTab() {
-  const [fh,       setFh      ] = useState(DEFAULT_FH);
-  const [cy,       setCy      ] = useState(DEFAULT_CY);
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  // Suppress unused variable warning for NOW — it documents the reference date
-  void NOW;
+  const [fh,         setFh       ] = useState(DEFAULT_FH);
+  const [cy,         setCy       ] = useState(DEFAULT_CY);
+  const [expanded,   setExpanded ] = useState<string | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     return AIRCRAFT_LIST.map(a => {
@@ -238,7 +235,7 @@ export function ScenarioModellingTab() {
             cursor: "pointer",
           }}
         >
-          Reset to defaults
+          Reset to heuristic defaults
         </button>
       </div>
 
@@ -282,6 +279,8 @@ export function ScenarioModellingTab() {
               {/* Main row */}
               <div
                 onClick={() => setExpanded(isExpanded ? null : row.leaseId)}
+                onMouseEnter={() => setHoveredRow(row.leaseId)}
+                onMouseLeave={() => setHoveredRow(null)}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "minmax(0,2fr) 100px 130px 130px 130px 32px",
@@ -290,7 +289,7 @@ export function ScenarioModellingTab() {
                   borderBottom: "1px solid #F1F5F9",
                   fontSize: "0.8rem",
                   cursor: "pointer",
-                  background: isExpanded ? "#EFF6FF" : "transparent",
+                  background: isExpanded ? "#EFF6FF" : hoveredRow === row.leaseId ? "#F8FAFC" : "transparent",
                   alignItems: "center",
                   transition: "background 100ms",
                 }}
@@ -355,7 +354,7 @@ export function ScenarioModellingTab() {
                     projections={row.baseProj}
                   />
                   <MiniProjectionTable
-                    title={`Scenario · ${fh.toLocaleString()} FH / ${cy.toLocaleString()} cy`}
+                    title={`Scenario (${fh.toLocaleString()} FH / ${cy.toLocaleString()} cy)`}
                     projections={row.scenProj}
                     highlight
                   />
