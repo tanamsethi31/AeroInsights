@@ -1,6 +1,6 @@
 // src/app/components/rate-outlook/RateOutlookChart.tsx
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Area, ComposedChart,
 } from "recharts";
 import type { RateOutlookResult } from "../../data/rateOutlookData";
