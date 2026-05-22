@@ -631,7 +631,6 @@ export default function CashFlow() {
         style={{
           background: "#FFFFFF", border: "1px solid #E2E8F0",
           borderRadius: "12px", padding: "1.25rem 1.5rem",
-          marginBottom: "1.25rem",
           boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
         }}
       >
