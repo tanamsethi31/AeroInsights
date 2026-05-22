@@ -272,7 +272,7 @@ export default function Reconciliation() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <PageHeader title="Reconciliation" subtitle="Browse uploaded bank statements and transactions">
         <button
           onClick={() => setUploadOpen(true)}
