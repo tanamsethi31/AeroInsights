@@ -9,6 +9,7 @@ import {
 import { PageHeader } from "../components/ui/PageHeader";
 import { KpiCard } from "../components/ui/KpiCard";
 import { useCashFlow } from "../hooks/useCashFlow";
+import { SAMPLE_CASH_EVENTS } from "../data/sampleCashEvents";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import type { CashEvent, CashEventType, NewCashEvent } from "../utils/cashFlowForecast";
 import type { Lease, Lessee } from "../types/portfolio";
@@ -360,6 +361,9 @@ export default function CashFlow() {
   const { events, actuals, forecast, loading, saving, addEvent, editEvent, deleteEvent } = useCashFlow();
   const { leases, lessees } = usePortfolioData();
 
+  const isDemoMode = !loading && events.length === 0;
+  const displayEvents = isDemoMode ? SAMPLE_CASH_EVENTS : events;
+
   const [viewMode,       setViewMode      ] = useState<ViewMode>("both");
   const [rangeMonths,    setRangeMonths   ] = useState<RangeMonths>(12);
   const [selectedLeases, setSelectedLeases] = useState<Set<string> | null>(null); // null = all
@@ -379,49 +383,51 @@ export default function CashFlow() {
     const rangeEndStr = rangeEnd.toISOString().slice(0, 10);
 
     let base: CashEvent[] = [];
-    if (viewMode === "actuals")       base = actuals;
-    else if (viewMode === "forecast") base = forecast;
-    else                              base = events;
+    if (viewMode === "actuals")       base = displayEvents.filter(e => !e.isForecast && e.source !== "rule");
+    else if (viewMode === "forecast") base = displayEvents.filter(e => e.isForecast || e.source === "rule");
+    else                              base = displayEvents;
 
     return base.filter(e => {
-      if (e.eventDate < todayStr || e.eventDate > rangeEndStr) return false;
+      // Only filter out past dates for rule/forecast events — past actuals always appear in the ledger
+      if ((e.isForecast || e.source === "rule") && e.eventDate < todayStr) return false;
+      if (e.eventDate > rangeEndStr) return false;
       if (selectedLeases !== null && e.leaseId && !selectedLeases.has(e.leaseId)) return false;
       return true;
     });
-  }, [events, actuals, forecast, viewMode, rangeMonths, selectedLeases, now]);
+  }, [displayEvents, viewMode, rangeMonths, selectedLeases, now]);
 
   // ── KPI calculations ──────────────────────────────────────────────────────
   const currentMonth = isoMonth(now);
 
   const netReceivedMTD = useMemo(() => {
-    return events
+    return displayEvents
       .filter(e => !e.isForecast && e.source !== "rule" && e.eventDate.slice(0, 7) === currentMonth)
       .reduce((s, e) => s + e.amount, 0);
-  }, [events, currentMonth]);
+  }, [displayEvents, currentMonth]);
 
   const netForecast12m = useMemo(() => {
     const horizon = addMonths(now, 12);
-    return events
+    return displayEvents
       .filter(e => (e.isForecast || e.source === "rule") && new Date(e.eventDate) <= horizon)
       .reduce((s, e) => s + e.amount, 0);
-  }, [events, now]);
+  }, [displayEvents, now]);
 
   const largestOutflow90d = useMemo(() => {
     const next90 = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-    const candidates = events.filter(
+    const candidates = displayEvents.filter(
       e => (e.isForecast || e.source === "rule") && e.amount < 0 && new Date(e.eventDate) <= next90
     );
     if (candidates.length === 0) return null;
     return candidates.reduce((min, e) => e.amount < min.amount ? e : min);
-  }, [events, now]);
+  }, [displayEvents, now]);
 
   const mrDraws90d = useMemo(() => {
     const next90 = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-    const candidates = events.filter(
+    const candidates = displayEvents.filter(
       e => e.eventType === "mr_draw" && (e.isForecast || e.source === "rule") && new Date(e.eventDate) <= next90
     );
     return { count: candidates.length, total: candidates.reduce((s, e) => s + e.amount, 0) };
-  }, [events, now]);
+  }, [displayEvents, now]);
 
   // ── Chart data ────────────────────────────────────────────────────────────
 
@@ -513,6 +519,22 @@ export default function CashFlow() {
           <Plus size={15} /> Add Event
         </button>
       </PageHeader>
+
+      {isDemoMode && (
+        <div style={{ marginBottom: "0.75rem" }}>
+          <span style={{
+            background: "#F1F5F9",
+            border: "1px solid #E2E8F0",
+            color: "#94A3B8",
+            borderRadius: "99px",
+            padding: "0.2rem 0.625rem",
+            fontSize: "0.7rem",
+            fontWeight: 500,
+          }}>
+            SAMPLE DATA
+          </span>
+        </div>
+      )}
 
       {/* KPI Strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
