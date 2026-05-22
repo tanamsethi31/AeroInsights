@@ -25,23 +25,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
+    _local = settings.ENVIRONMENT == "local"
     app = FastAPI(
         title="Aeroinsights API",
         description="Aviation Lessor Decision Platform — Backend API",
         version=settings.VERSION,
-        openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
-        docs_url=f"{settings.API_V1_PREFIX}/docs",
-        redoc_url=f"{settings.API_V1_PREFIX}/redoc",
+        openapi_url=f"{settings.API_V1_PREFIX}/openapi.json" if _local else None,
+        docs_url=f"{settings.API_V1_PREFIX}/docs" if _local else None,
+        redoc_url=f"{settings.API_V1_PREFIX}/redoc" if _local else None,
         lifespan=lifespan,
     )
 
-    # CORS — frontend origin
+    # CORS — restrict to known origins, methods, and headers
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
     )
 
     # Audit logging middleware

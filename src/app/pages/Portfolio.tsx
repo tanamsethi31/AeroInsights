@@ -406,6 +406,7 @@ export default function Portfolio() {
         tabs={isExecutiveMode ? EXEC_TABS : tabs}
         activeTab={activeTab}
         onChange={setActiveTab}
+        style={{ marginTop: "-1.5rem" }}
       />
 
       {/* Leases Tab */}
@@ -602,27 +603,33 @@ export default function Portfolio() {
                         <tr style={{ borderBottom: "1px solid #E2E8F0" }}>
                           <td colSpan={11} style={{ padding: 0, background: "#FAFAFA" }}>
                             {/* Sub-tab switcher */}
-                            <div style={{ display: "flex", gap: "3px", background: "#EAEFF5", borderBottom: "1px solid #E2E8F0", padding: "5px 5px 5px 1rem" }}>
-                              {(["Valuation", "Maintenance Forecast", "LGD Benchmark"] as const).map((st) => {
-                                const key = st === "Maintenance Forecast" ? "Maintenance" : st === "LGD Benchmark" ? "LGD" : "Valuation";
-                                const active = (aircraftSubTab[a.msn] ?? "Valuation") === key;
-                                return (
-                                  <button
-                                    key={st}
-                                    onClick={(e) => { e.stopPropagation(); setAircraftSubTab((prev) => ({ ...prev, [a.msn]: key as "Valuation" | "Maintenance" | "LGD" })); }}
-                                    style={{
-                                      padding: "4px 14px", fontSize: "0.8125rem", fontWeight: active ? 600 : 500,
-                                      cursor: "pointer", border: "none", borderRadius: "9999px",
-                                      background: active ? "#002147" : "transparent",
-                                      color: active ? "#FFFFFF" : "#64748B",
-                                      transition: "all 150ms cubic-bezier(0.23,1,0.32,1)",
-                                      boxShadow: active ? "0 1px 3px rgba(0,33,71,0.18)" : "none",
-                                    }}
-                                  >
-                                    {st}
-                                  </button>
-                                );
-                              })}
+                            <div style={{ background: "#EAEFF5", borderBottom: "1px solid #E2E8F0", padding: "6px 6px 6px 1rem" }}>
+                              <div style={{
+                                display: "inline-flex", gap: "3px",
+                                background: "#F1F5F9", border: "1px solid #E2E8F0",
+                                borderRadius: "9999px", padding: "4px",
+                              }}>
+                                {(["Valuation", "Maintenance Forecast", "LGD Benchmark"] as const).map((st) => {
+                                  const key = st === "Maintenance Forecast" ? "Maintenance" : st === "LGD Benchmark" ? "LGD" : "Valuation";
+                                  const active = (aircraftSubTab[a.msn] ?? "Valuation") === key;
+                                  return (
+                                    <button
+                                      key={st}
+                                      onClick={(e) => { e.stopPropagation(); setAircraftSubTab((prev) => ({ ...prev, [a.msn]: key as "Valuation" | "Maintenance" | "LGD" })); }}
+                                      style={{
+                                        padding: "4px 14px", fontSize: "0.8125rem", fontWeight: active ? 600 : 500,
+                                        cursor: "pointer", border: "none", borderRadius: "9999px",
+                                        background: active ? "#002147" : "transparent",
+                                        color: active ? "#FFFFFF" : "#64748B",
+                                        transition: "all 150ms cubic-bezier(0.23,1,0.32,1)",
+                                        boxShadow: active ? "0 1px 3px rgba(0,33,71,0.18)" : "none",
+                                      }}
+                                    >
+                                      {st}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
                             {/* Panel */}
                             {(aircraftSubTab[a.msn] ?? "Valuation") === "Valuation" ? (

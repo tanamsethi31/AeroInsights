@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { PageHeader } from "../components/ui/PageHeader";
 import { KpiCard } from "../components/ui/KpiCard";
+import { PillTabs } from "../components/ui/PillTabs";
 import { useCashFlow } from "../hooks/useCashFlow";
 import { useData } from "../contexts/DataContext";
 import { usePortfolioData } from "../hooks/usePortfolioData";
@@ -68,7 +69,7 @@ function monthLabel(isoDate: string): string {
   return new Date(isoDate + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
-type ViewMode = "actuals" | "forecast" | "both";
+type ViewMode = "Actuals" | "Forecast" | "Both";
 type RangeMonths = 3 | 6 | 12 | 24;
 
 // ── AddCashEventModal ─────────────────────────────────────────────────────────
@@ -366,7 +367,7 @@ export default function CashFlow() {
   const isDemoMode = !hasUpload;
   const displayEvents = events;
 
-  const [viewMode,       setViewMode      ] = useState<ViewMode>("both");
+  const [viewMode,       setViewMode      ] = useState<ViewMode>("Both");
   const [rangeMonths,    setRangeMonths   ] = useState<RangeMonths>(12);
   const [selectedLeases, setSelectedLeases] = useState<Set<string> | null>(null); // null = all
   const [clickedMonth,   setClickedMonth  ] = useState<string | null>(null);
@@ -385,8 +386,8 @@ export default function CashFlow() {
     const rangeEndStr = rangeEnd.toISOString().slice(0, 10);
 
     let base: CashEvent[] = [];
-    if (viewMode === "actuals")       base = displayEvents.filter(e => !e.isForecast && e.source !== "rule");
-    else if (viewMode === "forecast") base = displayEvents.filter(e => e.isForecast || e.source === "rule");
+    if (viewMode === "Actuals")       base = displayEvents.filter(e => !e.isForecast && e.source !== "rule");
+    else if (viewMode === "Forecast") base = displayEvents.filter(e => e.isForecast || e.source === "rule");
     else                              base = displayEvents;
 
     return base.filter(e => {
@@ -504,7 +505,7 @@ export default function CashFlow() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <PageHeader
         title="Cash Flow"
         subtitle="Actuals, forecasts, and redelivery cash events across your portfolio"
@@ -539,7 +540,7 @@ export default function CashFlow() {
       )}
 
       {/* KPI Strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
         <KpiCard
           label="Net Received MTD"
           value={fmtCurrency(netReceivedMTD)}
@@ -570,58 +571,21 @@ export default function CashFlow() {
 
       {/* Controls bar */}
       <div style={{
-        display: "flex", alignItems: "center", gap: "0.75rem",
-        marginBottom: "1rem", flexWrap: "wrap",
+        display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap",
       }}>
         {/* View mode toggle */}
-        <div style={{
-          display: "flex", gap: 0, background: "#F1F5F9",
-          border: "1px solid #E2E8F0", borderRadius: "8px", padding: "0.2rem",
-        }}>
-          {(["actuals", "forecast", "both"] as ViewMode[]).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              style={{
-                padding: "0.3rem 0.875rem",
-                background: viewMode === mode ? "#FFFFFF" : "transparent",
-                border: "none", borderRadius: "6px",
-                color: viewMode === mode ? "#0F172A" : "#64748B",
-                fontSize: "0.8rem", fontWeight: viewMode === mode ? 500 : 400,
-                cursor: "pointer", textTransform: "capitalize",
-                transition: "background 150ms, color 150ms",
-                boxShadow: viewMode === mode ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-              }}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
+        <PillTabs
+          tabs={["Actuals", "Forecast", "Both"]}
+          activeTab={viewMode}
+          onChange={(t) => setViewMode(t as ViewMode)}
+        />
 
         {/* Range toggle */}
-        <div style={{
-          display: "flex", gap: 0, background: "#F1F5F9",
-          border: "1px solid #E2E8F0", borderRadius: "8px", padding: "0.2rem",
-        }}>
-          {([3, 6, 12, 24] as RangeMonths[]).map(r => (
-            <button
-              key={r}
-              onClick={() => setRangeMonths(r)}
-              style={{
-                padding: "0.3rem 0.75rem",
-                background: rangeMonths === r ? "#FFFFFF" : "transparent",
-                border: "none", borderRadius: "6px",
-                color: rangeMonths === r ? "#0F172A" : "#64748B",
-                fontSize: "0.8rem", fontWeight: rangeMonths === r ? 500 : 400,
-                cursor: "pointer",
-                transition: "background 150ms, color 150ms",
-                boxShadow: rangeMonths === r ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-              }}
-            >
-              {r}m
-            </button>
-          ))}
-        </div>
+        <PillTabs
+          tabs={["3m", "6m", "12m", "24m"]}
+          activeTab={`${rangeMonths}m`}
+          onChange={(r) => setRangeMonths(parseInt(r) as RangeMonths)}
+        />
 
         {/* Month filter chip */}
         {clickedMonth && (
@@ -667,7 +631,6 @@ export default function CashFlow() {
         style={{
           background: "#FFFFFF", border: "1px solid #E2E8F0",
           borderRadius: "12px", padding: "1.25rem 1.5rem",
-          marginBottom: "1.25rem",
           boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
         }}
       >

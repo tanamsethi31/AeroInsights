@@ -19,6 +19,12 @@ from app.models import Aircraft, Lease, Lessee, Payment, User
 log = structlog.get_logger()
 router = APIRouter()
 
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+# Magic-byte signatures for allowed file types
+_XLSX_MAGIC = b"PK\x03\x04"            # ZIP-based Office Open XML
+_XLS_MAGIC  = b"\xd0\xcf\x11\xe0"     # OLE2 Compound Document
+
 EXPECTED_COLUMNS = {
     "lessee_name", "country_code", "credit_rating",
     "msn", "aircraft_type", "registration", "vintage",
@@ -46,14 +52,28 @@ async def import_portfolio(
     msn, aircraft_type, registration, vintage,
     lease_start, lease_end, monthly_rent_usd
     """
-    contents = await file.read()
+    # Read up to limit + 1 byte — if we hit the extra byte the file is too large
+    contents = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File exceeds the {MAX_UPLOAD_BYTES // (1024 * 1024)} MB upload limit",
+        )
+
     errors: list[str] = []
     lessees_created = aircraft_created = leases_created = 0
 
     try:
-        if file.filename and file.filename.endswith(".csv"):
+        is_csv = file.filename is not None and file.filename.lower().endswith(".csv")
+        if is_csv:
+            # Reject binary file signatures masquerading as CSV
+            if contents[:4] in (_XLSX_MAGIC, _XLS_MAGIC):
+                raise HTTPException(status_code=415, detail="File content does not match .csv extension")
             df = pd.read_csv(io.BytesIO(contents))
         else:
+            # Require valid Office magic bytes for spreadsheet uploads
+            if not (contents[:4] == _XLSX_MAGIC or contents[:4] == _XLS_MAGIC):
+                raise HTTPException(status_code=415, detail="File must be a valid .xlsx or .xls spreadsheet")
             df = pd.read_excel(io.BytesIO(contents))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Cannot parse file: {exc}")

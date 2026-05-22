@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, FileSpreadsheet, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
+import { PillTabs } from "../components/ui/PillTabs";
 import { StatementUploadModal } from "../components/reconciliation/StatementUploadModal";
 import { useBankStatements } from "../hooks/useBankStatements";
 import type { BankStatement, BankTransaction } from "../hooks/useBankStatements";
@@ -207,16 +208,16 @@ export default function Reconciliation() {
   const [selectedStatementId, setSelectedStatementId] = useState<string | null>(null);
   const [transactions,        setTransactions       ] = useState<BankTransaction[]>([]);
   const [loadingTx,           setLoadingTx          ] = useState(false);
-  const [activeTab, setActiveTab] = useState<"transactions" | "reconcile">("transactions");
+  const [activeTab, setActiveTab] = useState<"Transactions" | "Reconcile">("Transactions");
 
   const handleSelectStatement = async (id: string) => {
     if (selectedStatementId === id) {
       setSelectedStatementId(null);
       setTransactions([]);
-      setActiveTab("transactions");
+      setActiveTab("Transactions");
       return;
     }
-    setActiveTab("transactions");
+    setActiveTab("Transactions");
     setSelectedStatementId(id);
 
     // Demo bypass — skip the Supabase fetch for the sample statement
@@ -272,7 +273,7 @@ export default function Reconciliation() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <PageHeader title="Reconciliation" subtitle="Browse uploaded bank statements and transactions">
         <button
           onClick={() => setUploadOpen(true)}
@@ -310,40 +311,15 @@ export default function Reconciliation() {
                     style={{ marginTop: "0.75rem" }}
                   >
                     {/* Tab bar */}
-                    <div style={{
-                      display: "flex",
-                      gap: 0,
-                      background: "#F8FAFC",
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "8px",
-                      padding: "0.25rem",
-                      width: "fit-content",
-                      marginBottom: "0.75rem",
-                    }}>
-                      {(["transactions", "reconcile"] as const).map(tab => (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveTab(tab)}
-                          style={{
-                            padding: "0.375rem 0.875rem",
-                            background: activeTab === tab ? "#FFFFFF" : "transparent",
-                            border: "none",
-                            borderRadius: "6px",
-                            color: activeTab === tab ? "#0F172A" : "#94A3B8",
-                            fontSize: "0.8rem",
-                            fontWeight: activeTab === tab ? 500 : 400,
-                            cursor: "pointer",
-                            textTransform: "capitalize",
-                            transition: "background 150ms, color 150ms",
-                          }}
-                        >
-                          {tab}
-                        </button>
-                      ))}
-                    </div>
+                    <PillTabs
+                      tabs={["Transactions", "Reconcile"]}
+                      activeTab={activeTab}
+                      onChange={(t) => setActiveTab(t as "Transactions" | "Reconcile")}
+                      style={{ marginBottom: "0.75rem" }}
+                    />
 
                     {/* Panel */}
-                    {activeTab === "transactions" ? (
+                    {activeTab === "Transactions" ? (
                       <TransactionBrowser
                         transactions={transactions}
                         loading={loadingTx}

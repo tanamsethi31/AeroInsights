@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     API_V1_PREFIX: str = "/api/v1"
-    SECRET_KEY: str = "change-me-in-production"
+    SECRET_KEY: str = "change-me-in-production"  # must be overridden in non-local envs
 
     # ── Database ──────────────────────────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://aero:aero@localhost:5432/aeroinsights"
@@ -67,6 +67,15 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [i.strip() for i in v.split(",")]
         return v
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.ENVIRONMENT != "local":
+            if self.SECRET_KEY == "change-me-in-production":
+                raise ValueError("SECRET_KEY must be changed from the default in non-local environments")
+            if self.DEV_AUTH_BYPASS:
+                raise ValueError("DEV_AUTH_BYPASS must not be True in non-local environments")
+        return self
 
 
 settings = Settings()

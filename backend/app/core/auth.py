@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 import httpx
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
@@ -22,8 +23,10 @@ log = structlog.get_logger()
 # header.  Missing credentials in non-bypass mode are caught inside verify_token.
 bearer_scheme = HTTPBearer(auto_error=False)
 
-# Cache JWKS in memory (refreshed every 24h in production via background task)
+# JWKS cache — refreshed after TTL so key rotations propagate without restart
 _jwks: Optional[dict] = None
+_jwks_fetched_at: float = 0.0
+_JWKS_TTL = 3600.0  # seconds
 
 # ── Dev bypass identity ───────────────────────────────────────────────────────
 # Matches auth0_sub set on USR-001 in the seed script.
@@ -31,13 +34,15 @@ _DEV_AUTH0_SUB = "dev|usr-001"
 
 
 async def _get_jwks() -> dict:
-    global _jwks
-    if _jwks is None:
+    global _jwks, _jwks_fetched_at
+    now = time.monotonic()
+    if _jwks is None or (now - _jwks_fetched_at) > _JWKS_TTL:
         url = f"https://{settings.AUTH0_DOMAIN}/.well-known/jwks.json"
         async with httpx.AsyncClient() as client:
             resp = await client.get(url, timeout=10)
             resp.raise_for_status()
             _jwks = resp.json()
+            _jwks_fetched_at = now
     return _jwks
 
 
@@ -97,6 +102,7 @@ async def verify_token(
 
 
 async def get_current_user(
+    request: Request,
     payload: TokenPayload = Depends(verify_token),
     db: AsyncSession = Depends(get_db),
 ) -> User:
@@ -104,6 +110,7 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+    request.state.user = user
     return user
 
 
