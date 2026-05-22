@@ -1690,7 +1690,7 @@ export default function Intelligence() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-      style={{ padding: "1.5rem 2rem", maxWidth: "1400px", margin: "0 auto" }}
+      style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
     >
       {/* Page header */}
       <PageHeader
@@ -1730,7 +1730,7 @@ export default function Intelligence() {
         tabs={TABS.map((t) => t.id)}
         activeTab={activeTab}
         onChange={(id) => navigate(`/intelligence/${id}`)}
-        style={{ marginBottom: "1.5rem" }}
+        style={{ marginTop: "-1.5rem" }}
         renderTab={(id, isActive) => {
           const t = TABS.find((x) => x.id === id)!;
           const badge = badges[id as IntelTab];
