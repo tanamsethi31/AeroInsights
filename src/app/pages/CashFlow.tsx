@@ -358,7 +358,7 @@ function ChartTooltip({ active, payload, label }: {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CashFlow() {
-  const { events, actuals, forecast, loading, saving, addEvent, editEvent, deleteEvent } = useCashFlow();
+  const { events, loading, saving, addEvent, editEvent, deleteEvent } = useCashFlow();
   const { leases, lessees } = usePortfolioData();
 
   const isDemoMode = !loading && events.length === 0;
@@ -528,7 +528,7 @@ export default function CashFlow() {
             color: "#94A3B8",
             borderRadius: "99px",
             padding: "0.2rem 0.625rem",
-            fontSize: "0.7rem",
+            fontSize: "0.75rem",
             fontWeight: 500,
           }}>
             SAMPLE DATA
