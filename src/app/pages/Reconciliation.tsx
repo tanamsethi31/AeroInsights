@@ -221,6 +221,7 @@ export default function Reconciliation() {
 
     // Demo bypass — skip the Supabase fetch for the sample statement
     if (id === "demo-stmt-1") {
+      setLoadingTx(false);
       setTransactions(SAMPLE_TRANSACTIONS);
       return;
     }
@@ -258,6 +259,11 @@ export default function Reconciliation() {
     if (isDemoMode && selectedStatementId === null) {
       setSelectedStatementId("demo-stmt-1");
       setTransactions(SAMPLE_TRANSACTIONS);
+    }
+    // When the user uploads their first real statement, clear demo state
+    if (!isDemoMode) {
+      setSelectedStatementId(null);
+      setTransactions([]);
     }
   }, [isDemoMode]);
 
