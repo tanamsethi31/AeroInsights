@@ -177,6 +177,7 @@ const navGroups: NavGroup[] = [
           { title: "Lessee Radar",       url: "/intelligence/lessee-radar", icon: Activity   },
           { title: "Deal Feed",          url: "/intelligence/deal-feed",    icon: FileSearch  },
           { title: "Jurisdiction Watch", url: "/intelligence/jx-watch",    icon: Globe       },
+          { title: "Rate Outlook",       url: "/intelligence/rate-outlook", icon: TrendingUp  },
         ],
       },
       { title: "Counterparties", url: "/counterparties", icon: Handshake },

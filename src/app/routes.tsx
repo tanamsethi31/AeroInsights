@@ -21,6 +21,7 @@ import Transactions from "./pages/Transactions";
 import Reconciliation from "./pages/Reconciliation";
 import CashFlow from "./pages/CashFlow";
 import Maintenance from "./pages/Maintenance";
+import RateOutlook from "./pages/RateOutlook";
 
 /**
  * Guards the dashboard index route.
@@ -106,6 +107,7 @@ export const router = createBrowserRouter([
           { path: "intelligence/lessee-radar",  Component: Intelligence },
           { path: "intelligence/deal-feed",     Component: Intelligence },
           { path: "intelligence/jx-watch",      Component: Intelligence },
+          { path: "intelligence/rate-outlook",  Component: RateOutlook },
 
           // Reports
           { path: "reports",                    Component: Reports },
