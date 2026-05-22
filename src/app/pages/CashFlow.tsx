@@ -9,6 +9,7 @@ import {
 import { PageHeader } from "../components/ui/PageHeader";
 import { KpiCard } from "../components/ui/KpiCard";
 import { useCashFlow } from "../hooks/useCashFlow";
+import { useData } from "../contexts/DataContext";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import type { CashEvent, CashEventType, NewCashEvent } from "../utils/cashFlowForecast";
 import type { Lease, Lessee } from "../types/portfolio";
@@ -358,10 +359,11 @@ function ChartTooltip({ active, payload, label }: {
 
 export default function CashFlow() {
   const { events, actuals, loading, saving, addEvent, editEvent, deleteEvent } = useCashFlow();
+  const { hasUpload } = useData();
   const { leases, lessees } = usePortfolioData();
 
-  // isDemoMode: no persisted actuals → rule-based forecasts from DEMO_LEASES are driving the view
-  const isDemoMode = !loading && actuals.length === 0;
+  // isDemoMode: no uploaded portfolio data → rule events come from the demo SDMR portfolio
+  const isDemoMode = !hasUpload;
   const displayEvents = events;
 
   const [viewMode,       setViewMode      ] = useState<ViewMode>("both");

@@ -43,7 +43,7 @@ function mapRow(row: Record<string, unknown>): CashEvent {
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useCashFlow(): UseCashFlowReturn {
-  const { orgId }                               = useData();
+  const { orgId, hasUpload }                    = useData();
   const { assets, lessees, leases, provisions } = usePortfolioData();
   const [persisted, setPersisted]               = useState<CashEvent[]>([]);
   const [loading,   setLoading  ]               = useState(true);
@@ -56,15 +56,18 @@ export function useCashFlow(): UseCashFlowReturn {
   );
 
   // Rule-based forecast (client-side, never persisted).
-  // In demo mode (no orgId) fall back to the static SDMR demo portfolio so
-  // the chart shows real platform analytics instead of hard-coded sample events.
+  // Use live portfolio data only when the org has completed an upload;
+  // otherwise fall back to the static SDMR demo portfolio so the Cash Flow
+  // chart is always populated — even for a fresh / unauthenticated session.
+  const useDemoData = !hasUpload;
   const ruleEvents = useMemo(
     () => forecastCashFlows(
-      orgId ? leases         : DEMO_LEASES,
-      orgId ? sdmrData       : staticSdmrData,
+      useDemoData ? DEMO_LEASES    : leases,
+      useDemoData ? staticSdmrData : sdmrData,
       24,
     ),
-    [orgId, leases, sdmrData],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [useDemoData, leases, sdmrData],
   );
 
   // Split persisted into actuals and manual forecast overrides
