@@ -89,14 +89,17 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
 
     if (!response.ok) {
       console.warn("[narrative] non-200 response:", response.status, await response.text().catch(() => ""));
-      return null;
+      return buildFallbackNarrative(run);
     }
 
     const data = await response.json() as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const text = data?.choices?.[0]?.message?.content;
-    if (!text) { console.warn("[narrative] no text in response", data); return null; }
+    if (!text) {
+      console.warn("[narrative] no text in response", data);
+      return buildFallbackNarrative(run);
+    }
 
     // 3-anchor validation: each anchor must appear verbatim in the response
     const anchor1 = run.ecl.toFixed(1);                          // e.g. "61.2"
@@ -104,14 +107,14 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
     const anchor3 = ` ${run.s3LeaseCount} `;                      // e.g. " 4 " — prevents trivial substring match
 
     if (!text.includes(anchor1) || !text.includes(anchor2) || !text.includes(anchor3)) {
-      console.warn("[narrative] anchor validation failed", { anchor1, anchor2, anchor3, text });
-      return null;
+      console.warn("[narrative] anchor validation failed — using fallback", { anchor1, anchor2, anchor3 });
+      return buildFallbackNarrative(run);
     }
 
     console.log("[narrative] success for run", run.id);
     return text.trim();
   } catch (err) {
-    console.error("[narrative] fetch error:", err);
-    return null;
+    console.error("[narrative] fetch error — using fallback:", err);
+    return buildFallbackNarrative(run);
   }
 }
