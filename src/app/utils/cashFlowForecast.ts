@@ -1,6 +1,7 @@
 // src/app/utils/cashFlowForecast.ts
 import type { Lease } from "../types/portfolio";
 import type { LeaseSDMR } from "../components/portfolio/SDMRTab";
+import { totalMRBalance, eolCompensation } from "./sdmrHelpers";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,25 +37,11 @@ export interface NewCashEvent {
   notes:      string | null;
 }
 
-// ── Local SDMR helpers (mirrors unexported fns in SDMRTab) ────────────────────
-
-function totalMRBalance(sdmr: LeaseSDMR): number {
-  return sdmr.mrComponents.reduce((s, c) => s + c.cumulativeBalance, 0);
-}
+// ── Local SDMR helpers ────────────────────────────────────────────────────────
 
 function sdCashRefundable(sdmr: LeaseSDMR): number {
   if (sdmr.sd.type !== "Cash") return 0;
   return sdmr.sd.amount;
-}
-
-function eolCompensation(sdmr: LeaseSDMR): number {
-  // Half-life standard: lessee owes compensation if remaining units < half interval
-  return sdmr.mrComponents.reduce((sum, comp) => {
-    if (!comp.fullIntervalUnits || !comp.rateAmount) return sum;
-    const halfLife = comp.fullIntervalUnits / 2;
-    const shortfall = Math.max(0, halfLife - comp.remainingUnits);
-    return sum + shortfall * comp.rateAmount;
-  }, 0);
 }
 
 // ── Forecast engine ───────────────────────────────────────────────────────────
@@ -129,7 +116,7 @@ export function forecastCashFlows(
         leaseId:       lease.id,
         eventType:     "mr_draw",
         amount:        -mrTotal,
-        currency:      "USD",
+        currency:      lease.currency ?? "USD",
         eventDate:     endDateStr,
         isForecast:    true,
         source:        "rule",
@@ -148,7 +135,7 @@ export function forecastCashFlows(
         leaseId:       lease.id,
         eventType:     "sd_refund",
         amount:        -sdRefund,
-        currency:      "USD",
+        currency:      sdmr.sd.currency ?? "USD",
         eventDate:     endDateStr,
         isForecast:    true,
         source:        "rule",
@@ -167,7 +154,7 @@ export function forecastCashFlows(
         leaseId:       lease.id,
         eventType:     "eol_comp",
         amount:        eol,
-        currency:      "USD",
+        currency:      lease.currency ?? "USD",
         eventDate:     endDateStr,
         isForecast:    true,
         source:        "rule",

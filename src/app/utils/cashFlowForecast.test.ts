@@ -123,6 +123,22 @@ describe("forecastCashFlows", () => {
     expect(draws.length).toBe(0);
   });
 
+  it("mr_draw and eol_comp use lease.currency, sd_refund uses sdmr.sd.currency", () => {
+    const lease = makeLease({ end_date: addMonths(TODAY, 1), currency: "EUR" });
+    const sdmr  = makeSDMR("lease-1", {
+      sd: { type: "Cash", amount: 500_000, currency: "SGD", refundTriggers: [], governingLaw: "English" },
+    });
+    const result = forecastCashFlows([lease], [sdmr], 24);
+
+    const draw   = result.find(e => e.eventType === "mr_draw"   && e.leaseId === "lease-1");
+    const refund = result.find(e => e.eventType === "sd_refund" && e.leaseId === "lease-1");
+    const eol    = result.find(e => e.eventType === "eol_comp"  && e.leaseId === "lease-1");
+
+    expect(draw?.currency).toBe("EUR");
+    expect(refund?.currency).toBe("SGD");
+    expect(eol?.currency).toBe("EUR");
+  });
+
   it("generates no events for a lease that has already expired", () => {
     const expiredLease = makeLease({ end_date: addMonths(TODAY, -1) });
     const result = forecastCashFlows([expiredLease], [], 24);

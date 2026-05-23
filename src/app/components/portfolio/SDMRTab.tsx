@@ -5,6 +5,7 @@ import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
 import { MR_ADEQUACY, mrFlagColor, mrFlagBg, mrFlagBorder, TYPE_HEURISTICS, type MRAdeqFlag, type ComponentName } from "../../data/maintenanceHeuristics";
 import { type CreditDepositTier } from "../../utils/creditDeposit";
+import { mrNetRefund, totalMRBalance, refundableMRCapped, eolCompensation } from "../../utils/sdmrHelpers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -360,25 +361,10 @@ export function buildLiveSDMRData(
 
 // ─── Computed Functions ───────────────────────────────────────────────────────
 
-function mrNetRefund(comp: MRComponent): number {
-  if (!comp.refundable) return 0;
-  return Math.min(comp.cumulativeBalance, comp.evidencedCost);
-}
-
-function totalMRBalance(lease: LeaseSDMR): number {
-  return lease.mrComponents.reduce((s, c) => s + c.cumulativeBalance, 0);
-}
-
 function nonRefundableMR(lease: LeaseSDMR): number {
   return lease.mrComponents
     .filter((c) => !c.refundable)
     .reduce((s, c) => s + c.cumulativeBalance, 0);
-}
-
-function refundableMRCapped(lease: LeaseSDMR): number {
-  return lease.mrComponents
-    .filter((c) => c.refundable)
-    .reduce((s, c) => s + mrNetRefund(c), 0);
 }
 
 function conservativeOffset(lease: LeaseSDMR): number {
@@ -391,18 +377,6 @@ function optimisticOffset(lease: LeaseSDMR): number {
 
 function adjustedLGD(lease: LeaseSDMR): number {
   return Math.max(0, lease.baseLGD - conservativeOffset(lease) * 100);
-}
-
-function eolCompensation(lease: LeaseSDMR, condition: "half-life" | "full-life"): number {
-  return lease.mrComponents.reduce((sum, comp) => {
-    const target = condition === "half-life"
-      ? comp.fullIntervalUnits / 2
-      : comp.fullIntervalUnits;
-    const shortfall = condition === "half-life"
-      ? Math.max(0, target - comp.remainingUnits)
-      : target - comp.remainingUnits;
-    return sum + shortfall * comp.rateAmount;
-  }, 0);
 }
 
 function fmtUSD(n: number): string {
