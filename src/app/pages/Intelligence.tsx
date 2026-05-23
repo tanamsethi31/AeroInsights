@@ -400,40 +400,62 @@ function SignalCard({ sig, lesseeIdByName, liveExposure }: {
             </svg>
             Your portfolio
           </button>
-          {portfolioOpen && (
-            <div
-              style={{
-                background: "rgba(0,33,71,0.04)",
-                border: `1px solid rgba(0,33,71,0.12)`,
-                borderLeft: `3px solid ${T.blue}`,
-                borderRadius: "0 0.375rem 0.375rem 0",
-                padding: "0.625rem 0.75rem",
-                fontSize: "0.8125rem",
-                color: T.text,
-                lineHeight: 1.6,
-              }}
-            >
-              {sig.portfolioNarrative}
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {portfolioOpen && (
+              <motion.div
+                key="portfolio-narrative"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                style={{ overflow: "hidden" }}
+              >
+                <div
+                  style={{
+                    background: "rgba(0,33,71,0.04)",
+                    border: `1px solid rgba(0,33,71,0.12)`,
+                    borderLeft: `3px solid ${T.blue}`,
+                    borderRadius: "0 0.375rem 0.375rem 0",
+                    padding: "0.625rem 0.75rem",
+                    fontSize: "0.8125rem",
+                    color: T.text,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {sig.portfolioNarrative}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Action narrative — collapsible */}
-          {expanded && (
-            <div
-              style={{
-                background: sevBg(sig.severity),
-                border: `1px solid ${sevColor(sig.severity)}22`,
-                borderRadius: "0.375rem",
-                padding: "0.625rem 0.75rem",
-                fontSize: "0.8125rem",
-                color: T.text,
-                lineHeight: 1.6,
-              }}
-            >
-              <span style={{ fontWeight: 600, color: sevColor(sig.severity) }}>Action: </span>
-              {sig.actionNarrative}
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {expanded && (
+              <motion.div
+                key="action-narrative"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                style={{ overflow: "hidden" }}
+              >
+                <div
+                  style={{
+                    background: sevBg(sig.severity),
+                    border: `1px solid ${sevColor(sig.severity)}22`,
+                    borderRadius: "0.375rem",
+                    padding: "0.625rem 0.75rem",
+                    fontSize: "0.8125rem",
+                    color: T.text,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: sevColor(sig.severity) }}>Action: </span>
+                  {sig.actionNarrative}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Affected lessees strip */}

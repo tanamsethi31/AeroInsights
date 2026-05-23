@@ -1,3 +1,23 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* ── Sidebar collapsible sub-menu slide animation ─────────────────────────── */
+@keyframes collapsible-slide-down {
+  from { height: 0; opacity: 0.4; }
+  to   { height: var(--radix-collapsible-content-height); opacity: 1; }
+}
+@keyframes collapsible-slide-up {
+  from { height: var(--radix-collapsible-content-height); opacity: 1; }
+  to   { height: 0; opacity: 0; }
+}
+
+[data-slot="collapsible-content"] {
+  overflow: hidden;
+}
+[data-slot="collapsible-content"][data-state="open"] {
+  animation: collapsible-slide-down 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-slot="collapsible-content"][data-state="closed"] {
+  animation: collapsible-slide-up 180ms cubic-bezier(0.4, 0, 1, 1);
+}
