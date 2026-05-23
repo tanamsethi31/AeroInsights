@@ -1,6 +1,8 @@
 // src/app/pages/RateOutlook.tsx
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router";
+import { ArrowLeft } from "lucide-react";
 import { useRateOutlook } from "../hooks/useRateOutlook";
 import { useData } from "../contexts/DataContext";
 import { RateOutlookKPIStrip } from "../components/rate-outlook/RateOutlookKPIStrip";
@@ -89,6 +91,7 @@ function buildDemoPortfolioLeases(): PortfolioLease[] {
 }
 
 export default function RateOutlook() {
+  const navigate = useNavigate();
   const { data } = useRateOutlook();
   const { hasUpload } = useData();
 
@@ -118,15 +121,32 @@ export default function RateOutlook() {
     >
       {/* Page header */}
       <div style={{ marginBottom: "1.5rem" }}>
-        <h1
-          style={{
-            fontSize: "1.375rem", fontWeight: 800, color: T.text,
-            letterSpacing: "-0.02em", margin: 0,
-          }}
-        >
-          Rate Outlook
-        </h1>
-        <p style={{ fontSize: "0.8125rem", color: T.muted, marginTop: "0.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.25rem" }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: "2rem", height: "2rem", borderRadius: "0.5rem",
+              border: `1px solid ${T.border}`, background: "#FFFFFF",
+              color: T.muted, cursor: "pointer", flexShrink: 0,
+              transition: "border-color 140ms ease, color 140ms ease",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = T.blue; (e.currentTarget as HTMLButtonElement).style.color = T.blue; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = T.border; (e.currentTarget as HTMLButtonElement).style.color = T.muted; }}
+            title="Back to Aero Intelligence"
+          >
+            <ArrowLeft size={15} />
+          </button>
+          <h1
+            style={{
+              fontSize: "1.375rem", fontWeight: 800, color: T.text,
+              letterSpacing: "-0.02em", margin: 0,
+            }}
+          >
+            Rate Outlook
+          </h1>
+        </div>
+        <p style={{ fontSize: "0.8125rem", color: T.muted, marginTop: "0.1rem", paddingLeft: "2.625rem" }}>
           12-month forward rate intelligence · 18 aircraft types · Macro-adjusted
         </p>
       </div>
@@ -176,6 +196,40 @@ export default function RateOutlook() {
         leases={portfolioLeases}
         isDemo={!hasUpload}
       />
+
+      {/* Source attribution */}
+      <div
+        style={{
+          marginTop: "2rem",
+          padding: "0.875rem 1.125rem",
+          background: T.bg,
+          border: `1px solid ${T.border}`,
+          borderRadius: "0.625rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.3rem",
+        }}
+      >
+        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: T.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Data Sources
+        </span>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1.25rem" }}>
+          {[
+            { label: "Base rents & asset values", src: "AVAC / IBA published market surveys (Apr 2026)" },
+            { label: "RPK growth & load factor",  src: "IATA Air Passenger Market Analysis" },
+            { label: "Jet-A1 fuel price",         src: "IATA Fuel Monitor / Platts" },
+            { label: "Brent crude",               src: "U.S. Energy Information Administration (EIA)" },
+            { label: "10Y USD Treasury rate",     src: "U.S. Federal Reserve H.15" },
+          ].map(({ label, src }) => (
+            <span key={label} style={{ fontSize: "0.75rem", color: T.muted }}>
+              <span style={{ fontWeight: 600, color: T.text }}>{label}:</span>{" "}{src}
+            </span>
+          ))}
+        </div>
+        <span style={{ fontSize: "0.7rem", color: T.muted, marginTop: "0.15rem" }}>
+          Forecasts are model-generated and indicative only. They do not constitute financial advice or a valuation opinion.
+        </span>
+      </div>
     </motion.div>
   );
 }

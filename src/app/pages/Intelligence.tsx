@@ -1082,6 +1082,17 @@ const DEAL_CAT_FILTERS: { id: DealCategory | "all"; label: string }[] = [
   { id: "sanctions",         label: "Sanctions"          },
 ];
 
+/** Formats a publishedAt value — handles both "29 Apr 2026" strings and ISO timestamps */
+function fmtPublishedAt(raw: string): string {
+  // Already a human-readable date (static data format)
+  if (/^\d{1,2}\s[A-Za-z]{3}\s\d{4}$/.test(raw.trim())) return raw.trim();
+  try {
+    return new Date(raw).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return raw;
+  }
+}
+
 function DealCard({ item }: { item: DealItem }) {
   const navigate = useNavigate();
   return (
@@ -1159,11 +1170,28 @@ function DealCard({ item }: { item: DealItem }) {
           {item.headline}
         </div>
 
-        {/* Source + time */}
-        <div style={{ fontSize: "0.75rem", color: T.muted, marginBottom: "0.5rem" }}>
-          {item.source} · {item.hoursAgo < 24
-            ? `${item.hoursAgo}h ago`
-            : `${Math.round(item.hoursAgo / 24)}d ago`} · {item.publishedAt}
+        {/* Source + date */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.75rem", color: T.muted, fontWeight: 500 }}>{item.source}</span>
+          <span style={{ color: T.border }}>·</span>
+          <span
+            style={{
+              fontSize: "0.72rem",
+              fontWeight: 600,
+              color: T.blue,
+              background: "rgba(0,33,71,0.05)",
+              border: `1px solid rgba(0,33,71,0.1)`,
+              borderRadius: "0.3rem",
+              padding: "0.1rem 0.4rem",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {fmtPublishedAt(item.publishedAt)}
+          </span>
+          <span style={{ color: T.border }}>·</span>
+          <span style={{ fontSize: "0.72rem", color: T.muted }}>
+            {item.hoursAgo < 24 ? `${item.hoursAgo}h ago` : `${Math.round(item.hoursAgo / 24)}d ago`}
+          </span>
         </div>
 
         {/* Portfolio tag */}
