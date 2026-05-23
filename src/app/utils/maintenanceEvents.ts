@@ -57,6 +57,11 @@ export function applyServicerReport(
  * - Subtracts costPaidUSD from cumulativeBalance per component
  * - Sets remainingUnits to the most recent non-null remainingUnitsAfter
  * Events are applied oldest-to-newest regardless of input order.
+ *
+ * Note: costPaidUSD is expected to be > 0. Negative values (data entry errors)
+ * would incorrectly increase the balance. The UI form validates this before saving.
+ * Negative cumulativeBalance after deduction is intentional — it represents
+ * an overspend that the lessee owes the lessor.
  */
 export function applyEvents(
   lease:  LeaseSDMR,
@@ -109,13 +114,23 @@ export function adjustedLease(
 
 // ── Row mapper (used by hooks) ────────────────────────────────────────────────
 
+const VALID_EVENT_TYPES = new Set<string>([
+  "shop_visit", "aog", "llp_replacement", "supplemental_claim", "note",
+]);
+
 export function mapEventRow(row: Record<string, unknown>): MaintenanceEvent {
+  const eventType = row.event_type as string;
+  if (!VALID_EVENT_TYPES.has(eventType)) {
+    throw new Error(`[mapEventRow] Unknown event_type: "${eventType}"`);
+  }
   return {
     id:               row.id as string,
     leaseId:          row.lease_id as string,
     eventDate:        row.event_date as string,
-    eventType:        row.event_type as MaintenanceEvent["eventType"],
+    eventType:        eventType as MaintenanceEvent["eventType"],
     notes:            (row.notes as string | null) ?? null,
-    componentImpacts: (row.component_impacts as ComponentImpact[]) ?? [],
+    componentImpacts: Array.isArray(row.component_impacts)
+      ? (row.component_impacts as ComponentImpact[])
+      : [],
   };
 }

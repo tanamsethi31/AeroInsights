@@ -1,6 +1,6 @@
 // src/app/utils/maintenanceEvents.test.ts
 import { describe, it, expect } from "vitest";
-import { applyServicerReport, applyEvents, adjustedLease } from "./maintenanceEvents";
+import { applyServicerReport, applyEvents, adjustedLease, mapEventRow } from "./maintenanceEvents";
 import type { AdjustedLease, MaintenanceEvent } from "./maintenanceEvents";
 import type { LeaseSDMR } from "../components/portfolio/SDMRTab";
 import type { ServicerReport } from "../hooks/useServicerReport";
@@ -184,5 +184,40 @@ describe("adjustedLease", () => {
     const report = makeReport({ annualFH: 4000, annualCy: 2800 });
     const result = adjustedLease(makeLease(), report, []);
     expect(result.utilOverride?.annualFH).toBe(4000);
+  });
+});
+
+// ── mapEventRow ───────────────────────────────────────────────────────────────
+
+describe("mapEventRow", () => {
+  it("maps a well-formed DB row to MaintenanceEvent", () => {
+    const row = {
+      id: "abc", lease_id: "LSE-001", event_date: "2026-03-01",
+      event_type: "shop_visit", notes: "test note",
+      component_impacts: [{ component: "Engine PR", costPaidUSD: 100, remainingUnitsAfter: 5000 }],
+    };
+    const result = mapEventRow(row as Record<string, unknown>);
+    expect(result.id).toBe("abc");
+    expect(result.leaseId).toBe("LSE-001");
+    expect(result.eventType).toBe("shop_visit");
+    expect(result.notes).toBe("test note");
+    expect(result.componentImpacts).toHaveLength(1);
+  });
+
+  it("throws when event_type is not in the allowed set", () => {
+    const row = {
+      id: "abc", lease_id: "LSE-001", event_date: "2026-03-01",
+      event_type: "unknown_type", notes: null, component_impacts: [],
+    };
+    expect(() => mapEventRow(row as Record<string, unknown>)).toThrow("Unknown event_type");
+  });
+
+  it("defaults component_impacts to [] when DB returns null", () => {
+    const row = {
+      id: "abc", lease_id: "LSE-001", event_date: "2026-03-01",
+      event_type: "note", notes: null, component_impacts: null,
+    };
+    const result = mapEventRow(row as Record<string, unknown>);
+    expect(result.componentImpacts).toEqual([]);
   });
 });
