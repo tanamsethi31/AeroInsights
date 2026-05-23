@@ -162,7 +162,7 @@ export function useNewsFeed(): UseNewsFeedResult {
   const [jxEvents, setJxEvents] = useState<JurisdictionEvent[]>(JURISDICTION_EVENTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [partial, setPartial] = useState(false);
 
   const fetchNews = useCallback(async () => {

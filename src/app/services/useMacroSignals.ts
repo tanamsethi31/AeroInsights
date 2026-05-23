@@ -75,7 +75,7 @@ export function useMacroSignals(): UseMacroSignalsResult {
   const [signals, setSignals] = useState<MacroSignal[]>(MACRO_SIGNALS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [partial, setPartial] = useState(false);
 
   const fetchSignals = useCallback(async () => {
