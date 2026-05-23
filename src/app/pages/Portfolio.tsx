@@ -47,6 +47,7 @@ import { toKeyDateRows, toKeyDateKPIs } from "../lib/keyDatesAdapters";
 import { PaymentsTab } from "../components/portfolio/PaymentsTab";
 import { toPaymentSchedule } from "../lib/paymentAdapters";
 import { AnimatePresence, motion } from "framer-motion";
+import * as XLSX from "xlsx";
 import { LeaseEditDrawer } from "../components/portfolio/LeaseEditDrawer";
 import { useData } from "../contexts/DataContext";
 import { ModelParametersTab } from "../components/portfolio/ModelParametersTab";
@@ -204,6 +205,28 @@ export default function Portfolio() {
   const { sorted: sortedAircraft, sortState: aircraftSortState, toggleSort: toggleAircraftSort } = useSortable(aircraftWithValuation, aircraftAccessors);
   const { sorted: sortedLessees, sortState: lesseeSortState, toggleSort: toggleLesseeSort } = useSortable(lessees, lesseeAccessors);
 
+  function handleExport() {
+    const headers = ["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Monthly Rent (USD)", "Stage", "Status"];
+    const rows = sortedLeases.map((l) => [
+      l.id,
+      l.lessee,
+      l.aircraft,
+      l.msn,
+      l.start,
+      l.end,
+      l.rentUSD.replace(/,/g, ""),
+      `Stage ${l.stage}`,
+      l.status ?? "Active",
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map((h, i) => ({
+      wch: Math.min(Math.max(h.length, ...rows.map((r) => String(r[i]).length)) + 3, 35),
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Lease Register");
+    XLSX.writeFile(wb, `aeroinsights-lease-register-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
   if (isLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -236,6 +259,7 @@ export default function Portfolio() {
       >
         {/* Export — secondary ghost button */}
         <button
+          onClick={handleExport}
           style={{
             display: "flex",
             alignItems: "center",
