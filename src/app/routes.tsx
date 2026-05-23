@@ -4,6 +4,7 @@ import { Layout } from "./components/layout/Layout";
 import { RequireAuth } from "./components/auth/RequireAuth";
 import { usePortfolio } from "./contexts/PortfolioContext";
 import Login from "./pages/Login";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Portfolio from "./pages/Portfolio";
 import Scenarios from "./pages/Scenarios";
@@ -39,10 +40,11 @@ function PortfolioIndexGuard() {
 
 export const router = createBrowserRouter([
   // Public
+  { path: "/home", Component: Landing },
   { path: "/login", Component: Login },
   { path: "/docs/excel-addin", Component: ExcelAddinDocs },
 
-  // Protected — all app routes live under RequireAuth
+  // Root layout — RequireAuth gates the app shell; unauthenticated "/" → /home
   {
     path: "/",
     Component: RequireAuth,
