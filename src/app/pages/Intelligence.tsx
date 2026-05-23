@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane } from "lucide-react";
+import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane, RefreshCw } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PillTabs } from "../components/ui/PillTabs";
 import { usePortfolioData } from "../hooks/usePortfolioData";
@@ -589,9 +589,25 @@ function MacroSignalsView({ signals, loading, lastUpdated, onRefresh, lesseeIdBy
         <button
           onClick={onRefresh}
           disabled={loading}
-          style={{ fontSize: "0.75rem", color: T.blue, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "0.3rem",
+            fontSize: "0.75rem", color: T.blue, background: "none", border: "none",
+            cursor: loading ? "not-allowed" : "pointer", padding: 0,
+            opacity: loading ? 0.5 : 1, transition: "opacity 150ms",
+          }}
+          title={loading ? "Refreshing…" : "Refresh feed"}
         >
-          Refresh
+          <motion.span
+            animate={loading ? { rotate: 360 } : { rotate: 0 }}
+            transition={loading
+              ? { repeat: Infinity, duration: 0.75, ease: "linear" }
+              : { duration: 0.25 }
+            }
+            style={{ display: "inline-flex" }}
+          >
+            <RefreshCw size={12} />
+          </motion.span>
+          {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
@@ -1239,9 +1255,25 @@ function DealFeedView({ items, loading, lastUpdated, onRefresh }: {
         <button
           onClick={onRefresh}
           disabled={loading}
-          style={{ fontSize: "0.75rem", color: T.blue, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "0.3rem",
+            fontSize: "0.75rem", color: T.blue, background: "none", border: "none",
+            cursor: loading ? "not-allowed" : "pointer", padding: 0,
+            opacity: loading ? 0.5 : 1, transition: "opacity 150ms",
+          }}
+          title={loading ? "Refreshing…" : "Refresh feed"}
         >
-          Refresh
+          <motion.span
+            animate={loading ? { rotate: 360 } : { rotate: 0 }}
+            transition={loading
+              ? { repeat: Infinity, duration: 0.75, ease: "linear" }
+              : { duration: 0.25 }
+            }
+            style={{ display: "inline-flex" }}
+          >
+            <RefreshCw size={12} />
+          </motion.span>
+          {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
@@ -1573,9 +1605,25 @@ function JurisdictionWatchView({ events: rawEvents, loading, lastUpdated, onRefr
         <button
           onClick={onRefresh}
           disabled={loading}
-          style={{ fontSize: "0.75rem", color: T.blue, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "0.3rem",
+            fontSize: "0.75rem", color: T.blue, background: "none", border: "none",
+            cursor: loading ? "not-allowed" : "pointer", padding: 0,
+            opacity: loading ? 0.5 : 1, transition: "opacity 150ms",
+          }}
+          title={loading ? "Refreshing…" : "Refresh feed"}
         >
-          Refresh
+          <motion.span
+            animate={loading ? { rotate: 360 } : { rotate: 0 }}
+            transition={loading
+              ? { repeat: Infinity, duration: 0.75, ease: "linear" }
+              : { duration: 0.25 }
+            }
+            style={{ display: "inline-flex" }}
+          >
+            <RefreshCw size={12} />
+          </motion.span>
+          {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
@@ -1710,15 +1758,19 @@ export default function Intelligence() {
             color: T.muted,
           }}
         >
-          <span
-            style={{
-              width: "7px",
-              height: "7px",
-              borderRadius: "50%",
-              background: T.green,
-              flexShrink: 0,
-            }}
-          />
+          <motion.span
+            animate={(macroLoading || newsLoading) ? { rotate: 360 } : { rotate: 0 }}
+            transition={(macroLoading || newsLoading)
+              ? { repeat: Infinity, duration: 0.75, ease: "linear" }
+              : { duration: 0.25 }
+            }
+            style={{ display: "inline-flex", flexShrink: 0 }}
+          >
+            <RefreshCw
+              size={11}
+              style={{ color: (macroLoading || newsLoading) ? T.muted : T.green }}
+            />
+          </motion.span>
           {macroLoading || newsLoading ? "Refreshing…" : macroUpdated
             ? `Live · Updated ${macroUpdated.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
             : "Static data"}
