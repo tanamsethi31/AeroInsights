@@ -6,9 +6,10 @@ import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortab
 import { useViewMode } from "../contexts/ViewModeContext";
 
 const PATH_TAB: Record<string, string> = {
-  "/risk-ecl/summary":   "ECL Overview",
-  "/risk-ecl/migration": "Stage Migration",
-  "/risk-ecl/waterfall": "Sensitivity",
+  "/risk-ecl/summary":    "ECL Overview",
+  "/risk-ecl/migration":  "Stage Migration",
+  "/risk-ecl/waterfall":  "Sensitivity",
+  "/risk-ecl/rating-pd":  "Rating / PD",
 };
 import {
   BarChart,
@@ -68,6 +69,7 @@ import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
 import { useCurrency } from "../contexts/CurrencyContext";
 import { useEclSnapshots } from "../hooks/useEclSnapshots";
 import { computeRollForward } from "../utils/eclRollForward";
+import { RatingPDTab } from "../components/scenarios/RatingPDTab";
 import { computeCreditQualityMatrix } from "../utils/creditQualityMatrix";
 import { ClosePeriodModal } from "../components/risk-ecl/ClosePeriodModal";
 
@@ -143,6 +145,7 @@ const tabs = [
   "Stage Migration",
   "ECL by Lease",
   "Sensitivity",
+  "Rating / PD",
   "SICR Config",
   "IAS 36 Impairment",
 ];
@@ -2222,6 +2225,14 @@ export default function RiskECL() {
           {activeTab === "Stage Migration" && <StageMigrationTab />}
           {activeTab === "ECL by Lease" && <LeaseTab />}
           {activeTab === "Sensitivity" && <SensitivityTab />}
+          {activeTab === "Rating / PD" && (
+            <RatingPDTab
+              onUseInCustomBuilder={(pdS2Multi, pdS3Multi) => {
+                // Navigate to Scenarios → Custom Builder with pre-filled PD multipliers
+                navigate(`/scenarios?pdS2Multi=${pdS2Multi.toFixed(3)}&pdS3Multi=${pdS3Multi.toFixed(3)}`);
+              }}
+            />
+          )}
           {activeTab === "SICR Config" && <SICRConfigTab />}
           {activeTab === "IAS 36 Impairment" && <IAS36Tab />}
         </motion.div>

@@ -91,6 +91,7 @@ export const router = createBrowserRouter([
           { path: "risk-ecl/summary",           Component: RiskECL },
           { path: "risk-ecl/migration",         Component: RiskECL },
           { path: "risk-ecl/waterfall",         Component: RiskECL },
+          { path: "risk-ecl/rating-pd",         Component: RiskECL },
 
           // Maintenance
           { path: "maintenance",           Component: Maintenance },
