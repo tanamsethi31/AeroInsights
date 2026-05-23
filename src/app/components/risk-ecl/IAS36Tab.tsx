@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ChevronDown, ChevronUp, Download, RotateCcw } from "lucide-react";
 import { Card } from "../ui/Card";
 
@@ -237,6 +237,7 @@ export function IAS36Tab() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [inputs, setInputs] = useState<AircraftIAS36[]>(DEFAULT_AIRCRAFT);
   const [showCalc, setShowCalc] = useState(false);
+  const calcPanelRef = useRef<HTMLDivElement>(null);
 
   const aircraft = inputs[selectedIdx];
   const results = computeIAS36(aircraft);
@@ -513,15 +514,24 @@ export function IAS36Tab() {
                 alignItems: "center",
                 gap: "0.375rem",
                 fontSize: "0.8125rem",
-                color: "#475569",
-                background: "none",
-                border: "1px solid #E2E8F0",
+                color: "rgba(255,255,255,0.85)",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.25)",
                 borderRadius: "0.5rem",
                 padding: "0.375rem 0.75rem",
                 cursor: "pointer",
+                transition: "background 140ms ease-out",
               }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.14)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; }}
             >
-              {showCalc ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              <ChevronDown
+                size={13}
+                style={{
+                  transform: showCalc ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 200ms cubic-bezier(0.23,1,0.32,1)",
+                }}
+              />
               Show Calculation
             </button>
           }
@@ -566,9 +576,19 @@ export function IAS36Tab() {
             )}
           </div>
 
-          {/* Show Calculation expandable */}
-          {showCalc && (
-            <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: "1.25rem" }}>
+          {/* Show Calculation expandable — animated via max-height */}
+          <div
+            ref={calcPanelRef}
+            style={{
+              overflow: "hidden",
+              maxHeight: showCalc ? "1200px" : "0px",
+              opacity: showCalc ? 1 : 0,
+              transition: showCalc
+                ? "max-height 320ms cubic-bezier(0.23,1,0.32,1), opacity 200ms ease-out"
+                : "max-height 220ms cubic-bezier(0.23,1,0.32,1), opacity 150ms ease-in",
+            }}
+          >
+          <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: "1.25rem" }}>
               <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A", marginBottom: "0.75rem" }}>
                 DCF Workings — Value in Use
               </div>
@@ -678,7 +698,7 @@ export function IAS36Tab() {
                 </div>
               </div>
             </div>
-          )}
+          </div>{/* end animated wrapper */}
         </Card>
 
         {/* Card 3 — Export */}

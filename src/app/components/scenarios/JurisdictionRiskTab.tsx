@@ -3,6 +3,7 @@ import { usePortfolioData } from "../../hooks/usePortfolioData";
 import { computePortfolioJurisdictionMix, type CtcTier, UNKNOWN_REPOSS_P50 } from "../../utils/jurisdictionRisk";
 import { BASE_ECL } from "../../utils/eclCalculator";
 import { Card } from "../ui/Card";
+import { ScenarioKpiCard as KpiCard } from "../ui/KpiCard";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -25,25 +26,6 @@ const TIER_PILL_COLOR: Record<CtcTier, string> = {
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-
-function KpiCard({
-  label, value, color, bg, note,
-}: { label: string; value: string; color: string; bg: string; note?: string }) {
-  return (
-    <div style={{
-      background: bg, borderRadius: "0.5rem",
-      padding: "1rem", display: "flex", flexDirection: "column", gap: "0.25rem",
-    }}>
-      <div style={{ fontSize: "0.75rem", fontWeight: 600, color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-        {label}
-      </div>
-      <div style={{ fontSize: "1.375rem", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
-        {value}
-      </div>
-      {note && <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>{note}</div>}
-    </div>
-  );
-}
 
 function TierPill({ tier }: { tier: CtcTier }) {
   return (
