@@ -5,7 +5,7 @@ export default function Login() {
   const { loginWithRedirect, isLoading } = useAuth0();
   const location = useLocation();
   // Destination preserved by RequireAuth; fall back to dashboard root.
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? "/";
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? "/portfolios";
 
   const redirect = (extra: Record<string, string> = {}) =>
     loginWithRedirect({

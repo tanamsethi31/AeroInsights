@@ -24,11 +24,10 @@ export function RequireAuth() {
   const location = useLocation();
   const synced = useRef(false);
 
-  // Redirect to /login, preserving the intended destination so it can be
-  // restored after the Auth0 callback completes.
+  // Redirect unauthenticated users to /home (landing) or /login.
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate("/login", {
+      navigate(location.pathname === "/" ? "/home" : "/login", {
         replace: true,
         state: { returnTo: location.pathname + location.search },
       });
