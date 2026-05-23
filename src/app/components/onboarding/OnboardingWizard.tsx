@@ -65,7 +65,7 @@ export function OnboardingWizard() {
           borderRadius: "16px",
           width: "100%",
           maxWidth: "560px",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.24)",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.28)",
           overflow: "hidden",
         }}
       >
