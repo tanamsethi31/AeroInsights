@@ -81,8 +81,8 @@ export function MaintenanceEventLog({ events, saving, logEvent, deleteEvent, lea
         }
         continue;
       }
-      const remaining = imp.remainingAfter === "" ? null : parseInt(imp.remainingAfter, 10);
-      if (imp.remainingAfter !== "" && (isNaN(remaining!) || remaining! < 0)) {
+      const remaining = imp.remainingAfter === "" ? null : Number(imp.remainingAfter);
+      if (imp.remainingAfter !== "" && (!Number.isInteger(remaining) || (remaining as number) < 0)) {
         setFormError("Remaining units after must be a non-negative integer, or leave blank.");
         return;
       }
@@ -213,7 +213,7 @@ export function MaintenanceEventLog({ events, saving, logEvent, deleteEvent, lea
                 <label style={{ display: "flex", flexDirection: "column", gap: "0.2rem", fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
                   Remaining Units After <span style={{ fontWeight: 400, color: "#94A3B8" }}>(optional)</span>
                   <input
-                    type="number" min={0} value={imp.remainingAfter}
+                    type="number" min={0} step="1" value={imp.remainingAfter}
                     onChange={e => updateImpact(i, "remainingAfter", e.target.value)}
                     placeholder="leave blank if no reset"
                     style={{ padding: "0.3rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "0.78rem", width: "180px", background: "#FFFFFF" }}
