@@ -43,6 +43,27 @@ function FadeIn({
   );
 }
 
+/* ─── section blend (smooths background transitions) ──────────────────────── */
+function Blend({
+  from,
+  to,
+  position = "top",
+  h = 96,
+}: {
+  from: string;
+  to: string;
+  position?: "top" | "bottom";
+  h?: number;
+}) {
+  return (
+    <div
+      aria-hidden
+      className={cn("pointer-events-none absolute inset-x-0", position === "top" ? "top-0" : "bottom-0")}
+      style={{ height: h, background: `linear-gradient(to bottom, ${from}, ${to})` }}
+    />
+  );
+}
+
 /* ─── shared sub-components ────────────────────────────────────────────────── */
 function SectionPill({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
   return (
@@ -429,15 +450,19 @@ function Hero() {
       <AnimatedDotsCanvas />
 
       {/* Centre glow */}
-      <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-32">
+      <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-28">
         <div
-          className="h-[500px] w-[900px] rounded-full opacity-25"
-          style={{ background: "radial-gradient(ellipse at center, #2563eb 0%, #001a40 55%, transparent 75%)" }}
+          className="h-[620px] w-[1100px] rounded-full opacity-30"
+          style={{ background: "radial-gradient(ellipse at center, #3b82f6 0%, #001a40 50%, transparent 72%)" }}
         />
       </div>
 
-      {/* Bottom fade to white */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-white to-transparent" />
+      {/* Bottom fade to white (solid color gradient — no alpha, no muddy mid-tone) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-48"
+        style={{ background: "linear-gradient(to bottom, #001228 0%, #001228 40%, #ffffff 100%)" }}
+      />
 
       <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-20 sm:px-6 sm:py-28">
         {/* Badge */}
@@ -465,10 +490,11 @@ function Hero() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.08 }}
-          className="max-w-4xl text-center text-5xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.04]"
+          className="max-w-4xl text-center text-5xl font-black text-white sm:text-6xl lg:text-7xl leading-[1.02]"
+          style={{ letterSpacing: "-0.035em" }}
         >
           Aviation Finance{" "}
-          <span className="text-[#5a8fd8]">Intelligence,</span>{" "}
+          <span className="text-[#7aa6e0]">Intelligence,</span>{" "}
           Engineered for Lessors
         </motion.h1>
 
@@ -519,7 +545,12 @@ function Hero() {
         >
           <div className="relative">
             <DashboardMock />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 rounded-b-xl bg-gradient-to-t from-white to-transparent" />
+            {/* Fade dashboard bottom into the dark section bg (no alpha mid-tone) */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-32 rounded-b-xl"
+              style={{ background: "linear-gradient(to bottom, rgba(0,18,40,0) 0%, #001228 90%)" }}
+            />
           </div>
         </motion.div>
       </div>
@@ -641,8 +672,22 @@ function PortfolioSparkline() {
 
 function SolutionBento() {
   return (
-    <section id="solution" style={{ background: "#001228" }} className="py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+    <section id="solution" style={{ background: "#001228" }} className="relative overflow-hidden py-24">
+      {/* blend FROM previous white section */}
+      <Blend from="#ffffff" to="#001228" position="top" h={110} />
+      {/* blend INTO next white section */}
+      <Blend from="#001228" to="#ffffff" position="bottom" h={110} />
+      {/* subtle top glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
+        style={{
+          width: 900,
+          height: 280,
+          background: "radial-gradient(ellipse at top, rgba(59,130,246,0.18), transparent 65%)",
+        }}
+      />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHeader
           pill="The Solution"
           heading={<>One platform for every lessor workflow</>}
@@ -1294,8 +1339,19 @@ function FAQ() {
 /* ─── CTA BANNER ────────────────────────────────────────────────────────────── */
 function CTABanner() {
   return (
-    <section style={{ background: "#001228" }} className="py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+    <section style={{ background: "#001228" }} className="relative overflow-hidden py-24">
+      <Blend from="#ffffff" to="#001228" position="top" h={110} />
+      <Blend from="#001228" to="#ffffff" position="bottom" h={110} />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
+        style={{
+          width: 900,
+          height: 260,
+          background: "radial-gradient(ellipse at top, rgba(59,130,246,0.18), transparent 65%)",
+        }}
+      />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <FadeIn className="flex flex-col items-center gap-6 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-blue-300/60">
             ✦ Purpose-built for aviation lessors
@@ -1498,8 +1554,9 @@ const FOOTER_COLS = [
 
 function Footer() {
   return (
-    <footer style={{ background: "#001228" }} className="border-t border-white/5 py-14">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+    <footer style={{ background: "#001228" }} className="relative overflow-hidden py-14">
+      <Blend from="#f4f7fd" to="#001228" position="top" h={90} />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
           {/* Brand */}
           <div className="flex flex-col gap-4 lg:max-w-xs">
