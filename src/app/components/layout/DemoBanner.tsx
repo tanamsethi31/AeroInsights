@@ -1,15 +1,14 @@
-// src/app/components/layout/DemoBanner.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Database, X } from "lucide-react";
 import { useData } from "../../contexts/DataContext";
 
 export function DemoBanner() {
-  const { hasUpload, isLoadingOrg } = useData();
+  const { hasUpload } = useData();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
 
-  if (hasUpload || isLoadingOrg || dismissed) return null;
+  if (hasUpload || dismissed) return null;
 
   return (
     <div

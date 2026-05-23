@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { AlertTriangle, Check } from "lucide-react";
 import {
@@ -353,16 +353,6 @@ function ConcentrationView({
 
 // ─── HeatmapView ──────────────────────────────────────────────────────────────
 
-const HEATMAP_LESSEES = [
-  "Emirates", "Ryanair", "Singapore Airlines", "Air France", "Lufthansa",
-  "IndiGo Airlines", "SriLankan Airlines", "Azul Brazilian Airlines", "Air Transat", "Aeromexico",
-];
-
-const HEATMAP_COUNTRIES = [
-  "UAE", "Ireland", "France", "Germany", "Singapore",
-  "India", "Sri Lanka", "Brazil", "Canada", "Mexico",
-];
-
 const LESSEE_SHORT: Record<string, string> = {
   "Emirates":                "Emirates",
   "Ryanair":                 "Ryanair",
@@ -377,8 +367,24 @@ const LESSEE_SHORT: Record<string, string> = {
 };
 
 function HeatmapView({ cells }: { cells: HeatmapCell[] }) {
+  const uniqueLessees = useMemo(
+    () => [...new Set(cells.map((c) => c.lessee))].sort(),
+    [cells],
+  );
+  const uniqueCountries = useMemo(
+    () => [...new Set(cells.map((c) => c.country))].sort(),
+    [cells],
+  );
   const cellMap = new Map<string, HeatmapCell>();
   cells.forEach((c) => cellMap.set(`${c.lessee}::${c.country}`, c));
+
+  if (cells.length === 0) {
+    return (
+      <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "2rem", textAlign: "center", color: "#94A3B8", fontSize: "0.875rem" }}>
+        No exposure data available yet. Upload a portfolio to populate the heatmap.
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.75rem", padding: "1.25rem", overflowX: "auto" }}>
@@ -390,14 +396,14 @@ function HeatmapView({ cells }: { cells: HeatmapCell[] }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: `164px repeat(${HEATMAP_COUNTRIES.length}, minmax(68px, 1fr))`,
+          gridTemplateColumns: `164px repeat(${uniqueCountries.length}, minmax(68px, 1fr))`,
           gap: "3px",
           minWidth: "880px",
         }}
       >
         {/* Header row */}
         <div /> {/* top-left corner */}
-        {HEATMAP_COUNTRIES.map((country) => (
+        {uniqueCountries.map((country) => (
           <div
             key={country}
             style={{ padding: "0.25rem 0.375rem", fontSize: "0.625rem", fontWeight: 600, color: "#475569", textAlign: "center", background: "#F4F5F7", borderRadius: "0.25rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
@@ -407,14 +413,14 @@ function HeatmapView({ cells }: { cells: HeatmapCell[] }) {
         ))}
 
         {/* Data rows */}
-        {HEATMAP_LESSEES.map((lessee) => (
+        {uniqueLessees.map((lessee) => (
           <Fragment key={lessee}>
             {/* Row header */}
             <div style={{ padding: "0.375rem 0.5rem", fontSize: "0.75rem", fontWeight: 600, color: "#0F172A", display: "flex", alignItems: "center" }}>
               {LESSEE_SHORT[lessee] ?? lessee}
             </div>
             {/* Cells */}
-            {HEATMAP_COUNTRIES.map((country) => {
+            {uniqueCountries.map((country) => {
               const cell = cellMap.get(`${lessee}::${country}`);
               const eclPct = cell ? (cell.ecl / cell.exposure) * 100 : 0;
               const bg = cell ? heatColour(eclPct) : "#F8FAFC";
