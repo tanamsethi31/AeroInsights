@@ -191,7 +191,7 @@ function getModuleData(id: string, rows: LiveRows): ModuleRender | null {
         title: "Watchlist Headlines",
         subtitle: "Lessees classified Stage 3 (credit-impaired) — immediate attention required",
         headers: ["Lessee", "Country", "Rating", "Exposure", "Avg Days Late", "Behaviour Score"],
-        rows: at_risk.map(l => [l.name, l.country, l.rating, l.exposure, `${l.daysLate}d`, l.behavior]),
+        rows: at_risk.map(l => [l.name, l.country, l.rating, l.exposure, l.daysLate != null ? `${l.daysLate}d` : "—", l.behavior ?? "—"]),
       };
     }
 
@@ -202,7 +202,7 @@ function getModuleData(id: string, rows: LiveRows): ModuleRender | null {
         headers: ["Lessee", "Country", "Rating", "Stage", "Behaviour", "Leases", "Exposure", "Avg Days Late"],
         rows: [...lesseeRows]
           .sort((a, b) => parseInt(b.stage) - parseInt(a.stage) || a.behavior - b.behavior)
-          .map(l => [l.name, l.country, l.rating, `Stage ${l.stage}`, l.behavior, l.leases, l.exposure, `${l.daysLate}d`]),
+          .map(l => [l.name, l.country, l.rating, `Stage ${l.stage}`, l.behavior ?? "—", l.leases, l.exposure, l.daysLate != null ? `${l.daysLate}d` : "—"]),
       };
 
     case "jurisdiction":
@@ -362,7 +362,7 @@ export function generateReportPDF(reportId: string, currency: CurrencyCode, data
         startY: 45,
         head: [["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"]],
         body: lesseeRows.filter(l => l.stage !== "1").map(l => [
-          l.name, l.country, l.rating, `S${l.stage}`, l.behavior, l.leases, l.exposure, l.daysLate,
+          l.name, l.country, l.rating, `S${l.stage}`, l.behavior ?? "—", l.leases, l.exposure, l.daysLate ?? "—",
         ]),
         styles: { fontSize: 8, cellPadding: 2.5 },
         headStyles: { fillColor: [185, 28, 28], textColor: 255 },
@@ -436,7 +436,7 @@ export function generateReportXLSX(reportId: string, currency: CurrencyCode, dat
     case "RPT-005":
       addSheet("Watchlist",
         ["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"],
-        lesseeRows.map(l => [l.name, l.country, l.rating, `S${l.stage}`, l.behavior, l.leases, l.exposure, l.daysLate])
+        lesseeRows.map(l => [l.name, l.country, l.rating, `S${l.stage}`, l.behavior ?? "—", l.leases, l.exposure, l.daysLate ?? "—"])
       );
       break;
     case "RPT-006":
