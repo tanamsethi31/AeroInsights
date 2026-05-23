@@ -357,13 +357,13 @@ export default function PortfolioHub() {
                     (e.currentTarget as HTMLButtonElement).style.boxShadow =
                       "0 12px 32px rgba(0,33,71,0.30)";
                     (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "translate(40%, 40%) translateY(-22px) scale(1.10)";
+                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "scale(1.08)";
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLButtonElement).style.boxShadow =
                       "0 4px 20px rgba(0,33,71,0.25)";
                     (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "translate(40%, 40%) scale(1)";
+                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "scale(1)";
                   }}
                 >
                   {/* Background image */}
@@ -374,9 +374,9 @@ export default function PortfolioHub() {
                       inset: "-28px",
                       backgroundImage: "url('/sample-portfolio-bg.png')",
                       backgroundSize: "cover",
-                      backgroundPosition: "bottom right",
+                      backgroundPosition: "center",
                       borderRadius: "1.5rem",
-                      transform: "translate(40%, 40%) scale(1)",
+                      transform: "scale(1)",
                       transition: "transform 500ms cubic-bezier(0.23,1,0.32,1)",
                       pointerEvents: "none",
                     }}
