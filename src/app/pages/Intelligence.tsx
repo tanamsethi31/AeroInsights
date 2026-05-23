@@ -655,11 +655,11 @@ function MacroSignalsView({ signals, loading, lastUpdated, onRefresh, lesseeIdBy
         ))}
       </div>
 
-      {/* Signal cards — 2-col grid */}
+      {/* Signal cards — single column */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(520px, 1fr))",
+          gridTemplateColumns: "1fr",
           gap: "1rem",
         }}
       >
