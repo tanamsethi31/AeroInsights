@@ -406,7 +406,6 @@ export default function Portfolio() {
         tabs={isExecutiveMode ? EXEC_TABS : tabs}
         activeTab={activeTab}
         onChange={setActiveTab}
-        style={{ marginTop: "-1.5rem" }}
       />
 
       {/* Leases Tab */}
