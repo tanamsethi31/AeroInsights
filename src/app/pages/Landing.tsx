@@ -113,81 +113,60 @@ function SectionHeader({
   );
 }
 
-/* ─── ANIMATED PARTICLE CANVAS ──────────────────────────────────────────────── */
-function AnimatedDotsCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+/* ─── HERO MOUSE-TRACKING GLOW ──────────────────────────────────────────────── */
+function HeroGlow() {
+  const glowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const glow = glowRef.current;
+    if (!glow) return;
+    const section = glow.parentElement;
+    if (!section) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    function resize() {
-      canvas!.width = canvas!.offsetWidth;
-      canvas!.height = canvas!.offsetHeight;
-    }
-    resize();
-    window.addEventListener("resize", resize);
-
-    type P = { x: number; y: number; vx: number; vy: number; r: number; a: number };
-    const N = 90;
-    const LINK = 130;
-
-    const pts: P[] = Array.from({ length: N }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.22,
-      vy: (Math.random() - 0.5) * 0.22,
-      r: Math.random() * 1.2 + 0.4,
-      a: Math.random() * 0.35 + 0.1,
-    }));
-
+    let targetX = section.offsetWidth / 2;
+    let targetY = section.offsetHeight * 0.38;
+    let currentX = targetX;
+    let currentY = targetY;
     let raf: number;
-    function draw() {
-      const w = canvas!.width;
-      const h = canvas!.height;
-      ctx!.clearRect(0, 0, w, h);
 
-      pts.forEach((p) => {
-        p.x = (p.x + p.vx + w) % w;
-        p.y = (p.y + p.vy + h) % h;
-      });
+    const onMove = (e: MouseEvent) => {
+      const rect = section.getBoundingClientRect();
+      targetX = e.clientX - rect.left;
+      targetY = e.clientY - rect.top;
+    };
 
-      for (let i = 0; i < N; i++) {
-        for (let j = i + 1; j < N; j++) {
-          const dx = pts[i].x - pts[j].x;
-          const dy = pts[i].y - pts[j].y;
-          const d = Math.sqrt(dx * dx + dy * dy);
-          if (d < LINK) {
-            ctx!.beginPath();
-            ctx!.moveTo(pts[i].x, pts[i].y);
-            ctx!.lineTo(pts[j].x, pts[j].y);
-            ctx!.strokeStyle = `rgba(100,160,240,${0.14 * (1 - d / LINK)})`;
-            ctx!.lineWidth = 0.5;
-            ctx!.stroke();
-          }
-        }
-      }
+    const tick = () => {
+      // Smooth lerp — glow lags gently behind cursor for a fluid feel
+      currentX += (targetX - currentX) * 0.09;
+      currentY += (targetY - currentY) * 0.09;
+      glow.style.transform = `translate(${currentX - 400}px, ${currentY - 400}px)`;
+      raf = requestAnimationFrame(tick);
+    };
 
-      pts.forEach((p) => {
-        ctx!.beginPath();
-        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(160,200,255,${p.a})`;
-        ctx!.fill();
-      });
-
-      raf = requestAnimationFrame(draw);
-    }
-    draw();
+    raf = requestAnimationFrame(tick);
+    section.addEventListener("mousemove", onMove);
 
     return () => {
+      section.removeEventListener("mousemove", onMove);
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" />;
+  return (
+    <div
+      ref={glowRef}
+      aria-hidden
+      className="pointer-events-none absolute top-0 left-0"
+      style={{
+        width: 800,
+        height: 800,
+        background:
+          "radial-gradient(circle at center, rgba(0,33,71,0.06) 0%, rgba(0,33,71,0.022) 45%, transparent 70%)",
+        willChange: "transform",
+      }}
+    />
+  );
 }
 
 /* ─── NAVBAR ───────────────────────────────────────────────────────────────── */
@@ -219,12 +198,7 @@ function Navbar() {
           <div className="flex size-8 items-center justify-center rounded-lg bg-[#002147] p-1.5">
             <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
           </div>
-          <span
-            className={cn(
-              "text-[1.05rem] font-extrabold tracking-tight transition-colors duration-300",
-              scrolled ? "text-gray-950" : "text-white"
-            )}
-          >
+          <span className="text-[1.05rem] font-extrabold tracking-tight text-gray-950">
             AeroInsights
           </span>
         </Link>
@@ -239,12 +213,7 @@ function Navbar() {
                 e.preventDefault();
                 document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
               }}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm transition-colors",
-                scrolled
-                  ? "text-gray-600 hover:bg-gray-100 hover:text-gray-950"
-                  : "text-white/75 hover:bg-white/10 hover:text-white"
-              )}
+              className="rounded-md px-3 py-1.5 text-sm transition-colors text-gray-600 hover:bg-gray-100 hover:text-gray-950"
             >
               {l.label}
             </a>
@@ -265,16 +234,13 @@ function Navbar() {
             <>
               <Link
                 to="/login"
-                className={cn(
-                  "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                  scrolled ? "text-gray-700 hover:bg-gray-100" : "text-white/80 hover:bg-white/10 hover:text-white"
-                )}
+                className="rounded-lg px-4 py-2 text-sm font-medium transition-colors text-gray-700 hover:bg-gray-100"
               >
                 Sign In
               </Link>
               <Link
                 to="/login"
-                className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#002147] shadow-sm transition hover:bg-blue-50"
+                className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
               >
                 Request Demo
                 <i className="bi bi-arrow-right text-xs" />
@@ -285,10 +251,7 @@ function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className={cn(
-            "flex size-9 items-center justify-center rounded-lg border md:hidden",
-            scrolled ? "border-gray-200 text-gray-600" : "border-white/20 text-white"
-          )}
+          className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 md:hidden"
           onClick={() => setMobileOpen((v) => !v)}
         >
           <i className={cn("bi text-lg", mobileOpen ? "bi-x" : "bi-list")} />
@@ -338,7 +301,7 @@ function Navbar() {
 /* ─── HERO ─────────────────────────────────────────────────────────────────── */
 function DashboardMock() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#000d1a] shadow-2xl shadow-black/60">
+    <div className="relative overflow-hidden rounded-xl border border-[#002147]/12 bg-[#000d1a] shadow-2xl shadow-[#002147]/10">
       {/* Browser chrome */}
       <div className="flex items-center gap-1.5 border-b border-white/5 bg-white/4 px-4 py-2.5">
         <span className="size-2.5 rounded-full bg-red-400/70" />
@@ -444,25 +407,14 @@ function Hero() {
   return (
     <section
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16"
-      style={{ background: "#001228" }}
+      style={{
+        background: "#f8faff",
+        backgroundImage: "radial-gradient(circle, rgba(0,33,71,0.03) 1px, transparent 1px)",
+        backgroundSize: "28px 28px",
+      }}
     >
-      {/* Animated particle network */}
-      <AnimatedDotsCanvas />
-
-      {/* Centre glow */}
-      <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-28">
-        <div
-          className="h-[620px] w-[1100px] rounded-full opacity-30"
-          style={{ background: "radial-gradient(ellipse at center, #3b82f6 0%, #001a40 50%, transparent 72%)" }}
-        />
-      </div>
-
-      {/* Bottom fade to white (solid color gradient — no alpha, no muddy mid-tone) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-48"
-        style={{ background: "linear-gradient(to bottom, #001228 0%, #001228 40%, #ffffff 100%)" }}
-      />
+      {/* Mouse-tracking radial glow — GPU-only transform, lerp for smooth follow */}
+      <HeroGlow />
 
       <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-20 sm:px-6 sm:py-28">
         {/* Badge */}
@@ -477,11 +429,11 @@ function Hero() {
               e.preventDefault();
               document.querySelector("#features")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3.5 py-1.5 text-sm font-medium text-white/85 backdrop-blur-sm transition hover:bg-white/14"
+            className="inline-flex items-center gap-2 rounded-full border border-[#002147]/15 bg-[#002147]/5 px-3.5 py-1.5 text-sm font-medium text-[#002147] transition hover:bg-[#002147]/10"
           >
-            <i className="bi bi-stars text-amber-400 text-xs" />
+            <i className="bi bi-stars text-amber-500 text-xs" />
             Excel Add-In Now Available
-            <i className="bi bi-arrow-right text-xs text-white/45" />
+            <i className="bi bi-arrow-right text-xs text-[#002147]/45" />
           </a>
         </motion.div>
 
@@ -490,11 +442,11 @@ function Hero() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.08 }}
-          className="max-w-4xl text-center text-5xl font-black text-white sm:text-6xl lg:text-7xl leading-[1.02]"
+          className="max-w-4xl text-center text-5xl font-black text-gray-950 sm:text-6xl lg:text-7xl leading-[1.02]"
           style={{ letterSpacing: "-0.035em" }}
         >
           Aviation Finance{" "}
-          <span className="text-[#7aa6e0]">Intelligence,</span>{" "}
+          <span className="text-[#002147]">Intelligence,</span>{" "}
           Engineered for Lessors
         </motion.h1>
 
@@ -503,7 +455,7 @@ function Hero() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.16 }}
-          className="max-w-2xl text-center text-lg text-white/65 leading-relaxed"
+          className="max-w-2xl text-center text-lg text-gray-600 leading-relaxed"
         >
           AeroInsights unifies portfolio analytics, scenario modelling, risk &amp; ECL,
           and AI-powered deal intelligence — purpose-built for aviation finance teams.
@@ -518,7 +470,7 @@ function Hero() {
         >
           <Link
             to="/login"
-            className="flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#002147] shadow-lg shadow-black/25 transition hover:bg-blue-50"
+            className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
           >
             Request a Demo
             <i className="bi bi-arrow-right text-xs" />
@@ -529,9 +481,9 @@ function Hero() {
               e.preventDefault();
               document.querySelector("#platform")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-6 py-3 text-sm font-semibold text-white/85 backdrop-blur-sm transition hover:bg-white/14"
+            className="flex items-center gap-2 rounded-xl border border-[#002147]/18 bg-white px-6 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
           >
-            <i className="bi bi-play-circle text-white/55" />
+            <i className="bi bi-play-circle text-[#002147]/55" />
             See How It Works
           </a>
         </motion.div>
@@ -543,15 +495,7 @@ function Hero() {
           transition={{ duration: 0.7, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-5xl"
         >
-          <div className="relative">
-            <DashboardMock />
-            {/* Fade dashboard bottom into the dark section bg (no alpha mid-tone) */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-32 rounded-b-xl"
-              style={{ background: "linear-gradient(to bottom, rgba(0,18,40,0) 0%, #001228 90%)" }}
-            />
-          </div>
+          <DashboardMock />
         </motion.div>
       </div>
     </section>
