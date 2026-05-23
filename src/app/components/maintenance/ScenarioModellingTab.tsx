@@ -122,9 +122,13 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
   const rows = useMemo(() => {
     return adjustedLeases.map(({ lease, utilOverride }) => {
       const entry = Object.entries(LEASE_CONTEXT).find(([, ctx]) => ctx.leaseId === lease.leaseId);
-      const msn = entry?.[0] ?? "";
-      const ctx = msn ? LEASE_CONTEXT[msn] : null;
-      const leaseEndStr = ctx?.leaseEnd ?? "2030-01-01";
+      if (!entry) {
+        console.warn(`[ScenarioModellingTab] No LEASE_CONTEXT entry for leaseId ${lease.leaseId}; skipping row`);
+        return null;
+      }
+      const msn = entry[0];
+      const ctx = LEASE_CONTEXT[msn];
+      const leaseEndStr = ctx.leaseEnd;
       const leaseEndDate = parseDateLocal(leaseEndStr);
       const a = { leaseId: lease.leaseId, msn, lessee: lease.lessee, aircraft: lease.aircraft, leaseEnd: leaseEndStr };
 
@@ -141,8 +145,8 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
       const scenEOL = scenProj.reduce((s, p) => s + p.eolShortfall, 0);
       const delta   = scenEOL - baseEOL; // +ve = scenario worsens shortfall
 
-      return { ...a, lease, leaseEndDate, baseProj, scenProj, baseEOL, scenEOL, delta };
-    });
+      return { ...a, lease, leaseEndDate, baseProj, scenProj, baseEOL, scenEOL, delta, utilOverride };
+    }).filter((row): row is NonNullable<typeof row> => row !== null);
   }, [adjustedLeases, fh, cy]);
 
   return (
@@ -331,7 +335,7 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
                   gap: "1rem",
                 }}>
                   <MiniProjectionTable
-                    title="Base (Heuristic)"
+                    title={row.utilOverride ? "Base (Servicer Report)" : "Base (Heuristic)"}
                     projections={row.baseProj}
                   />
                   <MiniProjectionTable
