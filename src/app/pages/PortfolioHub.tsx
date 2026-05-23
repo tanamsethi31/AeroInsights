@@ -101,6 +101,7 @@ export default function PortfolioHub() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const sampleBgRef = useRef<HTMLDivElement>(null);
+  const uploadBgRef = useRef<HTMLDivElement>(null);
 
   // Fetch user's custom portfolios
   useEffect(() => {
@@ -433,10 +434,11 @@ export default function PortfolioHub() {
                   transition={{ delay: 0.12, duration: 0.38, ease: [0.23, 1, 0.32, 1] }}
                   onClick={() => navigate("/onboarding")}
                   style={{
+                    position: "relative",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    background: "#002147",
+                    background: "#001529",
                     border: "none",
                     borderRadius: "1rem",
                     padding: "2rem",
@@ -444,6 +446,7 @@ export default function PortfolioHub() {
                     textAlign: "left",
                     color: "#FFFFFF",
                     minHeight: "260px",
+                    overflow: "hidden",
                     transition: "box-shadow 160ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1)",
                     boxShadow: "0 4px 16px rgba(0,33,71,0.20)",
                   }}
@@ -451,24 +454,53 @@ export default function PortfolioHub() {
                     (e.currentTarget as HTMLButtonElement).style.boxShadow =
                       "0 12px 32px rgba(0,33,71,0.30)";
                     (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
+                    if (uploadBgRef.current) uploadBgRef.current.style.transform = "scale(1.08)";
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLButtonElement).style.boxShadow =
                       "0 4px 16px rgba(0,33,71,0.20)";
                     (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                    if (uploadBgRef.current) uploadBgRef.current.style.transform = "scale(1)";
                   }}
                 >
-                  <div>
+                  {/* Background image */}
+                  <div
+                    ref={uploadBgRef}
+                    style={{
+                      position: "absolute",
+                      inset: "-28px",
+                      backgroundImage: "url('/upload-portfolio-bg.png')",
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      borderRadius: "1.5rem",
+                      transform: "scale(1)",
+                      transition: "transform 500ms cubic-bezier(0.23,1,0.32,1)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  {/* Gradient overlay for text legibility */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "linear-gradient(160deg, rgba(0,21,47,0.78) 0%, rgba(0,33,71,0.60) 50%, rgba(0,10,30,0.35) 100%)",
+                      borderRadius: "1rem",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <div style={{ position: "relative", zIndex: 1 }}>
                     <div
                       style={{
                         width: "44px",
                         height: "44px",
-                        background: "rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.15)",
+                        backdropFilter: "blur(6px)",
                         borderRadius: "0.625rem",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         marginBottom: "1.5rem",
+                        border: "1px solid rgba(255,255,255,0.20)",
                       }}
                     >
                       <Database size={22} style={{ color: "#FFFFFF" }} />
@@ -476,12 +508,12 @@ export default function PortfolioHub() {
                     <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.625rem" }}>
                       Upload Your Portfolio
                     </div>
-                    <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>
+                    <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.75)", lineHeight: 1.6 }}>
                       Import your real fleet, leases, and lessees to unlock full platform capabilities.
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "2rem" }}>
+                  <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "2rem" }}>
                     <span style={{ fontSize: "0.9375rem", fontWeight: 600, color: "#FFFFFF" }}>
                       Import now
                     </span>
