@@ -374,7 +374,7 @@ export default function PortfolioHub() {
                       inset: "-28px",
                       backgroundImage: "url('/sample-portfolio-bg.png')",
                       backgroundSize: "cover",
-                      backgroundPosition: "center top",
+                      backgroundPosition: "bottom right",
                       borderRadius: "1.5rem",
                       transform: "translateY(0) scale(1)",
                       transition: "transform 500ms cubic-bezier(0.23,1,0.32,1)",
