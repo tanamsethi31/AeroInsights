@@ -6,7 +6,7 @@ import {
   mrFlagBg,
   type MRAdeqFlag,
 } from "../../data/maintenanceHeuristics";
-import { type LeaseSDMR } from "../portfolio/SDMRTab";
+import type { AdjustedLease } from "../../utils/maintenanceEvents";
 import {
   buildProjections,
   LEASE_CONTEXT,
@@ -38,10 +38,10 @@ function componentFlag(p: ComponentProjection): MRAdeqFlag {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
-  sdmrData: LeaseSDMR[];
+  adjustedLeases: AdjustedLease[];
 }
 
-export function MRPortfolioGrid({ sdmrData }: Props) {
+export function MRPortfolioGrid({ adjustedLeases }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const toggle = useCallback((leaseId: string) => {
@@ -53,8 +53,8 @@ export function MRPortfolioGrid({ sdmrData }: Props) {
   }, []);
 
   const rows = useMemo(() => {
-    return sdmrData
-      .map((lease) => {
+    return adjustedLeases
+      .map(({ lease, utilOverride }) => {
         const ctx = CONTEXT_BY_LEASE_ID[lease.leaseId];
         const leaseEndDate = lease.leaseEnd
           ? parseDateLocal(lease.leaseEnd)
@@ -62,7 +62,7 @@ export function MRPortfolioGrid({ sdmrData }: Props) {
           ? parseDateLocal(ctx.leaseEnd)
           : new Date(2028, 0, 1); // last-resort fallback
 
-        const projections = buildProjections(lease, lease.aircraft, leaseEndDate);
+        const projections = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride);
 
         const baseEOLShortfall = projections.reduce(
           (s, p) => s + Math.max(0, p.eolShortfall),
@@ -89,9 +89,9 @@ export function MRPortfolioGrid({ sdmrData }: Props) {
         };
       })
       .sort((a, b) => b.distressedEOLShortfall - a.distressedEOLShortfall);
-  }, [sdmrData]);
+  }, [adjustedLeases]);
 
-  if (sdmrData.length === 0) return null;
+  if (adjustedLeases.length === 0) return null;
 
   const redCount   = rows.filter((r) => r.overallFlag === "red").length;
   const amberCount = rows.filter((r) => r.overallFlag === "amber").length;
