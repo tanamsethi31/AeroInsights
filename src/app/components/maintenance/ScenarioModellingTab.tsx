@@ -1,6 +1,6 @@
 // src/app/components/maintenance/ScenarioModellingTab.tsx
 import { useState, useMemo } from "react";
-import { sdmrData } from "../portfolio/SDMRTab";
+import type { AdjustedLease } from "../../utils/maintenanceEvents";
 import {
   LEASE_CONTEXT,
   buildProjections,
@@ -29,31 +29,6 @@ function fmtUSD(n: number): string {
 function eolColor(shortfall: number): string {
   return shortfall > 0 ? "#B91C1C" : "#15803D";
 }
-
-// ── Static aircraft list ───────────────────────────────────────────────────────
-
-interface AircraftEntry {
-  leaseId:  string;
-  msn:      string;
-  lessee:   string;
-  aircraft: string;
-  leaseEnd: string;
-}
-
-const AIRCRAFT_LIST: AircraftEntry[] = sdmrData.map(lease => {
-  const entry = Object.entries(LEASE_CONTEXT).find(
-    ([, ctx]) => ctx.leaseId === lease.leaseId,
-  );
-  const msn = entry?.[0] ?? "";
-  const ctx = msn ? LEASE_CONTEXT[msn] : null;
-  return {
-    leaseId:  lease.leaseId,
-    msn,
-    lessee:   lease.lessee,
-    aircraft: lease.aircraft,
-    leaseEnd: ctx?.leaseEnd ?? "2030-01-01",
-  };
-});
 
 // ── MiniProjectionTable ────────────────────────────────────────────────────────
 
@@ -138,19 +113,24 @@ function MiniProjectionTable({
 
 // ── ScenarioModellingTab ───────────────────────────────────────────────────────
 
-export function ScenarioModellingTab() {
+export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: AdjustedLease[] }) {
   const [fh,         setFh       ] = useState(DEFAULT_FH);
   const [cy,         setCy       ] = useState(DEFAULT_CY);
   const [expanded,   setExpanded ] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   const rows = useMemo(() => {
-    return AIRCRAFT_LIST.map(a => {
-      const lease = sdmrData.find(l => l.leaseId === a.leaseId);
-      if (!lease) throw new Error(`ScenarioModellingTab: no sdmrData entry for leaseId ${a.leaseId}`);
-      const leaseEndDate = parseDateLocal(a.leaseEnd);
+    return adjustedLeases.map(({ lease, utilOverride }) => {
+      const entry = Object.entries(LEASE_CONTEXT).find(([, ctx]) => ctx.leaseId === lease.leaseId);
+      const msn = entry?.[0] ?? "";
+      const ctx = msn ? LEASE_CONTEXT[msn] : null;
+      const leaseEndStr = ctx?.leaseEnd ?? "2030-01-01";
+      const leaseEndDate = parseDateLocal(leaseEndStr);
+      const a = { leaseId: lease.leaseId, msn, lessee: lease.lessee, aircraft: lease.aircraft, leaseEnd: leaseEndStr };
 
-      const baseProj = buildProjections(lease, lease.aircraft, leaseEndDate);
+      // Base projection uses servicer report utilization (if available), otherwise heuristic
+      const baseProj = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride);
+      // Scenario projection uses user-slider FH/CY values
       const scenProj = buildProjections(lease, lease.aircraft, leaseEndDate, {
         annualFH:           fh,
         annualCy:           cy,
@@ -163,7 +143,7 @@ export function ScenarioModellingTab() {
 
       return { ...a, lease, leaseEndDate, baseProj, scenProj, baseEOL, scenEOL, delta };
     });
-  }, [fh, cy]);
+  }, [adjustedLeases, fh, cy]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1.5rem" }}>
