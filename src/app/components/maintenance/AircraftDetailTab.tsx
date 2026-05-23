@@ -1,12 +1,14 @@
 // src/app/components/maintenance/AircraftDetailTab.tsx
 import { useState, useMemo } from "react";
-import { sdmrData } from "../portfolio/SDMRTab";
 import {
   LEASE_CONTEXT,
   buildProjections,
   MaintenanceForecastTab,
 } from "../portfolio/MaintenanceForecastTab";
 import { AircraftBalanceChart } from "./AircraftBalanceChart";
+import { useMaintenanceEvents } from "../../hooks/useMaintenanceEvents";
+import { MaintenanceEventLog } from "./MaintenanceEventLog";
+import type { AdjustedLease, MaintenanceEvent } from "../../utils/maintenanceEvents";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -25,47 +27,44 @@ function monthsBetween(a: Date, b: Date): number {
   );
 }
 
-// ── Static aircraft list (derived once at module load) ────────────────────────
-
-interface AircraftEntry {
-  leaseId:  string;
-  msn:      string;
-  lessee:   string;
-  aircraft: string;
-  leaseEnd: string;
-}
-
-const AIRCRAFT_LIST: AircraftEntry[] = sdmrData.map(lease => {
-  const entry = Object.entries(LEASE_CONTEXT).find(
-    ([, ctx]) => ctx.leaseId === lease.leaseId,
-  );
-  const msn = entry?.[0] ?? "";
-  const ctx = msn ? LEASE_CONTEXT[msn] : null;
-  return {
-    leaseId:  lease.leaseId,
-    msn,
-    lessee:   lease.lessee,
-    aircraft: lease.aircraft,
-    leaseEnd: ctx?.leaseEnd ?? "2030-01-01",
-  };
-});
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function AircraftDetailTab() {
+export function AircraftDetailTab({
+  adjustedLeases,
+  eventsMap,
+}: {
+  adjustedLeases: AdjustedLease[];
+  eventsMap:      Map<string, MaintenanceEvent[]>;
+}) {
+  // Build aircraft list from adjustedLeases (replaces static AIRCRAFT_LIST derived from sdmrData)
+  const aircraftList = useMemo(() => adjustedLeases.map(({ lease, utilOverride }) => {
+    const entry = Object.entries(LEASE_CONTEXT).find(([, ctx]) => ctx.leaseId === lease.leaseId);
+    const msn = entry?.[0] ?? "";
+    const ctx = msn ? LEASE_CONTEXT[msn] : null;
+    return {
+      leaseId:     lease.leaseId,
+      msn,
+      lessee:      lease.lessee,
+      aircraft:    lease.aircraft,
+      leaseEnd:    ctx?.leaseEnd ?? "2030-01-01",
+      lease,
+      utilOverride,
+    };
+  }), [adjustedLeases]);
+
   const [selectedLeaseId, setSelectedLeaseId] = useState(
-    () => AIRCRAFT_LIST[0]?.leaseId ?? "",
+    () => aircraftList[0]?.leaseId ?? "",
   );
 
-  const selected      = AIRCRAFT_LIST.find(a => a.leaseId === selectedLeaseId) ?? AIRCRAFT_LIST[0];
-  const selectedLease = sdmrData.find(l => l.leaseId === selectedLeaseId) ?? sdmrData[0];
+  const selected      = aircraftList.find(a => a.leaseId === selectedLeaseId) ?? aircraftList[0];
+  const selectedLease = selected?.lease;
 
   // Hook must be called unconditionally (Rules of Hooks); null-safety checked after.
   const derived = useMemo(() => {
     if (!selected || !selectedLease) return null;
     const end = parseDateLocal(selected.leaseEnd);
     return {
-      projections:  buildProjections(selectedLease, selectedLease.aircraft, end),
+      projections:  buildProjections(selectedLease, selectedLease.aircraft, end, selected.utilOverride),
       leaseEndDate: end,
       monthsToEOL:  Math.max(0, monthsBetween(NOW, end)),
     };
@@ -76,12 +75,17 @@ export function AircraftDetailTab() {
 
   const { projections, leaseEndDate, monthsToEOL } = derived;
 
+  const { events, saving, logEvent, deleteEvent } = useMaintenanceEvents(selected?.leaseId ?? null);
+
+  // eventsMap is available for future use (e.g. portfolio-level views)
+  void eventsMap;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", marginTop: "1.5rem" }}>
 
       {/* ── Aircraft selector ─────────────────────────────────────────── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-        {AIRCRAFT_LIST.map(a => {
+        {aircraftList.map(a => {
           const isActive = a.leaseId === selectedLeaseId;
           return (
             <button
@@ -120,6 +124,15 @@ export function AircraftDetailTab() {
         msn={selected.msn}
         aircraftType={selectedLease.aircraft}
         vintage={2020}
+      />
+
+      {/* ── Maintenance Event Log ──────────────────────────────────────────────── */}
+      <MaintenanceEventLog
+        events={events}
+        saving={saving}
+        logEvent={logEvent}
+        deleteEvent={deleteEvent}
+        leaseId={selected.leaseId}
       />
     </div>
   );
