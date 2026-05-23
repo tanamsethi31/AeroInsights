@@ -1,3 +1,4 @@
+// src/app/pages/Maintenance.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -9,6 +10,10 @@ import { MRCashflowChart } from "../components/maintenance/MRCashflowChart";
 import { MREventCalendar } from "../components/maintenance/MREventCalendar";
 import { AircraftDetailTab } from "../components/maintenance/AircraftDetailTab";
 import { ScenarioModellingTab } from "../components/maintenance/ScenarioModellingTab";
+import { useAllServicerReports } from "../hooks/useAllServicerReports";
+import { useAllMaintenanceEvents } from "../hooks/useAllMaintenanceEvents";
+import { adjustedLease } from "../utils/maintenanceEvents";
+import type { AdjustedLease } from "../utils/maintenanceEvents";
 
 const PATH_TAB: Record<string, string> = {
   "/maintenance":           "Overview",
@@ -26,11 +31,23 @@ export default function Maintenance() {
     setActiveTab(PATH_TAB[pathname] ?? "Overview");
   }, [pathname]);
 
+  const { reports, loading: reportsLoading } = useAllServicerReports();
+  const { eventsMap, loading: eventsLoading } = useAllMaintenanceEvents();
+
+  const adjustedLeases: AdjustedLease[] = useMemo(
+    () => sdmrData.map(raw =>
+      adjustedLease(raw, reports.get(raw.leaseId) ?? null, eventsMap.get(raw.leaseId) ?? [])
+    ),
+    [reports, eventsMap],
+  );
+
   const chartData = useMemo(() => toMRChartData(sdmrData), []);
   const leaseLessees = useMemo(
     () => Object.fromEntries(sdmrData.map((l) => [l.leaseId, l.lessee])),
     []
   );
+
+  const isLoading = reportsLoading || eventsLoading;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -47,8 +64,12 @@ export default function Maintenance() {
       />
 
       {activeTab === "Overview" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          <MRPortfolioGrid sdmrData={sdmrData} />
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1.5rem" }}>
+          {isLoading ? (
+            <div style={{ color: "#94A3B8", fontSize: "0.875rem", padding: "2rem 0" }}>Loading maintenance data…</div>
+          ) : (
+            <MRPortfolioGrid adjustedLeases={adjustedLeases} />
+          )}
           <MRCashflowChart data={chartData.cashflow} />
           <MREventCalendar
             data={chartData.events}
@@ -60,11 +81,11 @@ export default function Maintenance() {
       )}
 
       {activeTab === "Aircraft Detail" && (
-        <AircraftDetailTab />
+        <AircraftDetailTab adjustedLeases={adjustedLeases} eventsMap={eventsMap} />
       )}
 
       {activeTab === "Scenario Modelling" && (
-        <ScenarioModellingTab />
+        <ScenarioModellingTab adjustedLeases={adjustedLeases} />
       )}
     </div>
   );
