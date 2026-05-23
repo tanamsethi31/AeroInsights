@@ -68,14 +68,13 @@ export function AircraftDetailTab({
       leaseEndDate: end,
       monthsToEOL:  Math.max(0, monthsBetween(NOW, end)),
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLeaseId]);
+  }, [selected, selectedLease]);
+
+  const { events, saving, logEvent, deleteEvent } = useMaintenanceEvents(selected?.leaseId ?? null);
 
   if (!selected || !selectedLease || !derived) return null;
 
   const { projections, leaseEndDate, monthsToEOL } = derived;
-
-  const { events, saving, logEvent, deleteEvent } = useMaintenanceEvents(selected?.leaseId ?? null);
 
   // eventsMap is available for future use (e.g. portfolio-level views)
   void eventsMap;
