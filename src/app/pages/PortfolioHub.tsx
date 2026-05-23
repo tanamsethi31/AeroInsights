@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth0 } from "@auth0/auth0-react";
 import { motion } from "framer-motion";
@@ -100,7 +100,6 @@ export default function PortfolioHub() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const sampleBgRef = useRef<HTMLDivElement>(null);
 
   // Fetch user's custom portfolios
   useEffect(() => {
@@ -357,40 +356,13 @@ export default function PortfolioHub() {
                     (e.currentTarget as HTMLButtonElement).style.boxShadow =
                       "0 12px 32px rgba(0,33,71,0.30)";
                     (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "translate(40%, 40%) translateY(-22px) scale(1.10)";
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLButtonElement).style.boxShadow =
                       "0 4px 20px rgba(0,33,71,0.25)";
                     (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                    if (sampleBgRef.current) sampleBgRef.current.style.transform = "translate(40%, 40%) scale(1)";
                   }}
                 >
-                  {/* Rising background image */}
-                  <div
-                    ref={sampleBgRef}
-                    style={{
-                      position: "absolute",
-                      inset: "-28px",
-                      backgroundImage: "url('/sample-portfolio-bg.png')",
-                      backgroundSize: "cover",
-                      backgroundPosition: "bottom right",
-                      borderRadius: "1.5rem",
-                      transform: "translate(40%, 40%) scale(1)",
-                      transition: "transform 500ms cubic-bezier(0.23,1,0.32,1)",
-                      pointerEvents: "none",
-                    }}
-                  />
-                  {/* Gradient overlay for text legibility */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background: "linear-gradient(160deg, rgba(0,21,47,0.78) 0%, rgba(0,33,71,0.60) 50%, rgba(0,10,30,0.35) 100%)",
-                      borderRadius: "1rem",
-                      pointerEvents: "none",
-                    }}
-                  />
 
                   {/* Content sits above overlay */}
                   <div style={{ position: "relative", zIndex: 1 }}>
