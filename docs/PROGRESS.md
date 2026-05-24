@@ -7,15 +7,27 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 0 | 0 | 10 | 0% |
+| 1 | 10 | 2 | 0 | 8 | 20% |
 | 2 | 6 | 0 | 0 | 6 | 0% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **5** | **0** | **36** | **12.2%** |
+| **Total** | **41** | **7** | **0** | **34** | **17.1%** |
 
 ## Completed Tasks
+
+### T-1.1 + T-1.2 — Multi-sheet parser + Lessee Profiles ingest (2026-05-24)
+- New file `src/app/utils/excelParser.ts` (~380 LOC): `parseWorkbook(file)` + `detectCanonical(file)` + per-sheet handlers (Lessee Profiles full, Aircraft Register parsed, Lease Register parsed). Banner-row tolerant header detection. Field coercion helpers (`asNumber`, `asPercent`, `asBool`, `asStage`, `asMillions`, `asThousands`).
+- New file `src/app/services/portfolioIngest.ts` (~180 LOC): `ingestLessees()` with onConflict upsert by (org_id, portfolio_id, external_id). `ingestWorkbook()` orchestrator runs sheet ingesters in dependency order.
+- Migration `20260524130000_lessee_profiles_ingest.sql` applied live via Supabase MCP:
+  - First analytical-table `portfolio_id NOT NULL` per ADR-002 Phase B (backfill: per-org Default Portfolio).
+  - 14 new columns on `lessees` (external_id, region, stage, dpd_days, rating_notches_down, country_watchlist, insolvency_filed, 5 behaviour scores, pay_behaviour_tier).
+  - Compound indexes `(org_id, portfolio_id)` and `(org_id, portfolio_id, external_id)`.
+  - Unique partial index on external_id for re-import upserts.
+- New component `src/app/components/upload/MultiSheetReviewStep.tsx` (~250 LOC): per-sheet preview table, live import button, results panel with per-sheet success/failure.
+- `UploadWizard.tsx` routes canonical .xlsx/.xls files to MultiSheetReviewStep (bypassing column mapping); flat CSV/template path preserved.
+- Phase 1: 0/10 → 2/10 (20%). Total: 5/41 → 7/41 (17.1%).
 
 ### T-0.3 — Canonicalize Portfolio vs Org scoping (Phase A, 2026-05-24)
 - **Discovery during survey:** zero `portfolios` table existed (my prior claim was wrong); `PortfolioContext` was pure in-memory; `PortfolioHub.tsx` still pointed at `${API_BASE}/portfolios` on dead FastAPI — **third hidden FastAPI bug closed**.

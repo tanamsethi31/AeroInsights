@@ -57,11 +57,19 @@ Establishes the foundations every subsequent phase inherits. Must be completed f
 The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 sheets and 70+ data points. Today the importer reads only the Lease Register sheet (11 columns). Every other sheet — Aircraft Register, Lessee Profiles, SD+MR balances, IFRS-9 ECL parameters, SICR triggers, Stress Scenarios, Jurisdiction LGD overlays — is left on the floor.
 
 ### T-1.1 — Multi-sheet Excel parser
-- **Status:** TODO
-- **Files affected:** `src/app/components/upload/ReviewImportStep.tsx`, `src/app/utils/excelParser.ts` (new), `src/app/components/import/ColumnMapStep.tsx`
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `src/app/utils/excelParser.ts` (new, 380 LOC), `src/app/components/upload/MultiSheetReviewStep.tsx` (new, 250 LOC), `src/app/components/upload/UploadWizard.tsx`
 - **Depends on:** T-0.2
-- **Why:** Today we ingest 1 of 14 sheets. The wizard needs sheet detection + per-sheet column mapping.
-- **Estimated effort:** 3 days
+- **Why:** Sample portfolio Excel has 14 sheets; today we ingest 1. The parser detects canonical sheet names (Aircraft Register, Lessee Profiles, Lease Register, Security Deposits+MR, IFRS 9 ECL, SICR Triggers, Stress Scenarios, Jurisdiction LGD), tolerates banner rows (header detection picks the first short-distinct-text row), and dispatches each to a typed handler.
+- **Outcome:** `parseWorkbook(file)` returns `ParsedWorkbook { sheets, sheetNames, recognisedSheets, unknownSheets }`. `detectCanonical(file)` is a header-only probe used by the UploadWizard to skip the column-mapping step for canonical workbooks. Three sheet handlers shipped (Lessee Profiles full live; Aircraft Register + Lease Register parsed for preview, ingest in next slice). T-1.4–T-1.8 handlers stub in place with stable shapes so future slices land without touching the parser entry.
+
+### T-1.2 — Ingest Lessee Profiles sheet
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `supabase/migrations/20260524130000_lessee_profiles_ingest.sql`, `src/app/services/portfolioIngest.ts` (new, 180 LOC), `src/app/utils/excelParser.ts`, `src/app/components/upload/MultiSheetReviewStep.tsx`
+- **Depends on:** T-1.1
+- **Why:** Lessee Profiles sheet carries country, region, credit rating, PD estimate, watchlist, IFRS-9 stage, DPD days, rating notches down, country watchlist, insolvency flag, behaviour scores (punctuality / restructuring coop / govt interference / litigation), overall behaviour score, pay-behaviour tier. Today hardcoded in `intelligenceData.ts` for fictitious lessees; this migration + ingest path replaces it with live data.
+- **Outcome:** Migration applied live via Supabase MCP. `lessees` table extended with 14 new columns (external_id, region, stage, dpd_days, rating_notches_down, country_watchlist, insolvency_filed, 5 behaviour scores, pay_behaviour_tier) PLUS the first analytical-table `portfolio_id NOT NULL` (ADR-002 Phase B begins). Unique index `(org_id, portfolio_id, external_id)` enables T-1.10 re-import upsert. Ingester `ingestLessees()` upserts by `external_id` (`onConflict`), straight-inserts rows without `external_id`. UploadWizard's MultiSheetReviewStep wires the full path end-to-end with per-sheet UI counts.
+- **Unlocks:** T-2.4 (real counterparty profiles)
 
 ### T-1.2 — Ingest Lessee Profiles sheet
 - **Status:** TODO

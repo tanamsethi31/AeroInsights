@@ -5,7 +5,9 @@ import { X } from "lucide-react";
 import { DropZoneStep } from "./DropZoneStep";
 import { ColumnMapStep } from "./ColumnMapStep";
 import { ReviewImportStep } from "./ReviewImportStep";
+import { MultiSheetReviewStep } from "./MultiSheetReviewStep";
 import { suggestMapping } from "../../lib/columnMapper";
+import { detectCanonical } from "../../utils/excelParser";
 
 interface UploadWizardProps {
   orgId: string;
@@ -33,12 +35,32 @@ export function UploadWizard({ orgId, portfolioId, onClose, onComplete }: Upload
   const [filename, setFilename] = React.useState("");
   const [mapping, setMapping] = React.useState<Record<string, string | null>>({});
   const [importError, setImportError] = React.useState<string | null>(null);
+  // When the dropped file is a canonical AeroInsights workbook (T-1.1) we
+  // bypass the column-mapping step entirely and route to the multi-sheet
+  // reviewer. The flat path is preserved for CSV / template uploads.
+  const [canonicalFile, setCanonicalFile] = React.useState<File | null>(null);
 
-  function handleFileParsed(h: string[], r: Record<string, string>[], file: File) {
+  async function handleFileParsed(h: string[], r: Record<string, string>[], file: File) {
     setHeaders(h);
     setRows(r);
     setFilename(file.name);
     setMapping(suggestMapping(h));
+
+    // Detect canonical only for spreadsheets — CSV cannot have named sheets.
+    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
+    if (ext === ".xlsx" || ext === ".xls") {
+      try {
+        const probe = await detectCanonical(file);
+        if (probe.canonical) {
+          setCanonicalFile(file);
+          setStep("review"); // skip "map" — canonical sheets have known columns
+          return;
+        }
+      } catch {
+        // Fall through to flat path on probe failure.
+      }
+    }
+    setCanonicalFile(null);
     setStep("map");
   }
 
@@ -127,16 +149,27 @@ export function UploadWizard({ orgId, portfolioId, onClose, onComplete }: Upload
                       {importError}
                     </div>
                   )}
-                  <ReviewImportStep
-                    orgId={orgId}
-                    portfolioId={portfolioId}
-                    filename={filename}
-                    mapping={mapping}
-                    rows={rows}
-                    columnMap={mapping}
-                    onComplete={onComplete}
-                    onError={setImportError}
-                  />
+                  {canonicalFile ? (
+                    <MultiSheetReviewStep
+                      orgId={orgId}
+                      portfolioId={portfolioId}
+                      file={canonicalFile}
+                      filename={filename}
+                      onComplete={onComplete}
+                      onError={setImportError}
+                    />
+                  ) : (
+                    <ReviewImportStep
+                      orgId={orgId}
+                      portfolioId={portfolioId}
+                      filename={filename}
+                      mapping={mapping}
+                      rows={rows}
+                      columnMap={mapping}
+                      onComplete={onComplete}
+                      onError={setImportError}
+                    />
+                  )}
                 </>
               )}
             </motion.div>
