@@ -21,7 +21,8 @@ import {
   DEFAULT_POLICY_RULES,
   PEAK_CONCENTRATIONS,
 } from "../data/concentrationPolicy";
-import { ImportWizard } from "../components/import/ImportWizard";
+import { UploadWizard } from "../components/upload/UploadWizard";
+import { useData } from "../contexts/DataContext";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 import { useAssumptionLog } from "../hooks/useAssumptionLog";
 import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
@@ -72,6 +73,7 @@ const userAccessors = {
 
 export default function Settings() {
   const { pathname } = useLocation();
+  const { orgId } = useData();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "tenant");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "tenant"); }, [pathname]);
   const [saved, setSaved] = useState(false);
@@ -308,8 +310,12 @@ export default function Settings() {
           {/* Data Sources */}
           {activeTab === "datasources" && (
             <>
-            {showImportWizard && (
-              <ImportWizard onClose={() => setShowImportWizard(false)} />
+            {showImportWizard && orgId && (
+              <UploadWizard
+                orgId={orgId}
+                onClose={() => setShowImportWizard(false)}
+                onComplete={() => setShowImportWizard(false)}
+              />
             )}
             <Card
               title="Data Sources"

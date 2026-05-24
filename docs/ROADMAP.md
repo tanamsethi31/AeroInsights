@@ -22,11 +22,11 @@ Establishes the foundations every subsequent phase inherits. Must be completed f
 - **Outcome:** −4,145 lines net, single source of truth, ADR captured.
 
 ### T-0.2 — Consolidate import flows
-- **Status:** TODO
-- **Files affected:** `src/app/components/import/ImportWizard.tsx` (likely delete), `src/app/components/upload/ReviewImportStep.tsx`, `src/app/pages/Settings.tsx`
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `src/app/components/import/ImportWizard.tsx` (deleted, 1226 LOC), `src/app/components/portfolios/UploadWizard.tsx` (deleted, 1134 LOC), `src/app/pages/Settings.tsx`, `src/app/pages/PortfolioHub.tsx`
 - **Depends on:** T-0.1
-- **Why:** Two parallel import wizards exist. `ImportWizard.tsx` collects + validates but has no DB write path. `ReviewImportStep.tsx` writes to Supabase. End state: one wizard, one DB write path. The PRD describes a single 4-step ImportWizard.
-- **Estimated effort:** half-day
+- **Why:** Survey found **three** wizards, not two: `import/ImportWizard.tsx` (used by Settings, no Supabase write — façade); `upload/UploadWizard.tsx` (real, 3-step drop → map → review, writes via `ReviewImportStep.tsx`); and `portfolios/UploadWizard.tsx` (broken since T-0.1 — still posting to `localhost:8000/api/v1` against the deleted FastAPI). Settings's "Import" button silently did nothing; PortfolioHub's "Upload Your Portfolio" card was hitting a dead endpoint.
+- **Outcome:** Both dead wizards deleted (−2360 LOC). `upload/UploadWizard` is now the single canonical wizard; Settings and PortfolioHub both invoke it with `orgId` from `DataContext`. Production bundle dropped from 1521 kB → 1471 kB (−50 kB).
 
 ### T-0.4 — Python scenarios engine (preemptive reversal-condition build)
 - **Status:** DONE (2026-05-24)

@@ -6,16 +6,23 @@
 
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
-| 0 | 4 | 2 | 0 | 2 | 50% |
+| 0 | 4 | 3 | 0 | 1 | 75% |
 | 1 | 10 | 0 | 0 | 10 | 0% |
 | 2 | 6 | 0 | 0 | 6 | 0% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **40** | **2** | **0** | **38** | **5%** |
+| **Total** | **40** | **3** | **0** | **37** | **7.5%** |
 
 ## Completed Tasks
+
+### T-0.2 — Consolidate import flows (2026-05-24)
+- Survey revealed THREE wizards, not two — discovered `portfolios/UploadWizard.tsx` was a hidden third wizard still pointing to dead FastAPI (`localhost:8000/api/v1`). PortfolioHub's "Upload Your Portfolio" card had been broken since T-0.1.
+- Deleted `src/app/components/import/ImportWizard.tsx` (1226 LOC, no Supabase write — façade)
+- Deleted `src/app/components/portfolios/UploadWizard.tsx` (1134 LOC, broken FastAPI client)
+- `Settings.tsx` and `PortfolioHub.tsx` both now invoke `components/upload/UploadWizard.tsx` with `orgId` from `DataContext`
+- Net: −2360 LOC, bundle 1521 → 1471 kB
 
 ### T-0.4 — Python scenarios engine (2026-05-24)
 - `api/scenarios/run.py` written — Vercel Python Function, vectorised NumPy MC, exact parity port of `computeECLFromBase`

@@ -8,7 +8,8 @@ import {
   SAMPLE_PORTFOLIO,
   type Portfolio,
 } from "../contexts/PortfolioContext";
-import { UploadWizard } from "../components/portfolios/UploadWizard";
+import { UploadWizard } from "../components/upload/UploadWizard";
+import { useData } from "../contexts/DataContext";
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
@@ -96,6 +97,7 @@ export default function PortfolioHub() {
   const navigate = useNavigate();
   const { user, getAccessTokenSilently, logout } = useAuth0();
   const { setActivePortfolio } = usePortfolio();
+  const { orgId } = useData();
 
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,8 +143,15 @@ export default function PortfolioHub() {
 
   return (
     <>
-      {showCreateModal && (
-        <UploadWizard onClose={() => setShowCreateModal(false)} />
+      {showCreateModal && orgId && (
+        <UploadWizard
+          orgId={orgId}
+          onClose={() => setShowCreateModal(false)}
+          onComplete={() => {
+            setShowCreateModal(false);
+            navigate("/", { replace: true });
+          }}
+        />
       )}
 
       <div
