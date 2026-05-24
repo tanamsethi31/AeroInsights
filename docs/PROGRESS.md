@@ -6,16 +6,24 @@
 
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
-| 0 | 4 | 3 | 0 | 1 | 75% |
+| 0 | 5 | 4 | 0 | 1 | 80% |
 | 1 | 10 | 0 | 0 | 10 | 0% |
 | 2 | 6 | 0 | 0 | 6 | 0% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **40** | **3** | **0** | **37** | **7.5%** |
+| **Total** | **41** | **4** | **0** | **37** | **9.8%** |
 
 ## Completed Tasks
+
+### T-0.5 — Per-lease IFRS-9 ECL engine on Supabase (2026-05-24)
+- Sibling to T-0.4. Delegated to a `general-purpose` subagent with a self-contained prompt; agent honoured every constraint (no edits outside `api/risk-engine/`, no commit, no deploy, lazy-import `supabase` so tests run on minimal env).
+- 6 files created in `api/risk-engine/` (~1231 LOC total): `engine.py` (pure compute, 345 LOC), `compute.py` (handler + orchestration, 230 LOC), `supabase_client.py` (read/write wrapper, 170 LOC), `test_engine.py` (5 tests, 275 LOC, no pytest required), `requirements.txt` (numpy + supabase), `README.md` (209 LOC).
+- 5/5 unit tests pass when I re-ran them via the uv-managed Python: `default_pd_for_segment_monotonic`, `compute_lease_ecl_arithmetic`, `compute_lease_ecl_falls_back_to_default_pd`, `compute_portfolio_ecl_aggregates_three_leases`, `stage_totals_sum_to_total_ecl`.
+- Verified `carrier_segment` column exists in `lessees` (added by migration `20260523113150_aviation_pd_curves.sql`); `current_operator` on `assets` and `reporting_date` on `provisions` also confirmed. No invented schema.
+- Health probe never 500s on missing env vars — returns `{"ok": false, "reason": "..."}` cleanly so a Vercel deploy without `SUPABASE_*` env vars still passes the readiness check.
+- Known gaps explicitly mapped to roadmap tasks in `api/risk-engine/README.md` — does not leave silent debt.
 
 ### T-0.2 — Consolidate import flows (2026-05-24)
 - Survey revealed THREE wizards, not two — discovered `portfolios/UploadWizard.tsx` was a hidden third wizard still pointing to dead FastAPI (`localhost:8000/api/v1`). PortfolioHub's "Upload Your Portfolio" card had been broken since T-0.1.

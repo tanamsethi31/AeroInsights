@@ -35,6 +35,14 @@ Establishes the foundations every subsequent phase inherits. Must be completed f
 - **Why:** ADR-001 listed `/api/scenarios/run.py` as a future reversal condition once Monte Carlo client-side compute exceeded ~2 s. Discovered during the build that the existing client-side MC was theatrical (no actual path simulation — just multiplying ECL by fixed factors). Building the Python function now turns Monte Carlo from a cosmetic feature into a real one AND establishes the precedent for any future Python compute. Still a single function, not a service — does not reverse the broader ADR.
 - **Outcome:** Vectorised NumPy MC, 8/8 parity tests pass, 50k paths in <1 s, deterministic stays client-side, graceful fallback when server unreachable.
 
+### T-0.5 — Per-lease IFRS-9 ECL engine on Supabase (preemptive reversal-condition build)
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `api/risk-engine/engine.py`, `api/risk-engine/compute.py`, `api/risk-engine/supabase_client.py`, `api/risk-engine/test_engine.py`, `api/risk-engine/requirements.txt`, `api/risk-engine/README.md`
+- **Depends on:** T-0.1
+- **Why:** ADR-001 listed "rebuild fresh against the actual Supabase schema, not the stale Alembic one" as the second reversal condition. Built preemptively (no Python team to hire — agent built it directly) so the per-lease compute primitive exists when Phase 3 persistence tasks need it. Sibling to T-0.4 (macro scenarios engine on scalar baseline); this one builds the baseline by reading the live Supabase portfolio and running per-lease PD × LGD × EAD.
+- **Outcome:** Vercel Python Function at `/api/risk-engine/compute`. Pure compute in `engine.py` (no I/O, importable, testable). 5/5 unit tests pass without network. Reads 6 Supabase tables (`assets`, `lessees`, `leases`, `provisions`, `pd_curve_overrides`, `lgd_recovery_overrides`), aggregates per-stage totals + book value + coverage %, optionally writes to `ecl_period_snapshots`. Auth via interim `X-Org-Id` header with explicit `TODO(T-4.1)` markers. Does **not** reverse ADR-001 — still single functions, not a service.
+- **Known gaps mapped to follow-up tasks:** T-1.5 (IFRS-9 param ingestion · linear vs survival PD), T-1.6 (SICR triggers · naive stage assignment), T-3.1/T-3.2 (per-lease writeback), T-3.4 (audit-log emission on snapshot writes), T-4.1 (JWT-based auth), T-5.4 (currency conversion · assumes USD). See `api/risk-engine/README.md` § Known gaps.
+
 ### T-0.3 — Canonicalize Portfolio vs Org scoping
 - **Status:** TODO
 - **Files affected:** `src/app/contexts/PortfolioContext.tsx`, `src/app/hooks/usePortfolioData.ts`, all hooks under `src/app/hooks/`, all Supabase migrations
