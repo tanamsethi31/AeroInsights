@@ -86,12 +86,12 @@ The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 she
 - **Why:** Aircraft Register sheet carries registration, MSN, type, manufacturer, vintage, family, operator, country, current MV, EAD, monthly rent, lease term remaining, part-out value. Previously we ingested ~5 of 16 cols. Fleet tab + valuation panel + IAS-36 impairment recoverable-amount logic need the full picture.
 - **Outcome:** Migration applied live via Supabase MCP. `assets` table extended with 7 new columns (external_id, family, country, stage, current_mv_usd, part_out_usd) + ADR-002 Phase B `portfolio_id NOT NULL` with backfill. Two partial unique indexes: `(org_id, portfolio_id, external_id)` for rows with AC ID, `(org_id, portfolio_id, msn)` for rows without. `ingestAircraft()` upserts on the appropriate key. `MultiSheetReviewStep` flips Aircraft Register from "ready" to "live". Demo MOCK_ASSETS seeded with realistic family/country/stage/current MV/part-out so the Fleet tab works on mock data too. EAD / monthly rent / lease term remaining are lease-level facts (next slice).
 
-### T-1.4 — Ingest Security Deposits and Maintenance Reserves
-- **Status:** TODO
-- **Files affected:** `supabase/migrations/` (new `security_deposits` and `maintenance_reserves` tables), `src/app/components/portfolio/SDMRTab.tsx`
-- **Depends on:** T-1.1
-- **Why:** The Excel sheet has deposit months, deposit amount, MR balance per lease. Today the SD/MR tab estimates these from heuristics in `maintenanceHeuristics.ts`. Real data eliminates estimates.
-- **Estimated effort:** 2 days
+### T-1.4 — Ingest Security Deposits and Maintenance Reserves (also closes Lease Register ingest)
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `supabase/migrations/20260524150000_sd_mr_ingest.sql`, `src/app/utils/excelParser.ts`, `src/app/services/portfolioIngest.ts`, `src/app/types/portfolio.ts`, `src/app/data/mockPortfolioData.ts`, `src/app/components/upload/MultiSheetReviewStep.tsx`
+- **Depends on:** T-1.1, T-1.2, T-1.3
+- **Why:** The Excel "Security Deposits+MR" sheet has TWO sections (A. SECURITY DEPOSITS with one row per lease; B. MAINTENANCE RESERVES with one row per (lease, component) pair). The Portfolio → SD/MR tab today estimates these via `maintenanceHeuristics.ts`. Live data eliminates estimates. Slice also closes the Lease Register ingest pending from T-1.3 since SD/MR FKs to lease_id.
+- **Outcome:** Migration applied live via Supabase MCP. `leases` extended: `portfolio_id NOT NULL` (ADR-002 Phase B continued), `external_id`, `jurisdiction`, `status`. Two new tables: `security_deposits` (unique per `(org_id, portfolio_id, lease_id)`) and `maintenance_reserves` (unique per `(org_id, portfolio_id, lease_id, component)`). Both have RLS + indexes. Parser handler `parseSdMrSheet()` walks raw rows, splits at "B. MAINTENANCE RESERVES" banner, and runs two header-aware passes. Three new ingesters (`ingestLeases`, `ingestSecurityDeposits`, `ingestMaintenanceReserves`) chained into the dependency-ordered orchestrator after lessees + aircraft. MOCK_LEASES seeded with `external_id` / `jurisdiction` matching the sample workbook. MultiSheetReviewStep now flips Lease Register + Security Deposits + Maintenance Reserves all to "live" — five of eight canonical sheets are now end-to-end live.
 
 ### T-1.5 — Ingest IFRS 9 ECL parameters
 - **Status:** TODO

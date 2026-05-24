@@ -58,6 +58,8 @@ export interface Lessee {
 export interface Lease {
   id: string;
   org_id: string;
+  /** ADR-002 Phase B: scope every analytical row to a portfolio. */
+  portfolio_id: string;
   asset_id: string;
   lessee_id: string;
   start_date: string;
@@ -65,7 +67,42 @@ export interface Lease {
   monthly_rental: number | null;
   currency: string;
   stage: 1 | 2 | 3 | null;
+  // ── T-1.4 ingested columns ──────────────────────────────────────────────
+  external_id: string | null;
+  jurisdiction: string | null;
+  status: string | null;
   created_at: string;
+}
+
+export interface SecurityDeposit {
+  id: string;
+  org_id: string;
+  portfolio_id: string;
+  lease_id: string;
+  deposit_months: number | null;
+  deposit_amount_usd: number | null;
+  type: string | null;
+  credit_tier: string | null;
+  notes: string | null;
+  source_upload_id: string | null;
+  updated_at: string;
+}
+
+export interface MaintenanceReserve {
+  id: string;
+  org_id: string;
+  portfolio_id: string;
+  lease_id: string;
+  component: string;
+  rate_basis: "per FH" | "per Cy" | "per Month" | null;
+  rate_usd: number | null;
+  est_annual_units: number | null;
+  annual_accrual_usd: number | null;
+  cumulative_balance_usd: number | null;
+  refundable: boolean | null;
+  notes: string | null;
+  source_upload_id: string | null;
+  updated_at: string;
 }
 
 export interface Provision {

@@ -85,10 +85,12 @@ export function MultiSheetReviewStep({
         status,
       });
     }
-    summarise("Lessee Profiles",       workbook.sheets.lessees,         "live");
-    summarise("Aircraft Register",     workbook.sheets.aircraft,        "live");
-    summarise("Lease Register",        workbook.sheets.leases,          "ready");
-    // Other sheets land in subsequent Phase 1 slices.
+    summarise("Lessee Profiles",       workbook.sheets.lessees,             "live");
+    summarise("Aircraft Register",     workbook.sheets.aircraft,            "live");
+    summarise("Lease Register",        workbook.sheets.leases,              "live");
+    summarise("Security Deposits",     workbook.sheets.securityDeposits,    "live");
+    summarise("Maintenance Reserves",  workbook.sheets.maintenanceReserves, "live");
+    // T-1.5–T-1.8 sheets land in subsequent Phase 1 slices.
     return out;
   }, [workbook]);
 

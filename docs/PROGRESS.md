@@ -7,15 +7,32 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 3 | 0 | 7 | 30% |
+| 1 | 10 | 4 | 0 | 6 | 40% |
 | 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **9** | **0** | **32** | **22.0%** |
+| **Total** | **41** | **10** | **0** | **31** | **24.4%** |
 
 ## Completed Tasks
+
+### T-1.4 — SD/MR ingestion + Lease Register close (2026-05-24)
+- Migration `20260524150000_sd_mr_ingest.sql` applied live via Supabase MCP:
+  - `leases.portfolio_id NOT NULL` (ADR-002 Phase B continued, backfilled).
+  - `leases.external_id`, `jurisdiction`, `status` columns added.
+  - `(org_id, portfolio_id, external_id)` partial unique on `leases` enables T-1.10 upsert.
+  - Two new tables: `security_deposits` (one row per lease, unique constraint), `maintenance_reserves` (one row per `(lease, component)`, unique constraint). Both have RLS + (org_id, portfolio_id) indexes.
+- `excelParser.ts` adds `parseSdMrSheet()` — walks raw rows, splits at "B. MAINTENANCE RESERVES" banner, runs two header-aware passes. Skips TOTAL + footnote rows. Two new row types: `ParsedSecurityDepositRow`, `ParsedMaintenanceReserveRow`. Replaces the old `ParsedSdMrRow` stub.
+- `portfolioIngest.ts` adds three ingesters:
+  - `ingestLeases()` — FK lookup by lessee name + aircraft reg within (org, portfolio); upsert on external_id when present.
+  - `ingestSecurityDeposits()` — FK lookup by external lease_id via `buildLeaseExternalIdMap`; upsert on `(org, portfolio, lease)`.
+  - `ingestMaintenanceReserves()` — same FK lookup; upsert on `(org, portfolio, lease, component)`.
+- Orchestrator dependency chain: lessees → aircraft → leases → SD → MR.
+- `types/portfolio.ts` Lease interface gains `portfolio_id`, `external_id`, `jurisdiction`, `status`. New `SecurityDeposit` and `MaintenanceReserve` types exported.
+- `mockPortfolioData.ts` MOCK_LEASES seeded with LS-01..LS-10 external IDs and real jurisdiction strings matching the sample workbook.
+- MultiSheetReviewStep: Lease Register, Security Deposits, Maintenance Reserves all flipped to "live".
+- Phase 1: 3/10 → 4/10 (40%). Total: 9/41 → 10/41 (24.4%). Five of eight canonical sheets are now end-to-end live.
 
 ### T-1.3 — Aircraft Register full ingestion (2026-05-24)
 - Migration `20260524140000_aircraft_register_ingest.sql` applied live via Supabase MCP:

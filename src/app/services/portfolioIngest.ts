@@ -17,7 +17,10 @@
 import { supabase } from "../lib/supabase";
 import type {
   ParsedAircraftRow,
+  ParsedLeaseRow,
   ParsedLesseeRow,
+  ParsedMaintenanceReserveRow,
+  ParsedSecurityDepositRow,
   ParsedWorkbook,
 } from "../utils/excelParser";
 
@@ -243,12 +246,246 @@ function toAssetDbRow(r: ParsedAircraftRow, ctx: CommonContext) {
   };
 }
 
+// ─── Lease Register ingester (T-1.4 prep) ───────────────────────────────────
+//
+// Depends on lessees + assets — looks up lessee_id by name and asset_id by
+// registration within the (org_id, portfolio_id) scope. Upserts on
+// (org_id, portfolio_id, external_id) when Lease ID is present.
+
+export async function ingestLeases(
+  rows: ParsedLeaseRow[],
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet:     "Lease Register",
+    attempted: rows.length,
+    inserted:  0,
+    updated:   0,
+    skipped:   0,
+    errors:    [],
+  };
+
+  const valid = rows.filter((r) => {
+    if (r._errors.length > 0) {
+      result.errors.push(`Row ${r._rowIndex}: ${r._errors.join("; ")}`);
+      result.skipped++;
+      return false;
+    }
+    return true;
+  });
+  if (valid.length === 0) return result;
+
+  // Fetch lessees + assets in scope so we can map names/regs to UUIDs.
+  const [{ data: lessees }, { data: assets }] = await Promise.all([
+    supabase.from("lessees").select("id, name")
+      .eq("org_id", ctx.orgId).eq("portfolio_id", ctx.portfolioId),
+    supabase.from("assets").select("id, registration")
+      .eq("org_id", ctx.orgId).eq("portfolio_id", ctx.portfolioId),
+  ]);
+
+  const lesseeByName = new Map<string, string>();
+  for (const l of lessees ?? []) lesseeByName.set(l.name, l.id);
+
+  const assetByReg = new Map<string, string>();
+  for (const a of assets ?? []) assetByReg.set(a.registration, a.id);
+
+  const payload: Array<Record<string, unknown>> = [];
+  for (const r of valid) {
+    const lessee_id = lesseeByName.get(r.lessee_name);
+    const asset_id  = assetByReg.get(r.aircraft_reg);
+    if (!lessee_id) {
+      result.errors.push(`Row ${r._rowIndex}: lessee "${r.lessee_name}" not found in portfolio`);
+      result.skipped++;
+      continue;
+    }
+    if (!asset_id) {
+      result.errors.push(`Row ${r._rowIndex}: aircraft reg "${r.aircraft_reg}" not found in portfolio`);
+      result.skipped++;
+      continue;
+    }
+    payload.push({
+      org_id:         ctx.orgId,
+      portfolio_id:   ctx.portfolioId,
+      lessee_id,
+      asset_id,
+      external_id:    r.external_id,
+      start_date:     r.start_date,
+      end_date:       r.end_date,
+      monthly_rental: r.monthly_rent_usd,
+      currency:       r.currency ?? "USD",
+      stage:          r.stage,
+      status:         r.status,
+      jurisdiction:   r.jurisdiction,
+    });
+  }
+  if (payload.length === 0) return result;
+
+  const withExt    = payload.filter((p) => p.external_id);
+  const withoutExt = payload.filter((p) => !p.external_id);
+
+  if (withExt.length > 0) {
+    const { data, error } = await supabase
+      .from("leases")
+      .upsert(withExt, {
+        onConflict: "org_id,portfolio_id,external_id",
+        ignoreDuplicates: false,
+      })
+      .select("id");
+    if (error) result.errors.push(`Lease upsert (external_id): ${error.message}`);
+    else if (data) result.inserted += data.length;
+  }
+  if (withoutExt.length > 0) {
+    const { data, error } = await supabase.from("leases").insert(withoutExt).select("id");
+    if (error) result.errors.push(`Lease insert: ${error.message}`);
+    else if (data) result.inserted += data.length;
+  }
+
+  return result;
+}
+
+// ─── Security Deposits ingester (T-1.4) ─────────────────────────────────────
+//
+// FK lookup: external Lease ID → lease.id within the (org, portfolio) scope.
+
+async function buildLeaseExternalIdMap(ctx: CommonContext): Promise<Map<string, string>> {
+  const { data } = await supabase.from("leases")
+    .select("id, external_id")
+    .eq("org_id", ctx.orgId)
+    .eq("portfolio_id", ctx.portfolioId)
+    .not("external_id", "is", null);
+  const map = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (row.external_id) map.set(row.external_id, row.id);
+  }
+  return map;
+}
+
+export async function ingestSecurityDeposits(
+  rows: ParsedSecurityDepositRow[],
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet: "Security Deposits", attempted: rows.length,
+    inserted: 0, updated: 0, skipped: 0, errors: [],
+  };
+  const leaseMap = await buildLeaseExternalIdMap(ctx);
+  if (leaseMap.size === 0) {
+    result.errors.push("No leases with external_id found in this portfolio — ingest leases first.");
+    result.skipped = rows.length;
+    return result;
+  }
+
+  const payload: Array<Record<string, unknown>> = [];
+  for (const r of rows) {
+    if (r._errors.length > 0) {
+      result.errors.push(`Row ${r._rowIndex}: ${r._errors.join("; ")}`);
+      result.skipped++;
+      continue;
+    }
+    const lease_id = r.lease_external_id ? leaseMap.get(r.lease_external_id) : undefined;
+    if (!lease_id) {
+      result.errors.push(`Row ${r._rowIndex}: lease "${r.lease_external_id ?? ""}" not found`);
+      result.skipped++;
+      continue;
+    }
+    payload.push({
+      org_id:             ctx.orgId,
+      portfolio_id:       ctx.portfolioId,
+      lease_id,
+      deposit_months:     r.deposit_months,
+      deposit_amount_usd: r.deposit_amount_usd,
+      type:               r.type,
+      credit_tier:        r.credit_tier,
+      notes:              r.notes,
+      source_upload_id:   ctx.uploadId,
+      updated_at:         new Date().toISOString(),
+    });
+  }
+  if (payload.length === 0) return result;
+
+  const { data, error } = await supabase
+    .from("security_deposits")
+    .upsert(payload, {
+      onConflict: "org_id,portfolio_id,lease_id",
+      ignoreDuplicates: false,
+    })
+    .select("id");
+  if (error) result.errors.push(`Upsert: ${error.message}`);
+  else if (data) result.inserted += data.length;
+  return result;
+}
+
+// ─── Maintenance Reserves ingester (T-1.4) ──────────────────────────────────
+//
+// Multiple rows per lease (one per component). Upserts on
+// (org_id, portfolio_id, lease_id, component).
+
+export async function ingestMaintenanceReserves(
+  rows: ParsedMaintenanceReserveRow[],
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet: "Maintenance Reserves", attempted: rows.length,
+    inserted: 0, updated: 0, skipped: 0, errors: [],
+  };
+  const leaseMap = await buildLeaseExternalIdMap(ctx);
+  if (leaseMap.size === 0) {
+    result.errors.push("No leases with external_id found in this portfolio — ingest leases first.");
+    result.skipped = rows.length;
+    return result;
+  }
+
+  const payload: Array<Record<string, unknown>> = [];
+  for (const r of rows) {
+    if (r._errors.length > 0) {
+      result.errors.push(`Row ${r._rowIndex}: ${r._errors.join("; ")}`);
+      result.skipped++;
+      continue;
+    }
+    const lease_id = r.lease_external_id ? leaseMap.get(r.lease_external_id) : undefined;
+    if (!lease_id) {
+      result.errors.push(`Row ${r._rowIndex}: lease "${r.lease_external_id ?? ""}" not found`);
+      result.skipped++;
+      continue;
+    }
+    payload.push({
+      org_id:                  ctx.orgId,
+      portfolio_id:            ctx.portfolioId,
+      lease_id,
+      component:               r.component,
+      rate_basis:              r.rate_basis,
+      rate_usd:                r.rate_usd,
+      est_annual_units:        r.est_annual_units,
+      annual_accrual_usd:      r.annual_accrual_usd,
+      cumulative_balance_usd:  r.cumulative_balance_usd,
+      refundable:              r.refundable,
+      source_upload_id:        ctx.uploadId,
+      updated_at:              new Date().toISOString(),
+    });
+  }
+  if (payload.length === 0) return result;
+
+  const { data, error } = await supabase
+    .from("maintenance_reserves")
+    .upsert(payload, {
+      onConflict: "org_id,portfolio_id,lease_id,component",
+      ignoreDuplicates: false,
+    })
+    .select("id");
+  if (error) result.errors.push(`Upsert: ${error.message}`);
+  else if (data) result.inserted += data.length;
+  return result;
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 //
-// Runs lessees + aircraft. Subsequent Phase 1 slices plug in leases (which
-// depends on both lessees and aircraft for FK lookup), SD/MR (depends on
-// leases), then the org-scoped settings sheets (ifrs9, sicr, stress
-// scenarios, jurisdiction LGD).
+// Dependency order:
+//   1. lessees    (no deps)
+//   2. aircraft   (no deps)
+//   3. leases     (depends on lessees + aircraft FK lookup)
+//   4. SD         (depends on leases FK lookup)
+//   5. MR         (depends on leases FK lookup)
+//   6+ ifrs9 / sicr / stress / jurisdiction-lgd — org-scoped settings, no deps
 
 export async function ingestWorkbook(
   workbook: ParsedWorkbook,
@@ -264,8 +501,18 @@ export async function ingestWorkbook(
     ctx.onProgress?.("Aircraft Register");
     sheetResults.push(await ingestAircraft(workbook.sheets.aircraft, ctx));
   }
-  // T-1.3 leases ingester (depends on lessees + aircraft FK lookup) — next slice
-  // T-1.4 sd/mr ingester
+  if (workbook.sheets.leases) {
+    ctx.onProgress?.("Lease Register");
+    sheetResults.push(await ingestLeases(workbook.sheets.leases, ctx));
+  }
+  if (workbook.sheets.securityDeposits) {
+    ctx.onProgress?.("Security Deposits");
+    sheetResults.push(await ingestSecurityDeposits(workbook.sheets.securityDeposits, ctx));
+  }
+  if (workbook.sheets.maintenanceReserves) {
+    ctx.onProgress?.("Maintenance Reserves");
+    sheetResults.push(await ingestMaintenanceReserves(workbook.sheets.maintenanceReserves, ctx));
+  }
   // T-1.5 ifrs9 ecl params
   // T-1.6 sicr triggers
   // T-1.7 stress scenarios

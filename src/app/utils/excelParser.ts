@@ -107,9 +107,36 @@ export interface ParsedLeaseRow {
   _errors:       string[];
 }
 
-// T-1.4–T-1.8 — handlers come in subsequent commits. Types here are deliberate
-// stubs so the ParsedWorkbook shape is stable across the Phase 1 slices.
-export type ParsedSdMrRow            = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
+// T-1.4 SD/MR (real). T-1.5–T-1.8 still stubs.
+export interface ParsedSecurityDepositRow {
+  lease_external_id:    string | null;   // Excel "Lease ID" — FK lookup
+  lessee_name:          string | null;
+  watchlist:            string | null;
+  credit_tier:          string | null;
+  monthly_rent_usd:     number | null;
+  deposit_months:       number | null;
+  type:                 string | null;
+  deposit_amount_usd:   number | null;
+  notes:                string | null;
+  _rowIndex:            number;
+  _errors:              string[];
+}
+
+export interface ParsedMaintenanceReserveRow {
+  lease_external_id:    string | null;   // Excel "Lease ID" — FK lookup
+  aircraft_reg:         string | null;
+  aircraft_type:        string | null;
+  component:            string;
+  rate_basis:           "per FH" | "per Cy" | "per Month" | null;
+  rate_usd:             number | null;
+  est_annual_units:     number | null;
+  annual_accrual_usd:   number | null;
+  cumulative_balance_usd: number | null;
+  refundable:           boolean | null;
+  _rowIndex:            number;
+  _errors:              string[];
+}
+
 export type ParsedIfrs9EclRow        = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
 export type ParsedSicrTriggerRow     = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
 export type ParsedStressScenarioRow  = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
@@ -118,14 +145,15 @@ export type ParsedJurisdictionLgdRow = Record<string, unknown> & { _rowIndex: nu
 export interface ParsedWorkbook {
   /** Sheets we actually found and parsed. Missing sheets are absent from this object. */
   sheets: {
-    lessees?:         ParsedLesseeRow[];
-    aircraft?:        ParsedAircraftRow[];
-    leases?:          ParsedLeaseRow[];
-    sdMr?:            ParsedSdMrRow[];
-    ifrs9Ecl?:        ParsedIfrs9EclRow[];
-    sicrTriggers?:    ParsedSicrTriggerRow[];
-    stressScenarios?: ParsedStressScenarioRow[];
-    jurisdictionLgd?: ParsedJurisdictionLgdRow[];
+    lessees?:           ParsedLesseeRow[];
+    aircraft?:          ParsedAircraftRow[];
+    leases?:            ParsedLeaseRow[];
+    securityDeposits?:  ParsedSecurityDepositRow[];
+    maintenanceReserves?: ParsedMaintenanceReserveRow[];
+    ifrs9Ecl?:          ParsedIfrs9EclRow[];
+    sicrTriggers?:      ParsedSicrTriggerRow[];
+    stressScenarios?:   ParsedStressScenarioRow[];
+    jurisdictionLgd?:   ParsedJurisdictionLgdRow[];
   };
   /** Names of sheets in the workbook (helpful for debugging / UI). */
   sheetNames: string[];
@@ -177,8 +205,13 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbook> {
   if (recognised.includes(CANONICAL_SHEETS.leases)) {
     sheets.leases = parseLeaseRegisterSheet(wb.Sheets[CANONICAL_SHEETS.leases]);
   }
-  // SD/MR, IFRS-9 ECL, SICR, Stress Scenarios, Jurisdiction LGD: stubs land
-  // in the next Phase 1 slice. We deliberately omit them from `sheets` rather
+  if (recognised.includes(CANONICAL_SHEETS.sdMr)) {
+    const sdMr = parseSdMrSheet(wb.Sheets[CANONICAL_SHEETS.sdMr]);
+    sheets.securityDeposits = sdMr.deposits;
+    sheets.maintenanceReserves = sdMr.reserves;
+  }
+  // IFRS-9 ECL, SICR, Stress Scenarios, Jurisdiction LGD: handlers land in
+  // subsequent Phase 1 slices. We deliberately omit them from `sheets` rather
   // than emit empty arrays so callers can distinguish "not parsed yet" from
   // "parsed but empty".
 
@@ -477,4 +510,124 @@ export function parseLeaseRegisterSheet(
     });
   });
   return out;
+}
+
+// ─── Security Deposits + Maintenance Reserves (T-1.4) ───────────────────────
+//
+// This sheet has TWO sections separated by banner rows:
+//   Row 1:  "A. SECURITY DEPOSITS"           (banner)
+//   Row 2:  header                            (Lease ID, Lessee, ...)
+//   Rows 3..N: SD data
+//   Blank row(s)
+//   Row M:  "B. MAINTENANCE RESERVES"        (banner)
+//   Row M+1: header                           (Lease ID, Aircraft Reg, Component, ...)
+//   Rows M+2..end: MR data
+//
+// We can't reuse `sheetToObjects` (single-header) so we walk raw rows, split
+// at the second banner, and run two header-aware passes.
+
+interface SdMrParseResult {
+  deposits: ParsedSecurityDepositRow[];
+  reserves: ParsedMaintenanceReserveRow[];
+}
+
+export function parseSdMrSheet(
+  sheet: XLSX.WorkSheet | undefined,
+): SdMrParseResult {
+  if (!sheet) return { deposits: [], reserves: [] };
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1, raw: true, defval: null,
+  });
+
+  // Find the row index of section B's banner. Anything before that block is
+  // section A; anything after is section B.
+  const bIdx = raw.findIndex((row) => {
+    const first = (row?.[0] ?? "").toString().toUpperCase();
+    return first.includes("MAINTENANCE RESERVES");
+  });
+
+  const sdSlice = bIdx >= 0 ? raw.slice(0, bIdx) : raw;
+  const mrSlice = bIdx >= 0 ? raw.slice(bIdx + 1) : [];
+
+  // ── Section A: Security Deposits ───────────────────────────────────────
+  const deposits: ParsedSecurityDepositRow[] = [];
+  const sdHeaderIdx = findHeaderRow(sdSlice);
+  const sdHeaders = (sdSlice[sdHeaderIdx] ?? []).map((c) =>
+    c == null ? "" : normalise(String(c).trim()),
+  );
+  for (let i = sdHeaderIdx + 1; i < sdSlice.length; i++) {
+    const row = sdSlice[i] ?? [];
+    const hasValue = row.some((c) => c != null && String(c).trim() !== "");
+    if (!hasValue) continue;
+    const firstCell = String(row[0] ?? "").trim().toUpperCase();
+    if (firstCell === "TOTAL" || firstCell.startsWith("SOURCES:")) continue;
+    const obj: Record<string, unknown> = {};
+    sdHeaders.forEach((h, c) => { if (h) obj[h] = row[c] ?? null; });
+    const errors: string[] = [];
+    const lease_external_id = asString(pick(obj, ["lease_id", "id"]));
+    if (!lease_external_id) errors.push("lease_id is required");
+    deposits.push({
+      lease_external_id,
+      lessee_name:        asString(pick(obj, ["lessee", "lessee_name"])),
+      watchlist:          asString(pick(obj, ["watchlist"])),
+      credit_tier:        asString(pick(obj, ["credit_tier", "tier"])),
+      monthly_rent_usd:   asNumber(pick(obj, ["monthly_rent_", "monthly_rent"])),
+      deposit_months:     asNumber(pick(obj, ["deposit_months"])),
+      type:               asString(pick(obj, ["type", "instrument"])),
+      deposit_amount_usd: asNumber(pick(obj, ["deposit_amount_", "deposit_amount"])),
+      notes:              asString(pick(obj, ["notes"])),
+      _rowIndex:          sdHeaderIdx + 2 + (i - sdHeaderIdx - 1),
+      _errors:            errors,
+    });
+  }
+
+  // ── Section B: Maintenance Reserves ────────────────────────────────────
+  const reserves: ParsedMaintenanceReserveRow[] = [];
+  if (mrSlice.length > 0) {
+    const mrHeaderIdx = findHeaderRow(mrSlice);
+    const mrHeaders = (mrSlice[mrHeaderIdx] ?? []).map((c) =>
+      c == null ? "" : normalise(String(c).trim()),
+    );
+    for (let i = mrHeaderIdx + 1; i < mrSlice.length; i++) {
+      const row = mrSlice[i] ?? [];
+      const hasValue = row.some((c) => c != null && String(c).trim() !== "");
+      if (!hasValue) continue;
+      const firstCell = String(row[0] ?? "").trim().toUpperCase();
+      if (firstCell === "TOTAL" || firstCell.startsWith("SOURCES:")) continue;
+      const obj: Record<string, unknown> = {};
+      mrHeaders.forEach((h, c) => { if (h) obj[h] = row[c] ?? null; });
+
+      const errors: string[] = [];
+      const lease_external_id = asString(pick(obj, ["lease_id", "id"]));
+      const component = asString(pick(obj, ["component"]));
+      if (!lease_external_id) errors.push("lease_id is required");
+      if (!component)         errors.push("component is required");
+
+      const rateBasisRaw = asString(pick(obj, ["rate_basis", "basis"]));
+      let rate_basis: ParsedMaintenanceReserveRow["rate_basis"] = null;
+      if (rateBasisRaw) {
+        const s = rateBasisRaw.toLowerCase();
+        if (s.includes("fh"))     rate_basis = "per FH";
+        else if (s.includes("cy")) rate_basis = "per Cy";
+        else if (s.includes("month")) rate_basis = "per Month";
+      }
+
+      reserves.push({
+        lease_external_id,
+        aircraft_reg:           asString(pick(obj, ["aircraft_reg", "registration"])),
+        aircraft_type:          asString(pick(obj, ["type", "aircraft_type"])),
+        component:              component ?? "",
+        rate_basis,
+        rate_usd:               asNumber(pick(obj, ["rate_fh_or_cy", "rate_fh", "rate_cy", "rate"])),
+        est_annual_units:       asNumber(pick(obj, ["est_annual_fh_cy", "annual_fh_cy", "annual_units"])),
+        annual_accrual_usd:     asNumber(pick(obj, ["annual_accrual_", "annual_accrual"])),
+        cumulative_balance_usd: asNumber(pick(obj, ["cumulative_balance_", "cumulative_balance"])),
+        refundable:             asBool(pick(obj, ["refundable"])),
+        _rowIndex:              bIdx + mrHeaderIdx + 2 + (i - mrHeaderIdx - 1),
+        _errors:                errors,
+      });
+    }
+  }
+
+  return { deposits, reserves };
 }

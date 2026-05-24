@@ -63,17 +63,19 @@ export const MOCK_LESSEES: Lessee[] = [
     score_punctuality: 88, score_restructuring_coop: 84, score_govt_interference: 81, score_litigation: 85, overall_behaviour_score: 85, pay_behaviour_tier: "Cooperative" },
 ];
 
+// Demo leases include T-1.4 ingested fields (external_id, jurisdiction, status).
+const DEMO_LEASE_BASE = { org_id: "demo", portfolio_id: "demo-portfolio", created_at: "2024-01-01T00:00:00Z", status: "Active" };
 export const MOCK_LEASES: Lease[] = [
-  { id: "mock-ls1",  org_id: "demo", asset_id: "mock-a1",  lessee_id: "mock-l1",  start_date: "2019-03-01", end_date: "2028-03-01", monthly_rental: 285000,  currency: "USD", stage: 3, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls2",  org_id: "demo", asset_id: "mock-a2",  lessee_id: "mock-l2",  start_date: "2020-06-15", end_date: "2027-06-15", monthly_rental: 310000,  currency: "USD", stage: 3, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls3",  org_id: "demo", asset_id: "mock-a3",  lessee_id: "mock-l3",  start_date: "2021-01-10", end_date: "2030-01-10", monthly_rental: 1240000, currency: "USD", stage: 1, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls4",  org_id: "demo", asset_id: "mock-a4",  lessee_id: "mock-l4",  start_date: "2020-09-01", end_date: "2026-09-01", monthly_rental: 480000,  currency: "USD", stage: 2, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls5",  org_id: "demo", asset_id: "mock-a5",  lessee_id: "mock-l5",  start_date: "2022-04-15", end_date: "2032-04-15", monthly_rental: 340000,  currency: "USD", stage: 1, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls6",  org_id: "demo", asset_id: "mock-a6",  lessee_id: "mock-l6",  start_date: "2018-07-20", end_date: "2028-07-20", monthly_rental: 960000,  currency: "USD", stage: 1, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls7",  org_id: "demo", asset_id: "mock-a7",  lessee_id: "mock-l7",  start_date: "2021-11-01", end_date: "2029-11-01", monthly_rental: 295000,  currency: "USD", stage: 2, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls8",  org_id: "demo", asset_id: "mock-a8",  lessee_id: "mock-l8",  start_date: "2019-05-01", end_date: "2027-05-01", monthly_rental: 275000,  currency: "USD", stage: 2, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls9",  org_id: "demo", asset_id: "mock-a9",  lessee_id: "mock-l9",  start_date: "2023-02-01", end_date: "2033-02-01", monthly_rental: 1050000, currency: "USD", stage: 1, created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-ls10", org_id: "demo", asset_id: "mock-a10", lessee_id: "mock-l10", start_date: "2022-08-01", end_date: "2032-08-01", monthly_rental: 220000,  currency: "USD", stage: 1, created_at: "2024-01-01T00:00:00Z" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls1",  external_id: "LS-01", asset_id: "mock-a1",  lessee_id: "mock-l1",  start_date: "2019-03-01", end_date: "2028-03-01", monthly_rental: 285000,  currency: "USD", stage: 3, jurisdiction: "India (IBC)" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls2",  external_id: "LS-02", asset_id: "mock-a2",  lessee_id: "mock-l2",  start_date: "2020-06-15", end_date: "2027-06-15", monthly_rental: 310000,  currency: "USD", stage: 3, jurisdiction: "Mexico (Concurso)" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls3",  external_id: "LS-03", asset_id: "mock-a3",  lessee_id: "mock-l3",  start_date: "2021-01-10", end_date: "2030-01-10", monthly_rental: 1240000, currency: "USD", stage: 1, jurisdiction: "UAE (DIFC)" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls4",  external_id: "LS-04", asset_id: "mock-a4",  lessee_id: "mock-l4",  start_date: "2020-09-01", end_date: "2026-09-01", monthly_rental: 480000,  currency: "USD", stage: 2, jurisdiction: "Sri Lanka" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls5",  external_id: "LS-05", asset_id: "mock-a5",  lessee_id: "mock-l5",  start_date: "2022-04-15", end_date: "2032-04-15", monthly_rental: 340000,  currency: "USD", stage: 1, jurisdiction: "Ireland" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls6",  external_id: "LS-06", asset_id: "mock-a6",  lessee_id: "mock-l6",  start_date: "2018-07-20", end_date: "2028-07-20", monthly_rental: 960000,  currency: "USD", stage: 1, jurisdiction: "France" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls7",  external_id: "LS-07", asset_id: "mock-a7",  lessee_id: "mock-l7",  start_date: "2021-11-01", end_date: "2029-11-01", monthly_rental: 295000,  currency: "USD", stage: 2, jurisdiction: "Brazil (RJ)" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls8",  external_id: "LS-08", asset_id: "mock-a8",  lessee_id: "mock-l8",  start_date: "2019-05-01", end_date: "2027-05-01", monthly_rental: 275000,  currency: "USD", stage: 2, jurisdiction: "Canada" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls9",  external_id: "LS-09", asset_id: "mock-a9",  lessee_id: "mock-l9",  start_date: "2023-02-01", end_date: "2033-02-01", monthly_rental: 1050000, currency: "USD", stage: 1, jurisdiction: "Singapore" },
+  { ...DEMO_LEASE_BASE, id: "mock-ls10", external_id: "LS-10", asset_id: "mock-a10", lessee_id: "mock-l10", start_date: "2022-08-01", end_date: "2032-08-01", monthly_rental: 220000,  currency: "USD", stage: 1, jurisdiction: "Germany" },
 ];
 
 export const MOCK_PROVISIONS: Provision[] = [
