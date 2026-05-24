@@ -8,14 +8,22 @@
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
 | 1 | 10 | 2 | 0 | 8 | 20% |
-| 2 | 6 | 0 | 0 | 6 | 0% |
+| 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **7** | **0** | **34** | **17.1%** |
+| **Total** | **41** | **8** | **0** | **33** | **19.5%** |
 
 ## Completed Tasks
+
+### T-2.4 — Real counterparty profiles (first cut, 2026-05-24)
+- `src/app/types/portfolio.ts` Lessee interface extended with all 14 T-1.2 columns + `portfolio_id` + `carrier_segment`.
+- `src/app/data/mockPortfolioData.ts` MOCK_LESSEES seeded with realistic behaviour scores / DPD / SICR flags so the demo experience matches the live-upload experience.
+- `src/app/components/counterparties/SimpleLesseePanel.tsx` rewritten (~280 LOC): renders Behaviour Scores card (4 bars + overall), SICR Signals card (DPD chip, rating drift, country watchlist, insolvency filed), pay-behaviour tier pill, region annotation, intelligence-source footer. "Not yet ingested" placeholder only shows when no T-1.2 data is present — the previous "Contact support to request coverage" copy is gone.
+- `src/app/pages/Counterparties.tsx` `lesseeRows` builder reads the new columns directly. Panel selection priority **reversed**: lessees WITH ingested behaviour scores get the upgraded SimpleLesseePanel; only lessees WITHOUT data fall back to the hardcoded `LesseeProfilePanel` (legacy demo fallback, retired in a future slice).
+- Phase 2: 0/6 → 1/6 (17%). Total: 7/41 → 8/41 (19.5%).
+- Hardcoded `LESSEE_PROFILE` fixture still present as fallback — full retirement waits for T-1.3 (full aircraft ingestion) + T-3.1 (scenario history per lessee).
 
 ### T-1.1 + T-1.2 — Multi-sheet parser + Lessee Profiles ingest (2026-05-24)
 - New file `src/app/utils/excelParser.ts` (~380 LOC): `parseWorkbook(file)` + `detectCanonical(file)` + per-sheet handlers (Lessee Profiles full, Aircraft Register parsed, Lease Register parsed). Banner-row tolerant header detection. Field coercion helpers (`asNumber`, `asPercent`, `asBool`, `asStage`, `asMillions`, `asThousands`).

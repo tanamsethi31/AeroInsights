@@ -163,12 +163,12 @@ Today the Intelligence tab shows IndiGo, Aeromexico, SriLankan etc. regardless o
 - **Estimated effort:** 2 days
 
 ### T-2.4 — Real counterparty profile generation
-- **Status:** TODO
-- **Files affected:** `src/app/components/counterparties/LesseeProfilePanel.tsx`, `src/app/components/counterparties/SimpleLesseePanel.tsx` (eliminate placeholder)
+- **Status:** DONE (first cut, 2026-05-24) — full deletion of hardcoded `LESSEE_PROFILE` deferred until T-1.3 / T-1.4 / scenario history per lessee land
+- **Files affected:** `src/app/types/portfolio.ts`, `src/app/data/mockPortfolioData.ts`, `src/app/pages/Counterparties.tsx`, `src/app/components/counterparties/SimpleLesseePanel.tsx`
 - **Depends on:** T-1.2
-- **Why:** Today 6 hardcoded `LESSEE_PROFILE` objects exist (IndiGo, Aeromexico, Aer Lingus, etc.) with rich timelines, behaviour scores, restructuring history. Any other uploaded lessee gets the degraded `SimpleLesseePanel`. Generate full profiles from ingested behaviour scores + DPD + payment events. The single most visible gap when demoing with a real Excel.
-- **Estimated effort:** 4 days
-- **Priority:** HIGH — biggest demo improvement
+- **Why:** Today 6 hardcoded `LESSEE_PROFILE` objects exist (IndiGo, Aeromexico, Aer Lingus, etc.) with rich timelines, behaviour scores, restructuring history. Any other uploaded lessee got the degraded `SimpleLesseePanel`. With T-1.2 schema live, the panel now reads real ingested columns instead of zeros.
+- **Outcome:** `SimpleLesseePanel` upgraded — renders Behaviour Scores card (4 bars + overall), SICR Signals card (DPD chip, rating drift, country watchlist, insolvency filed), pay-behaviour tier pill, region annotation, intelligence-source footer. Placeholder ("not yet ingested") only shows when no T-1.2 data is present. `Counterparties.tsx` reverses the panel-selection priority: lessees WITH ingested behaviour scores get `SimpleLesseePanel`; only lessees WITHOUT data fall back to the hardcoded `LesseeProfilePanel`. Demo `MOCK_LESSEES` seeded with realistic behaviour values so the demo experience matches the upload experience.
+- **Remaining (next cuts):** Restructuring history timeline (T-1.3 needs to ingest lease event data), per-lessee scenario history (T-3.1 dependent), drop the hardcoded LESSEE_PROFILE fixture entirely.
 
 ### T-2.5 — Real sanctions screening
 - **Status:** TODO

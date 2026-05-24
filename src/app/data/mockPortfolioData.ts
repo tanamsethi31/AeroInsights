@@ -17,17 +17,45 @@ export const MOCK_ASSETS: Asset[] = [
   { id: "mock-a10", org_id: "demo", upload_id: null, registration: "D-AIVM",  msn: "55124", aircraft_type: "A220-300",   manufacturer: "Airbus",  vintage: 2022, current_operator: "Lufthansa",            created_at: "2024-01-01T00:00:00Z" },
 ];
 
+// Demo lessees include realistic T-1.2 fields so the live SimpleLesseePanel
+// view renders meaningfully even before a tenant uploads. Real uploads will
+// overwrite these via the multi-sheet ingester.
+const DEMO_BASE = {
+  org_id: "demo", portfolio_id: "demo-portfolio", external_id: null,
+  created_at: "2024-01-01T00:00:00Z",
+};
+
 export const MOCK_LESSEES: Lessee[] = [
-  { id: "mock-l1",  org_id: "demo", name: "IndiGo Airlines",      iata_code: "6E", country: "India",       credit_rating: "BB-",  pd_estimate: 0.12, watchlist_status: "red",   created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l2",  org_id: "demo", name: "Aeromexico",           iata_code: "AM", country: "Mexico",      credit_rating: "CCC",  pd_estimate: 0.28, watchlist_status: "red",   created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l3",  org_id: "demo", name: "Emirates",             iata_code: "EK", country: "UAE",         credit_rating: "A-",   pd_estimate: 0.01, watchlist_status: "green", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l4",  org_id: "demo", name: "SriLankan Airlines",   iata_code: "UL", country: "Sri Lanka",   credit_rating: "B+",   pd_estimate: 0.08, watchlist_status: "amber", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l5",  org_id: "demo", name: "Ryanair",              iata_code: "FR", country: "Ireland",     credit_rating: "BBB+", pd_estimate: 0.02, watchlist_status: "green", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l6",  org_id: "demo", name: "Air France",           iata_code: "AF", country: "France",      credit_rating: "BB+",  pd_estimate: 0.04, watchlist_status: "green", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l7",  org_id: "demo", name: "Azul Brazilian Airlines", iata_code: "AD", country: "Brazil",   credit_rating: "B+",   pd_estimate: 0.09, watchlist_status: "amber", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l8",  org_id: "demo", name: "Air Transat",          iata_code: "TS", country: "Canada",      credit_rating: "B",    pd_estimate: 0.11, watchlist_status: "amber", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l9",  org_id: "demo", name: "Singapore Airlines",   iata_code: "SQ", country: "Singapore",   credit_rating: "A",    pd_estimate: 0.01, watchlist_status: "green", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-l10", org_id: "demo", name: "Lufthansa",            iata_code: "LH", country: "Germany",     credit_rating: "BBB-", pd_estimate: 0.03, watchlist_status: "green", created_at: "2024-01-01T00:00:00Z" },
+  { ...DEMO_BASE, id: "mock-l1",  name: "IndiGo Airlines",         iata_code: "6E", country: "India",      region: "South Asia",     credit_rating: "BB-",  pd_estimate: 0.12, watchlist_status: "red",   carrier_segment: "lcc",
+    stage: 3, dpd_days: 47, rating_notches_down: 3, country_watchlist: true,  insolvency_filed: false,
+    score_punctuality: 28, score_restructuring_coop: 52, score_govt_interference: 41, score_litigation: 55, overall_behaviour_score: 44, pay_behaviour_tier: "Adversarial" },
+  { ...DEMO_BASE, id: "mock-l2",  name: "Aeromexico",              iata_code: "AM", country: "Mexico",     region: "Latin America",  credit_rating: "CCC",  pd_estimate: 0.28, watchlist_status: "red",   carrier_segment: "network",
+    stage: 3, dpd_days: 62, rating_notches_down: 5, country_watchlist: true,  insolvency_filed: true,
+    score_punctuality: 18, score_restructuring_coop: 38, score_govt_interference: 35, score_litigation: 25, overall_behaviour_score: 29, pay_behaviour_tier: "Adversarial" },
+  { ...DEMO_BASE, id: "mock-l3",  name: "Emirates",                iata_code: "EK", country: "UAE",        region: "MENA",           credit_rating: "A-",   pd_estimate: 0.01, watchlist_status: "green", carrier_segment: "network",
+    stage: 1, dpd_days: 0,  rating_notches_down: 0, country_watchlist: false, insolvency_filed: false,
+    score_punctuality: 98, score_restructuring_coop: 95, score_govt_interference: 92, score_litigation: 91, overall_behaviour_score: 94, pay_behaviour_tier: "Cooperative" },
+  { ...DEMO_BASE, id: "mock-l4",  name: "SriLankan Airlines",      iata_code: "UL", country: "Sri Lanka",  region: "South Asia",     credit_rating: "B+",   pd_estimate: 0.08, watchlist_status: "amber", carrier_segment: "network",
+    stage: 2, dpd_days: 28, rating_notches_down: 2, country_watchlist: true,  insolvency_filed: false,
+    score_punctuality: 55, score_restructuring_coop: 70, score_govt_interference: 48, score_litigation: 75, overall_behaviour_score: 62, pay_behaviour_tier: "Neutral" },
+  { ...DEMO_BASE, id: "mock-l5",  name: "Ryanair",                 iata_code: "FR", country: "Ireland",    region: "Europe",         credit_rating: "BBB+", pd_estimate: 0.02, watchlist_status: "green", carrier_segment: "lcc",
+    stage: 1, dpd_days: 2,  rating_notches_down: 0, country_watchlist: false, insolvency_filed: false,
+    score_punctuality: 91, score_restructuring_coop: 78, score_govt_interference: 85, score_litigation: 82, overall_behaviour_score: 84, pay_behaviour_tier: "Cooperative" },
+  { ...DEMO_BASE, id: "mock-l6",  name: "Air France",              iata_code: "AF", country: "France",     region: "Europe",         credit_rating: "BB+",  pd_estimate: 0.04, watchlist_status: "green", carrier_segment: "network",
+    stage: 1, dpd_days: 8,  rating_notches_down: 1, country_watchlist: false, insolvency_filed: false,
+    score_punctuality: 76, score_restructuring_coop: 72, score_govt_interference: 68, score_litigation: 78, overall_behaviour_score: 74, pay_behaviour_tier: "Cooperative" },
+  { ...DEMO_BASE, id: "mock-l7",  name: "Azul Brazilian Airlines", iata_code: "AD", country: "Brazil",     region: "Latin America",  credit_rating: "B+",   pd_estimate: 0.09, watchlist_status: "amber", carrier_segment: "lcc",
+    stage: 2, dpd_days: 34, rating_notches_down: 2, country_watchlist: false, insolvency_filed: false,
+    score_punctuality: 62, score_restructuring_coop: 75, score_govt_interference: 88, score_litigation: 47, overall_behaviour_score: 68, pay_behaviour_tier: "Neutral" },
+  { ...DEMO_BASE, id: "mock-l8",  name: "Air Transat",             iata_code: "TS", country: "Canada",     region: "North America",  credit_rating: "B",    pd_estimate: 0.11, watchlist_status: "amber", carrier_segment: "charter",
+    stage: 2, dpd_days: 31, rating_notches_down: 1, country_watchlist: false, insolvency_filed: false,
+    score_punctuality: 68, score_restructuring_coop: 78, score_govt_interference: 62, score_litigation: 76, overall_behaviour_score: 71, pay_behaviour_tier: "Neutral" },
+  { ...DEMO_BASE, id: "mock-l9",  name: "Singapore Airlines",      iata_code: "SQ", country: "Singapore",  region: "South-East Asia",credit_rating: "A",    pd_estimate: 0.01, watchlist_status: "green", carrier_segment: "network",
+    stage: 1, dpd_days: 0,  rating_notches_down: 0, country_watchlist: false, insolvency_filed: false,
+    score_punctuality: 96, score_restructuring_coop: 94, score_govt_interference: 90, score_litigation: 92, overall_behaviour_score: 93, pay_behaviour_tier: "Cooperative" },
+  { ...DEMO_BASE, id: "mock-l10", name: "Lufthansa",               iata_code: "LH", country: "Germany",    region: "Europe",         credit_rating: "BBB-", pd_estimate: 0.03, watchlist_status: "green", carrier_segment: "network",
+    stage: 1, dpd_days: 4,  rating_notches_down: 0, country_watchlist: false, insolvency_filed: false,
+    score_punctuality: 88, score_restructuring_coop: 84, score_govt_interference: 81, score_litigation: 85, overall_behaviour_score: 85, pay_behaviour_tier: "Cooperative" },
 ];
 
 export const MOCK_LEASES: Lease[] = [

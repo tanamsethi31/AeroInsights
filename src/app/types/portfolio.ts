@@ -16,12 +16,31 @@ export interface Asset {
 export interface Lessee {
   id: string;
   org_id: string;
+  /** ADR-002 Phase B: scope every analytical row to a portfolio. */
+  portfolio_id: string;
   name: string;
   iata_code: string | null;
   country: string | null;
   credit_rating: string | null;
   pd_estimate: number | null;
   watchlist_status: "green" | "amber" | "red" | null;
+  carrier_segment: "network" | "lcc" | "regional" | "charter" | null;
+  // ── T-1.2 ingested columns ──────────────────────────────────────────────
+  /** External identifier from the source Excel (e.g. "LE-001"). Used by
+   *  re-import reconciliation to match prior rows. */
+  external_id: string | null;
+  region: string | null;
+  stage: 1 | 2 | 3 | null;
+  dpd_days: number | null;
+  rating_notches_down: number | null;
+  country_watchlist: boolean | null;
+  insolvency_filed: boolean | null;
+  score_punctuality: number | null;
+  score_restructuring_coop: number | null;
+  score_govt_interference: number | null;
+  score_litigation: number | null;
+  overall_behaviour_score: number | null;
+  pay_behaviour_tier: string | null;
   created_at: string;
 }
 

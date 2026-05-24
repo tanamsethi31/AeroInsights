@@ -192,7 +192,7 @@ const LESSEE_NAME_TO_PROFILE_ID: Record<string, LesseeId> = {
 
 interface CounterpartyRow {
   id: string;              // UUID for real data, profile id for demo data
-  profileId?: LesseeId;    // set when name matches known coverage
+  profileId?: LesseeId;    // set when name matches hardcoded coverage (legacy)
   name: string;
   country: string;
   rating: string;
@@ -207,6 +207,12 @@ interface CounterpartyRow {
   watchlistStatus?: "green" | "amber" | "red" | null;
   carrierSegment?: CarrierSegment | null;
   pdEstimate?: number | null;
+  // ── T-1.2 ingested fields (preferred source when present) ────────────────
+  region?: string | null;
+  ratingNotchesDown?: number | null;
+  countryWatchlist?: boolean | null;
+  insolvencyFiled?: boolean | null;
+  payBehaviourTier?: string | null;
 }
 
 const DEMO_LESSEES: CounterpartyRow[] = [
@@ -308,24 +314,50 @@ export default function Counterparties() {
       exposureByLesseeId.set(lesseeId, (exposureByLesseeId.get(lesseeId) ?? 0) + (p.ead ?? 0));
     }
 
-    return lesseeData.map(l => ({
-      id: l.id,
-      profileId: LESSEE_NAME_TO_PROFILE_ID[l.name],
-      name: l.name,
-      country: l.country ?? "—",
-      rating: l.credit_rating ?? "—",
-      stage: (l.watchlist_status === "red" ? "3" : l.watchlist_status === "amber" ? "2" : "1") as "1" | "2" | "3",
-      behaviorScore: 0,
-      scores: { punctuality: 0, restructuringCoop: 0, govtInterference: 0, litigationPropensity: 0 },
-      exposure: fmtExposure(exposureByLesseeId.get(l.id) ?? 0),
-      leases: leaseCounts.get(l.id) ?? 0,
-      lastPayment: "—",
-      daysOverdue: 0,
-      notes: "",
-      watchlistStatus: l.watchlist_status,
-      carrierSegment: l.carrier_segment ?? null,
-      pdEstimate: l.pd_estimate ?? null,
-    }));
+    return lesseeData.map(l => {
+      // Stage priority: T-1.2 ingested stage column → leases.stage (already
+      // reflected by watchlist mapping) → watchlist heuristic. Once T-1.6
+      // (SICR) lands the heuristic can drop entirely.
+      const stage: "1" | "2" | "3" =
+        l.stage === 1 ? "1" :
+        l.stage === 2 ? "2" :
+        l.stage === 3 ? "3" :
+        l.watchlist_status === "red"   ? "3" :
+        l.watchlist_status === "amber" ? "2" : "1";
+      return {
+        id: l.id,
+        // Only use the hardcoded LesseeProfilePanel when this lessee has NO
+        // ingested behaviour data. Real-uploaded lessees with ingested
+        // scores get the upgraded SimpleLesseePanel instead.
+        profileId: l.overall_behaviour_score == null
+          ? LESSEE_NAME_TO_PROFILE_ID[l.name]
+          : undefined,
+        name: l.name,
+        country: l.country ?? "—",
+        rating: l.credit_rating ?? "—",
+        stage,
+        behaviorScore: l.overall_behaviour_score ?? 0,
+        scores: {
+          punctuality:         l.score_punctuality        ?? 0,
+          restructuringCoop:   l.score_restructuring_coop ?? 0,
+          govtInterference:    l.score_govt_interference  ?? 0,
+          litigationPropensity:l.score_litigation         ?? 0,
+        },
+        exposure: fmtExposure(exposureByLesseeId.get(l.id) ?? 0),
+        leases: leaseCounts.get(l.id) ?? 0,
+        lastPayment: "—",
+        daysOverdue: l.dpd_days ?? 0,
+        notes: "",
+        watchlistStatus: l.watchlist_status,
+        carrierSegment: l.carrier_segment ?? null,
+        pdEstimate: l.pd_estimate ?? null,
+        region:             l.region                  ?? null,
+        ratingNotchesDown:  l.rating_notches_down     ?? null,
+        countryWatchlist:   l.country_watchlist       ?? null,
+        insolvencyFiled:    l.insolvency_filed        ?? null,
+        payBehaviourTier:   l.pay_behaviour_tier      ?? null,
+      };
+    });
   }, [lesseeData, leaseData, provisions, isDemo]);
 
   const [selectedLessee, setSelectedLessee] = useState<CounterpartyRow>(lesseeRows[0] ?? DEMO_LESSEES[0]);
@@ -518,6 +550,20 @@ export default function Counterparties() {
               leases: selectedLessee.leases,
               exposure: selectedLessee.exposure,
               watchlistStatus: selectedLessee.watchlistStatus,
+              // T-1.2 ingested fields — drive the rich behaviour view in
+              // SimpleLesseePanel. All optional: nulls degrade gracefully to
+              // the "Not yet ingested" placeholder.
+              region:                    selectedLessee.region,
+              dpd_days:                  selectedLessee.daysOverdue || null,
+              rating_notches_down:       selectedLessee.ratingNotchesDown,
+              country_watchlist:         selectedLessee.countryWatchlist,
+              insolvency_filed:          selectedLessee.insolvencyFiled,
+              score_punctuality:         selectedLessee.scores.punctuality          || null,
+              score_restructuring_coop:  selectedLessee.scores.restructuringCoop    || null,
+              score_govt_interference:   selectedLessee.scores.govtInterference     || null,
+              score_litigation:          selectedLessee.scores.litigationPropensity || null,
+              overall_behaviour_score:   selectedLessee.behaviorScore               || null,
+              pay_behaviour_tier:        selectedLessee.payBehaviourTier,
             } satisfies SimpleLesseeData} />
           )}
           {(selectedLessee.stage === "2" || selectedLessee.stage === "3") && (
