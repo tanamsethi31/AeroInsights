@@ -15,9 +15,9 @@ Excel cell: =AER.ECL("LSE-2019-001","Baseline","2026-04-29")
                 │
         public/functions/functions.js  ← plain ES2020, no bundler
                 │
-        GET https://api.aerinsights.com/api/v1/excel/ecl?...
+        GET https://aeroinsights.vercel.app/api/excel/ecl?...
                 │
-        FastAPI  backend/app/api/v1/endpoints/excel.py
+        Vercel Function  api/excel/*.ts  (to be implemented — see ADR-001)
 ```
 
 **Shared runtime**: the task pane and custom functions run in the **same** JavaScript
@@ -167,12 +167,13 @@ Tokens expire based on your Auth0 settings. When the task pane shows a red dot, 
 
 3. **`src/taskpane/TaskPane.tsx`** — add to the `FUNCTIONS` array with group, params, description, example.
 
-4. **`backend/app/api/v1/endpoints/excel.py`** — add the FastAPI endpoint:
-   ```python
-   @router.get("/my-endpoint")
-   async def get_my_endpoint(param: str = Query(...), current_user: User = Depends(get_current_user)):
-       # TODO: real query
-       return {"value": 42.0}
+4. **`api/excel/my-endpoint.ts`** — add a Vercel Function (see ADR-001):
+   ```ts
+   import type { VercelRequest, VercelResponse } from "@vercel/node";
+   export default async function handler(req: VercelRequest, res: VercelResponse) {
+     // TODO: verify Auth0 JWT, query Supabase, return value
+     res.json({ value: 42.0 });
+   }
    ```
 
 5. Run `npm run validate-manifest` — no manifest change needed unless you change the function's
@@ -230,13 +231,18 @@ Also required:
 
 ## Backend CORS update required
 
-Add these origins to `backend/app/core/config.py` (or set via env var):
+Vercel Functions need to allow the add-in origin. Add the CORS headers in
+each `api/excel/*.ts` Function (or via `vercel.json` headers config):
 
-```python
-CORS_ORIGINS: list[str] = [
-    "http://localhost:5173",              # main app Vite dev
-    "http://localhost:3100",              # add-in Vite dev
-    "https://app.aeroinsights.io",        # main app prod
-    "https://addin.aerinsights.com",      # add-in prod
-]
+```ts
+res.setHeader("Access-Control-Allow-Origin", "https://addin.aerinsights.com");
+res.setHeader("Access-Control-Allow-Credentials", "true");
 ```
+
+Dev origins to allow during local development:
+- `http://localhost:5173` (main app Vite dev)
+- `http://localhost:3100` (add-in Vite dev)
+- `https://addin.aerinsights.com` (add-in prod)
+- `https://aeroinsights.vercel.app` (main app prod)
+
+See `docs/ADR-001-backend-architecture.md` for context.
