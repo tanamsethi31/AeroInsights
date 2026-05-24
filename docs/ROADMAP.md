@@ -1,0 +1,350 @@
+# Aeroinsights Roadmap — Phases 0–6
+
+**Goal:** Turn this codebase from a half-finished React app with mocked data into a complete, end-to-end SaaS platform that ingests a tenant's Excel portfolio, performs real IFRS-9 ECL analysis, persists scenario runs, generates audit-ready reports, and operates with proper RBAC and observability.
+
+**Format:** Each task has a stable ID (e.g. `T-0.2`), a phase, current status, files affected, dependencies, and a "why" link to PRD section or ADR.
+
+**Status values:** `DONE` · `IN_PROGRESS` · `TODO` · `BLOCKED`
+
+**See also:** [PROGRESS.md](./PROGRESS.md) for daily tracker · [ADR-001](./ADR-001-backend-architecture.md) for backend decision · [PRD.md](./PRD.md) for product requirements.
+
+---
+
+## Phase 0 — Architectural Decisions
+
+Establishes the foundations every subsequent phase inherits. Must be completed first.
+
+### T-0.1 — Decide and execute backend architecture
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `backend/` (deleted, 3,639 LOC), `src/app/services/api.ts` (deleted), `packages/excel-addin/README.md`, `docs/ADR-001-backend-architecture.md`
+- **Depends on:** none
+- **Why:** Two parallel data layers (Supabase + unused FastAPI) caused "is this real or fake?" confusion. ADR-001 standardised on Supabase + Vercel Functions.
+- **Outcome:** −4,145 lines net, single source of truth, ADR captured.
+
+### T-0.2 — Consolidate import flows
+- **Status:** TODO
+- **Files affected:** `src/app/components/import/ImportWizard.tsx` (likely delete), `src/app/components/upload/ReviewImportStep.tsx`, `src/app/pages/Settings.tsx`
+- **Depends on:** T-0.1
+- **Why:** Two parallel import wizards exist. `ImportWizard.tsx` collects + validates but has no DB write path. `ReviewImportStep.tsx` writes to Supabase. End state: one wizard, one DB write path. The PRD describes a single 4-step ImportWizard.
+- **Estimated effort:** half-day
+
+### T-0.4 — Python scenarios engine (preemptive reversal-condition build)
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `api/scenarios/run.py`, `api/scenarios/requirements.txt`, `api/scenarios/test_parity.py`, `src/app/services/scenarioEngine.ts`, `src/app/pages/Scenarios.tsx`, `docs/ADR-001-backend-architecture.md`
+- **Depends on:** T-0.1
+- **Why:** ADR-001 listed `/api/scenarios/run.py` as a future reversal condition once Monte Carlo client-side compute exceeded ~2 s. Discovered during the build that the existing client-side MC was theatrical (no actual path simulation — just multiplying ECL by fixed factors). Building the Python function now turns Monte Carlo from a cosmetic feature into a real one AND establishes the precedent for any future Python compute. Still a single function, not a service — does not reverse the broader ADR.
+- **Outcome:** Vectorised NumPy MC, 8/8 parity tests pass, 50k paths in <1 s, deterministic stays client-side, graceful fallback when server unreachable.
+
+### T-0.3 — Canonicalize Portfolio vs Org scoping
+- **Status:** TODO
+- **Files affected:** `src/app/contexts/PortfolioContext.tsx`, `src/app/hooks/usePortfolioData.ts`, all hooks under `src/app/hooks/`, all Supabase migrations
+- **Depends on:** T-0.1
+- **Why:** Today `org_id` filters every analytical table, but PRD requires multi-portfolio per tenant. Either commit to one-portfolio-per-tenant or add `portfolio_id` to every analytical table. The `portfolios` table exists but most hooks key on `org_id`.
+- **Estimated effort:** 2-3 days
+
+---
+
+## Phase 1 — Full Excel Ingestion
+
+The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 sheets and 70+ data points. Today the importer reads only the Lease Register sheet (11 columns). Every other sheet — Aircraft Register, Lessee Profiles, SD+MR balances, IFRS-9 ECL parameters, SICR triggers, Stress Scenarios, Jurisdiction LGD overlays — is left on the floor.
+
+### T-1.1 — Multi-sheet Excel parser
+- **Status:** TODO
+- **Files affected:** `src/app/components/upload/ReviewImportStep.tsx`, `src/app/utils/excelParser.ts` (new), `src/app/components/import/ColumnMapStep.tsx`
+- **Depends on:** T-0.2
+- **Why:** Today we ingest 1 of 14 sheets. The wizard needs sheet detection + per-sheet column mapping.
+- **Estimated effort:** 3 days
+
+### T-1.2 — Ingest Lessee Profiles sheet
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new migration for `lessee_profiles` table), `src/app/hooks/usePortfolioData.ts`, `src/app/components/counterparties/`
+- **Depends on:** T-1.1
+- **Why:** Lessee Profiles sheet contains: country, credit rating, PD estimate, watchlist status, DPD days, rating notches down, country watchlist, insolvency filed, behaviour scores (punctuality / restructuring cooperation / government interference / litigation propensity), overall behaviour score, pay behaviour tier. Today these are hardcoded in `intelligenceData.ts` for fictitious lessees.
+- **Estimated effort:** 2 days
+- **Unlocks:** T-2.4 (real counterparty profiles)
+
+### T-1.3 — Ingest Aircraft Register sheet fully
+- **Status:** TODO
+- **Files affected:** `src/app/components/upload/ReviewImportStep.tsx`, `supabase/migrations/` (extend `assets` table)
+- **Depends on:** T-1.1
+- **Why:** Aircraft Register has registration, MSN, type, manufacturer, vintage, family, operator, country, current MV, EAD, monthly rent, lease term remaining, part-out value. Today only ~5 of these are ingested. Fleet tab and valuation calculations need the full picture.
+- **Estimated effort:** 1 day
+
+### T-1.4 — Ingest Security Deposits and Maintenance Reserves
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `security_deposits` and `maintenance_reserves` tables), `src/app/components/portfolio/SDMRTab.tsx`
+- **Depends on:** T-1.1
+- **Why:** The Excel sheet has deposit months, deposit amount, MR balance per lease. Today the SD/MR tab estimates these from heuristics in `maintenanceHeuristics.ts`. Real data eliminates estimates.
+- **Estimated effort:** 2 days
+
+### T-1.5 — Ingest IFRS 9 ECL parameters
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `ifrs9_parameters` table), `src/app/pages/Settings.tsx` (Model Parameters tab), `src/app/utils/eclCalculator.ts`
+- **Depends on:** T-1.1
+- **Why:** The Excel sheet has effective discount rate (5.75% default), per-stage PD inputs, LGD assumptions. Today Settings → Model Parameters tab is decorative — values are hardcoded in `eclCalculator.ts`. Need persistent per-tenant configuration.
+- **Estimated effort:** 2 days
+
+### T-1.6 — Ingest SICR triggers configuration
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `sicr_config` table), `src/app/pages/RiskECL.tsx` (SICR Config tab)
+- **Depends on:** T-1.1
+- **Why:** The Excel sheet has DPD threshold (30 days), rating notches threshold (≥2), country WL flag, insolvency flag, upgrade threshold (2 notches). Today the SICR Config tab is read-only display of hardcoded values. Need editable, persistent SICR thresholds per tenant.
+- **Estimated effort:** 1 day
+
+### T-1.7 — Ingest Stress Scenarios sheet
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (extend `scenarios` table), `src/app/pages/Scenarios.tsx`, `src/app/data/intelligenceData.ts` (SCENARIO_LIBRARY → DB)
+- **Depends on:** T-1.1
+- **Why:** Excel has 7 pre-built scenarios with macro shock parameters and weights. Today the hardcoded `SCENARIO_LIBRARY` array drives everything. Need per-tenant scenario seeding from Excel + ability to customise scenarios with persistence.
+- **Estimated effort:** 2 days
+
+### T-1.8 — Ingest Jurisdiction LGD overlays
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `jurisdiction_lgd_overlays` table), `src/app/components/jurisdictions/jurisdictionData.ts` (deprecate hardcoded), `src/app/pages/Jurisdictions.tsx`
+- **Depends on:** T-1.1
+- **Why:** Excel has CTC score, Alt-A, IDERA, enforceability, rule of law, P50/P90 repossession months, P50 cost %, success probability, LGD delta vs US §1110, uncertainty band, precedent count per jurisdiction. Today `jurisdictionData.ts` has these hardcoded for ~24 countries. Need ingestion + tenant override path.
+- **Estimated effort:** 2 days
+
+### T-1.9 — Validation and dry-run flow
+- **Status:** TODO
+- **Files affected:** `src/app/components/import/ImportWizard.tsx`, `src/app/components/upload/ReviewImportStep.tsx`
+- **Depends on:** T-1.1
+- **Why:** Pre-commit row-by-row check per sheet, errors surfaced in UI with inline editing before commit. The ImportWizard already has the UI scaffold for this — the wiring is missing.
+- **Estimated effort:** 2 days
+
+### T-1.10 — Re-import and merge with prior data
+- **Status:** TODO
+- **Files affected:** `src/app/components/upload/ReviewImportStep.tsx`, `supabase/migrations/` (new `import_diffs` table)
+- **Depends on:** T-1.1, T-3.4
+- **Why:** Tenant uploads a new monthly file → system computes diff against prior data, presents changes for review, logs changes to audit log. Required for the "monthly close" workflow described in PRD §3.3 Persona 1.
+- **Estimated effort:** 3 days
+
+---
+
+## Phase 2 — Replace Hardcoded Intelligence with Portfolio-Driven Data
+
+Today the Intelligence tab shows IndiGo, Aeromexico, SriLankan etc. regardless of who is logged in. Replace with tenant's actual uploaded portfolio.
+
+### T-2.1 — Lessee Radar driven by real lessees
+- **Status:** TODO
+- **Files affected:** `src/app/data/intelligenceData.ts` (deprecate `LESSEE_RADAR`), `src/app/pages/Intelligence.tsx`, `src/app/services/lesseeRadarService.ts` (new)
+- **Depends on:** T-1.2
+- **Why:** Today `LESSEE_RADAR` is a hardcoded array of fictitious lessees with fake load factors and schedule stability. Replace with: for each lessee in tenant's portfolio, derive operational metrics from ingested behaviour scores OR external feeds (CAPA/OAG when licensed).
+- **Estimated effort:** 3 days
+
+### T-2.2 — Deal Feed personalisation
+- **Status:** TODO
+- **Files affected:** `src/app/services/useNewsFeed.ts` (`PORTFOLIO_LESSEES` hardcoded array), `api/signals/news.ts`
+- **Depends on:** T-1.2
+- **Why:** `useNewsFeed.ts` line 32 has `PORTFOLIO_LESSEES = ["IndiGo", "Aeromexico", ...]` hardcoded. Replace with the live list of lessees from tenant's portfolio so news matching is real.
+- **Estimated effort:** 1 day
+
+### T-2.3 — Jurisdiction Watch driven by portfolio
+- **Status:** TODO
+- **Files affected:** `src/app/data/intelligenceData.ts` (deprecate `JURISDICTION_EVENTS`), `src/app/services/useNewsFeed.ts`, `api/signals/news.ts`
+- **Depends on:** T-1.2, T-1.3
+- **Why:** `JURISDICTION_EVENTS` is hardcoded for 6 countries. Replace with: fetch jurisdiction news filtered by the user's actual lessee countries; aggregate portfolio exposure from real leases.
+- **Estimated effort:** 2 days
+
+### T-2.4 — Real counterparty profile generation
+- **Status:** TODO
+- **Files affected:** `src/app/components/counterparties/LesseeProfilePanel.tsx`, `src/app/components/counterparties/SimpleLesseePanel.tsx` (eliminate placeholder)
+- **Depends on:** T-1.2
+- **Why:** Today 6 hardcoded `LESSEE_PROFILE` objects exist (IndiGo, Aeromexico, Aer Lingus, etc.) with rich timelines, behaviour scores, restructuring history. Any other uploaded lessee gets the degraded `SimpleLesseePanel`. Generate full profiles from ingested behaviour scores + DPD + payment events. The single most visible gap when demoing with a real Excel.
+- **Estimated effort:** 4 days
+- **Priority:** HIGH — biggest demo improvement
+
+### T-2.5 — Real sanctions screening
+- **Status:** TODO
+- **Files affected:** `src/app/data/sanctionsData.ts` (deprecate), `api/sanctions/screen.ts` (new), `supabase/migrations/` (new `sanctions_hits` table), `src/app/pages/Counterparties.tsx`
+- **Depends on:** T-1.2
+- **Why:** Today `sanctionsData.ts` is fully hardcoded with fake OFAC entries. Build a Vercel function that fetches OFAC SDN XML daily, computes fuzzy matches against tenant lessees, persists to `sanctions_hits`. Wire to Fleet Sanctions Tracker.
+- **Estimated effort:** 4 days
+
+### T-2.6 — Real aircraft valuation source
+- **Status:** TODO
+- **Files affected:** `src/app/components/portfolio/AircraftValuationPanel.tsx` (`valuationData` is hardcoded), `supabase/migrations/` (new `aircraft_valuations` table)
+- **Depends on:** T-1.3
+- **Why:** `valuationData` in `AircraftValuationPanel.tsx` is fully hardcoded. Options: (a) accept user-uploaded valuation columns from Excel, (b) integrate AVAC/IBA API (paid), (c) make manual-input workflow with full audit trail. Recommend (a) + (c) initially.
+- **Estimated effort:** 3 days
+
+---
+
+## Phase 3 — Persistence and Immutable Audit Trail
+
+This is what makes the IFRS-9 audit claim real. Today scenario runs vanish on refresh; ECL snapshots are calculated but never stored; report exports leave no trace.
+
+### T-3.1 — Persist scenario runs
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `scenario_runs` table), `src/app/pages/Scenarios.tsx` (Custom Builder + Run History)
+- **Depends on:** T-0.3
+- **Why:** Today scenario runs computed client-side, never persisted. Run History tab shows in-memory array — survives nothing. Build `scenario_runs(id, org_id, portfolio_id, scenario_id, mode, inputs JSONB, result JSONB, parent_run_id, run_at, run_by)`. Write on every run. Run History reads from here. Survives refresh.
+- **Estimated effort:** 2 days
+
+### T-3.2 — Persist ECL period snapshots
+- **Status:** TODO
+- **Files affected:** `src/app/pages/RiskECL.tsx`, `src/app/utils/eclCalculator.ts`
+- **Depends on:** T-3.1, T-1.5
+- **Why:** The `ecl_period_snapshots` table exists with an immutability trigger but is never written to. Wire a "Close Period" action that snapshots the entire ECL state.
+- **Estimated effort:** 1 day
+
+### T-3.3 — Persist report exports
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `report_exports` table), `src/app/services/exportService.ts`, `src/app/pages/Reports.tsx` (Export History tab)
+- **Depends on:** T-0.3
+- **Why:** Today reports generate XLSX/PDF in browser. No record exists. "Export History" tab is mocked. Build `report_exports(id, org_id, report_id, format, params JSONB, file_url, generated_at, generated_by)`. Upload generated files to Supabase Storage. Export History reads from here.
+- **Estimated effort:** 2 days
+
+### T-3.4 — Universal audit log
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `audit_log` table or extend `assumption_change_log`), `src/app/pages/Settings.tsx` (Audit Log tab)
+- **Depends on:** T-0.3
+- **Why:** `assumption_change_log` only logs assumption edits. Extend or add new universal log: settings changes, scenario runs, report exports, lease edits, stage migrations — all write to single `audit_log(id, org_id, actor_user_id, action, entity_type, entity_id, before JSONB, after JSONB, timestamp)`.
+- **Estimated effort:** 3 days
+
+### T-3.5 — Stage migration log
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `stage_migrations` table), `src/app/pages/RiskECL.tsx` (Stage Migration tab)
+- **Depends on:** T-3.4
+- **Why:** When ingestion or a scenario run changes a lease's IFRS-9 stage 1→2 or 2→3, write a row to `stage_migrations(lease_id, from_stage, to_stage, reason, signal_id, scenario_run_id, timestamp)`. PRD §8.4 requires this for the Stage Migration tab.
+- **Estimated effort:** 2 days
+
+---
+
+## Phase 4 — Multi-tenancy and RBAC Hardening
+
+PRD §10 defines four roles: Admin, Risk Analyst, Accounting, Read-Only. Today none are enforced in the UI.
+
+### T-4.1 — Row-level security audit and lockdown
+- **Status:** TODO
+- **Files affected:** All `supabase/migrations/*.sql`
+- **Depends on:** T-0.3
+- **Why:** Every table must have RLS policy: `org_id = (SELECT org_id FROM org_memberships WHERE user_id = auth.uid())`. Some tables may be wide-open today. Audit and lock down.
+- **Estimated effort:** 2 days
+- **Priority:** HIGH — security gap
+
+### T-4.2 — Role enforcement in UI
+- **Status:** TODO
+- **Files affected:** `src/app/hooks/useRole.ts` (new), every page component, `src/app/contexts/PortfolioContext.tsx`
+- **Depends on:** T-4.1
+- **Why:** Roles exist in `org_memberships` table but UI doesn't gate any actions. Add `useRole()` hook and gate destructive/admin actions per PRD §10 role matrix.
+- **Estimated effort:** 3 days
+
+### T-4.3 — Per-tenant API key configuration
+- **Status:** TODO
+- **Files affected:** `supabase/migrations/` (new `tenant_integrations` table), `src/app/pages/Settings.tsx` (Data Sources tab), `api/signals/`
+- **Depends on:** T-4.1
+- **Why:** Today NewsAPI, OFAC, etc. keys are env-wide. Make per-tenant configurable so each customer brings their own keys (or uses the platform shared pool).
+- **Estimated effort:** 2 days
+
+### T-4.4 — Portfolio switching cache invalidation
+- **Status:** TODO
+- **Files affected:** `src/app/contexts/PortfolioContext.tsx`, all hooks under `src/app/hooks/`
+- **Depends on:** T-0.3
+- **Why:** When `setActivePortfolio()` changes, all hooks must re-fetch. Today some hooks may retain stale data across portfolio switches.
+- **Estimated effort:** 1 day
+
+---
+
+## Phase 5 — Operational Layer
+
+Alerts, scheduled reports, watchlist rules. Today all are decorative UI in Settings.
+
+### T-5.1 — Real email alert system
+- **Status:** TODO
+- **Files affected:** `api/cron/alerts.ts` (new), `src/app/services/alertService.ts`, `supabase/migrations/` (new `alert_rules` table)
+- **Depends on:** T-3.4, T-4.2
+- **Why:** Settings UI has alert configuration but no email send. Pick provider (Resend / SendGrid / SES). Build Vercel cron `/api/cron/alerts` that runs every 30 min: re-evaluates watchlist rules, sends emails to configured recipients. Persists alert deliveries to `alert_deliveries`.
+- **Estimated effort:** 4 days
+
+### T-5.2 — Scheduled reports
+- **Status:** TODO
+- **Files affected:** `api/cron/scheduled-reports.ts` (new), `src/app/pages/Reports.tsx` (Scheduled tab), `supabase/migrations/` (new `scheduled_reports` table)
+- **Depends on:** T-3.3, T-5.1
+- **Why:** Settings UI has schedule config but no cron. Build Vercel cron that on each due date generates report, uploads to Supabase Storage, emails recipients.
+- **Estimated effort:** 3 days
+
+### T-5.3 — Watchlist rule engine
+- **Status:** TODO
+- **Files affected:** `src/app/services/watchlistEngine.ts` (rewrite), `supabase/migrations/` (new `watchlist_entries` table), `api/cron/watchlist-eval.ts` (new)
+- **Depends on:** T-1.2, T-2.1, T-3.4
+- **Why:** Today `WATCHLIST_DATA` is a static array. Build a service that evaluates each lessee against configured thresholds (DPD, rating change, news sentiment, country event) and updates `watchlist_entries` continuously. Drives alert system and dashboard badges.
+- **Estimated effort:** 5 days
+
+### T-5.4 — Live currency engine
+- **Status:** TODO
+- **Files affected:** `src/app/contexts/CurrencyContext.tsx`, `api/fx/rates.ts` (new), `supabase/migrations/` (new `fx_rates` table)
+- **Depends on:** none
+- **Why:** Today FX rates hardcoded. Pull live ECB daily FX into `fx_rates` table; all monetary computations convert through it. Daily cron job.
+- **Estimated effort:** 2 days
+
+### T-5.5 — Excel Add-in working bridge
+- **Status:** TODO
+- **Files affected:** `packages/excel-addin/src/`, `api/excel/*.ts` (new Vercel Functions)
+- **Depends on:** T-3.1, T-3.2, T-4.1
+- **Why:** Today documentation only. Build the actual `api/excel/ecl.ts`, `api/excel/stage.ts`, etc. functions so `=AERO.ECL(leaseId)` works in Excel against real tenant data. ADR-001 specifies Vercel Functions, not FastAPI.
+- **Estimated effort:** 5 days
+
+---
+
+## Phase 6 — Quality, Observability, Compliance
+
+### T-6.1 — Frontend service test coverage
+- **Status:** TODO
+- **Files affected:** `src/app/services/*.ts` test files, `src/app/utils/*.ts` test files
+- **Depends on:** none
+- **Why:** Extend Vitest coverage on `src/app/services/` and `src/app/utils/` to 60%+. ECL calculator, narrative service, export service are critical paths with no tests.
+- **Estimated effort:** 5 days
+
+### T-6.2 — End-to-end Playwright tests
+- **Status:** TODO
+- **Files affected:** `e2e/` (new directory), `playwright.config.ts` (new)
+- **Depends on:** T-0.2, T-1.1
+- **Why:** One critical-path test: sign-up → upload portfolio → see ECL → run scenario → export report → see in history. One test = full demo script. Run in CI.
+- **Estimated effort:** 3 days
+
+### T-6.3 — Error tracking (Sentry)
+- **Status:** TODO
+- **Files affected:** `src/main.tsx`, `api/**/*.ts`, `vercel.ts` (env vars)
+- **Depends on:** none
+- **Why:** Today exceptions are `console.error` — they vanish in production. Add Sentry to both React app and Vercel Functions.
+- **Estimated effort:** 1 day
+
+### T-6.4 — AI observability via Vercel AI Gateway
+- **Status:** TODO
+- **Files affected:** `src/app/services/narrativeService.ts`, `api/ai/narrative.ts`, `api/ai/chat.ts`
+- **Depends on:** none
+- **Why:** `/api/ai/narrative` is silent on usage/cost. Route through Vercel AI Gateway for observability, fallbacks, zero-data-retention. Per system context: prefer plain `"provider/model"` strings via Gateway by default.
+- **Estimated effort:** 1 day
+
+### T-6.5 — Data retention and tenant deletion
+- **Status:** TODO
+- **Files affected:** `api/tenant/delete.ts` (new), `src/app/pages/Settings.tsx`, `supabase/migrations/` (cascade rules)
+- **Depends on:** T-4.1
+- **Why:** Tenant offboarding flow: delete all `org_id`-scoped rows, purge Storage, audit-log the deletion. GDPR + contractual requirement for B2B SaaS.
+- **Estimated effort:** 2 days
+
+### T-6.6 — Security baseline (SOC-2 prep)
+- **Status:** TODO
+- **Files affected:** `.github/workflows/security.yml` (new), `docs/RUNBOOK.md` (new)
+- **Depends on:** T-6.3
+- **Why:** Dependency vulnerability scanning (`npm audit` flagged 3 vulns last build), incident response runbook, backup verification, secret rotation policy.
+- **Estimated effort:** 3 days
+
+---
+
+## Total Effort Estimate
+
+- Phase 0: ~4 days (1 done)
+- Phase 1: ~20 days
+- Phase 2: ~17 days
+- Phase 3: ~10 days
+- Phase 4: ~8 days
+- Phase 5: ~19 days
+- Phase 6: ~15 days
+
+**Total: ~93 engineer-days (~19 weeks for one engineer, ~10 weeks for two).**
+
+## Critical Path
+
+T-0.1 → T-0.2 → T-1.1 → T-1.2 → T-2.4 (real lessee profiles — biggest demo unlock) → T-3.1 (persist scenarios — biggest audit unlock) → T-4.2 (RBAC — biggest security unlock) → T-5.1 (alerts — biggest operational unlock)

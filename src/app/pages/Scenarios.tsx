@@ -44,6 +44,7 @@ import {
 } from "../components/scenarios/RunResultPanel";
 import { ScenarioInsightsPanel } from "../components/scenarios/ScenarioInsightsPanel";
 import { generateNarrative } from "../services/narrativeService";
+import { runScenario as runScenarioEngine } from "../services/scenarioEngine";
 import { SCENARIO_CALIBRATION } from "../data/intelligenceData";
 import {
   ScenarioInputs,
@@ -1192,23 +1193,59 @@ export default function Scenarios() {
     if (paths) setCustomPaths(paths);
   };
 
-  const handleCustomRun = () => {
+  const handleCustomRun = async () => {
     const parsed = parseDSL(dslText);
     if (!parsed.ok && parsed.errors.some((e) => e.startsWith("Invalid") || e.includes("must be"))) return;
     setCustomRunning(true);
     setCustomResultId(null);
     // Scroll to result area immediately so the skeleton is visible
     setTimeout(() => customResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-    const duration = customMode === "deterministic" ? 1800 : 3200;
+
+    const seed = Math.floor(Math.random() * 9999) + 1;
+    const minSkeletonMs = 600; // keep a brief skeleton so very-fast runs don't flicker
+    const startedAt = performance.now();
+
+    // Route through the scenario engine. Deterministic stays client-side;
+    // Monte Carlo hits /api/scenarios/run for real NumPy-vectorised paths.
+    const engineResult = await runScenarioEngine({
+      inputs:  formInputs,
+      mode:    customMode,
+      paths:   customPaths,
+      seed,
+      baseECL: liveBaseECL,
+    });
+
+    // buildRun owns the narrative envelope (shapley, top lessees, key findings).
+    // We seed it with the engine's ECL so the entire result is consistent.
+    const newRun = buildRun(
+      customName || "Custom Scenario",
+      formInputs,
+      customMode,
+      customPaths,
+      seed,
+      null,
+      engineResult.ecl,
+      liveStage3Lessees ?? STAGE3_LESSEES,
+    );
+
+    // Overwrite the placeholder MC bounds with real server-computed values
+    // when we actually got them from python-numpy.
+    if (customMode === "montecarlo" && engineResult.p5 != null && engineResult.p95 != null) {
+      newRun.p5 = engineResult.p5;
+      newRun.p95 = engineResult.p95;
+    }
+    // Stamp the engine used so the UI can show provenance.
+    (newRun as ScenarioRunResult & { engine?: string }).engine = engineResult.engine;
+    if (branchFromId) { (newRun as ScenarioRunResult).parentId = branchFromId; }
+
+    const elapsed = performance.now() - startedAt;
+    const remainingSkeletonMs = Math.max(0, minSkeletonMs - elapsed);
     setTimeout(() => {
-      const seed = Math.floor(Math.random() * 9999) + 1;
-      const newRun = buildRun(customName || "Custom Scenario", formInputs, customMode, customPaths, seed, null, computeECLFromBase(liveBaseECL, formInputs), liveStage3Lessees ?? STAGE3_LESSEES);
-      if (branchFromId) { (newRun as ScenarioRunResult).parentId = branchFromId; }
       setRuns((prev) => [newRun, ...prev]);
       setCustomResultId(newRun.id);
       setCustomRunning(false);
       setBranchFromId(null);
-    }, duration);
+    }, remainingSkeletonMs);
   };
 
   // Apply pre-fill from Intelligence deep-link

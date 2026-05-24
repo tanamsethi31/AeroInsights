@@ -57,6 +57,7 @@ Specifically:
 
 ### When to revisit
 - If Monte Carlo scenarios start exceeding ~2 seconds client-side for real (1,000+ lease) portfolios → add a `/api/scenarios/run.py` Vercel Function. Single function, not a service.
+  - **Status (2026-05-24): preemptively built.** See `api/scenarios/run.py` (Vercel Python Function, NumPy-vectorised MC, 8/8 parity tests passing). The client-side MC was theatrical (`computeMCRange` multiplied ECL by fixed factors with seeded noise); the Python function replaces it with real path simulation. Frontend routing via `src/app/services/scenarioEngine.ts`: deterministic stays client-side (~1 ms); MC goes to the Function (~50 k paths in <200 ms warm). Falls back to a deterministic-derived synthetic spread tagged `client-fallback` if the server is unreachable. Does **not** reverse the broader ADR — still a single function, not a service.
 - If the team hires a dedicated Python risk engineer who owns the ECL model → revisit then, building fresh against the live Supabase schema.
 
 ## References
