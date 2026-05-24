@@ -6,16 +6,24 @@
 
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
-| 0 | 5 | 4 | 0 | 1 | 80% |
+| 0 | 5 | 5 | 0 | 0 | 100% |
 | 1 | 10 | 0 | 0 | 10 | 0% |
 | 2 | 6 | 0 | 0 | 6 | 0% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **4** | **0** | **37** | **9.8%** |
+| **Total** | **41** | **5** | **0** | **36** | **12.2%** |
 
 ## Completed Tasks
+
+### T-0.3 — Canonicalize Portfolio vs Org scoping (Phase A, 2026-05-24)
+- **Discovery during survey:** zero `portfolios` table existed (my prior claim was wrong); `PortfolioContext` was pure in-memory; `PortfolioHub.tsx` still pointed at `${API_BASE}/portfolios` on dead FastAPI — **third hidden FastAPI bug closed**.
+- ADR-002 written documenting "many portfolios per tenant" decision with a 3-phase rollout (A: schema + minimal wiring now; B: per-table `portfolio_id` columns during Phase 1 ingestion migrations; C: ~129 hook query rewrites at Phase 1 close).
+- Migration `20260524120000_portfolios_table.sql` applied to live Supabase via MCP: created `portfolios` table (id, org_id, name, kind in (live/sandbox/abs/jv), slug, archived_at) with RLS, added `uploads.portfolio_id` with FK + backfilled existing rows to a per-org "Default Portfolio", added compound `(org_id, portfolio_id)` index on `uploads`.
+- `PortfolioContext` now persists `activePortfolioId` to localStorage so refresh survives.
+- `PortfolioHub.tsx` reads `portfolios` table from Supabase (not dead FastAPI).
+- `UploadWizard` + `ReviewImportStep` extended with optional `portfolioId` prop. When absent (first-time onboarding), they create a new portfolio named after the file and report the new id via `onComplete(uploadId, count, portfolioId)`. PortfolioHub uses that to set the new portfolio active before redirecting to dashboard.
 
 ### T-0.5 — Per-lease IFRS-9 ECL engine on Supabase (2026-05-24)
 - Sibling to T-0.4. Delegated to a `general-purpose` subagent with a self-contained prompt; agent honoured every constraint (no edits outside `api/risk-engine/`, no commit, no deploy, lazy-import `supabase` so tests run on minimal env).

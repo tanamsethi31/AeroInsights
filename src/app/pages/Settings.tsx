@@ -314,7 +314,11 @@ export default function Settings() {
               <UploadWizard
                 orgId={orgId}
                 onClose={() => setShowImportWizard(false)}
-                onComplete={() => setShowImportWizard(false)}
+                onComplete={(_uploadId, _count, _portfolioId) => {
+                  // Settings stays inside whatever portfolio context was
+                  // active; the new portfolio is selectable from PortfolioHub.
+                  setShowImportWizard(false);
+                }}
               />
             )}
             <Card

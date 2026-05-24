@@ -9,13 +9,24 @@ import { suggestMapping } from "../../lib/columnMapper";
 
 interface UploadWizardProps {
   orgId: string;
+  /**
+   * Existing portfolio to associate the upload with. If omitted (typical for
+   * first-time onboarding) the wizard creates a new portfolio named after
+   * the file and reports the new portfolio_id via onComplete (ADR-002).
+   */
+  portfolioId?: string;
   onClose: () => void;
-  onComplete: (uploadId: string, importedCount: number) => void;
+  /**
+   * Fired when the import commits. `portfolioId` is the existing or
+   * newly-created portfolio the upload is bound to — callers should set it
+   * as the active portfolio (PortfolioHub does this).
+   */
+  onComplete: (uploadId: string, importedCount: number, portfolioId: string) => void;
 }
 
 type Step = "drop" | "map" | "review";
 
-export function UploadWizard({ orgId, onClose, onComplete }: UploadWizardProps) {
+export function UploadWizard({ orgId, portfolioId, onClose, onComplete }: UploadWizardProps) {
   const [step, setStep] = React.useState<Step>("drop");
   const [headers, setHeaders] = React.useState<string[]>([]);
   const [rows, setRows] = React.useState<Record<string, string>[]>([]);
@@ -118,6 +129,7 @@ export function UploadWizard({ orgId, onClose, onComplete }: UploadWizardProps) 
                   )}
                   <ReviewImportStep
                     orgId={orgId}
+                    portfolioId={portfolioId}
                     filename={filename}
                     mapping={mapping}
                     rows={rows}

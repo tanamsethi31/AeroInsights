@@ -10,10 +10,7 @@ import {
 } from "../contexts/PortfolioContext";
 import { UploadWizard } from "../components/upload/UploadWizard";
 import { useData } from "../contexts/DataContext";
-
-const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
-  "http://localhost:8000/api/v1";
+import { supabase } from "../lib/supabase";
 
 // ─── Portfolio card (for existing portfolios) ─────────────────────────────────
 
@@ -105,27 +102,38 @@ export default function PortfolioHub() {
   const sampleBgRef = useRef<HTMLDivElement>(null);
   const uploadBgRef = useRef<HTMLDivElement>(null);
 
-  // Fetch user's custom portfolios
+  // Fetch user's portfolios from Supabase (per ADR-002).
   useEffect(() => {
+    if (!orgId) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
-      try {
-        const token = await getAccessTokenSilently();
-        const res = await fetch(`${API_BASE}/portfolios`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok && !cancelled) {
-          const data: Portfolio[] = await res.json();
-          setPortfolios(data);
-        }
-      } catch {
-        // Backend not available or endpoint doesn't exist yet — show empty state
-      } finally {
-        if (!cancelled) setLoading(false);
+      const { data, error } = await supabase
+        .from("portfolios")
+        .select("id, name, created_at, kind, slug")
+        .eq("org_id", orgId)
+        .is("archived_at", null)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (error) {
+        console.warn("[PortfolioHub] supabase load failed", error);
+      } else if (data) {
+        // Decorate with aircraft_count by counting assets per portfolio.
+        // assets.portfolio_id arrives in Phase B; for now fall back to 0.
+        const portfolios: Portfolio[] = data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          aircraft_count: 0,
+          created_at: p.created_at,
+        }));
+        setPortfolios(portfolios);
       }
+      setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [getAccessTokenSilently]);
+  }, [orgId]);
 
   function handleSample() {
     setActivePortfolio(SAMPLE_PORTFOLIO);
@@ -147,8 +155,23 @@ export default function PortfolioHub() {
         <UploadWizard
           orgId={orgId}
           onClose={() => setShowCreateModal(false)}
-          onComplete={() => {
+          onComplete={async (_uploadId, _count, newPortfolioId) => {
             setShowCreateModal(false);
+            // Hydrate the new portfolio row so the dashboard inherits a real
+            // active selection — ADR-002 Phase A.
+            const { data } = await supabase
+              .from("portfolios")
+              .select("id, name, created_at")
+              .eq("id", newPortfolioId)
+              .single();
+            if (data) {
+              setActivePortfolio({
+                id: data.id,
+                name: data.name,
+                aircraft_count: 0,
+                created_at: data.created_at,
+              });
+            }
             navigate("/", { replace: true });
           }}
         />

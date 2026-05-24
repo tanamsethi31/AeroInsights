@@ -44,11 +44,11 @@ Establishes the foundations every subsequent phase inherits. Must be completed f
 - **Known gaps mapped to follow-up tasks:** T-1.5 (IFRS-9 param ingestion · linear vs survival PD), T-1.6 (SICR triggers · naive stage assignment), T-3.1/T-3.2 (per-lease writeback), T-3.4 (audit-log emission on snapshot writes), T-4.1 (JWT-based auth), T-5.4 (currency conversion · assumes USD). See `api/risk-engine/README.md` § Known gaps.
 
 ### T-0.3 — Canonicalize Portfolio vs Org scoping
-- **Status:** TODO
-- **Files affected:** `src/app/contexts/PortfolioContext.tsx`, `src/app/hooks/usePortfolioData.ts`, all hooks under `src/app/hooks/`, all Supabase migrations
+- **Status:** DONE (2026-05-24, Phase A only — Phase B/C continue inside Phase 1)
+- **Files affected:** `docs/ADR-002-multi-portfolio-scoping.md`, `supabase/migrations/20260524120000_portfolios_table.sql`, `src/app/contexts/PortfolioContext.tsx`, `src/app/pages/PortfolioHub.tsx`, `src/app/pages/Settings.tsx`, `src/app/components/upload/UploadWizard.tsx`, `src/app/components/upload/ReviewImportStep.tsx`
 - **Depends on:** T-0.1
-- **Why:** Today `org_id` filters every analytical table, but PRD requires multi-portfolio per tenant. Either commit to one-portfolio-per-tenant or add `portfolio_id` to every analytical table. The `portfolios` table exists but most hooks key on `org_id`.
-- **Estimated effort:** 2-3 days
+- **Why:** Investigation revealed (a) NO `portfolios` table existed — my earlier claim was wrong; (b) `PortfolioContext` was pure in-memory state; (c) `PortfolioHub.tsx` was the THIRD hidden FastAPI-removal bug, hitting `${API_BASE}/portfolios` on `localhost:8000/api/v1`. PRD demands multi-portfolio per tenant (balance-sheet / ABS / JV / sandbox); real customers need analytical scope tighter than org. ADR-002 captures the decision and a 3-phase roll-out so the schema gets `portfolio_id` for free during the Phase 1 ingestion migrations instead of expensive retrofits.
+- **Outcome (Phase A):** `portfolios` table live in Supabase (with backfill of a "Default Portfolio" per org). `uploads.portfolio_id` column added + indexed. `PortfolioContext` persists active selection to localStorage so refresh survives. `PortfolioHub` reads from Supabase instead of dead FastAPI. `UploadWizard` creates a new portfolio at first import (named after the file) and reports the new id via `onComplete` so PortfolioHub can set it active. ADR-002 documents Phase B (per-table column additions during Phase 1 ingestion migrations) and Phase C (~129 hook query rewrites at Phase 1 close).
 
 ---
 

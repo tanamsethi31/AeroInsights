@@ -5,11 +5,13 @@ import { supabase } from "../../lib/supabase";
 
 interface ReviewImportStepProps {
   orgId: string;
+  /** ADR-002: if absent, the importer creates a new portfolio named after the file. */
+  portfolioId?: string;
   filename: string;
   mapping: Record<string, string | null>;
   rows: Record<string, string>[];
   columnMap: Record<string, string | null>;
-  onComplete: (uploadId: string, importedCount: number) => void;
+  onComplete: (uploadId: string, importedCount: number, portfolioId: string) => void;
   onError: (message: string) => void;
 }
 
@@ -109,6 +111,7 @@ function parseRows(rows: Record<string, string>[], mapping: Record<string, strin
 
 export function ReviewImportStep({
   orgId,
+  portfolioId,
   filename,
   mapping,
   rows,
@@ -128,10 +131,38 @@ export function ReviewImportStep({
     setIsImporting(true);
 
     try {
-      // 1. Create upload record
+      // 0. Resolve portfolio (ADR-002). If the caller didn't pass one, create a
+      // new portfolio named after the file. Slug is the timestamp so collisions
+      // are impossible within an org. Caller (PortfolioHub) will set this as
+      // the active portfolio after onComplete fires.
+      let effectivePortfolioId: string;
+      if (portfolioId) {
+        effectivePortfolioId = portfolioId;
+      } else {
+        const baseName = filename.replace(/\.[^.]+$/, "").trim() || "Imported portfolio";
+        const slug = `import-${Date.now().toString(36)}`;
+        const { data: newPortfolio, error: portfolioError } = await supabase
+          .from("portfolios")
+          .insert({ org_id: orgId, name: baseName, kind: "live", slug })
+          .select("id")
+          .single();
+        if (portfolioError || !newPortfolio) {
+          throw new Error(portfolioError?.message ?? "Failed to create portfolio");
+        }
+        effectivePortfolioId = newPortfolio.id;
+      }
+
+      // 1. Create upload record (now portfolio-scoped)
       const { data: upload, error: uploadError } = await supabase
         .from("uploads")
-        .insert({ org_id: orgId, filename, status: "processing", column_map: columnMap, row_count: valid.length })
+        .insert({
+          org_id: orgId,
+          portfolio_id: effectivePortfolioId,
+          filename,
+          status: "processing",
+          column_map: columnMap,
+          row_count: valid.length,
+        })
         .select("id")
         .single();
 
@@ -216,7 +247,7 @@ export function ReviewImportStep({
       // 6. Mark upload complete
       await supabase.from("uploads").update({ status: "complete" }).eq("id", uploadId);
 
-      onComplete(uploadId, valid.length);
+      onComplete(uploadId, valid.length, effectivePortfolioId);
     } catch (err) {
       onError((err as Error).message);
     } finally {
