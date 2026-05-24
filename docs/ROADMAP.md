@@ -80,11 +80,11 @@ The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 she
 - **Unlocks:** T-2.4 (real counterparty profiles)
 
 ### T-1.3 — Ingest Aircraft Register sheet fully
-- **Status:** TODO
-- **Files affected:** `src/app/components/upload/ReviewImportStep.tsx`, `supabase/migrations/` (extend `assets` table)
+- **Status:** DONE (2026-05-24) — assets table; leases ingest pending next slice
+- **Files affected:** `supabase/migrations/20260524140000_aircraft_register_ingest.sql`, `src/app/services/portfolioIngest.ts`, `src/app/utils/excelParser.ts` (handler already shipped in T-1.1), `src/app/components/upload/MultiSheetReviewStep.tsx`, `src/app/types/portfolio.ts`, `src/app/data/mockPortfolioData.ts`
 - **Depends on:** T-1.1
-- **Why:** Aircraft Register has registration, MSN, type, manufacturer, vintage, family, operator, country, current MV, EAD, monthly rent, lease term remaining, part-out value. Today only ~5 of these are ingested. Fleet tab and valuation calculations need the full picture.
-- **Estimated effort:** 1 day
+- **Why:** Aircraft Register sheet carries registration, MSN, type, manufacturer, vintage, family, operator, country, current MV, EAD, monthly rent, lease term remaining, part-out value. Previously we ingested ~5 of 16 cols. Fleet tab + valuation panel + IAS-36 impairment recoverable-amount logic need the full picture.
+- **Outcome:** Migration applied live via Supabase MCP. `assets` table extended with 7 new columns (external_id, family, country, stage, current_mv_usd, part_out_usd) + ADR-002 Phase B `portfolio_id NOT NULL` with backfill. Two partial unique indexes: `(org_id, portfolio_id, external_id)` for rows with AC ID, `(org_id, portfolio_id, msn)` for rows without. `ingestAircraft()` upserts on the appropriate key. `MultiSheetReviewStep` flips Aircraft Register from "ready" to "live". Demo MOCK_ASSETS seeded with realistic family/country/stage/current MV/part-out so the Fleet tab works on mock data too. EAD / monthly rent / lease term remaining are lease-level facts (next slice).
 
 ### T-1.4 — Ingest Security Deposits and Maintenance Reserves
 - **Status:** TODO

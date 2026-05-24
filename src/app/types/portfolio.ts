@@ -3,6 +3,8 @@
 export interface Asset {
   id: string;
   org_id: string;
+  /** ADR-002 Phase B: scope every analytical row to a portfolio. */
+  portfolio_id: string;
   upload_id: string | null;
   registration: string;
   msn: string;
@@ -10,6 +12,15 @@ export interface Asset {
   manufacturer: string | null;
   vintage: number | null;
   current_operator: string | null;
+  // ── T-1.3 ingested columns ──────────────────────────────────────────────
+  external_id: string | null;
+  family: string | null;
+  country: string | null;
+  stage: 1 | 2 | 3 | null;
+  /** Current Market Value in USD (absolute, parser expands Excel "$M"). */
+  current_mv_usd: number | null;
+  /** Part-out / teardown floor in USD. */
+  part_out_usd: number | null;
   created_at: string;
 }
 

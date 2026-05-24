@@ -86,7 +86,7 @@ export function MultiSheetReviewStep({
       });
     }
     summarise("Lessee Profiles",       workbook.sheets.lessees,         "live");
-    summarise("Aircraft Register",     workbook.sheets.aircraft,        "ready");
+    summarise("Aircraft Register",     workbook.sheets.aircraft,        "live");
     summarise("Lease Register",        workbook.sheets.leases,          "ready");
     // Other sheets land in subsequent Phase 1 slices.
     return out;

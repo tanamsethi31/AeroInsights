@@ -7,15 +7,27 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 2 | 0 | 8 | 20% |
+| 1 | 10 | 3 | 0 | 7 | 30% |
 | 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **8** | **0** | **33** | **19.5%** |
+| **Total** | **41** | **9** | **0** | **32** | **22.0%** |
 
 ## Completed Tasks
+
+### T-1.3 — Aircraft Register full ingestion (2026-05-24)
+- Migration `20260524140000_aircraft_register_ingest.sql` applied live via Supabase MCP:
+  - `assets.portfolio_id NOT NULL` (ADR-002 Phase B continued, backfilled to per-org Default Portfolio).
+  - 7 new columns: external_id, family, country, stage (1/2/3), current_mv_usd, part_out_usd. (`registration`, `msn`, `aircraft_type`, `manufacturer`, `vintage`, `current_operator` were already there.)
+  - Two partial unique indexes: `(org_id, portfolio_id, external_id)` and `(org_id, portfolio_id, msn)` — disjoint row sets, both upserts supported.
+- `src/app/services/portfolioIngest.ts` adds `ingestAircraft()` with split-batch upserts on the appropriate key. Plugged into `ingestWorkbook` after lessees in dependency order.
+- `src/app/types/portfolio.ts` Asset interface extended with all new columns.
+- `src/app/data/mockPortfolioData.ts` MOCK_ASSETS seeded with realistic family/country/stage/current MV (USD)/part-out values per aircraft. Demo experience now mirrors live-upload experience for the Fleet tab.
+- `src/app/components/upload/MultiSheetReviewStep.tsx` flips Aircraft Register status from "ready" (parsed) to "live" (written). UI now shows "X rows" instead of "Parsed (writer pending)".
+- Phase 1: 2/10 → 3/10 (30%). Total: 8/41 → 9/41 (22.0%).
+- Lease Register ingest still pending — it depends on lessees + aircraft FK lookup; lands as a follow-up. EAD / monthly rent / lease term remaining are lease-level facts not stored on assets.
 
 ### T-2.4 — Real counterparty profiles (first cut, 2026-05-24)
 - `src/app/types/portfolio.ts` Lessee interface extended with all 14 T-1.2 columns + `portfolio_id` + `carrier_segment`.

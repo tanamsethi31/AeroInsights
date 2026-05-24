@@ -16,6 +16,7 @@
 
 import { supabase } from "../lib/supabase";
 import type {
+  ParsedAircraftRow,
   ParsedLesseeRow,
   ParsedWorkbook,
 } from "../utils/excelParser";
@@ -137,21 +138,117 @@ function toDbRow(r: ParsedLesseeRow, ctx: CommonContext) {
   };
 }
 
+// ─── Aircraft Register ingester (T-1.3) ─────────────────────────────────────
+//
+// Excel columns → assets columns:
+//   AC ID         → external_id           (upsert key when present)
+//   Registration  → registration
+//   MSN           → msn                   (upsert key when external_id null)
+//   Type          → aircraft_type
+//   Manufacturer  → manufacturer
+//   Vintage       → vintage
+//   Family        → family
+//   Operator      → current_operator
+//   Country       → country
+//   Stage         → stage
+//   Current MV    → current_mv_usd        (parser already expanded $M → $)
+//   Part-Out      → part_out_usd          (parser already expanded $M → $)
+//
+// EAD / Monthly Rent / Lease Term Remaining are NOT stored on assets — those
+// are lease-level facts written by the leases ingester (T-1.3 follow-up).
+
+export async function ingestAircraft(
+  rows: ParsedAircraftRow[],
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet:     "Aircraft Register",
+    attempted: rows.length,
+    inserted:  0,
+    updated:   0,
+    skipped:   0,
+    errors:    [],
+  };
+
+  const valid = rows.filter((r) => {
+    if (r._errors.length > 0) {
+      result.errors.push(`Row ${r._rowIndex}: ${r._errors.join("; ")}`);
+      result.skipped++;
+      return false;
+    }
+    return true;
+  });
+  if (valid.length === 0) return result;
+
+  // Two upsert keys exist in the schema (migration 20260524140000):
+  //   external_id partial unique  → rows WITH external_id
+  //   msn partial unique           → rows WITHOUT external_id
+  // Split the batch so each side gets the right onConflict.
+
+  const withExt    = valid.filter((r) => r.external_id);
+  const withoutExt = valid.filter((r) => !r.external_id);
+
+  if (withExt.length > 0) {
+    const payload = withExt.map((r) => toAssetDbRow(r, ctx));
+    const { data, error } = await supabase
+      .from("assets")
+      .upsert(payload, {
+        onConflict: "org_id,portfolio_id,external_id",
+        ignoreDuplicates: false,
+      })
+      .select("id");
+    if (error) {
+      result.errors.push(`Upsert (with external_id): ${error.message}`);
+    } else if (data) {
+      result.inserted += data.length;
+    }
+  }
+
+  if (withoutExt.length > 0) {
+    const payload = withoutExt.map((r) => toAssetDbRow(r, ctx));
+    const { data, error } = await supabase
+      .from("assets")
+      .upsert(payload, {
+        onConflict: "org_id,portfolio_id,msn",
+        ignoreDuplicates: false,
+      })
+      .select("id");
+    if (error) {
+      result.errors.push(`Upsert (by MSN): ${error.message}`);
+    } else if (data) {
+      result.inserted += data.length;
+    }
+  }
+
+  return result;
+}
+
+function toAssetDbRow(r: ParsedAircraftRow, ctx: CommonContext) {
+  return {
+    org_id:           ctx.orgId,
+    portfolio_id:     ctx.portfolioId,
+    upload_id:        ctx.uploadId,
+    external_id:      r.external_id,
+    registration:     r.registration,
+    msn:              r.msn,
+    aircraft_type:    r.aircraft_type,
+    manufacturer:     r.manufacturer,
+    vintage:          r.vintage,
+    family:           r.family,
+    current_operator: r.operator,
+    country:          r.country,
+    stage:            r.stage,
+    current_mv_usd:   r.current_mv_usd,
+    part_out_usd:     r.part_out_usd,
+  };
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 //
-// Currently runs only the lessees ingester. Subsequent Phase 1 slices add the
-// aircraft, leases, sd/mr, ifrs9, sicr, scenarios, jurisdiction-lgd
-// ingesters in dependency order:
-//   1. lessees    (parent for leases)
-//   2. aircraft   (parent for leases)
-//   3. leases     (depends on lessees + aircraft)
-//   4. sd/mr      (depends on leases)
-//   5. ifrs9 ecl  (org-scoped settings)
-//   6. sicr       (org-scoped settings)
-//   7. stress scenarios (org-scoped)
-//   8. jurisdiction lgd (org-scoped)
-//
-// Each new sheet plugs into the switch below.
+// Runs lessees + aircraft. Subsequent Phase 1 slices plug in leases (which
+// depends on both lessees and aircraft for FK lookup), SD/MR (depends on
+// leases), then the org-scoped settings sheets (ifrs9, sicr, stress
+// scenarios, jurisdiction LGD).
 
 export async function ingestWorkbook(
   workbook: ParsedWorkbook,
@@ -163,7 +260,11 @@ export async function ingestWorkbook(
     ctx.onProgress?.("Lessee Profiles");
     sheetResults.push(await ingestLessees(workbook.sheets.lessees, ctx));
   }
-  // T-1.3 aircraft ingester lands in next slice
+  if (workbook.sheets.aircraft) {
+    ctx.onProgress?.("Aircraft Register");
+    sheetResults.push(await ingestAircraft(workbook.sheets.aircraft, ctx));
+  }
+  // T-1.3 leases ingester (depends on lessees + aircraft FK lookup) — next slice
   // T-1.4 sd/mr ingester
   // T-1.5 ifrs9 ecl params
   // T-1.6 sicr triggers

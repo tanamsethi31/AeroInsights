@@ -4,17 +4,22 @@
 
 import type { Asset, Lessee, Lease, Provision } from "../types/portfolio";
 
+// Demo assets seeded with realistic T-1.3 fields (family, country, stage,
+// current MV in absolute USD, part-out floor) so the Fleet tab / Aircraft
+// valuation panel render meaningfully off mock data. Real uploads overwrite
+// these via the multi-sheet ingester.
+const DEMO_ASSET_BASE = { org_id: "demo", portfolio_id: "demo-portfolio", upload_id: null, created_at: "2024-01-01T00:00:00Z" };
 export const MOCK_ASSETS: Asset[] = [
-  { id: "mock-a1",  org_id: "demo", upload_id: null, registration: "VT-IYC",  msn: "9218",  aircraft_type: "A320neo",    manufacturer: "Airbus",  vintage: 2019, current_operator: "IndiGo Airlines",      created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a2",  org_id: "demo", upload_id: null, registration: "XA-AMX",  msn: "41234", aircraft_type: "B737-800",   manufacturer: "Boeing",  vintage: 2020, current_operator: "Aeromexico",           created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a3",  org_id: "demo", upload_id: null, registration: "A6-ECE",  msn: "62047", aircraft_type: "B777-300ER", manufacturer: "Boeing",  vintage: 2021, current_operator: "Emirates",             created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a4",  org_id: "demo", upload_id: null, registration: "4R-ALB",  msn: "1728",  aircraft_type: "A330-300",   manufacturer: "Airbus",  vintage: 2015, current_operator: "SriLankan Airlines",   created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a5",  org_id: "demo", upload_id: null, registration: "EI-HXP",  msn: "67892", aircraft_type: "B737 MAX 8", manufacturer: "Boeing",  vintage: 2022, current_operator: "Ryanair",              created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a6",  org_id: "demo", upload_id: null, registration: "F-HTYR",  msn: "0378",  aircraft_type: "A350-900",   manufacturer: "Airbus",  vintage: 2018, current_operator: "Air France",           created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a7",  org_id: "demo", upload_id: null, registration: "PR-YRJ",  msn: "10442", aircraft_type: "A320neo",    manufacturer: "Airbus",  vintage: 2021, current_operator: "Azul Brazilian Airlines", created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a8",  org_id: "demo", upload_id: null, registration: "C-GTSA",  msn: "8841",  aircraft_type: "A321neo",    manufacturer: "Airbus",  vintage: 2019, current_operator: "Air Transat",          created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a9",  org_id: "demo", upload_id: null, registration: "9V-SMB",  msn: "0521",  aircraft_type: "A350-900",   manufacturer: "Airbus",  vintage: 2023, current_operator: "Singapore Airlines",   created_at: "2024-01-01T00:00:00Z" },
-  { id: "mock-a10", org_id: "demo", upload_id: null, registration: "D-AIVM",  msn: "55124", aircraft_type: "A220-300",   manufacturer: "Airbus",  vintage: 2022, current_operator: "Lufthansa",            created_at: "2024-01-01T00:00:00Z" },
+  { ...DEMO_ASSET_BASE, id: "mock-a1",  external_id: "AC-001", registration: "VT-IYC", msn: "9218",  aircraft_type: "A320neo",    manufacturer: "Airbus", vintage: 2019, current_operator: "IndiGo Airlines",         family: "Narrowbody", country: "India",      stage: 3, current_mv_usd:  48_000_000, part_out_usd: 12_400_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a2",  external_id: "AC-002", registration: "XA-AMX", msn: "41234", aircraft_type: "B737-800",   manufacturer: "Boeing", vintage: 2020, current_operator: "Aeromexico",              family: "Narrowbody", country: "Mexico",     stage: 3, current_mv_usd:  42_500_000, part_out_usd: 11_100_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a3",  external_id: "AC-003", registration: "A6-ECE", msn: "62047", aircraft_type: "B777-300ER", manufacturer: "Boeing", vintage: 2021, current_operator: "Emirates",                family: "Widebody",   country: "UAE",        stage: 1, current_mv_usd: 140_000_000, part_out_usd: 28_000_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a4",  external_id: "AC-004", registration: "4R-ALB", msn: "1728",  aircraft_type: "A330-300",   manufacturer: "Airbus", vintage: 2015, current_operator: "SriLankan Airlines",      family: "Widebody",   country: "Sri Lanka",  stage: 2, current_mv_usd:  62_000_000, part_out_usd: 18_500_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a5",  external_id: "AC-005", registration: "EI-HXP", msn: "67892", aircraft_type: "B737 MAX 8", manufacturer: "Boeing", vintage: 2022, current_operator: "Ryanair",                 family: "Narrowbody", country: "Ireland",    stage: 1, current_mv_usd:  52_000_000, part_out_usd: 13_500_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a6",  external_id: "AC-006", registration: "F-HTYR", msn: "0378",  aircraft_type: "A350-900",   manufacturer: "Airbus", vintage: 2018, current_operator: "Air France",              family: "Widebody",   country: "France",     stage: 1, current_mv_usd: 138_000_000, part_out_usd: 32_000_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a7",  external_id: "AC-007", registration: "PR-YRJ", msn: "10442", aircraft_type: "A320neo",    manufacturer: "Airbus", vintage: 2021, current_operator: "Azul Brazilian Airlines", family: "Narrowbody", country: "Brazil",     stage: 2, current_mv_usd:  47_500_000, part_out_usd: 12_400_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a8",  external_id: "AC-008", registration: "C-GTSA", msn: "8841",  aircraft_type: "A321neo",    manufacturer: "Airbus", vintage: 2019, current_operator: "Air Transat",             family: "Narrowbody", country: "Canada",     stage: 2, current_mv_usd:  55_000_000, part_out_usd: 14_200_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a9",  external_id: "AC-009", registration: "9V-SMB", msn: "0521",  aircraft_type: "A350-900",   manufacturer: "Airbus", vintage: 2023, current_operator: "Singapore Airlines",      family: "Widebody",   country: "Singapore",  stage: 1, current_mv_usd: 145_000_000, part_out_usd: 33_500_000 },
+  { ...DEMO_ASSET_BASE, id: "mock-a10", external_id: "AC-010", registration: "D-AIVM", msn: "55124", aircraft_type: "A220-300",   manufacturer: "Airbus", vintage: 2022, current_operator: "Lufthansa",               family: "Regional",   country: "Germany",    stage: 1, current_mv_usd:  40_000_000, part_out_usd: 10_500_000 },
 ];
 
 // Demo lessees include realistic T-1.2 fields so the live SimpleLesseePanel
