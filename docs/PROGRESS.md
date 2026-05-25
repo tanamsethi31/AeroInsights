@@ -8,14 +8,22 @@
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
 | 1 | 10 | 10 | 0 | 0 | 100% |
-| 2 | 6 | 1 | 0 | 5 | 17% |
+| 2 | 6 | 2 | 0 | 4 | 33% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **16** | **0** | **25** | **39.0%** |
+| **Total** | **41** | **17** | **0** | **24** | **41.5%** |
 
 ## Completed Tasks
+
+### T-2.3 — Jurisdictions tab wired to ingested data (2026-05-24)
+- New `useJurisdictions` hook fetches `jurisdiction_lgd_overlays` rows for active portfolio.
+- `mergeJurisdictions()` overlays ingested numeric fields (CTC score, enforceability, P50/P90 reposs, success prob, precedent count, uncertainty band) on the hardcoded baseline. Hardcoded entries keep providing narrative + flag + sanctions text + AWG alerts (DB doesn't track those). DB-only codes synthesise into 🌐-flag entries.
+- `Jurisdictions.tsx` swaps direct `jurisdictions` import for the hook. Subtitle indicates "overlaid with your portfolio data" when ingestion present.
+- Consumers reading real ingested data: 9 → 10 (of 10 visible spots — Counterparties hardcoded LesseeProfile partial retire still pending).
+- Phase 2: 1/6 → 2/6 (33%). Total: 16/41 → 17/41 (41.5%).
+- Follow-up: LeaseGenerator, LeasePricingTab, RestructuringTab, exportService still import raw `jurisdictions` const — migrate to the hook in a sweep slice.
 
 ### T-1.9 + T-1.10 — Validation inspector + re-import diff (2026-05-24)
 - `previewIngest()` added to `portfolioIngest.ts`. For each sheet, queries existing rows by the same unique key the ingester upserts on (`external_id` for lessees/aircraft/leases, `slug` for stress/restructuring, `code` for jurisdiction, presence-check for IFRS-9/SICR singletons). Returns `{ new, update, invalid }` per sheet. No writes.

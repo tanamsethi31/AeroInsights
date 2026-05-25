@@ -156,11 +156,11 @@ Today the Intelligence tab shows IndiGo, Aeromexico, SriLankan etc. regardless o
 - **Estimated effort:** 1 day
 
 ### T-2.3 — Jurisdiction Watch driven by portfolio
-- **Status:** TODO
-- **Files affected:** `src/app/data/intelligenceData.ts` (deprecate `JURISDICTION_EVENTS`), `src/app/services/useNewsFeed.ts`, `api/signals/news.ts`
-- **Depends on:** T-1.2, T-1.3
-- **Why:** `JURISDICTION_EVENTS` is hardcoded for 6 countries. Replace with: fetch jurisdiction news filtered by the user's actual lessee countries; aggregate portfolio exposure from real leases.
-- **Estimated effort:** 2 days
+- **Status:** DONE (Jurisdictions tab data wire, 2026-05-24) — news-feed jurisdiction events tab still uses hardcoded JURISDICTION_EVENTS; that piece moves into Phase 2 closeout when news enrichment lands.
+- **Files affected:** `src/app/hooks/useJurisdictions.ts` (new), `src/app/pages/Jurisdictions.tsx`
+- **Depends on:** T-1.8
+- **Why:** Jurisdictions tab read 24 hardcoded country profiles from `jurisdictionData.ts`. Now overlays ingested `jurisdiction_lgd_overlays` rows on top of the hardcoded baseline.
+- **Outcome:** `useJurisdictions()` hook fetches DB rows for the active portfolio and `mergeJurisdictions()` overlays them on the hardcoded baseline (numeric fields like CTC score, enforceability, repossession months, success prob, precedent count all come from DB when present; narrative + flag + sanctions text stay from baseline because the DB schema doesn't track them yet). DB-only country codes get synthesised entries with a 🌐 flag. Subtitle indicates "overlaid with your portfolio data" when DB has rows. Jurisdictions page rebuild auto-reflects re-imports. Other consumers (LeaseGenerator, LeasePricingTab, RestructuringTab, exportService) still read the raw `jurisdictions` const directly — they'll migrate to the hook in a follow-up pass.
 
 ### T-2.4 — Real counterparty profile generation
 - **Status:** DONE (first cut, 2026-05-24) — full deletion of hardcoded `LESSEE_PROFILE` deferred until T-1.3 / T-1.4 / scenario history per lessee land

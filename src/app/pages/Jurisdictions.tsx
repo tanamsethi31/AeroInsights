@@ -7,17 +7,24 @@ import { CountryFlag } from "../components/ui/CountryFlag";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Search } from "lucide-react";
 import { useViewMode } from "../contexts/ViewModeContext";
-import { jurisdictions, precedents } from "../components/jurisdictions/jurisdictionData";
+import { precedents } from "../components/jurisdictions/jurisdictionData";
 import { JurisdictionDetail } from "../components/jurisdictions/JurisdictionDetail";
 import { PrecedentTable } from "../components/jurisdictions/PrecedentTable";
 import { PillTabs } from "../components/ui/PillTabs";
+import { useJurisdictions } from "../hooks/useJurisdictions";
 
 const ALL_TABS = ["Profiles", "Repossession Model", "Precedent Database"];
 const EXEC_TABS = ["Profiles"];
 
 export default function Jurisdictions() {
   const { isExecutiveMode } = useViewMode();
-  const [selectedCode, setSelectedCode] = useState(jurisdictions[0].code);
+  // T-2.3 consumer wire — hardcoded baseline + DB overlay from the
+  // jurisdiction_lgd_overlays table (T-1.8 ingest). When a tenant uploads
+  // their workbook with custom jurisdiction parameters, the numeric fields
+  // override here; narrative / flag / sanctions stay from baseline because
+  // the DB schema doesn't track them yet.
+  const { jurisdictions, hasIngested } = useJurisdictions();
+  const [selectedCode, setSelectedCode] = useState(jurisdictions[0]?.code ?? "US");
   const [activeTab, setActiveTab] = useState("Profiles");
   const [search, setSearch] = useState("");
 
@@ -34,7 +41,7 @@ export default function Jurisdictions() {
       jurisdictions.filter((j) =>
         j.country.toLowerCase().includes(search.toLowerCase())
       ),
-    [search]
+    [jurisdictions, search]
   );
 
   const chartData = jurisdictions.filter((j) => j.repossP50 < 100);
@@ -43,7 +50,11 @@ export default function Jurisdictions() {
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <PageHeader
         title="Jurisdictions"
-        subtitle="CTC party status, enforceability scores, repossession models — 30 jurisdictions"
+        subtitle={
+          hasIngested
+            ? `CTC party status, enforceability scores, repossession models — ${jurisdictions.length} jurisdictions (overlaid with your portfolio data)`
+            : `CTC party status, enforceability scores, repossession models — ${jurisdictions.length} jurisdictions`
+        }
       />
 
       {/* Tabs */}
