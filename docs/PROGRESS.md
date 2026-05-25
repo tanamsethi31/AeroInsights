@@ -7,15 +7,23 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 5 | 0 | 5 | 50% |
+| 1 | 10 | 6 | 0 | 4 | 60% |
 | 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **11** | **0** | **30** | **26.8%** |
+| **Total** | **41** | **12** | **0** | **29** | **29.3%** |
 
 ## Completed Tasks
+
+### T-1.6 — SICR triggers configuration ingestion (2026-05-24)
+- Migration `20260524170000_sicr_config.sql` applied live via Supabase MCP. New table `sicr_config` with one row per `(org_id, portfolio_id)`: dpd_enabled, dpd_threshold_days, rating_notches_threshold, country_watchlist_enabled, insolvency_filing_enabled, upgrade_threshold_notches. All NOT NULL with documented defaults + CHECK bounds. RLS + unique constraint.
+- `excelParser.ts` replaces stub `ParsedSicrTriggerRow` with `ParsedSicrConfig` (single scalar row). Handler `parseSicrSheet()` walks the 6 label/value pairs that live in row 2 of the SICR sheet (DPD Enabled / DPD Threshold / Rating Notches / Country WL / Insolvency / Upgrade Threshold). A small `extractIntFromText` helper pulls integers out of "30 days", "≥ 2", "2 notches" strings.
+- `portfolioIngest.ts` adds `ingestSicrConfig()` — upserts on the unique `(org, portfolio)` constraint. Forwards parser soft warnings into the import-review UI.
+- MultiSheetReviewStep adapts single-row shape (rowsTotal=1).
+- Phase 1: 5/10 → 6/10 (60%). Total: 11/41 → 12/41 (29.3%). **7 of 8 canonical sheets** now end-to-end live.
+- Follow-up: `RiskECL → SICR Config` tab still hardcoded; rewire to read/write the new `sicr_config` row in a future slice.
 
 ### T-1.5 — IFRS-9 ECL parameters ingestion (2026-05-24)
 - Migration `20260524160000_ifrs9_parameters.sql` applied live via Supabase MCP. New table `ifrs9_parameters` with one row per `(org_id, portfolio_id)`: discount_rate, lgd_flat, pd_lifetime_multiplier_s2, pd_lifetime_s3_floor, scenario_weight_baseline/adverse/upside. All NOT NULL with documented defaults + CHECK bounds. RLS + unique constraint.

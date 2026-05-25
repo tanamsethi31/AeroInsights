@@ -101,7 +101,17 @@ export function MultiSheetReviewStep({
         status: "live",
       });
     }
-    // T-1.6–T-1.8 sheets land in subsequent Phase 1 slices.
+    if (workbook.sheets.sicrConfig) {
+      const s = workbook.sheets.sicrConfig;
+      out.push({
+        name: "SICR Triggers",
+        rowsTotal: 1,
+        rowsValid: 1,
+        rowsInvalid: s._errors.length,
+        status: "live",
+      });
+    }
+    // T-1.7–T-1.8 sheets land in subsequent Phase 1 slices.
     return out;
   }, [workbook]);
 

@@ -101,11 +101,11 @@ The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 she
 - **Outcome:** Migration applied live via Supabase MCP. New `ifrs9_parameters` table with one row per `(org_id, portfolio_id)` carrying discount_rate, lgd_flat, pd_lifetime_multiplier_s2, pd_lifetime_s3_floor, and three scenario weights (baseline / adverse / upside), all with sensible defaults + CHECK bounds. Parser `parseIfrs9Sheet()` extracts discount_rate from the explicit row + median LGD from the stage summary section; defaults to documented values for weights/multipliers (still footer-encoded in v2026 of the template) and surfaces a soft warning in `_errors` when defaults are used. New `ingestIfrs9Params()` upserts the one row per (org, portfolio). MultiSheetReviewStep shows IFRS 9 ECL parameters as a single-row "live" sheet — total 6 of 8 canonical sheets now end-to-end.
 
 ### T-1.6 — Ingest SICR triggers configuration
-- **Status:** TODO
-- **Files affected:** `supabase/migrations/` (new `sicr_config` table), `src/app/pages/RiskECL.tsx` (SICR Config tab)
+- **Status:** DONE (ingest, 2026-05-24) — RiskECL → SICR Config tab rewire to read/write this row deferred to next slice
+- **Files affected:** `supabase/migrations/20260524170000_sicr_config.sql`, `src/app/utils/excelParser.ts`, `src/app/services/portfolioIngest.ts`, `src/app/components/upload/MultiSheetReviewStep.tsx`
 - **Depends on:** T-1.1
-- **Why:** The Excel sheet has DPD threshold (30 days), rating notches threshold (≥2), country WL flag, insolvency flag, upgrade threshold (2 notches). Today the SICR Config tab is read-only display of hardcoded values. Need editable, persistent SICR thresholds per tenant.
-- **Estimated effort:** 1 day
+- **Why:** The Excel "SICR Triggers" sheet encodes the config as 6 label/value pairs spread across row 2; the rest of the sheet is OUTPUT (per-lessee SICR evaluation), which is recomputable server-side from this config + already-ingested lessee columns. Today the SICR Config tab is read-only with hardcoded values.
+- **Outcome:** Migration applied live via Supabase MCP. New `sicr_config` table with one row per `(org_id, portfolio_id)` carrying dpd_enabled, dpd_threshold_days, rating_notches_threshold, country_watchlist_enabled, insolvency_filing_enabled, upgrade_threshold_notches — all with documented defaults + CHECK bounds. Parser `parseSicrSheet()` walks the row 2 label/value pairs and pulls integers from "30 days" / "≥ 2" / "2 notches" via a small regex helper. Ingester `ingestSicrConfig()` upserts one row per (org, portfolio). Status flipped to live in MultiSheetReviewStep. **7 of 8 canonical sheets** now end-to-end.
 
 ### T-1.7 — Ingest Stress Scenarios sheet
 - **Status:** TODO

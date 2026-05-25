@@ -148,7 +148,16 @@ export interface ParsedIfrs9Params {
   scenario_weight_upside:     number | null;
   _errors:                    string[];
 }
-export type ParsedSicrTriggerRow     = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
+/** T-1.6 — SICR configuration. ONE row per workbook (org + portfolio scalars). */
+export interface ParsedSicrConfig {
+  dpd_enabled:               boolean | null;
+  dpd_threshold_days:        number | null;
+  rating_notches_threshold:  number | null;
+  country_watchlist_enabled: boolean | null;
+  insolvency_filing_enabled: boolean | null;
+  upgrade_threshold_notches: number | null;
+  _errors:                   string[];
+}
 export type ParsedStressScenarioRow  = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
 export type ParsedJurisdictionLgdRow = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
 
@@ -162,7 +171,8 @@ export interface ParsedWorkbook {
     maintenanceReserves?: ParsedMaintenanceReserveRow[];
     /** Single scalar row, not a list — these are one-per-portfolio settings. */
     ifrs9Params?:       ParsedIfrs9Params;
-    sicrTriggers?:      ParsedSicrTriggerRow[];
+    /** Single scalar row, not a list — one-per-portfolio SICR thresholds. */
+    sicrConfig?:        ParsedSicrConfig;
     stressScenarios?:   ParsedStressScenarioRow[];
     jurisdictionLgd?:   ParsedJurisdictionLgdRow[];
   };
@@ -224,8 +234,10 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbook> {
   if (recognised.includes(CANONICAL_SHEETS.ifrs9Ecl)) {
     sheets.ifrs9Params = parseIfrs9Sheet(wb.Sheets[CANONICAL_SHEETS.ifrs9Ecl]);
   }
-  // SICR, Stress Scenarios, Jurisdiction LGD: handlers land in subsequent
-  // Phase 1 slices.
+  if (recognised.includes(CANONICAL_SHEETS.sicrTriggers)) {
+    sheets.sicrConfig = parseSicrSheet(wb.Sheets[CANONICAL_SHEETS.sicrTriggers]);
+  }
+  // Stress Scenarios, Jurisdiction LGD: handlers land in subsequent slices.
 
   return {
     sheets,
@@ -743,4 +755,80 @@ export function parseIfrs9Sheet(
   }
 
   return params;
+}
+
+// ─── SICR Triggers handler (T-1.6) ──────────────────────────────────────────
+//
+// The Excel sheet's config lives entirely in row 2 as label/value pairs
+// spread across the row:
+//   col B "DPD Enabled:"          col C "Yes"
+//   col D "DPD Threshold:"        col E "30 days"
+//   col F "Rating Notches:"       col G "≥ 2"
+//   col H "Country WL:"           col I "Yes"
+//   col J "Insolvency:"           col K "Yes"
+//   col L "Upgrade Threshold:"    col M "2 notches"
+//
+// The rest of the sheet (rows 3+) is an OUTPUT matrix showing per-lessee
+// SICR evaluation — those are recomputed server-side from this config + the
+// already-ingested lessee columns (dpd_days, rating_notches_down, etc.), so
+// we don't ingest them.
+
+function extractIntFromText(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number") return Math.round(v);
+  const s = String(v);
+  // Match the first integer in the string. Handles "30 days", "≥ 2", "2 notches".
+  const m = s.match(/-?\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+export function parseSicrSheet(
+  sheet: XLSX.WorkSheet | undefined,
+): ParsedSicrConfig {
+  const cfg: ParsedSicrConfig = {
+    dpd_enabled:               null,
+    dpd_threshold_days:        null,
+    rating_notches_threshold:  null,
+    country_watchlist_enabled: null,
+    insolvency_filing_enabled: null,
+    upgrade_threshold_notches: null,
+    _errors: [],
+  };
+  if (!sheet) return cfg;
+
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1, raw: true, defval: null,
+  });
+
+  // Find the "Config:" row in the top 5 rows.
+  let configRow: unknown[] | null = null;
+  for (let i = 0; i < Math.min(raw.length, 5); i++) {
+    const row = raw[i] ?? [];
+    const first = String(row[0] ?? "").trim().toLowerCase();
+    if (first.startsWith("config")) { configRow = row; break; }
+  }
+  if (!configRow) {
+    cfg._errors.push("Config row not found — using defaults.");
+    return cfg;
+  }
+
+  // Walk label/value pairs. Each label cell is followed by exactly one value cell.
+  for (let c = 1; c < configRow.length; c++) {
+    const label = String(configRow[c] ?? "").trim().toLowerCase();
+    if (!label.endsWith(":")) continue;
+    const value = configRow[c + 1];
+    if (label.startsWith("dpd enabled"))           cfg.dpd_enabled               = asBool(value);
+    else if (label.startsWith("dpd threshold"))    cfg.dpd_threshold_days        = extractIntFromText(value);
+    else if (label.startsWith("rating notches"))   cfg.rating_notches_threshold  = extractIntFromText(value);
+    else if (label.startsWith("country wl"))       cfg.country_watchlist_enabled = asBool(value);
+    else if (label.startsWith("insolvency"))       cfg.insolvency_filing_enabled = asBool(value);
+    else if (label.startsWith("upgrade threshold")) cfg.upgrade_threshold_notches = extractIntFromText(value);
+  }
+
+  // Soft warnings for any field still null — defaults will apply at write time.
+  if (cfg.dpd_threshold_days        == null) cfg._errors.push("DPD threshold missing — defaulting to 30 days.");
+  if (cfg.rating_notches_threshold  == null) cfg._errors.push("Rating notches threshold missing — defaulting to 2.");
+  if (cfg.upgrade_threshold_notches == null) cfg._errors.push("Upgrade threshold missing — defaulting to 2 notches.");
+
+  return cfg;
 }

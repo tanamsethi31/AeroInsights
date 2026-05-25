@@ -22,6 +22,7 @@ import type {
   ParsedLesseeRow,
   ParsedMaintenanceReserveRow,
   ParsedSecurityDepositRow,
+  ParsedSicrConfig,
   ParsedWorkbook,
 } from "../utils/excelParser";
 
@@ -526,6 +527,53 @@ export async function ingestIfrs9Params(
   return result;
 }
 
+// ─── SICR config ingester (T-1.6) ───────────────────────────────────────────
+//
+// One row per (org, portfolio). Upsert via the unique (org_id, portfolio_id)
+// constraint. Parser-supplied nulls fall back to documented defaults at
+// write time so an incomplete config row still produces a valid record.
+
+export async function ingestSicrConfig(
+  cfg: ParsedSicrConfig,
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet:     "SICR Triggers",
+    attempted: 1,
+    inserted:  0,
+    updated:   0,
+    skipped:   0,
+    errors:    [...cfg._errors],
+  };
+
+  const payload = {
+    org_id:                    ctx.orgId,
+    portfolio_id:              ctx.portfolioId,
+    dpd_enabled:               cfg.dpd_enabled               ?? true,
+    dpd_threshold_days:        cfg.dpd_threshold_days        ?? 30,
+    rating_notches_threshold:  cfg.rating_notches_threshold  ?? 2,
+    country_watchlist_enabled: cfg.country_watchlist_enabled ?? true,
+    insolvency_filing_enabled: cfg.insolvency_filing_enabled ?? true,
+    upgrade_threshold_notches: cfg.upgrade_threshold_notches ?? 2,
+    source_upload_id:          ctx.uploadId,
+    updated_at:                new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("sicr_config")
+    .upsert(payload, {
+      onConflict: "org_id,portfolio_id",
+      ignoreDuplicates: false,
+    })
+    .select("id");
+  if (error) {
+    result.errors.push(`Upsert: ${error.message}`);
+  } else if (data) {
+    result.inserted = data.length;
+  }
+  return result;
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 //
 // Dependency order:
@@ -535,7 +583,8 @@ export async function ingestIfrs9Params(
 //   4. SD         (depends on leases FK lookup)
 //   5. MR         (depends on leases FK lookup)
 //   6. ifrs9 params (org-scoped settings, no deps)
-//   7+ sicr / stress / jurisdiction-lgd — also org-scoped settings, no deps
+//   7. sicr config (org-scoped settings, no deps)
+//   8+ stress / jurisdiction-lgd — also org-scoped settings, no deps
 
 export async function ingestWorkbook(
   workbook: ParsedWorkbook,
@@ -567,7 +616,10 @@ export async function ingestWorkbook(
     ctx.onProgress?.("IFRS 9 ECL parameters");
     sheetResults.push(await ingestIfrs9Params(workbook.sheets.ifrs9Params, ctx));
   }
-  // T-1.6 sicr triggers
+  if (workbook.sheets.sicrConfig) {
+    ctx.onProgress?.("SICR Triggers");
+    sheetResults.push(await ingestSicrConfig(workbook.sheets.sicrConfig, ctx));
+  }
   // T-1.7 stress scenarios
   // T-1.8 jurisdiction lgd
 
