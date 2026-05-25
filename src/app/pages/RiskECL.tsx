@@ -74,6 +74,7 @@ import { computeRollForward } from "../utils/eclRollForward";
 import { RatingPDTab } from "../components/scenarios/RatingPDTab";
 import { computeCreditQualityMatrix } from "../utils/creditQualityMatrix";
 import { ClosePeriodModal } from "../components/risk-ecl/ClosePeriodModal";
+import { PeriodHistoryCard } from "../components/risk-ecl/PeriodHistoryCard";
 
 const tornadoData = [
   { input: "PD Multiplier (Stage 3)", impact: 8.4, dir: "positive" },
@@ -2126,6 +2127,9 @@ export default function RiskECL() {
           Export PDF + JSON
         </button>
       </PageHeader>
+
+      {/* Period History — locked snapshots from ecl_period_snapshots (T-3.2) */}
+      <PeriodHistoryCard />
 
       {/* KPI Strip */}
       <div

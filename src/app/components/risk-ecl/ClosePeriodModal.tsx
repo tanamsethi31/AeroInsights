@@ -23,6 +23,7 @@ export function ClosePeriodModal({ open, onClose, onLocked, liveData }: ClosePer
   const [periodLabel, setPeriodLabel] = useState(currentQuarterLabel);
   const [saving, setSaving]           = useState(false);
   const [done, setDone]               = useState(false);
+  const [errorMsg, setErrorMsg]       = useState<string | null>(null);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -30,6 +31,7 @@ export function ClosePeriodModal({ open, onClose, onLocked, liveData }: ClosePer
       setPeriodLabel(currentQuarterLabel());
       setSaving(false);
       setDone(false);
+      setErrorMsg(null);
     }
   }, [open]);
 
@@ -53,11 +55,13 @@ export function ClosePeriodModal({ open, onClose, onLocked, liveData }: ClosePer
   async function handleConfirm() {
     if (!canConfirm) return;
     setSaving(true);
+    setErrorMsg(null);
     try {
       await lockPeriod({ ...liveData, periodLabel: periodLabel.trim() });
       setDone(true);
     } catch (err) {
       console.error("[ClosePeriodModal] lockPeriod error:", err);
+      setErrorMsg((err as Error).message ?? "Failed to lock period.");
       setSaving(false);
     }
   }
@@ -147,6 +151,12 @@ export function ClosePeriodModal({ open, onClose, onLocked, liveData }: ClosePer
               {liveData.eclRows.length === 0 && (
                 <p style={{ fontSize: "0.8125rem", color: "#B45309", background: "#FEF3C7", borderRadius: "0.5rem", padding: "0.625rem 0.875rem", marginBottom: "1rem", marginTop: 0 }}>
                   No leases in portfolio — add leases before closing a period.
+                </p>
+              )}
+
+              {errorMsg && (
+                <p style={{ fontSize: "0.8125rem", color: "#B91C1C", background: "#FEE2E2", borderRadius: "0.5rem", padding: "0.625rem 0.875rem", marginBottom: "1rem", marginTop: 0 }}>
+                  {errorMsg}
                 </p>
               )}
 

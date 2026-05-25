@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
+import { usePortfolio } from "../contexts/PortfolioContext";
 import type { CurrencyCode } from "../contexts/CurrencyContext";
 import type { ScenarioInputs } from "../utils/eclCalculator";
 import type { EclRow } from "../utils/eclRollForward";
@@ -46,6 +47,11 @@ export type LockPeriodPayload = Omit<EclSnapshot, "id" | "lockedAt" | "lockedBy"
 interface Result {
   snapshots:  EclSnapshot[];
   isLoading:  boolean;
+  /**
+   * Persist a locked period for the active portfolio. Resolves with the
+   * inserted snapshot id, or throws when the period label is already taken
+   * (duplicate-period guard at the DB layer).
+   */
   lockPeriod: (payload: LockPeriodPayload) => Promise<void>;
 }
 
@@ -73,18 +79,24 @@ function mapRow(r: Record<string, unknown>): EclSnapshot {
 
 export function useEclSnapshots(): Result {
   const { orgId } = useData();
+  const { activePortfolioId } = usePortfolio();
   const [snapshots, setSnapshots] = useState<EclSnapshot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!orgId) { setIsLoading(false); return; }
+      if (!orgId || !activePortfolioId) {
+        setSnapshots([]);
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       const { data, error } = await supabase
         .from("ecl_period_snapshots")
         .select("*")
         .eq("org_id", orgId)
+        .eq("portfolio_id", activePortfolioId)
         .order("locked_at", { ascending: false })
         .limit(20);
       if (cancelled) return;
@@ -95,15 +107,18 @@ export function useEclSnapshots(): Result {
     };
     run();
     return () => { cancelled = true; };
-  }, [orgId]);
+  }, [orgId, activePortfolioId]);
 
   const lockPeriod = useCallback(
     async (payload: LockPeriodPayload) => {
-      if (!orgId) return;
+      if (!orgId || !activePortfolioId) {
+        throw new Error("No active portfolio — cannot lock a period.");
+      }
       const user = (await supabase.auth.getUser()).data.user;
       const lockedBy = user?.email ?? "unknown";
       const { error } = await supabase.from("ecl_period_snapshots").insert({
         org_id:           orgId,
+        portfolio_id:     activePortfolioId,
         period_label:     payload.periodLabel,
         locked_by:        lockedBy,
         stage1_ecl:       payload.stage1Ecl,
@@ -120,19 +135,29 @@ export function useEclSnapshots(): Result {
         ecl_rows:         payload.eclRows,
         currency:         payload.currency,
       });
-      if (error) throw error;
+      if (error) {
+        // Surface the duplicate-period constraint as a friendly message —
+        // the modal will catch + display it.
+        if (error.code === "23505" || /unique/i.test(error.message)) {
+          throw new Error(
+            `Period "${payload.periodLabel}" is already locked for this portfolio.`
+          );
+        }
+        throw error;
+      }
       // Inline post-insert refresh (same pattern as useLgdCurves.ts)
       const { data } = await supabase
         .from("ecl_period_snapshots")
         .select("*")
         .eq("org_id", orgId)
+        .eq("portfolio_id", activePortfolioId)
         .order("locked_at", { ascending: false })
         .limit(20);
       if (data) {
         setSnapshots((data as Record<string, unknown>[]).map(mapRow));
       }
     },
-    [orgId]
+    [orgId, activePortfolioId]
   );
 
   return { snapshots, isLoading, lockPeriod };
