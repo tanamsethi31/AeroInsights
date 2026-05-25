@@ -15,6 +15,7 @@
 // duplicating any prior row — caller must dedupe before passing.
 
 import { supabase } from "../lib/supabase";
+import { logAudit } from "./auditLog";
 import type {
   ParsedAircraftRow,
   ParsedIfrs9Params,
@@ -806,6 +807,30 @@ export async function ingestWorkbook(
   const totalInserted  = sheetResults.reduce((a, b) => a + b.inserted, 0);
   const totalUpdated   = sheetResults.reduce((a, b) => a + b.updated, 0);
   const totalErrors    = sheetResults.reduce((a, b) => a + b.errors.length, 0);
+
+  // T-3.4 — single canonical audit entry per workbook ingestion. Captures
+  // per-sheet counts in `after` so auditors can see which sheets landed,
+  // how many rows, and how many errors — without scanning every entity.
+  void logAudit({
+    orgId:       ctx.orgId,
+    portfolioId: ctx.portfolioId,
+    entityType:  "ingestion",
+    entityId:    null,
+    action:      "import",
+    after: {
+      totalAttempted,
+      totalInserted,
+      totalUpdated,
+      totalErrors,
+      sheets: sheetResults.map((r) => ({
+        sheet:     r.sheet,
+        attempted: r.attempted,
+        inserted:  r.inserted,
+        updated:   r.updated,
+        errorCount: r.errors.length,
+      })),
+    },
+  });
 
   return { sheetResults, totalAttempted, totalInserted, totalUpdated, totalErrors };
 }

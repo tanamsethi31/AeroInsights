@@ -10,6 +10,7 @@ import {
   generateReportPDF,
   type AuditorPackData,
 } from "../../services/reportGenerators";
+import { useReportExports } from "../../hooks/useReportExports";
 
 // ─── Section navigator config ─────────────────────────────────────────────────
 
@@ -103,11 +104,26 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
     setActiveSection(id);
   }
 
+  // T-3.3b — recordExport closure persists the blob to Storage + audit_log.
+  const { recordExport } = useReportExports();
+
   // Download handlers
   async function handleDOCX() {
     setDownloading("docx");
     try {
-      await generateReportDOCX("RPT-001", data.currency, undefined, { ...data, managementOverlay });
+      await generateReportDOCX(
+        "RPT-001",
+        data.currency,
+        undefined,
+        { ...data, managementOverlay },
+        (blob, filename) => recordExport({
+          reportId:   "RPT-001",
+          reportName: "Auditor Evidence Pack",
+          format:     "docx",
+          blob, filename,
+          params: { currency: data.currency, periodLabel: data.periodLabel },
+        }),
+      );
     } finally {
       setDownloading(null);
     }
@@ -116,7 +132,16 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
   async function handlePDF() {
     setDownloading("pdf");
     try {
-      await generateReportPDF(previewRef as RefObject<HTMLDivElement>);
+      await generateReportPDF(
+        previewRef as RefObject<HTMLDivElement>,
+        (blob, filename) => recordExport({
+          reportId:   "RPT-001",
+          reportName: "Auditor Evidence Pack",
+          format:     "pdf",
+          blob, filename,
+          params: { currency: data.currency, periodLabel: data.periodLabel },
+        }),
+      );
     } finally {
       setDownloading(null);
     }

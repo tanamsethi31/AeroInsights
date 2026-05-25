@@ -6,6 +6,7 @@ import { generateReportPDF, generateReportXLSX } from "../../services/exportServ
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import { toExportData, toDashboardKPIs } from "../../lib/portfolioAdapters";
 import { toKeyDateRows } from "../../lib/keyDatesAdapters";
+import { useReportExports, type ReportFormat } from "../../hooks/useReportExports";
 
 // ─── Section definitions ──────────────────────────────────────────────────────
 
@@ -91,11 +92,24 @@ export function BoardPackModal({ reportId, reportName, onClose }: BoardPackModal
     setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
+  // T-3.3b — persist board pack exports to Storage + audit_log.
+  const { recordExport } = useReportExports();
+  function makeOnBlob(fmt: ReportFormat) {
+    return (blob: Blob, filename: string) =>
+      recordExport({
+        reportId,
+        reportName,
+        format: fmt,
+        blob, filename,
+        params: { currency, sections: Object.keys(selected).filter(k => selected[k]) },
+      });
+  }
+
   async function handleDownload() {
     setDownloading(true);
     try {
-      if (format === "pdf")  generateReportPDF(reportId, currency, exportData);
-      if (format === "xlsx") generateReportXLSX(reportId, currency, exportData);
+      if (format === "pdf")  generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"));
+      if (format === "xlsx") generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
       setDone(true);
       setTimeout(onClose, 1200);
     } finally {

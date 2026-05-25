@@ -425,6 +425,8 @@ export async function generateReportDOCX(
 
 export async function generateReportPDF(
   previewRef: RefObject<HTMLDivElement>,
+  /** T-3.3b — side-channel for Storage upload + report_exports insert. */
+  onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
 ): Promise<void> {
   if (!previewRef.current) return;
 
@@ -463,5 +465,16 @@ export async function generateReportPDF(
   }
 
   const date = new Date().toISOString().slice(0, 10);
-  pdf.save(`aeroinsights-auditor-evidence-pack-${date}.pdf`);
+  const filename = `aeroinsights-auditor-evidence-pack-${date}.pdf`;
+  if (onBlob) {
+    try {
+      const blob = pdf.output("blob") as Blob;
+      Promise.resolve(onBlob(blob, filename)).catch(err =>
+        console.warn("[generateReportPDF auditor] onBlob failed:", err)
+      );
+    } catch (err) {
+      console.warn("[generateReportPDF auditor] blob extraction failed:", err);
+    }
+  }
+  pdf.save(filename);
 }
