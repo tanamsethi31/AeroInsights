@@ -2,7 +2,7 @@
 // Pure-function utilities for CTC tier classification and portfolio jurisdiction mix computation.
 // No React dependencies — safe to use in both components and tests.
 
-import { jurisdictions, type Jurisdiction } from "../components/jurisdictions/jurisdictionData";
+import type { Jurisdiction } from "../components/jurisdictions/jurisdictionData";
 import type { Lessee, Lease } from "../types/portfolio";
 
 /**
@@ -43,7 +43,11 @@ export function ctcTier(j: Jurisdiction | undefined): CtcTier {
  * Compute the rental-weighted CTC tier mix for a given lessee/lease set.
  * - Lessees with no matching lease, or with null/zero monthly_rental, are excluded.
  * - lessee.country is matched case-insensitively against jurisdiction.country.
- * - Countries absent from jurisdictionData default to Non-CTC.
+ * - Countries absent from `jurisdictions` default to Non-CTC.
+ *
+ * `jurisdictions` MUST be sourced from `useJurisdictions().jurisdictions` so
+ * ingested DB overlays are applied. Tests may pass the hardcoded baseline
+ * directly.
  *
  * Returns:
  *   ctcGoldPct  — 0–1 share of total rental in Gold jurisdictions
@@ -53,6 +57,7 @@ export function ctcTier(j: Jurisdiction | undefined): CtcTier {
 export function computePortfolioJurisdictionMix(
   lessees: Lessee[],
   leases: Lease[],
+  jurisdictions: Jurisdiction[],
 ): { ctcGoldPct: number; nonCtcPct: number; avgRepossP50Months: number; rows: JurisdictionRow[] } {
   if (lessees.length === 0 || leases.length === 0) {
     return { ctcGoldPct: 0, nonCtcPct: 0, avgRepossP50Months: 0, rows: [] };

@@ -54,6 +54,7 @@ import { useLgdCurves } from "../hooks/useLgdCurves";
 import { useSicrConfig, DEFAULT_SICR_CONFIG } from "../hooks/useSicrConfig";
 import { computePortfolioAssetRisk } from "../utils/assetRisk";
 import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
+import { useJurisdictions } from "../hooks/useJurisdictions";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
 import { evaluateSICR } from "../utils/sicrEvaluator";
@@ -323,6 +324,7 @@ export default function RiskECL() {
   const [recoveryDrawerOpen, setRecoveryDrawerOpen] = useState(false);
 
   const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
+  const { jurisdictions: ingestedJurisdictions } = useJurisdictions();
 
   const portfolioLgdRisk = useMemo(
     () => computePortfolioAssetRisk(assets, leases, recoveryFactor, undefined, provisions),
@@ -330,8 +332,8 @@ export default function RiskECL() {
   );
 
   const portfolioJurisdictionMix = useMemo(
-    () => computePortfolioJurisdictionMix(lessees, leases),
-    [lessees, leases]
+    () => computePortfolioJurisdictionMix(lessees, leases, ingestedJurisdictions),
+    [lessees, leases, ingestedJurisdictions]
   );
 
   useEffect(() => {

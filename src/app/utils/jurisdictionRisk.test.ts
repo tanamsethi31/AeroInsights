@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ctcTier, computePortfolioJurisdictionMix, UNKNOWN_REPOSS_P50 } from "./jurisdictionRisk";
-import type { Jurisdiction } from "../components/jurisdictions/jurisdictionData";
+import { jurisdictions, type Jurisdiction } from "../components/jurisdictions/jurisdictionData";
 import type { Lessee, Lease } from "../types/portfolio";
 
 function makeJ(ctcParty: boolean, ctcScore: number): Jurisdiction {
@@ -50,7 +50,7 @@ describe("ctcTier", () => {
 
 describe("computePortfolioJurisdictionMix", () => {
   it("empty lessees → all zero, empty rows", () => {
-    const result = computePortfolioJurisdictionMix([], []);
+    const result = computePortfolioJurisdictionMix([], [], jurisdictions);
     expect(result.ctcGoldPct).toBe(0);
     expect(result.nonCtcPct).toBe(0);
     expect(result.rows).toHaveLength(0);
@@ -59,7 +59,7 @@ describe("computePortfolioJurisdictionMix", () => {
   it("single Gold lessee (Ireland) → ctcGoldPct=1, nonCtcPct=0", () => {
     const lessees = [makeLessee("l1", "Ryanair", "Ireland")];
     const leases  = [makeLease("l1", 340000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     expect(result.ctcGoldPct).toBeCloseTo(1.0, 5);
     expect(result.nonCtcPct).toBeCloseTo(0, 5);
   });
@@ -67,7 +67,7 @@ describe("computePortfolioJurisdictionMix", () => {
   it("single Non-CTC lessee (Sri Lanka) → ctcGoldPct=0, nonCtcPct=1", () => {
     const lessees = [makeLessee("l1", "SriLankan Airlines", "Sri Lanka")];
     const leases  = [makeLease("l1", 480000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     expect(result.ctcGoldPct).toBeCloseTo(0, 5);
     expect(result.nonCtcPct).toBeCloseTo(1.0, 5);
   });
@@ -75,7 +75,7 @@ describe("computePortfolioJurisdictionMix", () => {
   it("unknown country → treated as Non-CTC with UNKNOWN_REPOSS_P50 sentinel", () => {
     const lessees = [makeLessee("l1", "Mystery Airline", "Neverland")];
     const leases  = [makeLease("l1", 100000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     expect(result.nonCtcPct).toBeCloseTo(1.0, 5);
     expect(result.rows[0].tier).toBe("nonCtc");
     expect(result.rows[0].repossP50).toBe(UNKNOWN_REPOSS_P50);
@@ -87,7 +87,7 @@ describe("computePortfolioJurisdictionMix", () => {
       makeLessee("l2", "NonCtc Airline", "Sri Lanka"),
     ];
     const leases = [makeLease("l1", 500000), makeLease("l2", 500000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     expect(result.ctcGoldPct).toBeCloseTo(0.5, 5);
     expect(result.nonCtcPct).toBeCloseTo(0.5, 5);
   });
@@ -98,7 +98,7 @@ describe("computePortfolioJurisdictionMix", () => {
       makeLessee("l2", "Large", "Ireland"),
     ];
     const leases = [makeLease("l1", 100000), makeLease("l2", 900000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     expect(result.rows[0].lesseeName).toBe("Large");
     expect(result.rows[1].lesseeName).toBe("Small");
   });
@@ -109,7 +109,7 @@ describe("computePortfolioJurisdictionMix", () => {
       makeLessee("l2", "No Lease",   "Germany"),
     ];
     const leases = [makeLease("l1", 500000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].lesseeName).toBe("With Lease");
   });
@@ -117,14 +117,14 @@ describe("computePortfolioJurisdictionMix", () => {
   it("lessee with null monthly_rental is excluded", () => {
     const lessees = [makeLessee("l1", "Null Rental", "Ireland")];
     const leases = [{ ...makeLease("l1", 0), monthly_rental: null }];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     expect(result.rows).toHaveLength(0);
   });
 });
 
 describe("avgRepossP50Months (Sprint 19)", () => {
   it("empty input → avgRepossP50Months = 0", () => {
-    const result = computePortfolioJurisdictionMix([], []);
+    const result = computePortfolioJurisdictionMix([], [], jurisdictions);
     expect(result.avgRepossP50Months).toBe(0);
   });
 
@@ -132,6 +132,7 @@ describe("avgRepossP50Months (Sprint 19)", () => {
     const result = computePortfolioJurisdictionMix(
       [makeLessee("l1", "US Air", "United States")],
       [makeLease("l1", 1_000_000)],
+      jurisdictions,
     );
     // US has repossP50 = 3 months
     expect(result.avgRepossP50Months).toBeCloseTo(3, 0);
@@ -145,7 +146,7 @@ describe("avgRepossP50Months (Sprint 19)", () => {
       makeLessee("l2", "Garuda",     "Indonesia"),
     ];
     const leases = [makeLease("l1", 4_000_000), makeLease("l2", 1_000_000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     const expected = (4 * 4_000_000 + 16 * 1_000_000) / 5_000_000;  // 6.4
     expect(result.avgRepossP50Months).toBeCloseTo(expected, 1);
   });
@@ -156,7 +157,7 @@ describe("avgRepossP50Months (Sprint 19)", () => {
       makeLessee("l2", "Unknown", "Fictional Land"),
     ];
     const leases = [makeLease("l1", 1_000_000), makeLease("l2", 1_000_000)];
-    const result = computePortfolioJurisdictionMix(lessees, leases);
+    const result = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
     // Only Ireland contributes (repossP50 = 4 months); Fictional Land excluded
     expect(result.avgRepossP50Months).toBeCloseTo(4, 0);
   });

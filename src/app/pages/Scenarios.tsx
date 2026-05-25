@@ -11,6 +11,7 @@ import { JurisdictionRiskTab } from "../components/scenarios/JurisdictionRiskTab
 import { AssetRiskTab } from "../components/scenarios/AssetRiskTab";
 import { RatingPDTab } from "../components/scenarios/RatingPDTab";
 import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
+import { useJurisdictions } from "../hooks/useJurisdictions";
 import { computePortfolioAssetRisk } from "../utils/assetRisk";
 import { DEFAULT_RECOVERY_FACTOR } from "../data/lgdCurves";
 import { CreditDepositTab } from "../components/scenarios/CreditDepositTab";
@@ -1103,6 +1104,7 @@ export default function Scenarios() {
 
   // ── Live portfolio base ECL ──
   const { assets, lessees, leases, provisions, isDemo } = usePortfolioData();
+  const { jurisdictions: ingestedJurisdictions } = useJurisdictions();
   const liveBaseECL = React.useMemo(
     () => {
       const kpis = toDashboardKPIs(assets, lessees, provisions);
@@ -1151,8 +1153,8 @@ export default function Scenarios() {
   // Rental-weighted CTC tier mix — used by JurisdictionRiskTab "Use in Custom Builder"
   // handler and the "From portfolio" button in the Custom Builder Jurisdiction Risk section.
   const portfolioJurisdictionMix = React.useMemo(
-    () => computePortfolioJurisdictionMix(lessees, leases),
-    [lessees, leases]
+    () => computePortfolioJurisdictionMix(lessees, leases, ingestedJurisdictions),
+    [lessees, leases, ingestedJurisdictions]
   );
 
   // Rental-weighted asset risk metrics — used by AssetRiskTab "Use in Custom Builder"

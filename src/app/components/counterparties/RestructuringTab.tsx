@@ -11,7 +11,7 @@ import {
   type TemplateId,
   computeAllTemplates,
 } from "./restructuringEngine";
-import { jurisdictions } from "../jurisdictions/jurisdictionData";
+import { useJurisdictions } from "../../hooks/useJurisdictions";
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -233,6 +233,7 @@ export function RestructuringTab({ rows, country, lesseeName }: Props) {
   const [selectedId,  setSelectedId]    = useState<TemplateId | null>(null);
   const [showTooltip, setShowTooltip]   = useState<string | null>(null);
 
+  const { jurisdictions } = useJurisdictions();
   const results = useMemo(() => computeAllTemplates(rows), [rows]);
 
   const eclBase = useMemo(
@@ -249,7 +250,7 @@ export function RestructuringTab({ rows, country, lesseeName }: Props) {
   // Jurisdiction data for Termination column
   const jurisdiction = useMemo(
     () => jurisdictions.find(j => j.country.toLowerCase() === country.toLowerCase()) ?? null,
-    [country]
+    [country, jurisdictions]
   );
 
   // Parse repossession cost % from "8.4%" string → number

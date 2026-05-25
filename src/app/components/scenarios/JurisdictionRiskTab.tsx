@@ -1,5 +1,6 @@
 // src/app/components/scenarios/JurisdictionRiskTab.tsx
 import { usePortfolioData } from "../../hooks/usePortfolioData";
+import { useJurisdictions } from "../../hooks/useJurisdictions";
 import { computePortfolioJurisdictionMix, type CtcTier, UNKNOWN_REPOSS_P50 } from "../../utils/jurisdictionRisk";
 import { BASE_ECL } from "../../utils/eclCalculator";
 import { Card } from "../ui/Card";
@@ -52,7 +53,8 @@ interface Props {
 
 export function JurisdictionRiskTab({ onUseInCustomBuilder }: Props) {
   const { lessees, leases } = usePortfolioData();
-  const { ctcGoldPct, nonCtcPct, avgRepossP50Months, rows } = computePortfolioJurisdictionMix(lessees, leases);
+  const { jurisdictions } = useJurisdictions();
+  const { ctcGoldPct, nonCtcPct, avgRepossP50Months, rows } = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
   const ctcModeratePct = Math.max(0, 1 - ctcGoldPct - nonCtcPct);
 
   // LGD uplift using BASE_ECL (47.2) — consistent with spec calibration.
