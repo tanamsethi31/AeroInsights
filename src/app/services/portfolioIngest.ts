@@ -329,6 +329,25 @@ export async function ingestLeases(
   const withExt    = payload.filter((p) => p.external_id);
   const withoutExt = payload.filter((p) => !p.external_id);
 
+  // T-3.5 — Snapshot existing stages for the external_ids we're about to
+  // upsert. Any (external_id, stage) that changes after the upsert produces
+  // a stage_migrations row. Done BEFORE the upsert so the diff is clean.
+  const externalIds = withExt.map((p) => p.external_id as string);
+  const stageBefore = new Map<string, { stage: number; id: string }>();
+  if (externalIds.length > 0) {
+    const { data: existing } = await supabase
+      .from("leases")
+      .select("id, external_id, stage")
+      .eq("org_id", ctx.orgId)
+      .eq("portfolio_id", ctx.portfolioId)
+      .in("external_id", externalIds);
+    for (const row of (existing ?? []) as Array<{ id: string; external_id: string | null; stage: number | null }>) {
+      if (row.external_id && row.stage != null) {
+        stageBefore.set(row.external_id, { stage: row.stage, id: row.id });
+      }
+    }
+  }
+
   if (withExt.length > 0) {
     const { data, error } = await supabase
       .from("leases")
@@ -344,6 +363,36 @@ export async function ingestLeases(
     const { data, error } = await supabase.from("leases").insert(withoutExt).select("id");
     if (error) result.errors.push(`Lease insert: ${error.message}`);
     else if (data) result.inserted += data.length;
+  }
+
+  // T-3.5 — Emit stage_migrations rows for any external_id whose stage
+  // moved during this ingestion. Errors are non-fatal; an outage in the
+  // audit table must not block lease persistence.
+  const migrations: Array<Record<string, unknown>> = [];
+  for (const p of withExt) {
+    const extId  = p.external_id as string;
+    const toStg  = p.stage as number | null | undefined;
+    if (toStg == null || ![1, 2, 3].includes(toStg)) continue;
+    const prior  = stageBefore.get(extId);
+    if (!prior) continue;                // first appearance — no transition
+    if (prior.stage === toStg) continue; // no change
+    migrations.push({
+      org_id:            ctx.orgId,
+      portfolio_id:      ctx.portfolioId,
+      lease_external_id: extId,
+      lease_uuid:        prior.id,
+      from_stage:        prior.stage,
+      to_stage:          toStg,
+      direction:         toStg > prior.stage ? "up" : "down",
+      reason:            "ingestion",
+      signal:            "Excel import: stage column changed",
+    });
+  }
+  if (migrations.length > 0) {
+    const { error: migErr } = await supabase.from("stage_migrations").insert(migrations);
+    if (migErr) {
+      console.warn("[ingestLeases] stage_migrations insert failed (non-fatal):", migErr.message);
+    }
   }
 
   return result;
