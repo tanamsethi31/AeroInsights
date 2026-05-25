@@ -176,12 +176,29 @@ function docPreamble(title: string, currency: CurrencyCode): Paragraph[] {
   ];
 }
 
-async function saveDocx(doc: Document, slug: string): Promise<void> {
+/**
+ * Persist + download a DOCX. `onBlob` is a side-channel for T-3.3 — the
+ * caller (a React component with hook context) uploads the blob to
+ * Supabase Storage and inserts a report_exports row. The local browser
+ * download still always runs.
+ */
+async function saveDocx(
+  doc: Document,
+  slug: string,
+  onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
+): Promise<void> {
   const blob = await Packer.toBlob(doc);
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement("a"), {
-    href: url,
-    download: `aeroinsights-${slug}-${new Date().toISOString().slice(0, 10)}.docx`,
+  const filename = `aeroinsights-${slug}-${new Date().toISOString().slice(0, 10)}.docx`;
+  // Fire the side-channel BEFORE the local download so persistence can't be
+  // cancelled by the user closing the tab mid-click. Failures are swallowed
+  // by the caller; we never block the local download.
+  if (onBlob) {
+    try { await onBlob(blob, filename); }
+    catch (err) { console.warn("[saveDocx] onBlob failed:", err); }
+  }
+  const url = URL.createObjectURL(blob);
+  const a   = Object.assign(document.createElement("a"), {
+    href: url, download: filename,
   });
   document.body.appendChild(a);
   a.click();
@@ -196,6 +213,8 @@ export async function generateReportDOCX(
   currency: CurrencyCode,
   data?: PortfolioExportData,
   auditData?: AuditorPackData,
+  /** Side-channel that uploads the blob to Storage + records audit. Optional. */
+  onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
 ): Promise<void> {
   const eclRows    = data?.eclRows    ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows ?? LESSEES;
@@ -329,7 +348,7 @@ export async function generateReportDOCX(
           ],
         }],
       });
-      await saveDocx(doc, "auditor-evidence-pack");
+      await saveDocx(doc, "auditor-evidence-pack", onBlob);
       break;
     }
     case "RPT-002": {
@@ -340,7 +359,7 @@ export async function generateReportDOCX(
           SCENARIOS.map(s => [s.scenario, s.ecl12m, s.eclLT, s.coverage])
         ),
       ]}]});
-      await saveDocx(doc, "board-pack");
+      await saveDocx(doc, "board-pack", onBlob);
       break;
     }
     case "RPT-003": {
@@ -351,7 +370,7 @@ export async function generateReportDOCX(
           leaseRows.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`])
         ),
       ]}]});
-      await saveDocx(doc, "portfolio-register");
+      await saveDocx(doc, "portfolio-register", onBlob);
       break;
     }
     case "RPT-004": {
@@ -365,7 +384,7 @@ export async function generateReportDOCX(
           ])
         ),
       ]}]});
-      await saveDocx(doc, "ecl-disclosure-pack");
+      await saveDocx(doc, "ecl-disclosure-pack", onBlob);
       break;
     }
     case "RPT-005": {
@@ -379,7 +398,7 @@ export async function generateReportDOCX(
           ])
         ),
       ]}]});
-      await saveDocx(doc, "watchlist-report");
+      await saveDocx(doc, "watchlist-report", onBlob);
       break;
     }
     case "RPT-006": {
@@ -392,7 +411,7 @@ export async function generateReportDOCX(
           ])
         ),
       ]}]});
-      await saveDocx(doc, "jurisdiction-risk-summary");
+      await saveDocx(doc, "jurisdiction-risk-summary", onBlob);
       break;
     }
     default:

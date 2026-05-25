@@ -13,6 +13,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusPill } from "../components/ui/StatusPill";
 import { Download, FileText, Table, FileJson, File, Mail, Clock, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe, Trash2, Pause, Play, Pencil, Check, X } from "lucide-react";
 import { ReportFormatModal } from "../components/reports/ReportFormatModal";
+import { ExportHistoryPanel } from "../components/reports/ExportHistoryPanel";
 import { BoardPackModal } from "../components/reports/BoardPackModal";
 import { useEclSnapshots } from "../hooks/useEclSnapshots";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
@@ -483,35 +484,8 @@ export default function Reports() {
 
       {/* Export History */}
       {activeTab === "Export History" && (
-        <Card title="Recent Exports" subtitle="Last 30 days — all export events are audit-logged" noPadding>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
-            <thead>
-              <tr style={{ background: "#F4F5F7", borderBottom: "1px solid #E2E8F0" }}>
-                {["Export ID", "Report", "Format", "Generated", "By", "Size", ""].map(h => (
-                  <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#0F172A", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentExports.map((exp, i) => (
-                <tr key={exp.id} style={{ borderBottom: "1px solid #E2E8F0", background: i % 2 === 0 ? "#FFFFFF" : "#F4F5F7" }}>
-                  <td style={{ padding: "0.75rem 1rem", fontFamily: "monospace", fontSize: "0.75rem", color: "#475569" }}>{exp.id}</td>
-                  <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#0F172A" }}>{exp.report}</td>
-                  <td style={{ padding: "0.75rem 1rem" }}>
-                    <span style={{ fontSize: "0.75rem", background: "#F4F5F7", color: "#475569", padding: "0.2rem 0.5rem", borderRadius: "0.5rem", border: "1px solid #E2E8F0" }}>{exp.format}</span>
-                  </td>
-                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{exp.date}</td>
-                  <td style={{ padding: "0.75rem 1rem", color: "#475569" }}>{exp.user}</td>
-                  <td style={{ padding: "0.75rem 1rem", color: "#94A3B8" }}>{exp.size}</td>
-                  <td style={{ padding: "0.75rem 1rem" }}>
-                    <button style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 500, color: "#002147", background: "transparent", border: "1px solid #E2E8F0", borderRadius: "9999px", padding: "0.25rem 0.625rem", cursor: "pointer" }}>
-                      <Download size={11} /> Re-download
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <Card title="Recent Exports" subtitle="Persisted to Supabase Storage — click Download to re-fetch any past export. All events audit-logged." noPadding>
+          <ExportHistoryPanel />
         </Card>
       )}
 

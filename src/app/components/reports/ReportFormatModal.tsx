@@ -6,6 +6,7 @@ import { generateReportPDF, generateReportXLSX } from "../../services/exportServ
 import { generateReportDOCX } from "../../services/reportGenerators";
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import { toExportData } from "../../lib/portfolioAdapters";
+import { useReportExports, type ReportFormat } from "../../hooks/useReportExports";
 
 type Format = "pdf" | "xlsx" | "docx";
 
@@ -31,16 +32,30 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
   const { currency } = useCurrency();
   const { assets, lessees, leases, provisions } = usePortfolioData();
   const exportData = toExportData(assets, lessees, leases, provisions);
+  const { recordExport } = useReportExports();
   const [selected, setSelected] = React.useState<Format>("pdf");
   const [downloading, setDownloading] = React.useState(false);
   const [done, setDone] = React.useState(false);
 
+  // T-3.3 — wrap recordExport so it carries the static metadata for THIS run.
+  function makeOnBlob(format: ReportFormat) {
+    return (blob: Blob, filename: string) =>
+      recordExport({
+        reportId,
+        reportName,
+        format,
+        blob,
+        filename,
+        params: { currency },
+      });
+  }
+
   async function handleDownload() {
     setDownloading(true);
     try {
-      if (selected === "pdf")  generateReportPDF(reportId, currency, exportData);
-      if (selected === "xlsx") generateReportXLSX(reportId, currency, exportData);
-      if (selected === "docx") await generateReportDOCX(reportId, currency, exportData);
+      if (selected === "pdf")  generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"));
+      if (selected === "xlsx") generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
+      if (selected === "docx") await generateReportDOCX(reportId, currency, exportData, undefined, makeOnBlob("docx"));
       setDone(true);
       setTimeout(onClose, 1200);
     } finally {

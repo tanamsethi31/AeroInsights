@@ -266,7 +266,13 @@ function fe(usdMillions: number, currency: CurrencyCode): string {
 
 // ─── Named report generators — PDF ───────────────────────────────────────────
 
-export function generateReportPDF(reportId: string, currency: CurrencyCode, data?: PortfolioExportData): void {
+export function generateReportPDF(
+  reportId: string,
+  currency: CurrencyCode,
+  data?: PortfolioExportData,
+  /** T-3.3 side-channel — fired before the local download with the file blob + filename. */
+  onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
+): void {
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
   const leaseRows  = data?.leaseRows    ?? LEASES;
@@ -295,7 +301,20 @@ export function generateReportPDF(reportId: string, currency: CurrencyCode, data
   }
 
   function save(slug: string) {
-    doc.save(`aeroinsights-${slug}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    const filename = `aeroinsights-${slug}-${new Date().toISOString().slice(0, 10)}.pdf`;
+    if (onBlob) {
+      try {
+        // jsPDF returns a Blob when output("blob") is called; cast for TS.
+        const blob = doc.output("blob") as Blob;
+        // Fire-and-forget. Storage upload runs in parallel to the local download.
+        Promise.resolve(onBlob(blob, filename)).catch(err =>
+          console.warn("[generateReportPDF] onBlob failed:", err)
+        );
+      } catch (err) {
+        console.warn("[generateReportPDF] blob extraction failed:", err);
+      }
+    }
+    doc.save(filename);
   }
 
   switch (reportId) {
@@ -391,7 +410,13 @@ export function generateReportPDF(reportId: string, currency: CurrencyCode, data
 
 // ─── Named report generators — XLSX ──────────────────────────────────────────
 
-export function generateReportXLSX(reportId: string, currency: CurrencyCode, data?: PortfolioExportData): void {
+export function generateReportXLSX(
+  reportId: string,
+  currency: CurrencyCode,
+  data?: PortfolioExportData,
+  /** T-3.3 side-channel — fired before the local download with the file blob + filename. */
+  onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
+): void {
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
   const leaseRows  = data?.leaseRows    ?? LEASES;
@@ -450,7 +475,19 @@ export function generateReportXLSX(reportId: string, currency: CurrencyCode, dat
       return;
   }
 
-  XLSX.writeFile(wb, `aeroinsights-${reportId.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const filename = `aeroinsights-${reportId.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  if (onBlob) {
+    try {
+      const arrBuf = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+      const blob   = new Blob([arrBuf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      Promise.resolve(onBlob(blob, filename)).catch(err =>
+        console.warn("[generateReportXLSX] onBlob failed:", err)
+      );
+    } catch (err) {
+      console.warn("[generateReportXLSX] blob extraction failed:", err);
+    }
+  }
+  XLSX.writeFile(wb, filename);
 }
 
 // ─── PDF Export ────────────────────────────────────────────────────────────────
