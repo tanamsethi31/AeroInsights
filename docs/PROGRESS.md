@@ -17,6 +17,15 @@
 
 ## Completed Tasks
 
+### Consumer-wire slice — Scenarios DB scenarios (2026-05-24)
+Wires the biggest hardcoded consumer — `Scenarios.tsx` SCENARIO_LIBRARY.
+
+- **`useStressScenarios` hook** (`src/app/hooks/useStressScenarios.ts`) — reads `stress_scenarios` rows for active portfolio + converts each to a `SyntheticTemplate` (compatible shape with Scenarios.tsx's `Template` interface). Synthesises `shapley` (top-5 by absolute magnitude of inputs, renormalised to 100), `ecl` (via existing `computeECL`), `keyFinding` (template string referencing scenario name + ECL delta vs baseline), default `p5/p95Factor` (0.66 / 1.84). DB IDs = `DB-{slug}` so they never collide with hardcoded `TPL-*` ids that INITIAL_RUNS references at module scope.
+- **Scenarios.tsx wire**: `effectiveTemplates = useMemo(() => [...TEMPLATES, ...dbTemplates])`. New `templateById` Map for O(1) lookups. Render filters (macro/distress/insolvency), weighted-ECL calculation, and `getRunInputs` lookup all swap from `TEMPLATES` to `effectiveTemplates`/`templateById`. `cardStates` initialiser still seeds from hardcoded TEMPLATES; a `useEffect` adds idle cards for any newly-loaded DB scenarios.
+- Hardcoded distress + insolvency templates stay (no DB source for those yet). DB scenarios always render under the macro category with an "Imported" tag.
+
+Consumers reading real ingested data: 8 → 9 (of 10 visible spots). Remaining hardcoded: Jurisdictions tab + LesseeProfile full retirement.
+
 ### Consumer-wire slice — Settings + RiskECL + SDMR (2026-05-24)
 Pivot from ingest polish to wiring consumers (per "every input flows to real
 outputs" general instruction). Three small consumers wired to ingested data:

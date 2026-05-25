@@ -46,6 +46,7 @@ import { ScenarioInsightsPanel } from "../components/scenarios/ScenarioInsightsP
 import { generateNarrative } from "../services/narrativeService";
 import { runScenario as runScenarioEngine } from "../services/scenarioEngine";
 import { SCENARIO_CALIBRATION } from "../data/intelligenceData";
+import { useStressScenarios } from "../hooks/useStressScenarios";
 import {
   ScenarioInputs,
   BASE_ECL,
@@ -986,10 +987,38 @@ export default function Scenarios() {
     return INITIAL_RUNS;
   });
 
+  // ── T-1.7 consumer wire — merge DB-imported scenarios with hardcoded ────
+  // When the tenant uploaded a workbook with stress scenarios, they appear
+  // alongside the built-in library. Distress + insolvency categories stay
+  // hardcoded (no DB source yet); DB scenarios all live under the "macro"
+  // category. Synthesised IDs (DB-{slug}) never collide with TPL-* ids that
+  // INITIAL_RUNS references at module scope.
+  const { templates: dbTemplates } = useStressScenarios();
+  const effectiveTemplates = useMemo<Template[]>(
+    () => [...TEMPLATES, ...(dbTemplates as Template[])],
+    [dbTemplates],
+  );
+  // Map for O(1) byId-style lookups during runs that may reference DB ids.
+  const templateById = useMemo(() => {
+    const m = new Map<string, Template>();
+    for (const t of effectiveTemplates) m.set(t.id, t);
+    return m;
+  }, [effectiveTemplates]);
+
   // ── Library card state machine ──
   const [cardStates, setCardStates] = useState<Record<string, CardState>>(
     Object.fromEntries(TEMPLATES.map((t) => [t.id, { phase: "idle", mode: "deterministic", paths: 10000 }]))
   );
+  // Add card states for any newly-loaded DB scenarios. Idempotent.
+  useEffect(() => {
+    setCardStates((prev) => {
+      const next = { ...prev };
+      for (const t of effectiveTemplates) {
+        if (!next[t.id]) next[t.id] = { phase: "idle", mode: "deterministic", paths: 10000 };
+      }
+      return next;
+    });
+  }, [effectiveTemplates]);
 
   const setCardPhase = useCallback((id: string, updates: Partial<CardState>) => {
     setCardStates((prev) => ({ ...prev, [id]: { ...prev[id], ...updates } }));
@@ -1086,7 +1115,7 @@ export default function Scenarios() {
   // Only templates with numeric weights contribute. Weight strings like "60%" are parsed to 0.60.
   const weightedECL = React.useMemo(() => {
     let sumW = 0; let sumWE = 0;
-    for (const tpl of TEMPLATES) {
+    for (const tpl of effectiveTemplates) {
       if (tpl.weight === "—") continue;
       const w = parseFloat(tpl.weight) / 100;
       if (isNaN(w) || w <= 0) continue;
@@ -1094,7 +1123,7 @@ export default function Scenarios() {
       sumWE += w * computeECLFromBase(liveBaseECL, tpl.inputs);
     }
     return sumW > 0 ? sumWE / sumW : null;
-  }, [liveBaseECL]);
+  }, [liveBaseECL, effectiveTemplates]);
 
   // Derive live Stage 3 lessees from uploaded portfolio for scenario narrative
   const liveStage3Lessees = React.useMemo(() => {
@@ -1281,7 +1310,7 @@ export default function Scenarios() {
   // Derive template inputs for a run (custom runs fall back to ZERO_INPUTS)
   function getRunInputs(run: ScenarioRunResult): ScenarioInputs {
     if (run.templateId) {
-      return TEMPLATES.find((t) => t.id === run.templateId)?.inputs ?? ZERO_INPUTS;
+      return templateById.get(run.templateId)?.inputs ?? ZERO_INPUTS;
     }
     return ZERO_INPUTS;
   }
@@ -1390,7 +1419,7 @@ export default function Scenarios() {
           <div style={{ gridColumn: "1 / -1", fontSize: "0.6875rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", paddingBottom: "0.25rem", borderBottom: "1px solid #F1F5F9" }}>
             Macro Scenarios
           </div>
-          {TEMPLATES.filter((t) => t.category === "macro").map((tpl, tplIdx) => {
+          {effectiveTemplates.filter((t) => t.category === "macro").map((tpl, tplIdx) => {
             const cs = cardStates[tpl.id];
             const result = cs.resultId ? findRun(cs.resultId) : null;
 
@@ -1620,7 +1649,7 @@ export default function Scenarios() {
           <div style={{ gridColumn: "1 / -1", fontSize: "0.6875rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", paddingTop: "0.75rem", paddingBottom: "0.25rem", borderBottom: "1px solid #F1F5F9" }}>
             Distress Scenarios
           </div>
-          {TEMPLATES.filter((t) => t.category === "distress").map((tpl, tplIdx) => {
+          {effectiveTemplates.filter((t) => t.category === "distress").map((tpl, tplIdx) => {
             const cs = cardStates[tpl.id];
             const result = cs.resultId ? findRun(cs.resultId) : null;
 
@@ -1629,7 +1658,7 @@ export default function Scenarios() {
                 key={tpl.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.32, delay: (tplIdx + TEMPLATES.filter(t => t.category !== "distress").length) * 0.06, ease: [0.23, 1, 0.32, 1] }}
+                transition={{ duration: 0.32, delay: (tplIdx + effectiveTemplates.filter(t => t.category !== "distress").length) * 0.06, ease: [0.23, 1, 0.32, 1] }}
                 style={{
                   background: "#FFFFFF", border: "1px solid #E2E8F0",
                   borderRadius: "0.5rem", overflow: "hidden",
@@ -1851,8 +1880,8 @@ export default function Scenarios() {
           <div style={{ gridColumn: "1 / -1", fontSize: "0.6875rem", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", paddingTop: "0.75rem", paddingBottom: "0.25rem", borderBottom: "1px solid #F1F5F9" }}>
             Insolvency Scenarios
           </div>
-          {TEMPLATES.filter((t) => t.category === "insolvency").map((tpl, tplIdx) => {
-            const delayIdx = tplIdx + TEMPLATES.filter(t => t.category !== "insolvency").length;
+          {effectiveTemplates.filter((t) => t.category === "insolvency").map((tpl, tplIdx) => {
+            const delayIdx = tplIdx + effectiveTemplates.filter(t => t.category !== "insolvency").length;
             const cs = cardStates[tpl.id];
             const result = cs.resultId ? findRun(cs.resultId) : null;
 
