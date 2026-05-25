@@ -12,13 +12,16 @@
 
 import {
   Building2, MapPin, CreditCard, FileText, Activity,
-  AlertTriangle, ShieldAlert, Gavel,
+  AlertTriangle, ShieldAlert, Gavel, ArrowUpRight, ArrowDownRight, Lock,
 } from "lucide-react";
 import { CountryFlag } from "../ui/CountryFlag";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
+import { useLesseeTimeline } from "../../hooks/useLesseeTimeline";
 
 export interface SimpleLesseeData {
+  /** Lessee uuid — used by T-2.5 timeline hook. Optional for back-compat. */
+  id?: string;
   name: string;
   country: string;
   rating: string;
@@ -329,7 +332,61 @@ export function SimpleLesseePanel({ lessee }: { lessee: SimpleLesseeData }) {
           IFRS-9 SICR thresholds.
         </div>
       )}
+
+      {/* T-2.5 — Real-data timeline derived from stage_migrations + audit_log */}
+      {lessee.id && <SimpleLesseeTimeline lesseeUuid={lessee.id} />}
     </div>
+  );
+}
+
+// ─── Timeline (T-2.5) ──────────────────────────────────────────────────────
+//
+// Renders a compact event log for the lessee. Pulls stage migrations for
+// the lessee's leases and recent period locks via `useLesseeTimeline`.
+// Hidden entirely when the hook returns no events (e.g. lessee has never
+// crossed a stage boundary and no periods are locked).
+
+function SimpleLesseeTimeline({ lesseeUuid }: { lesseeUuid: string }) {
+  const { events, loading } = useLesseeTimeline(lesseeUuid);
+  if (loading || events.length === 0) return null;
+  return (
+    <Card title="Timeline" subtitle="Audit-derived events for this lessee" noPadding>
+      <div style={{ padding: "0.25rem 0.5rem" }}>
+        {events.slice(0, 12).map((e) => {
+          const Icon = e.type === "stage-change"
+            ? (e.description.includes("↑") ? ArrowUpRight : ArrowDownRight)
+            : Lock;
+          const iconColor = e.type === "stage-change"
+            ? (e.description.includes("↑") ? "#B91C1C" : "#15803D")
+            : "#3730A3";
+          return (
+            <div
+              key={e.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto 1fr auto",
+                gap: "0.75rem",
+                alignItems: "center",
+                padding: "0.5rem 0.75rem",
+                borderBottom: "1px solid #F1F5F9",
+                fontSize: "0.8125rem",
+              }}
+            >
+              <Icon size={13} style={{ color: iconColor }} />
+              <div>
+                <div style={{ color: "#0F172A", fontWeight: 500 }}>{e.description}</div>
+                <div style={{ color: "#64748B", fontSize: "0.75rem", marginTop: "0.125rem" }}>
+                  {e.impact}
+                </div>
+              </div>
+              <span style={{ color: "#94A3B8", fontSize: "0.75rem", whiteSpace: "nowrap" }}>
+                {e.date}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 

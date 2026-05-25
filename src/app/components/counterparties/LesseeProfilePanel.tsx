@@ -18,6 +18,7 @@ import { Card } from "../ui/Card";
 import { ExpandableCell } from "../ui/ExpandableCell";
 import { CountryFlag } from "../ui/CountryFlag";
 import { updateLessee } from "../../lib/portfolioMutations";
+import { useLesseeTimeline } from "../../hooks/useLesseeTimeline";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1340,6 +1341,12 @@ export function LesseeProfilePanel({ lesseeId, liveLessee, onSaved }: LesseeProf
     }
   }
 
+  // T-2.5 — Real-data timeline. Stage transitions for the lessee's leases
+  // (from stage_migrations) and recent period locks (from audit_log) are
+  // prepended onto the hardcoded events, then deduped + sorted. Empty
+  // ingested = panel looks identical to before.
+  const { events: ingestedEvents } = useLesseeTimeline(liveLessee?.id);
+
   // Merge watchlist audit events into the Timeline credit-event log
   const mergedEvents: PaymentEvent[] = useMemo(() => {
     const watchlistAudit = WATCHLIST_DATA[lesseeId]?.auditLog ?? [];
@@ -1351,8 +1358,26 @@ export function LesseeProfilePanel({ lesseeId, liveLessee, onSaved }: LesseeProf
         description: `Watchlist signal: ${a.triggeredBy} (risk score ${a.score.toFixed(1)})`,
         impact:      `Status → ${a.toStatus.charAt(0).toUpperCase() + a.toStatus.slice(1)}`,
       }));
-    return [...events, ...signalEvents].sort((a, b) => b.date.localeCompare(a.date));
-  }, [lesseeId, events]);
+    // Map ingested events → PaymentEvent shape. period-lock is mapped to
+    // 'trigger' (no dedicated icon in this panel yet) so the timeline still
+    // renders something sensible without a panel-wide refactor.
+    const ingested: PaymentEvent[] = ingestedEvents.map((e) => ({
+      date:        e.date,
+      type:        (e.type === "stage-change" ? "stage-change" : "trigger") as EventType,
+      description: e.description,
+      impact:      e.impact,
+    }));
+    // Dedupe: a hardcoded demo event and an ingested event on the exact
+    // same date + description should not double-render. Cheap key-set wins.
+    const seen = new Set<string>();
+    const all  = [...ingested, ...events, ...signalEvents].filter((e) => {
+      const key = `${e.date}::${e.description}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return all.sort((a, b) => b.date.localeCompare(a.date));
+  }, [lesseeId, events, ingestedEvents]);
 
   useEffect(() => { setActiveTab("Overview"); }, [lesseeId]);
   useEffect(() => {

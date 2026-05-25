@@ -543,6 +543,7 @@ export default function Counterparties() {
             <LesseeProfilePanel lesseeId={selectedLessee.profileId} />
           ) : (
             <SimpleLesseePanel lessee={{
+              id: selectedLessee.id,
               name: selectedLessee.name,
               country: selectedLessee.country,
               rating: selectedLessee.rating,
