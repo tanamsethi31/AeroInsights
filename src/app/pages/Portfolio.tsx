@@ -38,6 +38,7 @@ import { AddAircraftModal } from "../components/portfolios/AddAircraftModal";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { PillTabs } from "../components/ui/PillTabs";
 import { SDMRTab, buildLiveSDMRData, type LeaseSDMR } from "../components/portfolio/SDMRTab";
+import { useSdMr } from "../hooks/useSdMr";
 import { MRRiskBanner } from "../components/portfolio/MRRiskBanner";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
 import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForecastTab";
@@ -105,11 +106,18 @@ export default function Portfolio() {
   const paymentSchedule = toPaymentSchedule(leaseData, assets, lesseeData);
   const portfolioKPIs = toPortfolioKPIs(assets, leaseData, provisions);
 
+  // T-1.4 consumer wire — pull ingested SD/MR rows so the SDMR builder can
+  // override heuristic-derived numbers with real values per lease.
+  const sdMr = useSdMr();
+
   // Live SDMR data — built once and shared with SDMRTab + MaintenanceForecastTab
   const liveSDMRData = useMemo<LeaseSDMR[] | undefined>(() => {
     if (isDemo || assets.length === 0) return undefined;
-    return buildLiveSDMRData(assets, lesseeData, leaseData, provisions);
-  }, [isDemo, assets, lesseeData, leaseData, provisions]);
+    return buildLiveSDMRData(
+      assets, lesseeData, leaseData, provisions,
+      sdMr.depositsByLease, sdMr.reservesByLease,
+    );
+  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
 
   // Index by MSN for O(1) lookup inside aircraft accordion rows
   const liveSDMRByMsn = useMemo<Map<string, LeaseSDMR>>(() => {

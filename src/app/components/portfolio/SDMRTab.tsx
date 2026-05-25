@@ -263,11 +263,34 @@ function _tierFromWatchlist(w: "green" | "amber" | "red" | null | undefined): Cr
 /** Build heuristic-estimated LeaseSDMR records from live portfolio data.
  *  MR rates come from TYPE_HEURISTICS; SD amount estimated at 1× monthly rent.
  *  Values are labelled as heuristic in the UI disclaimer. */
+// ── T-1.4 consumer wire — optional ingested SD/MR overrides ───────────────
+// When the tenant has uploaded the canonical workbook, real per-lease deposit
+// and per-component reserve rows live in supabase. Pass them through here
+// keyed by lease_id and we'll override the heuristic-derived values.
+
+interface RealSdRow {
+  deposit_amount_usd?: number | null;
+  deposit_months?: number | null;
+  type?: string | null;
+  credit_tier?: string | null;
+}
+interface RealMrRow {
+  component: string;
+  rate_basis?: string | null;
+  rate_usd?: number | null;
+  est_annual_units?: number | null;
+  annual_accrual_usd?: number | null;
+  cumulative_balance_usd?: number | null;
+  refundable?: boolean | null;
+}
+
 export function buildLiveSDMRData(
   assets: PAAsset[],
   lessees: PALessee[],
   leases: PALease[],
   provisions: PAProvision[],
+  realDeposits?: Map<string, RealSdRow>,
+  realReserves?: Map<string, RealMrRow[]>,
 ): LeaseSDMR[] {
   const lesseeById = new Map(lessees.map((l) => [l.id, l]));
   const assetById  = new Map(assets.map((a) => [a.id, a]));
@@ -299,6 +322,12 @@ export function buildLiveSDMRData(
       const totalFH   = elapsedMonths * monthlyFH;
       const totalCy   = elapsedMonths * monthlyCy;
 
+      // Pull ingested overrides for this lease, if present.
+      const realSd = realDeposits?.get(lease.id);
+      const realMr = realReserves?.get(lease.id);
+      const realMrByComponent = new Map<string, RealMrRow>();
+      for (const r of realMr ?? []) realMrByComponent.set(r.component, r);
+
       const mrComponents: MRComponent[] = _COMPONENT_NAMES.map((name): MRComponent => {
         const h           = heuristic.components[name];
         const isCycle     = h.basis === "cycle";
@@ -317,13 +346,22 @@ export function buildLiveSDMRData(
           ? "Max 18 months' contributions"
           : "Max 12 months' contributions";
 
+        // Real-ingested values take precedence over heuristic. When the
+        // tenant uploaded a workbook with real MR rows, use them; otherwise
+        // fall back to the heuristic-derived numbers.
+        const realComp = realMrByComponent.get(name);
+        const finalRateAmount  = realComp?.rate_usd                ?? rateAmount;
+        const finalUnits       = realComp?.est_annual_units        ?? accumulated;
+        const finalBalance     = realComp?.cumulative_balance_usd  ?? balance;
+        const finalRefundable  = realComp?.refundable              ?? !isCycle;
+
         return {
           component:         name,
           rateBasis:         isCycle ? "$/cycle" : "$/FH",
-          rateAmount,
-          unitsAccumulated:  accumulated,
-          cumulativeBalance: balance,
-          refundable:        !isCycle,
+          rateAmount:        finalRateAmount,
+          unitsAccumulated:  finalUnits,
+          cumulativeBalance: finalBalance,
+          refundable:        finalRefundable,
           capRule,
           evidencedCost:     !isCycle ? Math.round(h.costUSD * 0.88) : 0,
           fullIntervalUnits: interval,
@@ -338,8 +376,10 @@ export function buildLiveSDMRData(
         eadNum:          Math.max(ead, 0),
         baseLGD:         Math.round(lgdRate * 100),
         sd: {
-          type:           "Cash",
-          amount:         Math.round((lease.monthly_rental ?? 0) * 1),
+          // Real-ingested security deposit wins over heuristic when present.
+          type:           (realSd?.type === "LC" ? "LC" : "Cash") as "Cash" | "LC",
+          amount:         realSd?.deposit_amount_usd
+                          ?? Math.round((lease.monthly_rental ?? 0) * 1),
           currency:       "USD",
           refundTriggers: [
             "No payment default in preceding 12 months",

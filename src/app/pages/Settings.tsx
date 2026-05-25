@@ -23,6 +23,7 @@ import {
 } from "../data/concentrationPolicy";
 import { UploadWizard } from "../components/upload/UploadWizard";
 import { useData } from "../contexts/DataContext";
+import { useIfrs9Params } from "../hooks/useIfrs9Params";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 import { useAssumptionLog } from "../hooks/useAssumptionLog";
 import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
@@ -78,7 +79,24 @@ export default function Settings() {
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "tenant"); }, [pathname]);
   const [saved, setSaved] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
-  const [weights, setWeights] = useState({ baseline: 60, adverse: 25, severe: 15 });
+
+  // ── IFRS-9 params (T-1.5 consumer wire) ──────────────────────────────────
+  // Persistent state replaces the old in-memory `weights` constant.
+  const ifrs9 = useIfrs9Params();
+  // Form-local mirror so users can type without thrashing the DB. Synced when
+  // the persisted row loads/changes.
+  const [weights, setWeights] = useState(() => ({
+    baseline: Math.round((ifrs9.params.scenario_weight_baseline ?? 0.60) * 100),
+    adverse:  Math.round((ifrs9.params.scenario_weight_adverse  ?? 0.25) * 100),
+    severe:   Math.round((ifrs9.params.scenario_weight_upside   ?? 0.15) * 100),
+  }));
+  useEffect(() => {
+    setWeights({
+      baseline: Math.round(ifrs9.params.scenario_weight_baseline * 100),
+      adverse:  Math.round(ifrs9.params.scenario_weight_adverse  * 100),
+      severe:   Math.round(ifrs9.params.scenario_weight_upside   * 100),
+    });
+  }, [ifrs9.params.scenario_weight_baseline, ifrs9.params.scenario_weight_adverse, ifrs9.params.scenario_weight_upside]);
   const [signalWeights, setSignalWeights] = useState({ ...DEFAULT_WEIGHTS });
   const [thresholds, setThresholds] = useState({ ...DEFAULT_THRESHOLDS });
   const [alertReadIds, setAlertReadIds] = useState<Set<string>>(new Set());
@@ -148,9 +166,23 @@ export default function Settings() {
   const alertEntries = watchlistEntries.filter(e => e.status !== "green");
   const { sorted: sortedUsers, sortState: userSortState, toggleSort: toggleUserSort } = useSortable(users, userAccessors);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    // Persist Model Params (T-1.5 consumer wire). Pull weights from local
+    // form state, convert back to fractions, merge with the rest of the
+    // IFRS-9 row, upsert.
+    try {
+      await ifrs9.save({
+        ...ifrs9.params,
+        scenario_weight_baseline: weights.baseline / 100,
+        scenario_weight_adverse:  weights.adverse  / 100,
+        scenario_weight_upside:   weights.severe   / 100,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error("[Settings] handleSave failed:", err);
+      // Stay un-flagged so the user knows something went wrong.
+    }
   };
 
   return (

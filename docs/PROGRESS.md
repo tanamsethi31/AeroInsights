@@ -17,6 +17,21 @@
 
 ## Completed Tasks
 
+### Consumer-wire slice — Settings + RiskECL + SDMR (2026-05-24)
+Pivot from ingest polish to wiring consumers (per "every input flows to real
+outputs" general instruction). Three small consumers wired to ingested data:
+
+- **`useIfrs9Params` hook** (`src/app/hooks/useIfrs9Params.ts`) — reads + writes the one `ifrs9_parameters` row per (org, portfolio). Defaults match the migration column defaults.
+- **`useSicrConfig` hook** (`src/app/hooks/useSicrConfig.ts`) — same shape for `sicr_config`.
+- **`useSdMr` hook** (`src/app/hooks/useSdMr.ts`) — returns `depositsByLease` + `reservesByLease` Maps for the active portfolio.
+
+Wired into:
+- **Settings → Model Params** — scenario weights now read from / write to `ifrs9_parameters.scenario_weight_*`. Save button persists via upsert; uses local form state mirror to avoid thrashing the DB on every keystroke.
+- **RiskECL → SICR Config tab** — `sicrConfig` state hydrated from `sicr_config` row on load; `saveSicrConfig()` upserts back. Mapping between UI camelCase (`dpdEnabled`/`dpdDays`/etc) and DB snake_case (`dpd_enabled`/`dpd_threshold_days`/etc); `upgradeEnabled` derived from `upgrade_threshold_notches > 0`.
+- **Portfolio → SD/MR tab** — `buildLiveSDMRData` extended with two optional Maps; real ingested values override heuristic-derived numbers per lease/component when present. Demo + no-upload portfolios keep working unchanged.
+
+Now-real consumers: 5 → 8. Remaining hardcoded: Scenarios (SCENARIO_LIBRARY) + Jurisdictions tab + LesseeProfile full retirement.
+
 ### T-1.8 — Jurisdiction LGD overlays ingestion (2026-05-24)
 - Migration `20260524190000_jurisdiction_lgd_overlays.sql` applied live. New table with 16 columns: code, name, region, ctc_party, ctc_score (0-100), alt_a, idera, enforceability (0-100), rule_of_law (0-100), p50/p90_reposs_months, p50_cost_pct, success_prob, lgd_delta_vs_us (signed, -1..1), uncertainty_band (enum), precedent_count. Unique on (org, portfolio, code). RLS + index.
 - `excelParser.ts` replaces stub `ParsedJurisdictionLgdRow` with typed shape. Handler `parseJurisdictionLgdSheet()` stops at "KEY PRECEDENTS" banner — precedent case history (LATAM Ch.11, Garuda PKPU, etc.) has different shape and gets its own table in a follow-up.

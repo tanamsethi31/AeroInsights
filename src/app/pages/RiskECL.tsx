@@ -51,6 +51,7 @@ import { LgdDecaySummaryCard } from "../components/risk-ecl/LgdDecaySummaryCard"
 import { JurisdictionRiskSummaryCard } from "../components/risk-ecl/JurisdictionRiskSummaryCard";
 import { RecoveryFactorDrawer } from "../components/risk-ecl/RecoveryFactorDrawer";
 import { useLgdCurves } from "../hooks/useLgdCurves";
+import { useSicrConfig, DEFAULT_SICR_CONFIG } from "../hooks/useSicrConfig";
 import { computePortfolioAssetRisk } from "../utils/assetRisk";
 import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { usePortfolioData } from "../hooks/usePortfolioData";
@@ -289,6 +290,25 @@ export default function RiskECL() {
   const [sicrConfig, setSicrConfig] = useState({ ...defaultSicrConfig });
   const [sicrDirty, setSicrDirty] = useState(false);
   const [sicrSaved, setSicrSaved] = useState(false);
+
+  // ── T-1.6 consumer wire — hydrate from sicr_config row ─────────────────
+  // Mapping between the local camelCase shape (UI legacy) and the snake_case
+  // DB row. `upgradeEnabled` is derived from upgrade_threshold_notches > 0.
+  const dbSicr = useSicrConfig();
+  useEffect(() => {
+    if (dbSicr.loading) return;
+    setSicrConfig({
+      dpdEnabled:              dbSicr.config.dpd_enabled,
+      dpdDays:                 dbSicr.config.dpd_threshold_days,
+      upgradeEnabled:          dbSicr.config.upgrade_threshold_notches > 0,
+      upgradeNotches:          dbSicr.config.upgrade_threshold_notches || 2,
+      countryWatchlistEnabled: dbSicr.config.country_watchlist_enabled,
+      insolvencyEnabled:       dbSicr.config.insolvency_filing_enabled,
+    });
+    setSicrDirty(false);
+  }, [dbSicr.loading, dbSicr.config.dpd_enabled, dbSicr.config.dpd_threshold_days,
+      dbSicr.config.upgrade_threshold_notches, dbSicr.config.country_watchlist_enabled,
+      dbSicr.config.insolvency_filing_enabled]);
   const [sicrRecommendations, setSicrRecommendations] = useState<SICRMigrationRecommendation[] | null>(null);
   const [stageOverrides, setStageOverrides] = useState<Record<string, "1" | "2" | "3">>({});
   const [selectedMigrations, setSelectedMigrations] = useState<Set<string>>(new Set());
@@ -447,10 +467,27 @@ export default function RiskECL() {
     setSicrSaved(false);
   }
 
-  function saveSicrConfig() {
-    setSicrDirty(false);
-    setSicrSaved(true);
-    setTimeout(() => setSicrSaved(false), 2000);
+  async function saveSicrConfig() {
+    try {
+      // Convert UI camelCase shape back to DB snake_case. Preserve
+      // rating_notches_threshold from whatever the row already has (not in
+      // this UI yet).
+      await dbSicr.save({
+        dpd_enabled:               sicrConfig.dpdEnabled,
+        dpd_threshold_days:        sicrConfig.dpdDays,
+        rating_notches_threshold:  dbSicr.config.rating_notches_threshold ?? DEFAULT_SICR_CONFIG.rating_notches_threshold,
+        country_watchlist_enabled: sicrConfig.countryWatchlistEnabled,
+        insolvency_filing_enabled: sicrConfig.insolvencyEnabled,
+        // When upgradeEnabled is false, write 0 (which evaluates as "disabled"
+        // on the next hydration via the derived boolean above).
+        upgrade_threshold_notches: sicrConfig.upgradeEnabled ? sicrConfig.upgradeNotches : 0,
+      });
+      setSicrDirty(false);
+      setSicrSaved(true);
+      setTimeout(() => setSicrSaved(false), 2000);
+    } catch (err) {
+      console.error("[RiskECL] saveSicrConfig failed:", err);
+    }
   }
 
   function resetSicrConfig() {
