@@ -18,6 +18,7 @@ import { supabase } from "../lib/supabase";
 import type {
   ParsedAircraftRow,
   ParsedIfrs9Params,
+  ParsedJurisdictionLgdRow,
   ParsedLeaseRow,
   ParsedLesseeRow,
   ParsedMaintenanceReserveRow,
@@ -681,6 +682,65 @@ export async function ingestRestructuringPresets(
   return result;
 }
 
+// ─── Jurisdiction LGD overlays ingester (T-1.8) ─────────────────────────────
+//
+// One row per jurisdiction code per (org, portfolio). Upserts on
+// (org_id, portfolio_id, code).
+
+export async function ingestJurisdictionLgd(
+  rows: ParsedJurisdictionLgdRow[],
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet:     "Jurisdiction LGD",
+    attempted: rows.length,
+    inserted:  0, updated: 0, skipped: 0, errors: [],
+  };
+  const valid = rows.filter((r) => {
+    if (r._errors.length > 0) {
+      result.errors.push(`Row ${r._rowIndex}: ${r._errors.join("; ")}`);
+      result.skipped++;
+      return false;
+    }
+    return true;
+  });
+  if (valid.length === 0) return result;
+
+  const payload = valid.map((r) => ({
+    org_id:             ctx.orgId,
+    portfolio_id:       ctx.portfolioId,
+    code:               r.code,
+    name:               r.name,
+    region:             r.region,
+    ctc_party:          r.ctc_party,
+    ctc_score:          r.ctc_score,
+    alt_a:              r.alt_a,
+    idera:              r.idera,
+    enforceability:     r.enforceability,
+    rule_of_law:        r.rule_of_law,
+    p50_reposs_months:  r.p50_reposs_months,
+    p90_reposs_months:  r.p90_reposs_months,
+    p50_cost_pct:       r.p50_cost_pct,
+    success_prob:       r.success_prob,
+    lgd_delta_vs_us:    r.lgd_delta_vs_us,
+    uncertainty_band:   r.uncertainty_band,
+    precedent_count:    r.precedent_count,
+    source_upload_id:   ctx.uploadId,
+    updated_at:         new Date().toISOString(),
+  }));
+
+  const { data, error } = await supabase
+    .from("jurisdiction_lgd_overlays")
+    .upsert(payload, {
+      onConflict: "org_id,portfolio_id,code",
+      ignoreDuplicates: false,
+    })
+    .select("id");
+  if (error) result.errors.push(`Upsert: ${error.message}`);
+  else if (data) result.inserted += data.length;
+  return result;
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 //
 // Dependency order:
@@ -689,10 +749,11 @@ export async function ingestRestructuringPresets(
 //   3. leases     (depends on lessees + aircraft FK lookup)
 //   4. SD         (depends on leases FK lookup)
 //   5. MR         (depends on leases FK lookup)
-//   6. ifrs9 params (org-scoped settings, no deps)
-//   7. sicr config (org-scoped settings, no deps)
-//   8. stress scenarios + restructuring presets (org-scoped, no deps)
-//   9+ jurisdiction-lgd — also org-scoped settings, no deps
+//   6. ifrs9 params              (org-scoped settings, no deps)
+//   7. sicr config               (org-scoped settings, no deps)
+//   8. stress scenarios + presets (org-scoped, no deps)
+//   9. jurisdiction-lgd overlays  (org-scoped, no deps)
+// All 8 canonical sheets now end-to-end.
 
 export async function ingestWorkbook(
   workbook: ParsedWorkbook,
@@ -736,7 +797,10 @@ export async function ingestWorkbook(
     ctx.onProgress?.("Restructuring Presets");
     sheetResults.push(await ingestRestructuringPresets(workbook.sheets.restructuringPresets, ctx));
   }
-  // T-1.8 jurisdiction lgd
+  if (workbook.sheets.jurisdictionLgd) {
+    ctx.onProgress?.("Jurisdiction LGD");
+    sheetResults.push(await ingestJurisdictionLgd(workbook.sheets.jurisdictionLgd, ctx));
+  }
 
   const totalAttempted = sheetResults.reduce((a, b) => a + b.attempted, 0);
   const totalInserted  = sheetResults.reduce((a, b) => a + b.inserted, 0);

@@ -115,11 +115,11 @@ The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 she
 - **Outcome:** Migration applied live via Supabase MCP. Two new tables — `stress_scenarios` (one row per scenario with 12 macro/PD/deferral columns + weight + slug) and `restructuring_presets` (one row per preset with deferral/govt/forgiveness columns) — both `(org_id, portfolio_id)` scoped with unique-on-slug, RLS, indexes. Parser `parseStressScenariosSheet()` pivots the transposed macro section back to one-row-per-scenario, parses both B and C section boundaries by detecting "A.", "B.", "C." banner prefixes, strips "×" suffix from PD multipliers via `stripMultiplier()`. Two new ingesters upsert on (org, portfolio, slug). Both flipped to "live" in MultiSheetReviewStep.
 
 ### T-1.8 — Ingest Jurisdiction LGD overlays
-- **Status:** TODO
-- **Files affected:** `supabase/migrations/` (new `jurisdiction_lgd_overlays` table), `src/app/components/jurisdictions/jurisdictionData.ts` (deprecate hardcoded), `src/app/pages/Jurisdictions.tsx`
+- **Status:** DONE (ingest, 2026-05-24) — Jurisdictions tab rewire from hardcoded `jurisdictionData.ts` deferred to follow-up
+- **Files affected:** `supabase/migrations/20260524190000_jurisdiction_lgd_overlays.sql`, `src/app/utils/excelParser.ts`, `src/app/services/portfolioIngest.ts`, `src/app/components/upload/MultiSheetReviewStep.tsx`
 - **Depends on:** T-1.1
-- **Why:** Excel has CTC score, Alt-A, IDERA, enforceability, rule of law, P50/P90 repossession months, P50 cost %, success probability, LGD delta vs US §1110, uncertainty band, precedent count per jurisdiction. Today `jurisdictionData.ts` has these hardcoded for ~24 countries. Need ingestion + tenant override path.
-- **Estimated effort:** 2 days
+- **Why:** The Excel "Jurisdiction LGD" sheet carries CTC score, Alt-A, IDERA, enforceability, rule of law, P50/P90 repossession months, P50 cost %, success probability, LGD delta vs US §1110, uncertainty band, precedent count per jurisdiction. Today `jurisdictionData.ts` has these hardcoded for ~24 countries.
+- **Outcome:** Migration applied live via Supabase MCP. New table `jurisdiction_lgd_overlays` with 16 columns per row, scoped `(org_id, portfolio_id)`, unique on code, RLS + index. Parser `parseJurisdictionLgdSheet()` stops at the "KEY PRECEDENTS" banner (precedent case history gets its own table in a follow-up — different shape, nested narrative). Ingester upserts on `(org, portfolio, code)`. Status flipped to "live" in MultiSheetReviewStep. **All 8 of 8 canonical sheets are now end-to-end ingested.**
 
 ### T-1.9 — Validation and dry-run flow
 - **Status:** TODO

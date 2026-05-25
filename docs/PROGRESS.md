@@ -7,15 +7,23 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 7 | 0 | 3 | 70% |
+| 1 | 10 | 8 | 0 | 2 | 80% |
 | 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **13** | **0** | **28** | **31.7%** |
+| **Total** | **41** | **14** | **0** | **27** | **34.1%** |
 
 ## Completed Tasks
+
+### T-1.8 — Jurisdiction LGD overlays ingestion (2026-05-24)
+- Migration `20260524190000_jurisdiction_lgd_overlays.sql` applied live. New table with 16 columns: code, name, region, ctc_party, ctc_score (0-100), alt_a, idera, enforceability (0-100), rule_of_law (0-100), p50/p90_reposs_months, p50_cost_pct, success_prob, lgd_delta_vs_us (signed, -1..1), uncertainty_band (enum), precedent_count. Unique on (org, portfolio, code). RLS + index.
+- `excelParser.ts` replaces stub `ParsedJurisdictionLgdRow` with typed shape. Handler `parseJurisdictionLgdSheet()` stops at "KEY PRECEDENTS" banner — precedent case history (LATAM Ch.11, Garuda PKPU, etc.) has different shape and gets its own table in a follow-up.
+- `portfolioIngest.ts` adds `ingestJurisdictionLgd()` upserting on `(org, portfolio, code)`. Plugged into orchestrator after restructuring presets.
+- MultiSheetReviewStep: row added, flipped to "live".
+- Phase 1: 7/10 → 8/10 (80%). Total: 13/41 → 14/41 (34.1%). **All 8 of 8 canonical sheets now end-to-end ingested.**
+- Follow-up: rewire `Jurisdictions.tsx` + `jurisdictionData.ts` consumers to query the new table.
 
 ### T-1.7 — Stress Scenarios + Restructuring Presets ingestion (2026-05-24)
 - Migration `20260524180000_stress_scenarios.sql` applied live. Two new tables: `stress_scenarios` (one row per scenario; weight, 12 macro/PD/deferral columns, slug; unique on (org, portfolio, slug)) and `restructuring_presets` (one row per preset; deferral/govt/forgiveness; same scope/unique). Both have RLS + indexes.

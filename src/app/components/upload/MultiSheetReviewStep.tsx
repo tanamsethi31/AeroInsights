@@ -113,7 +113,7 @@ export function MultiSheetReviewStep({
     }
     summarise("Stress Scenarios",      workbook.sheets.stressScenarios,     "live");
     summarise("Restructuring Presets", workbook.sheets.restructuringPresets, "live");
-    // T-1.8 sheet lands next slice.
+    summarise("Jurisdiction LGD",      workbook.sheets.jurisdictionLgd,     "live");
     return out;
   }, [workbook]);
 

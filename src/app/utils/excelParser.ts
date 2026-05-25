@@ -188,7 +188,27 @@ export interface ParsedRestructuringPreset {
   description:        string | null;
   _errors:            string[];
 }
-export type ParsedJurisdictionLgdRow = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
+/** T-1.8 — Jurisdiction LGD overlay. One row per jurisdiction code. */
+export interface ParsedJurisdictionLgdRow {
+  code:                string;
+  name:                string;
+  region:              string | null;
+  ctc_party:           boolean | null;
+  ctc_score:           number | null;
+  alt_a:               boolean | null;
+  idera:               boolean | null;
+  enforceability:      number | null;
+  rule_of_law:         number | null;
+  p50_reposs_months:   number | null;
+  p90_reposs_months:   number | null;
+  p50_cost_pct:        number | null;
+  success_prob:        number | null;
+  lgd_delta_vs_us:     number | null;
+  uncertainty_band:    "Low" | "Medium" | "High" | "Extreme" | null;
+  precedent_count:     number | null;
+  _rowIndex:           number;
+  _errors:             string[];
+}
 
 export interface ParsedWorkbook {
   /** Sheets we actually found and parsed. Missing sheets are absent from this object. */
@@ -272,7 +292,9 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbook> {
     sheets.stressScenarios = result.scenarios;
     sheets.restructuringPresets = result.presets;
   }
-  // Jurisdiction LGD: handler lands in subsequent slice.
+  if (recognised.includes(CANONICAL_SHEETS.jurisdictionLgd)) {
+    sheets.jurisdictionLgd = parseJurisdictionLgdSheet(wb.Sheets[CANONICAL_SHEETS.jurisdictionLgd]);
+  }
 
   return {
     sheets,
@@ -992,4 +1014,83 @@ function stripMultiplier(v: unknown): unknown {
   if (v == null) return v;
   if (typeof v === "number") return v;
   return String(v).replace(/[×x]\s*$/i, "").trim();
+}
+
+// ─── Jurisdiction LGD Overlays (T-1.8) ──────────────────────────────────────
+//
+// Two sections. We ingest only the first one (jurisdiction overlay table) —
+// the "KEY PRECEDENTS" section is case history with a different shape and
+// gets its own table in a follow-up slice.
+//
+// Section A: header row 2, jurisdictions in rows 3+ until either an empty
+// row OR a "KEY PRECEDENTS" banner. Each row has 16 columns covering CTC
+// adoption, governance proxies, repossession timeline, cost/probability,
+// LGD delta, and uncertainty band.
+
+const UNCERTAINTY_BANDS = new Set(["Low", "Medium", "High", "Extreme"]);
+
+export function parseJurisdictionLgdSheet(
+  sheet: XLSX.WorkSheet | undefined,
+): ParsedJurisdictionLgdRow[] {
+  if (!sheet) return [];
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1, raw: true, defval: null,
+  });
+
+  // Find first section's data range — stop at "KEY PRECEDENTS" banner.
+  const precedentsIdx = raw.findIndex((r) =>
+    String(r?.[0] ?? "").toUpperCase().includes("KEY PRECEDENTS"),
+  );
+  const endIdx = precedentsIdx >= 0 ? precedentsIdx : raw.length;
+
+  const headerIdx = findHeaderRow(raw.slice(0, endIdx));
+  const headers = (raw[headerIdx] ?? []).map((c) =>
+    c == null ? "" : normalise(String(c).trim()),
+  );
+
+  const out: ParsedJurisdictionLgdRow[] = [];
+  for (let i = headerIdx + 1; i < endIdx; i++) {
+    const row = raw[i] ?? [];
+    if (!row.some((c) => c != null && String(c).trim() !== "")) continue;
+    const firstCell = String(row[0] ?? "").trim().toUpperCase();
+    // Skip banner / total rows that may sit inside the section.
+    if (firstCell === "" || firstCell === "TOTAL" || firstCell.startsWith("SOURCES:")) continue;
+
+    const obj: Record<string, unknown> = {};
+    headers.forEach((h, c) => { if (h) obj[h] = row[c] ?? null; });
+
+    const errors: string[] = [];
+    const code = asString(pick(obj, ["code"]));
+    const name = asString(pick(obj, ["jurisdiction", "name"]));
+    if (!code) errors.push("code is required");
+    if (!name) errors.push("name is required");
+
+    const bandRaw = asString(pick(obj, ["uncertainty_band"]));
+    const uncertainty_band = bandRaw && UNCERTAINTY_BANDS.has(bandRaw)
+      ? (bandRaw as ParsedJurisdictionLgdRow["uncertainty_band"])
+      : null;
+
+    out.push({
+      code:              code ?? "",
+      name:              name ?? "",
+      region:            asString(pick(obj, ["region"])),
+      ctc_party:         asBool(pick(obj, ["ctc_party"])),
+      ctc_score:         asInt(pick(obj, ["ctc_score"])),
+      alt_a:             asBool(pick(obj, ["alt_a"])),
+      idera:             asBool(pick(obj, ["idera"])),
+      enforceability:    asInt(pick(obj, ["enforceability"])),
+      rule_of_law:       asInt(pick(obj, ["rule_of_law"])),
+      p50_reposs_months: asNumber(pick(obj, ["p50_reposs_mo", "p50_reposs_months"])),
+      p90_reposs_months: asNumber(pick(obj, ["p90_reposs_mo", "p90_reposs_months"])),
+      p50_cost_pct:      asPercent(pick(obj, ["p50_cost_", "p50_cost"])),
+      success_prob:      asPercent(pick(obj, ["success_prob"])),
+      lgd_delta_vs_us:   asPercent(pick(obj, ["lgd_delta_vs_us_1110", "lgd_delta_vs_us", "lgd_delta"])),
+      uncertainty_band,
+      precedent_count:   asInt(pick(obj, ["precedent_count"])),
+      _rowIndex:         headerIdx + 2 + (i - headerIdx - 1),
+      _errors:           errors,
+    });
+  }
+
+  return out;
 }
