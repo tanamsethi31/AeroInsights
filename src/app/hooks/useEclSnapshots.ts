@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { logAudit } from "../services/auditLog";
 import type { CurrencyCode } from "../contexts/CurrencyContext";
 import type { ScenarioInputs } from "../utils/eclCalculator";
 import type { EclRow } from "../utils/eclRollForward";
@@ -156,6 +157,25 @@ export function useEclSnapshots(): Result {
       if (data) {
         setSnapshots((data as Record<string, unknown>[]).map(mapRow));
       }
+      // T-3.4 — Period lock is the highest-value audit event we record.
+      void logAudit({
+        orgId,
+        portfolioId: activePortfolioId,
+        entityType:  "ecl_period_snapshot",
+        entityId:    payload.periodLabel,
+        action:      "lock",
+        after: {
+          periodLabel: payload.periodLabel,
+          totalEcl:    payload.totalEcl,
+          stage1Ecl:   payload.stage1Ecl,
+          stage2Ecl:   payload.stage2Ecl,
+          stage3Ecl:   payload.stage3Ecl,
+          ecl12m:      payload.ecl12m,
+          coveragePct: payload.coveragePct,
+          weights:     payload.weights,
+          currency:    payload.currency,
+        },
+      });
     },
     [orgId, activePortfolioId]
   );

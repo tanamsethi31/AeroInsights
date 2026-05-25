@@ -26,6 +26,7 @@ import { useData } from "../contexts/DataContext";
 import { useIfrs9Params } from "../hooks/useIfrs9Params";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 import { useAssumptionLog } from "../hooks/useAssumptionLog";
+import { AuditTrailPanel } from "../components/settings/AuditTrailPanel";
 import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
 import { computeRollForward } from "../utils/eclRollForward";
@@ -806,7 +807,11 @@ export default function Settings() {
 
           {/* Audit Log */}
           {activeTab === "audit" && (
-            <Card title="Audit Log" subtitle="Immutable 7-year retention — all user actions logged" noPadding>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <Card title="Universal Audit Trail" subtitle="Every settings save, scenario run, period lock, and report export — append-only, DB-enforced immutable" noPadding>
+              <AuditTrailPanel />
+            </Card>
+            <Card title="Assumption Change Log (legacy)" subtitle="PD curve + LGD recovery overrides — historical entries retained for reference" noPadding>
               <div style={{ padding: "1rem", borderBottom: "1px solid #E2E8F0", background: "#F4F5F7" }}>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <input placeholder="Search by user, action, resource..." style={{ flex: 1, minWidth: "200px", border: "1px solid #E2E8F0", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", color: "#0F172A", outline: "none" }} />
@@ -876,6 +881,7 @@ export default function Settings() {
                 </tbody>
               </table>
             </Card>
+            </div>
           )}
 
           {/* ECL Snapshots */}

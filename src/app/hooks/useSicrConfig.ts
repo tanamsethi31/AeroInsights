@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { logAudit } from "../services/auditLog";
 
 export interface SicrConfig {
   dpd_enabled:               boolean;
@@ -85,6 +86,7 @@ export function useSicrConfig(): UseSicrConfigResult {
         throw new Error("Active portfolio required to save SICR config.");
       }
       setError(null);
+      const previous = config; // snapshot before write — feeds audit "before"
       const { error: e } = await supabase
         .from("sicr_config")
         .upsert(
@@ -99,8 +101,18 @@ export function useSicrConfig(): UseSicrConfigResult {
       if (e) { setError(e.message); throw e; }
       setConfig(next);
       setPersisted(true);
+      // T-3.4 — SICR threshold change is an IFRS-9 staging policy edit.
+      void logAudit({
+        orgId,
+        portfolioId: activePortfolioId,
+        entityType:  "sicr_config",
+        entityId:    activePortfolioId,
+        action:      isPersisted ? "update" : "create",
+        before:      isPersisted ? previous : null,
+        after:       next,
+      });
     },
-    [orgId, activePortfolioId],
+    [orgId, activePortfolioId, config, isPersisted],
   );
 
   return { config, loading, isPersisted, error, save, refetch: fetchOnce };

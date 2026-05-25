@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { logAudit } from "../services/auditLog";
 import type { ScenarioRunResult, ShapleyDriver } from "../components/scenarios/RunResultPanel";
 import type { ScenarioInputs } from "../utils/eclCalculator";
 
@@ -197,6 +198,15 @@ export function useScenarioRuns(): UseScenarioRunsResult {
     const newRow = data as ScenarioRunRow;
     // Optimistic insert at the top so the UI updates synchronously.
     setRows((prev) => [newRow, ...prev]);
+    // Fire-and-forget audit row. T-3.4 — every scenario run is auditable.
+    void logAudit({
+      orgId,
+      portfolioId: activePortfolioId,
+      entityType:  "scenario_run",
+      entityId:    newRow.run_code,
+      action:      "run",
+      after:       { name: args.name, mode: args.mode, paths: args.paths, seed: args.seed, inputs: args.inputs, ecl: args.result.ecl },
+    });
     const codeToUuid = new Map<string, string>();
     for (const r of [newRow, ...rows]) codeToUuid.set(r.id, r.run_code);
     return rowToResult(newRow, codeToUuid);
