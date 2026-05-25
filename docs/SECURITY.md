@@ -94,14 +94,55 @@ order by tablename;
 
 Every row must have `permissive_policies = 0`.
 
+## Auth flow (Phase 4.2)
+
+```
+Browser                Auth0                Vercel /api/auth/supabase-token             Supabase
+  |                      |                            |                                    |
+  |--- login --------->  |                            |                                    |
+  |<-- auth0_token ----  |                            |                                    |
+  |                                                                                        |
+  |--- POST /api/auth/supabase-token (Bearer auth0_token) ------>                         |
+  |                                          verify auth0_token via JWKS                  |
+  |                                          look up org_members(user_id)                 |
+  |                                            using SUPABASE_SERVICE_ROLE_KEY -------->  |
+  |                                          sign HS256 JWT with SUPABASE_JWT_SECRET      |
+  |                                            embedding { sub, email, role, org_id }      |
+  |<-- { access_token, org_id, expires_in } -                                              |
+  |                                                                                        |
+  |--- supabase.auth.setSession({ access_token, ... })                                     |
+  |--- query (any table)  ----------------------------------------------------------> RLS  |
+  |                                              policy: org_id = auth.jwt()->>'org_id'    |
+  |<-- rows in user's org only --------------------------------------------------------    |
+```
+
+Re-exchange runs on a `setInterval` ~1 min before each token's 1 h
+expiry; long-lived sessions keep RLS working without forcing the user
+to sign in again.
+
+## Required server-side env vars
+
+| Variable                      | Surface          | Notes |
+|-------------------------------|------------------|-------|
+| `AUTH0_DOMAIN`                | Vercel function  | JWKS host, e.g. `dev-xxx.eu.auth0.com` |
+| `AUTH0_AUDIENCE`              | Vercel function  | Auth0 API audience identifier |
+| `SUPABASE_URL`                | Vercel function  | `https://<ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY`   | Vercel function  | NEVER bundle into browser code |
+| `SUPABASE_JWT_SECRET`         | Vercel function  | Project Settings → API → JWT Secret |
+| `VITE_API_BASE_URL`           | Browser          | e.g. `https://aeroinsights.io/api/v1`; if unset, exchange is skipped (legacy demo) |
+
 ## Known gaps
 
-1. The browser still talks to Supabase using the anon key directly.
-   Auth0 → Supabase token exchange has not been formalised in a
-   dedicated edge function; the current flow relies on the JWT
-   custom claim being set during Auth0 sign-in. A misconfigured
-   tenant will read/write zero rows, which is the safe failure mode.
-2. Service-role key must never ship to the browser bundle. Only
-   server-side ingest functions on Vercel should use it.
-3. JWT key rotation is documented in Auth0 — Supabase verifies via
-   the published JWKS endpoint, so rotation is transparent.
+1. **Service-role isolation** — the only legitimate consumer of
+   `SUPABASE_SERVICE_ROLE_KEY` is server-side code on Vercel.
+   `api/auth/supabase-token.ts` is the canonical example. New API routes
+   that need it MUST go through Vercel functions, NOT `import.meta.env`.
+2. **JWT key rotation** — Auth0 RSA keys rotate transparently via JWKS.
+   Supabase JWT secret rotation requires updating
+   `SUPABASE_JWT_SECRET` in Vercel and invalidates all in-flight
+   sessions; users get a 401 + re-exchange on the next polling tick.
+3. **No refresh token** — the exchange endpoint returns only an access
+   token; we re-mint on a timer rather than via `/token` refresh. Side
+   effect: a refresh while the Auth0 session is itself expired produces
+   a brief unauthenticated state — handled by the
+   `exchangeAndSetSession` fallback path.

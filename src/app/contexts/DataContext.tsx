@@ -21,23 +21,78 @@ const DataContext = createContext<DataContextValue>({
   refetchUploadStatus: async () => {},
 });
 
+// T-4.2 — endpoint that swaps an Auth0 token for a Supabase-signed JWT
+// carrying the `org_id` custom claim. Same VITE_API_BASE_URL pattern as
+// the other API calls; falls back to a local dev origin.
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+const TOKEN_REFRESH_BUFFER_SECONDS = 60; // refresh 1 min before expiry
+
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth0();
+  const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [orgId, setOrgId] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>("none");
   const [isLoadingOrg, setIsLoadingOrg] = useState(false);
 
+  // T-4.2 — Exchange the Auth0 token for a Supabase JWT and install it on
+  // the supabase client. RLS policies then see `org_id` via auth.jwt().
+  // Returns the resolved orgId from the exchange response, or null.
+  const exchangeAndSetSession = useCallback(async (): Promise<string | null> => {
+    if (!API_BASE) {
+      // No API base configured — skip exchange and rely on permissive demo
+      // mode (anon JWT). RLS-tightened tables will return empty for the
+      // browser. Documented in docs/SECURITY.md.
+      return null;
+    }
+    try {
+      const auth0Token = await getAccessTokenSilently();
+      const res = await fetch(`${API_BASE.replace(/\/$/, "")}/auth/supabase-token`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${auth0Token}` },
+      });
+      if (!res.ok) {
+        console.warn("[DataContext] supabase-token exchange failed:", res.status);
+        return null;
+      }
+      const { access_token, org_id } = (await res.json()) as {
+        access_token: string;
+        org_id: string | null;
+        expires_in: number;
+      };
+      // setSession requires both tokens; we don't issue refresh tokens, so
+      // we pass the access token twice and let the next exchange handle
+      // renewal explicitly.
+      await supabase.auth.setSession({
+        access_token,
+        refresh_token: access_token,
+      });
+      return org_id;
+    } catch (err) {
+      console.warn("[DataContext] supabase-token exchange threw:", err);
+      return null;
+    }
+  }, [getAccessTokenSilently]);
+
   const resolveOrg = useCallback(async (userId: string) => {
     setIsLoadingOrg(true);
     try {
+      // First try the JWT-exchange path. If it resolves org_id, we're done
+      // and the supabase client is also authenticated.
+      const exchangedOrgId = await exchangeAndSetSession();
+      if (exchangedOrgId) {
+        setOrgId(exchangedOrgId);
+        return;
+      }
+      // Fall back to the legacy direct lookup — works only because the
+      // org_members table is readable via the existing policy. Used for
+      // local-dev environments where the token exchange endpoint isn't
+      // wired up yet.
       const { data, error } = await supabase
         .from("org_members")
         .select("org_id")
         .eq("user_id", userId)
         .single();
-      // PGRST116 = "row not found" — expected when user has no org (demo mode)
       if (error && error.code !== "PGRST116") {
-        console.error("[DataContext] resolveOrg error:", error.message);
+        console.error("[DataContext] resolveOrg fallback error:", error.message);
       }
       if (data?.org_id) setOrgId(data.org_id);
     } catch {
@@ -45,7 +100,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoadingOrg(false);
     }
-  }, []);
+  }, [exchangeAndSetSession]);
+
+  // Schedule a refresh ~1 min before the 1-hour Supabase JWT expires so
+  // long-lived sessions don't see RLS suddenly return empty.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const intervalMs = ((60 * 60) - TOKEN_REFRESH_BUFFER_SECONDS) * 1000;
+    const id = setInterval(() => { void exchangeAndSetSession(); }, intervalMs);
+    return () => clearInterval(id);
+  }, [isAuthenticated, exchangeAndSetSession]);
 
   const fetchUploadStatus = useCallback(async () => {
     if (!orgId) return;
