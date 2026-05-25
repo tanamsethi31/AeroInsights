@@ -48,6 +48,7 @@ import { generateNarrative } from "../services/narrativeService";
 import { runScenario as runScenarioEngine } from "../services/scenarioEngine";
 import { SCENARIO_CALIBRATION } from "../data/intelligenceData";
 import { useStressScenarios } from "../hooks/useStressScenarios";
+import { useScenarioRuns } from "../hooks/useScenarioRuns";
 import {
   ScenarioInputs,
   BASE_ECL,
@@ -977,16 +978,15 @@ export default function Scenarios() {
       setActiveTab("Library");
     }
   }, [isExecutiveMode, activeTab]);
-  const [runs, setRuns] = useState<ScenarioRunResult[]>(() => {
-    try {
-      const s = localStorage.getItem("aero_run_history");
-      if (s) {
-        const p = JSON.parse(s);
-        if (Array.isArray(p) && p.length > 0) return p as ScenarioRunResult[];
-      }
-    } catch { /* ignore corrupt storage */ }
-    return INITIAL_RUNS;
-  });
+  // ── T-3.1 — runs persist to scenario_runs (Supabase) ─────────────────────
+  // Hook owns the list. INITIAL_RUNS only show until the first DB run is
+  // persisted (demo continuity for first-load empty state). After that,
+  // hasIngested flips and we surface DB rows only — no more mock seed.
+  const { runs: dbRuns, insertRun: persistRun, hasIngested: hasPersistedRuns } = useScenarioRuns();
+  const runs = useMemo<ScenarioRunResult[]>(
+    () => hasPersistedRuns ? dbRuns : INITIAL_RUNS,
+    [hasPersistedRuns, dbRuns]
+  );
 
   // ── T-1.7 consumer wire — merge DB-imported scenarios with hardcoded ────
   // When the tenant uploaded a workbook with stress scenarios, they appear
@@ -1031,35 +1031,40 @@ export default function Scenarios() {
     setCardPhase(tpl.id, { phase: "running" });
 
     const duration = cs.mode === "deterministic" ? 1800 : 3200;
-    setTimeout(() => {
+    setTimeout(async () => {
       const computedECL = computeECLFromBase(liveBaseECL, tpl.inputs);
       const { p5, p95 } = computeMCRange(computedECL, seed);
       const stages = computeStages(computedECL, tpl.inputs);
-      const newRun: ScenarioRunResult = {
-        id: nextRunId(),
-        templateId: tpl.id,
-        name: tpl.name,
-        mode: cs.mode,
-        paths: cs.mode === "montecarlo" ? cs.paths : null,
+      const runCode = nextRunId();
+      const inserted = await persistRun({
+        runCode,
+        scenarioId: tpl.id,
+        name:       tpl.name,
+        mode:       cs.mode,
+        paths:      cs.mode === "montecarlo" ? cs.paths : null,
         seed,
-        runDate: new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", ""),
-        durationSec: cs.mode === "deterministic"
-          ? `${(1.4 + seededRand(seed, 9) * 1.4).toFixed(1)}s`
-          : `${Math.round(28 + seededRand(seed, 11) * 20)}s`,
-        ecl: computedECL,
-        p5: cs.mode === "montecarlo" ? computedECL * tpl.p5Factor : null,
-        p95: cs.mode === "montecarlo" ? computedECL * tpl.p95Factor : null,
-        s1: stages.s1, s2: stages.s2, s3: stages.s3,
-        shapley: tpl.shapley,
-        keyFinding: tpl.keyFinding,
-        scenarioHash: hashFromSeed(seed).slice(0, 12),
-        topLessees: computeTopLessees(stages.s3, seed, liveStage3Lessees ?? STAGE3_LESSEES),
-        s3LeaseCount: computeS3LeaseCount(stages.s3),
-      };
-      setRuns((prev) => [newRun, ...prev]);
-      setCardPhase(tpl.id, { phase: "done", resultId: newRun.id });
+        inputs:     tpl.inputs,
+        result:     {
+          durationSec: cs.mode === "deterministic"
+            ? `${(1.4 + seededRand(seed, 9) * 1.4).toFixed(1)}s`
+            : `${Math.round(28 + seededRand(seed, 11) * 20)}s`,
+          ecl:          computedECL,
+          p5:           cs.mode === "montecarlo" ? computedECL * tpl.p5Factor : null,
+          p95:          cs.mode === "montecarlo" ? computedECL * tpl.p95Factor : null,
+          s1: stages.s1, s2: stages.s2, s3: stages.s3,
+          shapley:      tpl.shapley,
+          keyFinding:   tpl.keyFinding,
+          scenarioHash: hashFromSeed(seed).slice(0, 12),
+          topLessees:   computeTopLessees(stages.s3, seed, liveStage3Lessees ?? STAGE3_LESSEES),
+          s3LeaseCount: computeS3LeaseCount(stages.s3),
+        },
+        parentRunCode: null,
+      });
+      // If insert failed (no portfolio / RLS), still flip the card to "done"
+      // so the UI isn't stuck on the running spinner.
+      setCardPhase(tpl.id, { phase: "done", resultId: inserted?.id ?? runCode });
     }, duration);
-  }, [cardStates, setCardPhase]);
+  }, [cardStates, setCardPhase, persistRun, liveBaseECL, liveStage3Lessees]);
 
   // ── Custom Builder state ──
   const [prefillSource, setPrefillSource] = useState<string | null>(null);
@@ -1080,10 +1085,7 @@ export default function Scenarios() {
     try { localStorage.setItem("aero_custom_inputs", JSON.stringify(formInputs)); } catch { /* quota */ }
   }, [formInputs]);
 
-  // ── Persistence: save run history (last 50) whenever runs change ──
-  useEffect(() => {
-    try { localStorage.setItem("aero_run_history", JSON.stringify(runs.slice(0, 50))); } catch { /* quota */ }
-  }, [runs]);
+  // ── Run history persistence handled by useScenarioRuns hook ─────────────
 
   const [customMode, setCustomMode] = useState<RunMode>("deterministic");
   const [customPaths, setCustomPaths] = useState(10000);
@@ -1267,13 +1269,37 @@ export default function Scenarios() {
     }
     // Stamp the engine used so the UI can show provenance.
     (newRun as ScenarioRunResult & { engine?: string }).engine = engineResult.engine;
-    if (branchFromId) { (newRun as ScenarioRunResult).parentId = branchFromId; }
 
     const elapsed = performance.now() - startedAt;
     const remainingSkeletonMs = Math.max(0, minSkeletonMs - elapsed);
-    setTimeout(() => {
-      setRuns((prev) => [newRun, ...prev]);
-      setCustomResultId(newRun.id);
+    setTimeout(async () => {
+      // T-3.1 — persist Custom Builder run to scenario_runs.
+      const inserted = await persistRun({
+        runCode:       newRun.id,
+        scenarioId:    null,
+        name:          newRun.name,
+        mode:          newRun.mode,
+        paths:         newRun.paths,
+        seed:          newRun.seed,
+        inputs:        formInputs,
+        result: {
+          durationSec:  newRun.durationSec,
+          ecl:          newRun.ecl,
+          p5:           newRun.p5,
+          p95:          newRun.p95,
+          s1:           newRun.s1,
+          s2:           newRun.s2,
+          s3:           newRun.s3,
+          shapley:      newRun.shapley,
+          keyFinding:   newRun.keyFinding,
+          scenarioHash: newRun.scenarioHash,
+          topLessees:   newRun.topLessees,
+          s3LeaseCount: newRun.s3LeaseCount,
+          engine:       (newRun as ScenarioRunResult & { engine?: string }).engine,
+        },
+        parentRunCode: branchFromId,
+      });
+      setCustomResultId(inserted?.id ?? newRun.id);
       setCustomRunning(false);
       setBranchFromId(null);
     }, remainingSkeletonMs);
