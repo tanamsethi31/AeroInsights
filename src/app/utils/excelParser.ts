@@ -137,7 +137,17 @@ export interface ParsedMaintenanceReserveRow {
   _errors:              string[];
 }
 
-export type ParsedIfrs9EclRow        = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
+/** T-1.5 — IFRS-9 ECL parameters. ONE row per workbook (org + portfolio scalar). */
+export interface ParsedIfrs9Params {
+  discount_rate:              number | null;   // fraction, e.g. 0.0575
+  lgd_flat:                   number | null;   // fraction, e.g. 0.45
+  pd_lifetime_multiplier_s2:  number | null;   // e.g. 3.0
+  pd_lifetime_s3_floor:       number | null;   // fraction, e.g. 0.85
+  scenario_weight_baseline:   number | null;
+  scenario_weight_adverse:    number | null;
+  scenario_weight_upside:     number | null;
+  _errors:                    string[];
+}
 export type ParsedSicrTriggerRow     = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
 export type ParsedStressScenarioRow  = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
 export type ParsedJurisdictionLgdRow = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
@@ -150,7 +160,8 @@ export interface ParsedWorkbook {
     leases?:            ParsedLeaseRow[];
     securityDeposits?:  ParsedSecurityDepositRow[];
     maintenanceReserves?: ParsedMaintenanceReserveRow[];
-    ifrs9Ecl?:          ParsedIfrs9EclRow[];
+    /** Single scalar row, not a list — these are one-per-portfolio settings. */
+    ifrs9Params?:       ParsedIfrs9Params;
     sicrTriggers?:      ParsedSicrTriggerRow[];
     stressScenarios?:   ParsedStressScenarioRow[];
     jurisdictionLgd?:   ParsedJurisdictionLgdRow[];
@@ -210,10 +221,11 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbook> {
     sheets.securityDeposits = sdMr.deposits;
     sheets.maintenanceReserves = sdMr.reserves;
   }
-  // IFRS-9 ECL, SICR, Stress Scenarios, Jurisdiction LGD: handlers land in
-  // subsequent Phase 1 slices. We deliberately omit them from `sheets` rather
-  // than emit empty arrays so callers can distinguish "not parsed yet" from
-  // "parsed but empty".
+  if (recognised.includes(CANONICAL_SHEETS.ifrs9Ecl)) {
+    sheets.ifrs9Params = parseIfrs9Sheet(wb.Sheets[CANONICAL_SHEETS.ifrs9Ecl]);
+  }
+  // SICR, Stress Scenarios, Jurisdiction LGD: handlers land in subsequent
+  // Phase 1 slices.
 
   return {
     sheets,
@@ -630,4 +642,105 @@ export function parseSdMrSheet(
   }
 
   return { deposits, reserves };
+}
+
+// ─── IFRS 9 ECL parameters handler (T-1.5) ──────────────────────────────────
+//
+// The sheet is laid out as a calculation worksheet, not a parameter table.
+// The INPUT values are scattered:
+//   • Discount Rate: row 2, label in col A, value in col C (e.g. 0.0575).
+//   • Effective LGD: the "STAGE SUMMARY" section's "Effective LGD" column
+//     contains the same flat value across all stages (0.45 in the sample
+//     workbook). We take the median.
+//   • Scenario weights + lifetime-PD multipliers are encoded only in a
+//     prose footer note in v2026 of the template. We fall back to the
+//     documented defaults (60/25/15 weights, ×3.0 multiplier for S2, 0.85
+//     floor for S3) and surface a soft warning in `_errors` so the import
+//     review UI can prompt the user to confirm.
+//
+// Subsequent template revisions can add explicit cells for these — when they
+// do, add pickers below; the migration already has the columns.
+
+export function parseIfrs9Sheet(
+  sheet: XLSX.WorkSheet | undefined,
+): ParsedIfrs9Params {
+  const params: ParsedIfrs9Params = {
+    discount_rate:             null,
+    lgd_flat:                  null,
+    pd_lifetime_multiplier_s2: 3.0,
+    pd_lifetime_s3_floor:      0.85,
+    scenario_weight_baseline:  0.60,
+    scenario_weight_adverse:   0.25,
+    scenario_weight_upside:    0.15,
+    _errors: [],
+  };
+  if (!sheet) return params;
+
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1, raw: true, defval: null,
+  });
+
+  // 1) Discount rate — scan top 5 rows for a cell whose text starts with
+  //    "discount rate" (case-insensitive). The value is the first numeric
+  //    cell to its right.
+  for (let i = 0; i < Math.min(raw.length, 5); i++) {
+    const row = raw[i] ?? [];
+    for (let c = 0; c < row.length; c++) {
+      const v = row[c];
+      if (typeof v === "string" && v.toLowerCase().includes("discount rate")) {
+        for (let c2 = c + 1; c2 < row.length; c2++) {
+          const n = asPercent(row[c2]);
+          if (n != null && n > 0 && n < 1) {
+            params.discount_rate = n;
+            break;
+          }
+        }
+      }
+      if (params.discount_rate != null) break;
+    }
+    if (params.discount_rate != null) break;
+  }
+
+  // 2) Flat LGD — find STAGE SUMMARY section + median of "Effective LGD" col.
+  const summaryIdx = raw.findIndex((row) => {
+    const first = (row?.[0] ?? "").toString().toUpperCase();
+    return first.includes("STAGE SUMMARY");
+  });
+  if (summaryIdx >= 0) {
+    // Headers are on the next non-empty row; data follows.
+    let headerIdx = summaryIdx + 1;
+    while (headerIdx < raw.length) {
+      const hr = raw[headerIdx] ?? [];
+      if (hr.some((c) => c != null && String(c).trim() !== "")) break;
+      headerIdx++;
+    }
+    const headers = (raw[headerIdx] ?? []).map((c) =>
+      c == null ? "" : normalise(String(c).trim()),
+    );
+    const lgdCol = headers.findIndex((h) => h.includes("lgd") || h === "effective_lgd");
+    if (lgdCol >= 0) {
+      const values: number[] = [];
+      for (let i = headerIdx + 1; i < raw.length; i++) {
+        const row = raw[i] ?? [];
+        const stageLabel = String(row[0] ?? "").trim().toLowerCase();
+        if (!stageLabel.startsWith("stage")) continue;
+        const v = asPercent(row[lgdCol]);
+        if (v != null) values.push(v);
+      }
+      if (values.length > 0) {
+        const sorted = [...values].sort((a, b) => a - b);
+        params.lgd_flat = sorted[Math.floor(sorted.length / 2)];
+      }
+    }
+  }
+
+  // 3) Soft warning when defaults are used. Surfaces in the import review UI.
+  if (params.discount_rate == null) {
+    params._errors.push("Discount rate not found in sheet — defaulting to 5%.");
+  }
+  if (params.lgd_flat == null) {
+    params._errors.push("Effective LGD not found in stage summary — defaulting to 45%.");
+  }
+
+  return params;
 }

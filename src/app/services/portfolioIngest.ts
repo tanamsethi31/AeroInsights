@@ -17,6 +17,7 @@
 import { supabase } from "../lib/supabase";
 import type {
   ParsedAircraftRow,
+  ParsedIfrs9Params,
   ParsedLeaseRow,
   ParsedLesseeRow,
   ParsedMaintenanceReserveRow,
@@ -477,6 +478,54 @@ export async function ingestMaintenanceReserves(
   return result;
 }
 
+// ─── IFRS-9 ECL parameters ingester (T-1.5) ─────────────────────────────────
+//
+// One row per (org, portfolio). Upsert via the unique constraint on
+// (org_id, portfolio_id). Parser-supplied nulls fall back to documented
+// defaults at write time so an incomplete sheet still produces a valid row.
+
+export async function ingestIfrs9Params(
+  params: ParsedIfrs9Params,
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet:     "IFRS 9 ECL parameters",
+    attempted: 1,
+    inserted:  0,
+    updated:   0,
+    skipped:   0,
+    errors:    [...params._errors], // forward parser soft-warnings into the UI
+  };
+
+  const payload = {
+    org_id:                    ctx.orgId,
+    portfolio_id:              ctx.portfolioId,
+    discount_rate:             params.discount_rate ?? 0.05,
+    lgd_flat:                  params.lgd_flat ?? 0.45,
+    pd_lifetime_multiplier_s2: params.pd_lifetime_multiplier_s2 ?? 3.0,
+    pd_lifetime_s3_floor:      params.pd_lifetime_s3_floor ?? 0.85,
+    scenario_weight_baseline:  params.scenario_weight_baseline ?? 0.60,
+    scenario_weight_adverse:   params.scenario_weight_adverse ?? 0.25,
+    scenario_weight_upside:    params.scenario_weight_upside ?? 0.15,
+    source_upload_id:          ctx.uploadId,
+    updated_at:                new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("ifrs9_parameters")
+    .upsert(payload, {
+      onConflict: "org_id,portfolio_id",
+      ignoreDuplicates: false,
+    })
+    .select("id");
+  if (error) {
+    result.errors.push(`Upsert: ${error.message}`);
+  } else if (data) {
+    result.inserted = data.length;
+  }
+  return result;
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 //
 // Dependency order:
@@ -485,7 +534,8 @@ export async function ingestMaintenanceReserves(
 //   3. leases     (depends on lessees + aircraft FK lookup)
 //   4. SD         (depends on leases FK lookup)
 //   5. MR         (depends on leases FK lookup)
-//   6+ ifrs9 / sicr / stress / jurisdiction-lgd — org-scoped settings, no deps
+//   6. ifrs9 params (org-scoped settings, no deps)
+//   7+ sicr / stress / jurisdiction-lgd — also org-scoped settings, no deps
 
 export async function ingestWorkbook(
   workbook: ParsedWorkbook,
@@ -513,7 +563,10 @@ export async function ingestWorkbook(
     ctx.onProgress?.("Maintenance Reserves");
     sheetResults.push(await ingestMaintenanceReserves(workbook.sheets.maintenanceReserves, ctx));
   }
-  // T-1.5 ifrs9 ecl params
+  if (workbook.sheets.ifrs9Params) {
+    ctx.onProgress?.("IFRS 9 ECL parameters");
+    sheetResults.push(await ingestIfrs9Params(workbook.sheets.ifrs9Params, ctx));
+  }
   // T-1.6 sicr triggers
   // T-1.7 stress scenarios
   // T-1.8 jurisdiction lgd

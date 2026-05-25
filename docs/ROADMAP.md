@@ -94,11 +94,11 @@ The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 she
 - **Outcome:** Migration applied live via Supabase MCP. `leases` extended: `portfolio_id NOT NULL` (ADR-002 Phase B continued), `external_id`, `jurisdiction`, `status`. Two new tables: `security_deposits` (unique per `(org_id, portfolio_id, lease_id)`) and `maintenance_reserves` (unique per `(org_id, portfolio_id, lease_id, component)`). Both have RLS + indexes. Parser handler `parseSdMrSheet()` walks raw rows, splits at "B. MAINTENANCE RESERVES" banner, and runs two header-aware passes. Three new ingesters (`ingestLeases`, `ingestSecurityDeposits`, `ingestMaintenanceReserves`) chained into the dependency-ordered orchestrator after lessees + aircraft. MOCK_LEASES seeded with `external_id` / `jurisdiction` matching the sample workbook. MultiSheetReviewStep now flips Lease Register + Security Deposits + Maintenance Reserves all to "live" — five of eight canonical sheets are now end-to-end live.
 
 ### T-1.5 — Ingest IFRS 9 ECL parameters
-- **Status:** TODO
-- **Files affected:** `supabase/migrations/` (new `ifrs9_parameters` table), `src/app/pages/Settings.tsx` (Model Parameters tab), `src/app/utils/eclCalculator.ts`
+- **Status:** DONE (ingest, 2026-05-24) — Settings UI rewire to read/write this row deferred to next slice
+- **Files affected:** `supabase/migrations/20260524160000_ifrs9_parameters.sql`, `src/app/utils/excelParser.ts`, `src/app/services/portfolioIngest.ts`, `src/app/components/upload/MultiSheetReviewStep.tsx`
 - **Depends on:** T-1.1
-- **Why:** The Excel sheet has effective discount rate (5.75% default), per-stage PD inputs, LGD assumptions. Today Settings → Model Parameters tab is decorative — values are hardcoded in `eclCalculator.ts`. Need persistent per-tenant configuration.
-- **Estimated effort:** 2 days
+- **Why:** The Excel "IFRS 9 ECL" sheet is laid out as a calculation worksheet, not a parameter table — the INPUT values are scattered (discount rate at top, flat LGD in stage summary, scenario weights + lifetime-PD multipliers in a prose footer). Today Settings → Model Parameters is decorative. This slice creates the persistence and ingestion path; the Settings UI rewire to read/write the new row happens next.
+- **Outcome:** Migration applied live via Supabase MCP. New `ifrs9_parameters` table with one row per `(org_id, portfolio_id)` carrying discount_rate, lgd_flat, pd_lifetime_multiplier_s2, pd_lifetime_s3_floor, and three scenario weights (baseline / adverse / upside), all with sensible defaults + CHECK bounds. Parser `parseIfrs9Sheet()` extracts discount_rate from the explicit row + median LGD from the stage summary section; defaults to documented values for weights/multipliers (still footer-encoded in v2026 of the template) and surfaces a soft warning in `_errors` when defaults are used. New `ingestIfrs9Params()` upserts the one row per (org, portfolio). MultiSheetReviewStep shows IFRS 9 ECL parameters as a single-row "live" sheet — total 6 of 8 canonical sheets now end-to-end.
 
 ### T-1.6 — Ingest SICR triggers configuration
 - **Status:** TODO

@@ -7,15 +7,23 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 4 | 0 | 6 | 40% |
+| 1 | 10 | 5 | 0 | 5 | 50% |
 | 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **10** | **0** | **31** | **24.4%** |
+| **Total** | **41** | **11** | **0** | **30** | **26.8%** |
 
 ## Completed Tasks
+
+### T-1.5 — IFRS-9 ECL parameters ingestion (2026-05-24)
+- Migration `20260524160000_ifrs9_parameters.sql` applied live via Supabase MCP. New table `ifrs9_parameters` with one row per `(org_id, portfolio_id)`: discount_rate, lgd_flat, pd_lifetime_multiplier_s2, pd_lifetime_s3_floor, scenario_weight_baseline/adverse/upside. All NOT NULL with documented defaults + CHECK bounds. RLS + unique constraint.
+- `excelParser.ts` replaces stub `ParsedIfrs9EclRow` with `ParsedIfrs9Params` (single scalar row, not a list). Handler `parseIfrs9Sheet()` extracts discount rate from the explicit label row + median LGD from the stage summary section. Falls back to documented defaults for scenario weights and PD multipliers (still encoded only in the prose footer note in v2026 of the template) and surfaces soft warnings in `_errors`.
+- `portfolioIngest.ts` adds `ingestIfrs9Params()` — upserts on the unique `(org, portfolio)` constraint. Forwards parser warnings into the import-review UI. Plugged into orchestrator after MR (no FK deps).
+- MultiSheetReviewStep adapts the single-row shape: shows "1 row" with soft warnings counted as "errors" (visible but non-blocking).
+- Phase 1: 4/10 → 5/10 (50%). Total: 10/41 → 11/41 (26.8%). 6 of 8 canonical sheets now end-to-end live.
+- Follow-up: Settings → Model Params tab still hardcoded; rewire to read/write the new `ifrs9_parameters` row in a future slice.
 
 ### T-1.4 — SD/MR ingestion + Lease Register close (2026-05-24)
 - Migration `20260524150000_sd_mr_ingest.sql` applied live via Supabase MCP:

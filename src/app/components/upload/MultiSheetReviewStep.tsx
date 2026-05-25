@@ -90,7 +90,18 @@ export function MultiSheetReviewStep({
     summarise("Lease Register",        workbook.sheets.leases,              "live");
     summarise("Security Deposits",     workbook.sheets.securityDeposits,    "live");
     summarise("Maintenance Reserves",  workbook.sheets.maintenanceReserves, "live");
-    // T-1.5–T-1.8 sheets land in subsequent Phase 1 slices.
+    // IFRS-9 params is a single scalar row, not a list. Adapt the shape.
+    if (workbook.sheets.ifrs9Params) {
+      const p = workbook.sheets.ifrs9Params;
+      out.push({
+        name: "IFRS 9 ECL parameters",
+        rowsTotal: 1,
+        rowsValid: 1,
+        rowsInvalid: p._errors.length,  // soft warnings, not failures
+        status: "live",
+      });
+    }
+    // T-1.6–T-1.8 sheets land in subsequent Phase 1 slices.
     return out;
   }, [workbook]);
 
