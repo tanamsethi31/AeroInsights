@@ -7,15 +7,23 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 6 | 0 | 4 | 60% |
+| 1 | 10 | 7 | 0 | 3 | 70% |
 | 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **12** | **0** | **29** | **29.3%** |
+| **Total** | **41** | **13** | **0** | **28** | **31.7%** |
 
 ## Completed Tasks
+
+### T-1.7 — Stress Scenarios + Restructuring Presets ingestion (2026-05-24)
+- Migration `20260524180000_stress_scenarios.sql` applied live. Two new tables: `stress_scenarios` (one row per scenario; weight, 12 macro/PD/deferral columns, slug; unique on (org, portfolio, slug)) and `restructuring_presets` (one row per preset; deferral/govt/forgiveness; same scope/unique). Both have RLS + indexes.
+- `excelParser.ts` adds `parseStressScenariosSheet()` — detects sections by "A.", "B.", "C." banner prefix; pivots transposed macro matrix back to per-scenario rows; standard table parse for presets; skips computed-output section. Helper `stripMultiplier()` cleans "1.4×" before numeric coerce; `slugify()` derives the unique handle.
+- `portfolioIngest.ts` adds `ingestStressScenarios()` + `ingestRestructuringPresets()`; both upsert on the (org, portfolio, slug) unique. Plugged into orchestrator after SICR.
+- MultiSheetReviewStep: both flipped to "live".
+- Phase 1: 6/10 → 7/10 (70%). Total: 12/41 → 13/41 (31.7%). **8 of 8 canonical sheets** now have parsers + ingesters live.
+- Follow-up: rewire `Scenarios.tsx` to read from `stress_scenarios` table instead of hardcoded `SCENARIO_LIBRARY`.
 
 ### T-1.6 — SICR triggers configuration ingestion (2026-05-24)
 - Migration `20260524170000_sicr_config.sql` applied live via Supabase MCP. New table `sicr_config` with one row per `(org_id, portfolio_id)`: dpd_enabled, dpd_threshold_days, rating_notches_threshold, country_watchlist_enabled, insolvency_filing_enabled, upgrade_threshold_notches. All NOT NULL with documented defaults + CHECK bounds. RLS + unique constraint.

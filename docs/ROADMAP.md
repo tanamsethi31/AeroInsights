@@ -108,11 +108,11 @@ The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 she
 - **Outcome:** Migration applied live via Supabase MCP. New `sicr_config` table with one row per `(org_id, portfolio_id)` carrying dpd_enabled, dpd_threshold_days, rating_notches_threshold, country_watchlist_enabled, insolvency_filing_enabled, upgrade_threshold_notches — all with documented defaults + CHECK bounds. Parser `parseSicrSheet()` walks the row 2 label/value pairs and pulls integers from "30 days" / "≥ 2" / "2 notches" via a small regex helper. Ingester `ingestSicrConfig()` upserts one row per (org, portfolio). Status flipped to live in MultiSheetReviewStep. **7 of 8 canonical sheets** now end-to-end.
 
 ### T-1.7 — Ingest Stress Scenarios sheet
-- **Status:** TODO
-- **Files affected:** `supabase/migrations/` (extend `scenarios` table), `src/app/pages/Scenarios.tsx`, `src/app/data/intelligenceData.ts` (SCENARIO_LIBRARY → DB)
+- **Status:** DONE (ingest, 2026-05-24) — Scenarios.tsx swap from hardcoded `SCENARIO_LIBRARY` to DB queries deferred to a follow-up
+- **Files affected:** `supabase/migrations/20260524180000_stress_scenarios.sql`, `src/app/utils/excelParser.ts`, `src/app/services/portfolioIngest.ts`, `src/app/components/upload/MultiSheetReviewStep.tsx`
 - **Depends on:** T-1.1
-- **Why:** Excel has 7 pre-built scenarios with macro shock parameters and weights. Today the hardcoded `SCENARIO_LIBRARY` array drives everything. Need per-tenant scenario seeding from Excel + ability to customise scenarios with persistence.
-- **Estimated effort:** 2 days
+- **Why:** The Excel "Stress Scenarios" sheet has three sections: A. Macro Scenario Inputs (TRANSPOSED — cols=scenarios, rows=parameters), B. Restructuring Presets (standard table), C. ECL Outputs (computed, skipped). Today the hardcoded `SCENARIO_LIBRARY` array in `intelligenceData.ts` drives the scenarios engine. This slice gives tenants per-portfolio scenario seeding from Excel + DB persistence.
+- **Outcome:** Migration applied live via Supabase MCP. Two new tables — `stress_scenarios` (one row per scenario with 12 macro/PD/deferral columns + weight + slug) and `restructuring_presets` (one row per preset with deferral/govt/forgiveness columns) — both `(org_id, portfolio_id)` scoped with unique-on-slug, RLS, indexes. Parser `parseStressScenariosSheet()` pivots the transposed macro section back to one-row-per-scenario, parses both B and C section boundaries by detecting "A.", "B.", "C." banner prefixes, strips "×" suffix from PD multipliers via `stripMultiplier()`. Two new ingesters upsert on (org, portfolio, slug). Both flipped to "live" in MultiSheetReviewStep.
 
 ### T-1.8 — Ingest Jurisdiction LGD overlays
 - **Status:** TODO

@@ -158,7 +158,36 @@ export interface ParsedSicrConfig {
   upgrade_threshold_notches: number | null;
   _errors:                   string[];
 }
-export type ParsedStressScenarioRow  = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
+/** T-1.7 — Stress scenarios (macro inputs). One row per scenario. */
+export interface ParsedStressScenarioRow {
+  name:                   string;
+  slug:                   string;
+  weight:                 number | null;  // 0..1
+  gdp_shock_pct:          number | null;
+  rpk_growth_pct:         number | null;
+  fuel_delta_pct:         number | null;
+  em_fx_stress_pct:       number | null;
+  rate_rise_bps:          number | null;
+  asset_value_shock_pct:  number | null;
+  pd_s2_mult:             number | null;
+  pd_s3_mult:             number | null;
+  deferral_months:        number | null;
+  govt_support_prob:      number | null;
+  forgiveness_rate:       number | null;
+  description:            string | null;
+  _errors:                string[];
+}
+
+/** T-1.7 — Restructuring presets (per-preset row). */
+export interface ParsedRestructuringPreset {
+  name:               string;
+  slug:               string;
+  deferral_months:    number | null;
+  govt_support_prob:  number | null;
+  forgiveness_rate:   number | null;
+  description:        string | null;
+  _errors:            string[];
+}
 export type ParsedJurisdictionLgdRow = Record<string, unknown> & { _rowIndex: number; _errors: string[] };
 
 export interface ParsedWorkbook {
@@ -174,6 +203,7 @@ export interface ParsedWorkbook {
     /** Single scalar row, not a list — one-per-portfolio SICR thresholds. */
     sicrConfig?:        ParsedSicrConfig;
     stressScenarios?:   ParsedStressScenarioRow[];
+    restructuringPresets?: ParsedRestructuringPreset[];
     jurisdictionLgd?:   ParsedJurisdictionLgdRow[];
   };
   /** Names of sheets in the workbook (helpful for debugging / UI). */
@@ -237,7 +267,12 @@ export async function parseWorkbook(file: File): Promise<ParsedWorkbook> {
   if (recognised.includes(CANONICAL_SHEETS.sicrTriggers)) {
     sheets.sicrConfig = parseSicrSheet(wb.Sheets[CANONICAL_SHEETS.sicrTriggers]);
   }
-  // Stress Scenarios, Jurisdiction LGD: handlers land in subsequent slices.
+  if (recognised.includes(CANONICAL_SHEETS.stressScenarios)) {
+    const result = parseStressScenariosSheet(wb.Sheets[CANONICAL_SHEETS.stressScenarios]);
+    sheets.stressScenarios = result.scenarios;
+    sheets.restructuringPresets = result.presets;
+  }
+  // Jurisdiction LGD: handler lands in subsequent slice.
 
   return {
     sheets,
@@ -831,4 +866,130 @@ export function parseSicrSheet(
   if (cfg.upgrade_threshold_notches == null) cfg._errors.push("Upgrade threshold missing — defaulting to 2 notches.");
 
   return cfg;
+}
+
+// ─── Stress Scenarios + Restructuring Presets (T-1.7) ───────────────────────
+//
+// Three sections in this sheet:
+//   A. MACRO SCENARIO INPUTS — TRANSPOSED matrix. First column lists
+//      parameter labels; subsequent columns are one scenario each. We pivot
+//      it back to one row per scenario.
+//   B. RESTRUCTURING PRESETS — standard one-row-per-preset table.
+//   C. ECL OUTPUTS — computed values; we skip ingest (recompute server-side).
+//
+// Section boundaries are detected by the "A.", "B.", "C." prefix in col A.
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "scenario";
+}
+
+interface StressParseResult {
+  scenarios: ParsedStressScenarioRow[];
+  presets:   ParsedRestructuringPreset[];
+}
+
+export function parseStressScenariosSheet(
+  sheet: XLSX.WorkSheet | undefined,
+): StressParseResult {
+  if (!sheet) return { scenarios: [], presets: [] };
+  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1, raw: true, defval: null,
+  });
+
+  // Find banner rows for each section.
+  const sectionA = raw.findIndex((r) => String(r?.[0] ?? "").toUpperCase().includes("A. MACRO"));
+  const sectionB = raw.findIndex((r) => String(r?.[0] ?? "").toUpperCase().includes("B. RESTRUCTURING"));
+  const sectionC = raw.findIndex((r) => String(r?.[0] ?? "").toUpperCase().includes("C. "));
+
+  // ── Section A — transposed: cols=scenarios, rows=params ──────────────────
+  const scenarios: ParsedStressScenarioRow[] = [];
+  if (sectionA >= 0 && sectionB > sectionA) {
+    const headerRow = raw[sectionA + 1] ?? [];  // ["Parameter", "Baseline...", "Adverse...", ...]
+    const scenarioNames: string[] = [];
+    for (let c = 1; c < headerRow.length; c++) {
+      const name = String(headerRow[c] ?? "").trim();
+      if (!name || name.toLowerCase().startsWith("units")) break;
+      scenarioNames.push(name);
+    }
+
+    // Build a label → row index map for the params we care about.
+    const paramRows = new Map<string, number>();
+    for (let i = sectionA + 2; i < sectionB; i++) {
+      const label = String(raw[i]?.[0] ?? "").trim().toLowerCase();
+      if (label) paramRows.set(label, i);
+    }
+
+    function getParam(scenarioCol: number, ...labelKeywords: string[]): unknown {
+      for (const kw of labelKeywords) {
+        for (const [label, rowIdx] of paramRows.entries()) {
+          if (label.startsWith(kw)) return (raw[rowIdx] ?? [])[scenarioCol];
+        }
+      }
+      return null;
+    }
+
+    scenarioNames.forEach((name, idx) => {
+      const c = idx + 1;
+      const errors: string[] = [];
+      const description = `Macro scenario from sample portfolio Excel — column ${idx + 1}.`;
+      scenarios.push({
+        name,
+        slug:                  slugify(name),
+        weight:                asPercent(getParam(c, "scenario weight")),
+        gdp_shock_pct:         asPercent(getParam(c, "gdp shock")),
+        rpk_growth_pct:        asPercent(getParam(c, "rpk growth")),
+        fuel_delta_pct:        asPercent(getParam(c, "fuel delta")),
+        em_fx_stress_pct:      asPercent(getParam(c, "em fx stress")),
+        rate_rise_bps:         asInt(getParam(c, "rate rise")),
+        asset_value_shock_pct: asPercent(getParam(c, "asset value shock")),
+        pd_s2_mult:            asNumber(stripMultiplier(getParam(c, "pd stage 2"))),
+        pd_s3_mult:            asNumber(stripMultiplier(getParam(c, "pd stage 3"))),
+        deferral_months:       asInt(getParam(c, "deferral months")),
+        govt_support_prob:     asPercent(getParam(c, "govt support")),
+        forgiveness_rate:      asPercent(getParam(c, "forgiveness rate")),
+        description,
+        _errors: errors,
+      });
+    });
+  }
+
+  // ── Section B — standard table, one preset per row ───────────────────────
+  const presets: ParsedRestructuringPreset[] = [];
+  if (sectionB >= 0) {
+    const headerIdx = sectionB + 1;
+    const headers = (raw[headerIdx] ?? []).map((c) =>
+      c == null ? "" : normalise(String(c).trim()),
+    );
+    const endIdx = sectionC > headerIdx ? sectionC : raw.length;
+    for (let i = headerIdx + 1; i < endIdx; i++) {
+      const row = raw[i] ?? [];
+      if (!row.some((c) => c != null && String(c).trim() !== "")) continue;
+      const obj: Record<string, unknown> = {};
+      headers.forEach((h, c) => { if (h) obj[h] = row[c] ?? null; });
+      const name = asString(pick(obj, ["preset", "name"]));
+      if (!name) continue;
+      presets.push({
+        name,
+        slug:              slugify(name),
+        deferral_months:   asInt(pick(obj, ["deferral_mo", "deferral_months"])),
+        govt_support_prob: asPercent(pick(obj, ["govt_support"])),
+        forgiveness_rate:  asPercent(pick(obj, ["forgiveness_rate"])),
+        description:       asString(pick(obj, ["description"])),
+        _errors:           [],
+      });
+    }
+  }
+
+  return { scenarios, presets };
+}
+
+/** Strips "×" / "x" suffix from values like "1.4×" so asNumber can read it. */
+function stripMultiplier(v: unknown): unknown {
+  if (v == null) return v;
+  if (typeof v === "number") return v;
+  return String(v).replace(/[×x]\s*$/i, "").trim();
 }

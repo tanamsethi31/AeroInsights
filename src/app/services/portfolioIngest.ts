@@ -21,8 +21,10 @@ import type {
   ParsedLeaseRow,
   ParsedLesseeRow,
   ParsedMaintenanceReserveRow,
+  ParsedRestructuringPreset,
   ParsedSecurityDepositRow,
   ParsedSicrConfig,
+  ParsedStressScenarioRow,
   ParsedWorkbook,
 } from "../utils/excelParser";
 
@@ -574,6 +576,111 @@ export async function ingestSicrConfig(
   return result;
 }
 
+// ─── Stress Scenarios ingester (T-1.7) ──────────────────────────────────────
+//
+// One row per macro scenario. Upserts on (org_id, portfolio_id, slug).
+// Slug carried in the parsed row makes re-import idempotent — changing the
+// scenario name produces a new row, identical-name overwrites.
+
+export async function ingestStressScenarios(
+  rows: ParsedStressScenarioRow[],
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet:     "Stress Scenarios",
+    attempted: rows.length,
+    inserted:  0, updated: 0, skipped: 0, errors: [],
+  };
+  const valid = rows.filter((r) => {
+    if (r._errors.length > 0) {
+      result.errors.push(`Row "${r.name}": ${r._errors.join("; ")}`);
+      result.skipped++;
+      return false;
+    }
+    return true;
+  });
+  if (valid.length === 0) return result;
+
+  const payload = valid.map((r) => ({
+    org_id:                 ctx.orgId,
+    portfolio_id:           ctx.portfolioId,
+    name:                   r.name,
+    slug:                   r.slug,
+    weight:                 r.weight,
+    gdp_shock_pct:          r.gdp_shock_pct,
+    rpk_growth_pct:         r.rpk_growth_pct,
+    fuel_delta_pct:         r.fuel_delta_pct,
+    em_fx_stress_pct:       r.em_fx_stress_pct,
+    rate_rise_bps:          r.rate_rise_bps,
+    asset_value_shock_pct:  r.asset_value_shock_pct,
+    pd_s2_mult:             r.pd_s2_mult,
+    pd_s3_mult:             r.pd_s3_mult,
+    deferral_months:        r.deferral_months,
+    govt_support_prob:      r.govt_support_prob,
+    forgiveness_rate:       r.forgiveness_rate,
+    description:            r.description,
+    source_upload_id:       ctx.uploadId,
+    updated_at:             new Date().toISOString(),
+  }));
+
+  const { data, error } = await supabase
+    .from("stress_scenarios")
+    .upsert(payload, {
+      onConflict: "org_id,portfolio_id,slug",
+      ignoreDuplicates: false,
+    })
+    .select("id");
+  if (error) result.errors.push(`Upsert: ${error.message}`);
+  else if (data) result.inserted += data.length;
+  return result;
+}
+
+// ─── Restructuring Presets ingester (T-1.7) ─────────────────────────────────
+
+export async function ingestRestructuringPresets(
+  rows: ParsedRestructuringPreset[],
+  ctx: CommonContext,
+): Promise<SheetIngestResult> {
+  const result: SheetIngestResult = {
+    sheet:     "Restructuring Presets",
+    attempted: rows.length,
+    inserted:  0, updated: 0, skipped: 0, errors: [],
+  };
+  const valid = rows.filter((r) => {
+    if (r._errors.length > 0) {
+      result.errors.push(`Row "${r.name}": ${r._errors.join("; ")}`);
+      result.skipped++;
+      return false;
+    }
+    return true;
+  });
+  if (valid.length === 0) return result;
+
+  const payload = valid.map((r) => ({
+    org_id:            ctx.orgId,
+    portfolio_id:      ctx.portfolioId,
+    name:              r.name,
+    slug:              r.slug,
+    deferral_months:   r.deferral_months,
+    govt_support_prob: r.govt_support_prob,
+    forgiveness_rate:  r.forgiveness_rate,
+    description:       r.description,
+    source_upload_id:  ctx.uploadId,
+    updated_at:        new Date().toISOString(),
+  }));
+
+  const { data, error } = await supabase
+    .from("restructuring_presets")
+    .upsert(payload, {
+      onConflict: "org_id,portfolio_id,slug",
+      ignoreDuplicates: false,
+    })
+    .select("id");
+  if (error) result.errors.push(`Upsert: ${error.message}`);
+  else if (data) result.inserted += data.length;
+  return result;
+}
+
 // ─── Orchestrator ───────────────────────────────────────────────────────────
 //
 // Dependency order:
@@ -584,7 +691,8 @@ export async function ingestSicrConfig(
 //   5. MR         (depends on leases FK lookup)
 //   6. ifrs9 params (org-scoped settings, no deps)
 //   7. sicr config (org-scoped settings, no deps)
-//   8+ stress / jurisdiction-lgd — also org-scoped settings, no deps
+//   8. stress scenarios + restructuring presets (org-scoped, no deps)
+//   9+ jurisdiction-lgd — also org-scoped settings, no deps
 
 export async function ingestWorkbook(
   workbook: ParsedWorkbook,
@@ -620,7 +728,14 @@ export async function ingestWorkbook(
     ctx.onProgress?.("SICR Triggers");
     sheetResults.push(await ingestSicrConfig(workbook.sheets.sicrConfig, ctx));
   }
-  // T-1.7 stress scenarios
+  if (workbook.sheets.stressScenarios) {
+    ctx.onProgress?.("Stress Scenarios");
+    sheetResults.push(await ingestStressScenarios(workbook.sheets.stressScenarios, ctx));
+  }
+  if (workbook.sheets.restructuringPresets) {
+    ctx.onProgress?.("Restructuring Presets");
+    sheetResults.push(await ingestRestructuringPresets(workbook.sheets.restructuringPresets, ctx));
+  }
   // T-1.8 jurisdiction lgd
 
   const totalAttempted = sheetResults.reduce((a, b) => a + b.attempted, 0);

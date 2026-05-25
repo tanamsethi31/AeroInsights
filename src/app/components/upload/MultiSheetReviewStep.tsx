@@ -111,7 +111,9 @@ export function MultiSheetReviewStep({
         status: "live",
       });
     }
-    // T-1.7–T-1.8 sheets land in subsequent Phase 1 slices.
+    summarise("Stress Scenarios",      workbook.sheets.stressScenarios,     "live");
+    summarise("Restructuring Presets", workbook.sheets.restructuringPresets, "live");
+    // T-1.8 sheet lands next slice.
     return out;
   }, [workbook]);
 
