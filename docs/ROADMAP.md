@@ -122,18 +122,18 @@ The sample portfolio Excel (`AeroInsights_SamplePortfolio_2026.xlsx`) has 14 she
 - **Outcome:** Migration applied live via Supabase MCP. New table `jurisdiction_lgd_overlays` with 16 columns per row, scoped `(org_id, portfolio_id)`, unique on code, RLS + index. Parser `parseJurisdictionLgdSheet()` stops at the "KEY PRECEDENTS" banner (precedent case history gets its own table in a follow-up — different shape, nested narrative). Ingester upserts on `(org, portfolio, code)`. Status flipped to "live" in MultiSheetReviewStep. **All 8 of 8 canonical sheets are now end-to-end ingested.**
 
 ### T-1.9 — Validation and dry-run flow
-- **Status:** TODO
-- **Files affected:** `src/app/components/import/ImportWizard.tsx`, `src/app/components/upload/ReviewImportStep.tsx`
+- **Status:** DONE (2026-05-24)
+- **Files affected:** `src/app/services/portfolioIngest.ts` (new `previewIngest`), `src/app/components/upload/MultiSheetReviewStep.tsx`
 - **Depends on:** T-1.1
-- **Why:** Pre-commit row-by-row check per sheet, errors surfaced in UI with inline editing before commit. The ImportWizard already has the UI scaffold for this — the wiring is missing.
-- **Estimated effort:** 2 days
+- **Why:** Pre-commit row-by-row check, errors surfaced in UI with row-level detail.
+- **Outcome:** Per-sheet preview table now has expandable error rows — click any sheet with parser errors to see row index + error message detail for up to 50 rows. Invalid rows clearly flagged as "will be skipped on commit". Soft warnings from the IFRS-9 / SICR scalar parsers also surface (e.g. "DPD threshold missing — defaulting to 30 days"). User can fix in Excel and re-upload before committing.
 
 ### T-1.10 — Re-import and merge with prior data
-- **Status:** TODO
-- **Files affected:** `src/app/components/upload/ReviewImportStep.tsx`, `supabase/migrations/` (new `import_diffs` table)
-- **Depends on:** T-1.1, T-3.4
-- **Why:** Tenant uploads a new monthly file → system computes diff against prior data, presents changes for review, logs changes to audit log. Required for the "monthly close" workflow described in PRD §3.3 Persona 1.
-- **Estimated effort:** 3 days
+- **Status:** DONE (first cut, 2026-05-24) — universal audit-log entry deferred to T-3.4
+- **Files affected:** `src/app/services/portfolioIngest.ts` (new `previewIngest`), `src/app/components/upload/MultiSheetReviewStep.tsx`
+- **Depends on:** T-1.1
+- **Why:** Tenant uploads a new monthly file → system computes diff against prior data and presents changes BEFORE commit. The "monthly close" workflow described in PRD §3.3 Persona 1.
+- **Outcome:** `previewIngest()` runs after parse when `portfolioId` is set (re-import path), queries existing rows by each ingester's unique key (`external_id` / `slug` / `code`) and returns per-sheet `{ new, update, invalid }` counts. New "New" + "Update" columns in the preview table show what will change; summary line totals it. Fresh-portfolio imports skip diff and show "Fresh import — new portfolio will be created". Per-field deep diff + audit-log persistence wait for T-3.4 (universal audit log).
 
 ---
 

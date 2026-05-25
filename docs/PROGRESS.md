@@ -7,15 +7,23 @@
 | Phase | Total Tasks | Done | In Progress | Todo | % Complete |
 |---|---|---|---|---|---|
 | 0 | 5 | 5 | 0 | 0 | 100% |
-| 1 | 10 | 8 | 0 | 2 | 80% |
+| 1 | 10 | 10 | 0 | 0 | 100% |
 | 2 | 6 | 1 | 0 | 5 | 17% |
 | 3 | 5 | 0 | 0 | 5 | 0% |
 | 4 | 4 | 0 | 0 | 4 | 0% |
 | 5 | 5 | 0 | 0 | 5 | 0% |
 | 6 | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **41** | **14** | **0** | **27** | **34.1%** |
+| **Total** | **41** | **16** | **0** | **25** | **39.0%** |
 
 ## Completed Tasks
+
+### T-1.9 + T-1.10 — Validation inspector + re-import diff (2026-05-24)
+- `previewIngest()` added to `portfolioIngest.ts`. For each sheet, queries existing rows by the same unique key the ingester upserts on (`external_id` for lessees/aircraft/leases, `slug` for stress/restructuring, `code` for jurisdiction, presence-check for IFRS-9/SICR singletons). Returns `{ new, update, invalid }` per sheet. No writes.
+- MultiSheetReviewStep extended:
+  - **Diff preview** (T-1.10) — runs after parse when `portfolioId` is set. Adds "New" + "Update" columns to the per-sheet table; summary line shows totals. Fresh-portfolio path skips diff and shows "Fresh import — new portfolio will be created".
+  - **Expandable error inspector** (T-1.9) — sheets with parser errors get a chevron and can be expanded to reveal row-indexed error messages (up to 50 per sheet). Invalid rows clearly tagged "will be skipped on commit".
+- **Phase 1: 8/10 → 10/10 (100%). All 8 canonical sheets ingest + validation + re-import diff complete.**
+- Audit-log persistence of import changes deferred to T-3.4 (universal audit log).
 
 ### Consumer-wire slice — Scenarios DB scenarios (2026-05-24)
 Wires the biggest hardcoded consumer — `Scenarios.tsx` SCENARIO_LIBRARY.

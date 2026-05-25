@@ -809,3 +809,260 @@ export async function ingestWorkbook(
 
   return { sheetResults, totalAttempted, totalInserted, totalUpdated, totalErrors };
 }
+
+// ─── Pre-flight DIFF / dry-run (T-1.9 + T-1.10) ─────────────────────────────
+//
+// Walks the parsed workbook and, for each sheet, queries existing DB rows by
+// the same unique keys the ingesters use (external_id / slug / code). Returns
+// per-sheet counts of {new, update, unchanged, invalid} without writing.
+//
+// "Update" means a row with a matching key exists — we don't deep-diff every
+// column to distinguish update from unchanged (would require fetching every
+// column for every row), so update vs unchanged is approximate: any matching
+// existing row is reported as "update" until we add field-level diff in a
+// follow-up. The point of this preview is to surface the "is this a fresh
+// import or a re-import?" signal to the user pre-commit.
+
+export interface SheetDiff {
+  sheet: string;
+  attempted: number;       // valid rows that would write
+  invalid: number;          // parser-flagged rows we'd skip
+  newRows: number;          // no existing match
+  updateRows: number;       // existing match (will overwrite)
+  errors: string[];
+}
+
+export interface WorkbookDiff {
+  perSheet: SheetDiff[];
+  totalAttempted: number;
+  totalNew: number;
+  totalUpdate: number;
+  totalInvalid: number;
+}
+
+/**
+ * Returns counts only — no writes. Safe to call repeatedly.
+ * `ctx.uploadId` may be null; this never touches `uploads`.
+ */
+export async function previewIngest(
+  workbook: ParsedWorkbook,
+  ctx: Omit<CommonContext, "uploadId">,
+): Promise<WorkbookDiff> {
+  const perSheet: SheetDiff[] = [];
+
+  // ── Helper for per-row diff via unique-key fetch ────────────────────────
+  async function diffByKey(opts: {
+    sheet: string;
+    table: string;
+    keyColumn: string;
+    keyValues: string[];
+    invalidRows: number;
+    extraErrors?: string[];
+  }): Promise<SheetDiff> {
+    const errors = opts.extraErrors ?? [];
+    if (opts.keyValues.length === 0) {
+      return {
+        sheet: opts.sheet,
+        attempted: 0,
+        invalid: opts.invalidRows,
+        newRows: 0,
+        updateRows: 0,
+        errors,
+      };
+    }
+    const { data, error } = await supabase
+      .from(opts.table)
+      .select(opts.keyColumn)
+      .eq("org_id", ctx.orgId)
+      .eq("portfolio_id", ctx.portfolioId)
+      .in(opts.keyColumn, opts.keyValues);
+    if (error) {
+      errors.push(`Diff query failed: ${error.message}`);
+      return {
+        sheet: opts.sheet,
+        attempted: opts.keyValues.length,
+        invalid: opts.invalidRows,
+        newRows: opts.keyValues.length,  // pessimistic — treat all as new
+        updateRows: 0,
+        errors,
+      };
+    }
+    const existing = new Set((data ?? []).map((r) => r[opts.keyColumn] as string));
+    const updateRows = opts.keyValues.filter((v) => existing.has(v)).length;
+    return {
+      sheet: opts.sheet,
+      attempted: opts.keyValues.length,
+      invalid: opts.invalidRows,
+      newRows: opts.keyValues.length - updateRows,
+      updateRows,
+      errors,
+    };
+  }
+
+  // ── Lessees ──────────────────────────────────────────────────────────────
+  if (workbook.sheets.lessees) {
+    const rows = workbook.sheets.lessees;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    const invalid = rows.length - valid.length;
+    // Only rows with external_id participate in upsert reconciliation.
+    const keyValues = valid.map((r) => r.external_id).filter((v): v is string => !!v);
+    const diff = await diffByKey({
+      sheet: "Lessee Profiles",
+      table: "lessees",
+      keyColumn: "external_id",
+      keyValues,
+      invalidRows: invalid,
+    });
+    // Rows without external_id always insert fresh — treat as new.
+    diff.newRows += valid.length - keyValues.length;
+    diff.attempted = valid.length;
+    perSheet.push(diff);
+  }
+
+  // ── Aircraft ─────────────────────────────────────────────────────────────
+  if (workbook.sheets.aircraft) {
+    const rows = workbook.sheets.aircraft;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    const invalid = rows.length - valid.length;
+    const withExt = valid.filter((r) => r.external_id);
+    const withoutExt = valid.filter((r) => !r.external_id);
+    const extDiff = await diffByKey({
+      sheet: "Aircraft Register (ext_id)",
+      table: "assets",
+      keyColumn: "external_id",
+      keyValues: withExt.map((r) => r.external_id!).filter(Boolean),
+      invalidRows: 0,
+    });
+    const msnDiff = await diffByKey({
+      sheet: "Aircraft Register (MSN)",
+      table: "assets",
+      keyColumn: "msn",
+      keyValues: withoutExt.map((r) => r.msn).filter(Boolean),
+      invalidRows: 0,
+    });
+    perSheet.push({
+      sheet: "Aircraft Register",
+      attempted: valid.length,
+      invalid,
+      newRows:    extDiff.newRows + msnDiff.newRows,
+      updateRows: extDiff.updateRows + msnDiff.updateRows,
+      errors:     [...extDiff.errors, ...msnDiff.errors],
+    });
+  }
+
+  // ── Leases ───────────────────────────────────────────────────────────────
+  if (workbook.sheets.leases) {
+    const rows = workbook.sheets.leases;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    const invalid = rows.length - valid.length;
+    const keyValues = valid.map((r) => r.external_id).filter((v): v is string => !!v);
+    const diff = await diffByKey({
+      sheet: "Lease Register",
+      table: "leases",
+      keyColumn: "external_id",
+      keyValues,
+      invalidRows: invalid,
+    });
+    diff.newRows += valid.length - keyValues.length;
+    diff.attempted = valid.length;
+    perSheet.push(diff);
+  }
+
+  // ── SD: keyed by lease_external_id but FK resolves to lease.id. We can't
+  //    easily diff without joining; report as "all attempted" with full
+  //    invalid-row count for now. Field-level diff is a follow-up.
+  if (workbook.sheets.securityDeposits) {
+    const rows = workbook.sheets.securityDeposits;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    perSheet.push({
+      sheet: "Security Deposits",
+      attempted: valid.length,
+      invalid: rows.length - valid.length,
+      newRows: valid.length,
+      updateRows: 0,
+      errors: [],
+    });
+  }
+  if (workbook.sheets.maintenanceReserves) {
+    const rows = workbook.sheets.maintenanceReserves;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    perSheet.push({
+      sheet: "Maintenance Reserves",
+      attempted: valid.length,
+      invalid: rows.length - valid.length,
+      newRows: valid.length,
+      updateRows: 0,
+      errors: [],
+    });
+  }
+
+  // ── Single-row settings — always 1 row, treat as update if portfolio has any
+  for (const [label, table] of [
+    ["IFRS 9 ECL parameters", "ifrs9_parameters"],
+    ["SICR Triggers", "sicr_config"],
+  ] as const) {
+    const present = (label === "IFRS 9 ECL parameters" ? !!workbook.sheets.ifrs9Params : !!workbook.sheets.sicrConfig);
+    if (!present) continue;
+    const { data } = await supabase.from(table).select("id").eq("org_id", ctx.orgId).eq("portfolio_id", ctx.portfolioId).limit(1);
+    const existing = (data ?? []).length > 0;
+    perSheet.push({
+      sheet: label,
+      attempted: 1,
+      invalid: 0,
+      newRows: existing ? 0 : 1,
+      updateRows: existing ? 1 : 0,
+      errors: [],
+    });
+  }
+
+  // ── Stress scenarios ─────────────────────────────────────────────────────
+  if (workbook.sheets.stressScenarios) {
+    const rows = workbook.sheets.stressScenarios;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    perSheet.push(
+      await diffByKey({
+        sheet: "Stress Scenarios",
+        table: "stress_scenarios",
+        keyColumn: "slug",
+        keyValues: valid.map((r) => r.slug),
+        invalidRows: rows.length - valid.length,
+      }),
+    );
+  }
+  if (workbook.sheets.restructuringPresets) {
+    const rows = workbook.sheets.restructuringPresets;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    perSheet.push(
+      await diffByKey({
+        sheet: "Restructuring Presets",
+        table: "restructuring_presets",
+        keyColumn: "slug",
+        keyValues: valid.map((r) => r.slug),
+        invalidRows: rows.length - valid.length,
+      }),
+    );
+  }
+
+  // ── Jurisdiction LGD ─────────────────────────────────────────────────────
+  if (workbook.sheets.jurisdictionLgd) {
+    const rows = workbook.sheets.jurisdictionLgd;
+    const valid = rows.filter((r) => r._errors.length === 0);
+    perSheet.push(
+      await diffByKey({
+        sheet: "Jurisdiction LGD",
+        table: "jurisdiction_lgd_overlays",
+        keyColumn: "code",
+        keyValues: valid.map((r) => r.code),
+        invalidRows: rows.length - valid.length,
+      }),
+    );
+  }
+
+  return {
+    perSheet,
+    totalAttempted: perSheet.reduce((a, b) => a + b.attempted, 0),
+    totalNew:       perSheet.reduce((a, b) => a + b.newRows, 0),
+    totalUpdate:    perSheet.reduce((a, b) => a + b.updateRows, 0),
+    totalInvalid:   perSheet.reduce((a, b) => a + b.invalid, 0),
+  };
+}
