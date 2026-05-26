@@ -14,6 +14,7 @@ import { StatusPill } from "../components/ui/StatusPill";
 import { Download, FileText, Table, FileJson, File, Mail, Clock, Calendar, Search, ClipboardList, BarChart3, Scale, AlertTriangle, Globe, Trash2, Pause, Play, Pencil, Check, X } from "lucide-react";
 import { ReportFormatModal } from "../components/reports/ReportFormatModal";
 import { ExportHistoryPanel } from "../components/reports/ExportHistoryPanel";
+import { ReportSchedulesPanel } from "../components/reports/ReportSchedulesPanel";
 import { BoardPackModal } from "../components/reports/BoardPackModal";
 import { useEclSnapshots } from "../hooks/useEclSnapshots";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
@@ -313,6 +314,11 @@ export default function Reports() {
       {/* Scheduled Reports */}
       {activeTab === "Scheduled Reports" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          {/* T-5.2 — live report_schedules panel */}
+          <Card title="Active Schedules" subtitle="Persisted in report_schedules. /api/cron/scheduled-reports evaluates hourly.">
+            <ReportSchedulesPanel />
+          </Card>
+
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button
               onClick={() => setShowNewForm((v) => !v)}
