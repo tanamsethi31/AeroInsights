@@ -133,6 +133,10 @@ to sign in again.
 | `RESEND_API_KEY`              | Vercel cron      | Email send key for /api/cron/alerts (Phase 5.1) |
 | `RESEND_FROM_EMAIL`           | Vercel cron      | From-address. Default `alerts@aeroinsights.io` |
 | `CRON_SECRET`                 | Vercel cron      | Bearer-token gate for /api/cron/* endpoints |
+| `SENTRY_DSN_EDGE`             | Vercel function  | T-6.3 — captures unhandled throws + audit failures |
+| `SENTRY_TRACES_SAMPLE_RATE`   | Vercel function  | Optional, default 0.05 |
+| `VITE_SENTRY_DSN_FRONTEND`    | Browser          | T-6.3 — SPA error capture + ErrorBoundary |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE` | Browser       | Optional, default 0.05 |
 
 ## Known gaps
 

@@ -283,7 +283,7 @@ async function processSchedule(s: ScheduleRow): Promise<{ status: "sent" | "fail
 
 // ── Handler ───────────────────────────────────────────────────────────
 
-export default async function handler(req: Request): Promise<Response> {
+async function _handler(req: Request): Promise<Response> {
   if (req.method !== "POST" && req.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -325,3 +325,6 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 }
+
+import { withSentry as _ws_sr } from "../_lib/sentry";
+export default _ws_sr(_handler, "cron:scheduled-reports");

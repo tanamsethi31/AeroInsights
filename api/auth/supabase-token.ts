@@ -83,7 +83,7 @@ async function resolveOrgId(authSub: string): Promise<string | null> {
 
 // ── Handler ──────────────────────────────────────────────────────────────
 
-export default async function handler(req: Request): Promise<Response> {
+async function _handler(req: Request): Promise<Response> {
   if (req.method !== "POST" && req.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -135,3 +135,6 @@ export default async function handler(req: Request): Promise<Response> {
     { status: 200, headers: { "content-type": "application/json", "cache-control": "no-store" } },
   );
 }
+
+import { withSentry as _ws_auth } from "../_lib/sentry";
+export default _ws_auth(_handler, "auth:supabase-token");

@@ -64,7 +64,7 @@ async function sbInsert(rows: Array<Record<string, unknown>>): Promise<string | 
   return null;
 }
 
-export default async function handler(req: Request): Promise<Response> {
+async function _handler(req: Request): Promise<Response> {
   if (req.method !== "POST" && req.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -123,3 +123,6 @@ export default async function handler(req: Request): Promise<Response> {
     status: 200, headers: { "content-type": "application/json" },
   });
 }
+
+import { withSentry as _ws_fx } from "../_lib/sentry";
+export default _ws_fx(_handler, "cron:fx-refresh");

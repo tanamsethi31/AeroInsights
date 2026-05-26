@@ -376,7 +376,7 @@ async function handleKpi(orgId: string, params: URLSearchParams): Promise<Respon
 
 // ── Dispatcher ────────────────────────────────────────────────────────
 
-export default async function handler(req: Request): Promise<Response> {
+async function _handler(req: Request): Promise<Response> {
   if (req.method !== "GET" && req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -427,3 +427,6 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 }
+
+import { withSentry as _ws_excel } from "../_lib/sentry";
+export default _ws_excel(_handler, "excel:dispatcher");

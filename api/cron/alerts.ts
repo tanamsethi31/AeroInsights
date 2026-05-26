@@ -24,6 +24,7 @@ import { evaluateRules,
          type StageMigrationSnapshot,
          type LesseeAggregateSnapshot,
          type AlertFire } from "../_lib/alertEvaluator";
+import { withSentry } from "../_lib/sentry";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SRV = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -210,7 +211,7 @@ async function processOrg(orgId: string): Promise<{ fired: number; sent: number;
 
 // ── Handler ────────────────────────────────────────────────────────────
 
-export default async function handler(req: Request): Promise<Response> {
+async function alertsHandler(req: Request): Promise<Response> {
   // Vercel cron requests are POST. Allow GET for manual smoke testing too.
   if (req.method !== "POST" && req.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
@@ -257,3 +258,5 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 }
+
+export default withSentry(alertsHandler, "cron:alerts");

@@ -10,6 +10,7 @@
 // secondary record.
 
 import { supabase } from "../lib/supabase";
+import { Sentry } from "../lib/sentry";
 
 export type AuditAction =
   | "create" | "update" | "delete"
@@ -50,11 +51,17 @@ export async function logAudit(args: LogAuditArgs): Promise<boolean> {
     });
     if (error) {
       console.warn("[auditLog] write failed (non-fatal):", error.message);
+      Sentry.captureException(new Error(`auditLog insert failed: ${error.message}`), {
+        tags: { surface: "auditLog", entity_type: args.entityType, action: args.action },
+      });
       return false;
     }
     return true;
   } catch (err) {
     console.warn("[auditLog] write threw (non-fatal):", err);
+    Sentry.captureException(err, {
+      tags: { surface: "auditLog", entity_type: args.entityType, action: args.action },
+    });
     return false;
   }
 }
