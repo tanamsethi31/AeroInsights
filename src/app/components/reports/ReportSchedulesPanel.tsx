@@ -147,9 +147,9 @@ export function ReportSchedulesPanel() {
           </select>
           <select value={draftFormat} onChange={(e) => setDraftFormat(e.target.value as ReportFormat)} style={inputStyle}>
             <option value="csv">CSV</option>
-            <option value="pdf" disabled>PDF (soon)</option>
-            <option value="docx" disabled>DOCX (soon)</option>
-            <option value="xlsx" disabled>XLSX (soon)</option>
+            <option value="pdf">PDF</option>
+            <option value="docx">DOCX</option>
+            <option value="xlsx">XLSX</option>
           </select>
           <select value={draftFreq} onChange={(e) => setDraftFreq(e.target.value as ReportFrequency)} style={inputStyle}>
             <option value="daily">Daily</option>

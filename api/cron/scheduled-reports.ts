@@ -17,6 +17,11 @@
 
 export const config = { runtime: "edge" };
 
+import {
+  renderSnapshotCsv, renderSnapshotPdf, renderSnapshotDocx, renderSnapshotXlsx,
+  type SnapshotRow, type RenderedReport,
+} from "../_lib/reportRenderers";
+
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SRV = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const RESEND_KEY   = process.env.RESEND_API_KEY ?? "";
@@ -124,20 +129,9 @@ async function sendResendEmail(to: string, subject: string, html: string): Promi
   }
 }
 
-// ── CSV generation — portfolio snapshot ───────────────────────────────
+// ── Snapshot data fetch (shared across all formats) ───────────────────
 
-interface SnapshotRow {
-  lease_external_id: string | null;
-  lessee_name: string;
-  ead: number | null;
-  ecl_12m: number | null;
-  ecl_lifetime: number | null;
-  stage: number | null;
-}
-
-async function buildSnapshotCsv(orgId: string, portfolioId: string | null): Promise<string> {
-  // Pull leases + lessees + provisions in one batch. portfolio_id filter is
-  // optional — null means "all leases for the org".
+async function fetchSnapshotRows(orgId: string, portfolioId: string | null): Promise<SnapshotRow[]> {
   const portfolioClause = portfolioId ? `&portfolio_id=eq.${portfolioId}` : "";
   const leases   = await sbSelect<{ id: string; external_id: string | null; lessee_id: string; asset_id: string; stage: number | null }>(
     `leases?org_id=eq.${orgId}${portfolioClause}&select=id,external_id,lessee_id,asset_id,stage`,
@@ -148,11 +142,9 @@ async function buildSnapshotCsv(orgId: string, portfolioId: string | null): Prom
   const provs    = await sbSelect<{ asset_id: string; ead: number | null; ecl_12m: number | null; ecl_lifetime: number | null }>(
     `provisions?org_id=eq.${orgId}${portfolioClause}&select=asset_id,ead,ecl_12m,ecl_lifetime`,
   );
-
-  const lesseeById = new Map(lessees.map((l) => [l.id, l.name]));
+  const lesseeById  = new Map(lessees.map((l) => [l.id, l.name]));
   const provByAsset = new Map(provs.map((p) => [p.asset_id, p]));
-
-  const rows: SnapshotRow[] = leases.map((l) => {
+  return leases.map((l) => {
     const prov = provByAsset.get(l.asset_id);
     return {
       lease_external_id: l.external_id,
@@ -163,26 +155,17 @@ async function buildSnapshotCsv(orgId: string, portfolioId: string | null): Prom
       stage:             l.stage,
     };
   });
+}
 
-  // Header + rows. CSV-quote any field that contains a comma or quote.
-  function q(v: unknown): string {
-    if (v == null) return "";
-    const s = String(v);
-    return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+// ── Format dispatch ───────────────────────────────────────────────────
+
+async function renderSnapshot(format: "csv" | "pdf" | "docx" | "xlsx", rows: SnapshotRow[], reportName: string): Promise<RenderedReport> {
+  switch (format) {
+    case "csv":  return renderSnapshotCsv(rows);
+    case "pdf":  return renderSnapshotPdf(rows, reportName);
+    case "docx": return await renderSnapshotDocx(rows, reportName);
+    case "xlsx": return renderSnapshotXlsx(rows);
   }
-  const lines: string[] = [];
-  lines.push(["Lease ID", "Lessee", "EAD (USD)", "ECL 12M (USD)", "ECL Lifetime (USD)", "Stage"].join(","));
-  for (const r of rows) {
-    lines.push([
-      q(r.lease_external_id),
-      q(r.lessee_name),
-      q(r.ead?.toFixed(2) ?? ""),
-      q(r.ecl_12m?.toFixed(2) ?? ""),
-      q(r.ecl_lifetime?.toFixed(2) ?? ""),
-      q(r.stage ?? ""),
-    ].join(","));
-  }
-  return lines.join("\n");
 }
 
 // ── Frequency arithmetic ──────────────────────────────────────────────
@@ -210,42 +193,30 @@ interface ScheduleRow {
 }
 
 async function processSchedule(s: ScheduleRow): Promise<{ status: "sent" | "failed" | "skipped"; detail?: string }> {
-  if (s.format !== "csv") {
-    // PDF/DOCX/XLSX server-side generation is the next slice. For now we
-    // mark the run as skipped so the schedule still advances.
-    await sbPatch(`report_schedules?id=eq.${s.id}`, {
-      next_run_at: advanceNext(s.next_run_at, s.frequency),
-      last_run_at: new Date().toISOString(),
-      last_status: "skipped",
-      last_error:  `format ${s.format} not supported by cron yet`,
-      updated_at:  new Date().toISOString(),
-    });
-    return { status: "skipped", detail: `format ${s.format} not supported` };
-  }
-
-  // 1. Build CSV body.
-  let csv: string;
+  // 1. Fetch rows + render to the requested format.
+  let rendered: RenderedReport;
   try {
-    csv = await buildSnapshotCsv(s.org_id, s.portfolio_id);
+    const rows = await fetchSnapshotRows(s.org_id, s.portfolio_id);
+    rendered   = await renderSnapshot(s.format, rows, s.name);
   } catch (err) {
     await sbPatch(`report_schedules?id=eq.${s.id}`, {
       next_run_at: advanceNext(s.next_run_at, s.frequency),
       last_run_at: new Date().toISOString(),
       last_status: "failed",
-      last_error:  `csv build: ${(err as Error).message}`,
+      last_error:  `render ${s.format}: ${(err as Error).message}`,
       updated_at:  new Date().toISOString(),
     });
     return { status: "failed", detail: (err as Error).message };
   }
-  const bytes = new TextEncoder().encode(csv);
+  const bytes = rendered.bytes;
   const date  = new Date();
   const ymd   = date.toISOString().slice(0, 10);
-  const filename = `${s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${ymd}.csv`;
+  const filename = `${s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${ymd}.${rendered.ext}`;
   const portfolioSeg = s.portfolio_id ?? "org-wide";
   const path = `${s.org_id}/${portfolioSeg}/${ymd}/${date.getTime()}-${filename}`;
 
   // 2. Upload to Storage. Failed upload still records the row with no path.
-  const uploadedPath = await uploadToStorage(path, bytes, "text/csv");
+  const uploadedPath = await uploadToStorage(path, bytes, rendered.contentType);
 
   // 3. Sign URL for the email body.
   const url = uploadedPath ? await signUrl(uploadedPath) : null;
@@ -270,7 +241,7 @@ async function processSchedule(s: ScheduleRow): Promise<{ status: "sent" | "fail
     portfolio_id:     s.portfolio_id,
     report_id:        s.report_id,
     report_name:      s.name,
-    format:           "csv",
+    format:           rendered.ext,
     params:           { scheduled: true, schedule_id: s.id, frequency: s.frequency },
     storage_path:     uploadedPath,
     file_size_bytes:  bytes.length,
@@ -287,7 +258,7 @@ async function processSchedule(s: ScheduleRow): Promise<{ status: "sent" | "fail
     after: {
       reportId:   s.report_id,
       reportName: s.name,
-      format:     "csv",
+      format:     rendered.ext,
       filename,
       fileSize:   bytes.length,
       scheduled:  true,
