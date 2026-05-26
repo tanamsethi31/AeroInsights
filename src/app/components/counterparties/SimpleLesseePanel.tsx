@@ -18,6 +18,7 @@ import { CountryFlag } from "../ui/CountryFlag";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
 import { useLesseeTimeline } from "../../hooks/useLesseeTimeline";
+import { useWatchlist } from "../../hooks/useWatchlist";
 
 export interface SimpleLesseeData {
   /** Lessee uuid — used by T-2.5 timeline hook. Optional for back-compat. */
@@ -333,9 +334,57 @@ export function SimpleLesseePanel({ lessee }: { lessee: SimpleLesseeData }) {
         </div>
       )}
 
+      {/* T-5.3 — Live watchlist score from watchlist_entries */}
+      {lessee.id && <SimpleLesseeWatchlist lesseeUuid={lessee.id} />}
+
       {/* T-2.5 — Real-data timeline derived from stage_migrations + audit_log */}
       {lessee.id && <SimpleLesseeTimeline lesseeUuid={lessee.id} />}
     </div>
+  );
+}
+
+// ─── Watchlist score card (T-5.3) ──────────────────────────────────────────
+
+function SimpleLesseeWatchlist({ lesseeUuid }: { lesseeUuid: string }) {
+  const { byLesseeId, loading } = useWatchlist();
+  if (loading) return null;
+  const entry = byLesseeId.get(lesseeUuid);
+  if (!entry) return null;
+
+  const statusColor =
+    entry.status === "red"   ? { bg: "#FEE2E2", fg: "#B91C1C" } :
+    entry.status === "amber" ? { bg: "#FEF3C7", fg: "#B45309" } :
+                               { bg: "#DCFCE7", fg: "#15803D" };
+
+  return (
+    <Card title="Watchlist (live)" subtitle={`Re-scored every 30 min by /api/cron/watchlist · ${new Date(entry.evaluatedAt).toLocaleString("en-GB")}`} noPadding>
+      <div style={{ padding: "0.875rem 1rem", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "0.875rem", alignItems: "center" }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: "0.4rem",
+          padding: "0.3rem 0.75rem", borderRadius: "9999px",
+          background: statusColor.bg, color: statusColor.fg,
+          fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}>
+          <ShieldAlert size={12} />
+          {entry.status}
+        </div>
+        <div>
+          <div style={{ fontSize: "0.8125rem", color: "#0F172A", fontWeight: 500 }}>
+            {entry.triggeredBy ?? "—"}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "0.125rem" }}>
+            {entry.reason ?? "—"}
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0F172A", fontVariantNumeric: "tabular-nums" }}>
+            {entry.score.toFixed(1)}
+          </div>
+          <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>risk score</div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
