@@ -29,6 +29,7 @@ import { useAssumptionLog } from "../hooks/useAssumptionLog";
 import { AuditTrailPanel } from "../components/settings/AuditTrailPanel";
 import { AlertRulesPanel } from "../components/settings/AlertRulesPanel";
 import { WatchlistConfigPanel } from "../components/settings/WatchlistConfigPanel";
+import { DangerZonePanel } from "../components/settings/DangerZonePanel";
 import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
 import { computeRollForward } from "../utils/eclRollForward";
@@ -237,6 +238,7 @@ export default function Settings() {
         >
           {/* Tenant */}
           {activeTab === "tenant" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <Card title="Tenant Settings" subtitle="Company-wide configuration">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
                 {[
@@ -266,6 +268,11 @@ export default function Settings() {
                 </button>
               </div>
             </Card>
+            {/* T-6.5 — Danger Zone */}
+            <Card title="Danger Zone" subtitle="Tenant offboarding · permanent deletion · GDPR compliance">
+              <DangerZonePanel />
+            </Card>
+            </div>
           )}
 
           {/* Users */}
