@@ -13,12 +13,14 @@
 import {
   Building2, MapPin, CreditCard, FileText, Activity,
   AlertTriangle, ShieldAlert, Gavel, ArrowUpRight, ArrowDownRight, Lock,
+  Newspaper, ExternalLink,
 } from "lucide-react";
 import { CountryFlag } from "../ui/CountryFlag";
 import { StatusPill } from "../ui/StatusPill";
 import { Card } from "../ui/Card";
 import { useLesseeTimeline } from "../../hooks/useLesseeTimeline";
 import { useWatchlist } from "../../hooks/useWatchlist";
+import { useNewsSignal } from "../../hooks/useNewsSignal";
 
 export interface SimpleLesseeData {
   /** Lessee uuid — used by T-2.5 timeline hook. Optional for back-compat. */
@@ -337,6 +339,9 @@ export function SimpleLesseePanel({ lessee }: { lessee: SimpleLesseeData }) {
       {/* T-5.3 — Live watchlist score from watchlist_entries */}
       {lessee.id && <SimpleLesseeWatchlist lesseeUuid={lessee.id} />}
 
+      {/* Polish — news evidence drill-down (news_signals.articles) */}
+      {lessee.id && <SimpleLesseeNews lesseeUuid={lessee.id} />}
+
       {/* T-2.5 — Real-data timeline derived from stage_migrations + audit_log */}
       {lessee.id && <SimpleLesseeTimeline lesseeUuid={lessee.id} />}
     </div>
@@ -383,6 +388,108 @@ function SimpleLesseeWatchlist({ lesseeUuid }: { lesseeUuid: string }) {
           </div>
           <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>risk score</div>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─── News evidence drill-down (polish) ─────────────────────────────────────
+
+function SimpleLesseeNews({ lesseeUuid }: { lesseeUuid: string }) {
+  const { signal, loading } = useNewsSignal(lesseeUuid);
+  if (loading) return null;
+  if (!signal) return null;
+
+  const scoreColor =
+    signal.score >= 60 ? { bg: "#FEE2E2", fg: "#B91C1C" } :
+    signal.score >= 30 ? { bg: "#FEF3C7", fg: "#B45309" } :
+                         { bg: "#DCFCE7", fg: "#15803D" };
+
+  return (
+    <Card
+      title="News evidence"
+      subtitle={`${signal.keywordHits} matched article${signal.keywordHits === 1 ? "" : "s"} · refreshed ${new Date(signal.evaluatedAt).toLocaleString("en-GB")}`}
+      noPadding
+    >
+      <div style={{
+        padding: "0.875rem 1rem",
+        display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "0.875rem",
+        alignItems: "center", borderBottom: "1px solid #F1F5F9",
+      }}>
+        <Newspaper size={14} style={{ color: "#475569" }} />
+        <div style={{ fontSize: "0.8125rem", color: "#0F172A" }}>
+          {signal.articles.length === 0
+            ? <em style={{ color: "#94A3B8" }}>No matching articles in the last fetch window.</em>
+            : "Click any headline to open the source."}
+        </div>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: "0.35rem",
+          padding: "0.25rem 0.7rem", borderRadius: "9999px",
+          background: scoreColor.bg, color: scoreColor.fg,
+          fontSize: "0.75rem", fontWeight: 700,
+        }}>
+          news {signal.score.toFixed(0)}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {signal.articles.slice(0, 5).map((a, i) => {
+          const pill =
+            a.weight >= 25  ? { bg: "#FEE2E2", fg: "#B91C1C", label: "distress" } :
+            a.weight >= 15  ? { bg: "#FEF3C7", fg: "#B45309", label: "negative" } :
+            a.weight >  0   ? { bg: "#F1F5F9", fg: "#475569", label: "neutral"  } :
+                              { bg: "#DCFCE7", fg: "#15803D", label: "positive" };
+          return (
+            <a
+              key={`${a.url}-${i}`}
+              href={a.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto auto",
+                gap: "0.875rem",
+                alignItems: "center",
+                padding: "0.6rem 1rem",
+                borderBottom: "1px solid #F1F5F9",
+                textDecoration: "none",
+                color: "inherit",
+                transition: "background 120ms ease",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "#F8FAFC"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: "0.8125rem", fontWeight: 600, color: "#0F172A",
+                  display: "flex", alignItems: "center", gap: "0.35rem",
+                }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {a.title}
+                  </span>
+                  <ExternalLink size={11} style={{ flexShrink: 0, color: "#94A3B8" }} />
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.125rem" }}>
+                  {a.source} · {new Date(a.publishedAt).toLocaleDateString("en-GB")}
+                </div>
+              </div>
+              <span style={{
+                background: pill.bg, color: pill.fg,
+                fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase",
+                letterSpacing: "0.04em", padding: "0.15rem 0.5rem",
+                borderRadius: "9999px", whiteSpace: "nowrap",
+              }}>
+                {pill.label}
+              </span>
+              <span style={{
+                fontSize: "0.7rem", color: "#94A3B8",
+                fontVariantNumeric: "tabular-nums", minWidth: "36px", textAlign: "right",
+              }}>
+                {a.weight > 0 ? `+${a.weight}` : a.weight}
+              </span>
+            </a>
+          );
+        })}
       </div>
     </Card>
   );
