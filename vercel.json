@@ -8,6 +8,7 @@
     { "source": "/(.*)",     "destination": "/index.html" }
   ],
   "crons": [
-    { "path": "/api/cron/alerts", "schedule": "*/30 * * * *" }
+    { "path": "/api/cron/alerts",     "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/fx-refresh", "schedule": "0 6 * * *"   }
   ]
 }

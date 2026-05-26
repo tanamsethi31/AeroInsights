@@ -1,5 +1,6 @@
 // src/app/contexts/CurrencyContext.tsx
 import * as React from "react";
+import { useFxRates } from "../hooks/useFxRates";
 
 export type CurrencyCode = "EUR" | "USD" | "GBP" | "AED" | "SGD" | "HKD" | "JPY" | "CAD" | "AUD";
 
@@ -28,6 +29,8 @@ interface CurrencyContextValue {
   currency: CurrencyCode;
   setCurrency: (c: CurrencyCode) => void;
   fmt: (usd: number, opts?: { compact?: boolean }) => string;
+  /** Date of the FX rates currently in use, or null if static-only. */
+  fxDate: string | null;
 }
 
 const CurrencyContext = React.createContext<CurrencyContextValue | null>(null);
@@ -43,10 +46,17 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     setCurrencyState(c);
   }, []);
 
+  // T-5.4 — live ECB rates overlay the hardcoded CURRENCIES table.
+  const { rates: liveRates, date: fxDate } = useFxRates();
+  const effectiveRate = React.useCallback((c: CurrencyCode): number => {
+    return liveRates[c] ?? CURRENCIES[c].rate;
+  }, [liveRates]);
+
   const fmt = React.useCallback(
     (usd: number, opts?: { compact?: boolean }): string => {
       const meta = CURRENCIES[currency];
-      const value = usd * meta.rate;
+      const rate = effectiveRate(currency);
+      const value = usd * rate;
       if (opts?.compact) {
         const absValue = Math.abs(value);
         if (absValue >= 1_000_000_000)
@@ -61,10 +71,13 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
         maximumFractionDigits: meta.decimals,
       })}`;
     },
-    [currency],
+    [currency, effectiveRate],
   );
 
-  const value = React.useMemo(() => ({ currency, setCurrency, fmt }), [currency, setCurrency, fmt]);
+  const value = React.useMemo(
+    () => ({ currency, setCurrency, fmt, fxDate }),
+    [currency, setCurrency, fmt, fxDate],
+  );
 
   return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }
