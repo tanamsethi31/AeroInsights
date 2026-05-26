@@ -130,6 +130,9 @@ to sign in again.
 | `SUPABASE_SERVICE_ROLE_KEY`   | Vercel function  | NEVER bundle into browser code |
 | `SUPABASE_JWT_SECRET`         | Vercel function  | Project Settings → API → JWT Secret |
 | `VITE_API_BASE_URL`           | Browser          | e.g. `https://aeroinsights.io/api/v1`; if unset, exchange is skipped (legacy demo) |
+| `RESEND_API_KEY`              | Vercel cron      | Email send key for /api/cron/alerts (Phase 5.1) |
+| `RESEND_FROM_EMAIL`           | Vercel cron      | From-address. Default `alerts@aeroinsights.io` |
+| `CRON_SECRET`                 | Vercel cron      | Bearer-token gate for /api/cron/* endpoints |
 
 ## Known gaps
 

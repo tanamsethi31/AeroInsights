@@ -27,6 +27,7 @@ import { useIfrs9Params } from "../hooks/useIfrs9Params";
 import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore, computeStatus, type SignalKey } from "../components/counterparties/watchlistEngine";
 import { useAssumptionLog } from "../hooks/useAssumptionLog";
 import { AuditTrailPanel } from "../components/settings/AuditTrailPanel";
+import { AlertRulesPanel } from "../components/settings/AlertRulesPanel";
 import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
 import { computeRollForward } from "../utils/eclRollForward";
@@ -947,10 +948,15 @@ export default function Settings() {
           {activeTab === "alerts" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
+              {/* T-5.1 — live alert_rules CRUD + send history */}
+              <Card title="Alert Rules" subtitle="Configured rules. /api/cron/alerts re-evaluates every 30 minutes.">
+                <AlertRulesPanel />
+              </Card>
+
               {/* Email Notification Rules */}
               <Card
-                title="Email Notification Rules"
-                subtitle="Recipients automatically emailed when a lessee crosses a configured threshold"
+                title="Email Notification Rules (legacy demo)"
+                subtitle="Decorative recipients — superseded by the Alert Rules table above"
               >
                 {/* Recipient table */}
                 {emailRecipients.length > 0 && (
