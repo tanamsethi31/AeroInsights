@@ -28,6 +28,7 @@ import { getWatchlistSummary, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, computeScore,
 import { useAssumptionLog } from "../hooks/useAssumptionLog";
 import { AuditTrailPanel } from "../components/settings/AuditTrailPanel";
 import { AlertRulesPanel } from "../components/settings/AlertRulesPanel";
+import { WatchlistConfigPanel } from "../components/settings/WatchlistConfigPanel";
 import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
 import { computeRollForward } from "../utils/eclRollForward";
@@ -947,6 +948,11 @@ export default function Settings() {
 
           {activeTab === "alerts" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+              {/* T-5.3 polish — watchlist weights + thresholds editor */}
+              <Card title="Watchlist Engine" subtitle="Signal weights + status thresholds. Persisted to watchlist_config; cron picks up on next 30-min tick.">
+                <WatchlistConfigPanel />
+              </Card>
 
               {/* T-5.1 — live alert_rules CRUD + send history */}
               <Card title="Alert Rules" subtitle="Configured rules. /api/cron/alerts re-evaluates every 30 minutes.">

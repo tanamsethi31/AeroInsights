@@ -22,6 +22,7 @@ import { evaluateRules,
          type AlertRuleInput,
          type LesseeSnapshot,
          type StageMigrationSnapshot,
+         type LesseeAggregateSnapshot,
          type AlertFire } from "../_lib/alertEvaluator";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
@@ -127,7 +128,43 @@ async function processOrg(orgId: string): Promise<{ fired: number; sent: number;
     sanctionedCountries.map((c) => [c, "active" as const]),
   );
 
-  const fires = evaluateRules({ rules, lessees, migrations, leaseToLessee, sanctions });
+  // Aggregates per lessee for mr_shortfall + concentration kinds. Only
+  // fetched once per org so cron stays cheap; empty for orgs with no
+  // matching rule type but no harm.
+  const leaseRowsAll = await sbSelect<{ id: string; lessee_id: string; asset_id: string }>(
+    `leases?org_id=eq.${orgId}&select=id,lessee_id,asset_id`,
+  );
+  const provisionRows = await sbSelect<{ asset_id: string; ead: number | null }>(
+    `provisions?org_id=eq.${orgId}&select=asset_id,ead`,
+  );
+  const mrRows = await sbSelect<{ lease_id: string; balance_usd: number | null }>(
+    `maintenance_reserves?org_id=eq.${orgId}&select=lease_id,balance_usd`,
+  );
+  const eadByAsset = new Map<string, number>();
+  for (const p of provisionRows) eadByAsset.set(p.asset_id, Number(p.ead ?? 0));
+  const aggByLessee = new Map<string, { ead_usd: number; mr_balance_usd: number }>();
+  for (const l of leaseRowsAll) {
+    const cur = aggByLessee.get(l.lessee_id) ?? { ead_usd: 0, mr_balance_usd: 0 };
+    cur.ead_usd += eadByAsset.get(l.asset_id) ?? 0;
+    aggByLessee.set(l.lessee_id, cur);
+  }
+  const mrByLease = new Map<string, number>();
+  for (const m of mrRows) {
+    mrByLease.set(m.lease_id, (mrByLease.get(m.lease_id) ?? 0) + Number(m.balance_usd ?? 0));
+  }
+  for (const l of leaseRowsAll) {
+    const cur = aggByLessee.get(l.lessee_id);
+    if (!cur) continue;
+    cur.mr_balance_usd += mrByLease.get(l.id) ?? 0;
+  }
+  const aggregates: LesseeAggregateSnapshot[] = lessees.map((l) => ({
+    lessee_id:     l.id,
+    lessee_name:   l.name,
+    ead_usd:       aggByLessee.get(l.id)?.ead_usd ?? 0,
+    mr_balance_usd:aggByLessee.get(l.id)?.mr_balance_usd ?? 0,
+  }));
+
+  const fires = evaluateRules({ rules, lessees, migrations, leaseToLessee, sanctions, aggregates });
 
   let sent = 0, skipped = 0, failed = 0;
   for (const fire of fires) {

@@ -11,6 +11,8 @@ const KIND_LABEL: Record<AlertKind, string> = {
   stage_downgrade: "Stage downgrade",
   watchlist_red:   "Watchlist RED",
   sanctions_hit:   "Sanctions hit",
+  mr_shortfall:    "MR shortfall",
+  concentration:   "Concentration breach",
 };
 
 function ThresholdEditor({
@@ -41,6 +43,28 @@ function ThresholdEditor({
         <select value={value.to as number | undefined ?? ""} onChange={(e) => onChange({ ...value, to: e.target.value ? Number(e.target.value) : undefined })} style={inputStyle}>
           <option value="">any</option><option value="2">S2</option><option value="3">S3</option>
         </select>
+      </div>
+    );
+  }
+  if (kind === "mr_shortfall") {
+    return (
+      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+        <span style={{ fontSize: "0.75rem", color: "#64748B" }}>≥ $</span>
+        <input type="number" min={0} step={1000}
+          value={Number(value.usd ?? 100_000)}
+          onChange={(e) => onChange({ usd: Number(e.target.value) })}
+          style={inputStyle} placeholder="USD" />
+      </div>
+    );
+  }
+  if (kind === "concentration") {
+    return (
+      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+        <input type="number" min={1} max={100} step={1}
+          value={Number(value.pct ?? 25)}
+          onChange={(e) => onChange({ pct: Number(e.target.value) })}
+          style={inputStyle} placeholder="%" />
+        <span style={{ fontSize: "0.75rem", color: "#64748B" }}>% of EAD</span>
       </div>
     );
   }
@@ -161,12 +185,19 @@ export function AlertRulesPanel() {
           <select value={draftKind} onChange={(e) => {
             const k = e.target.value as AlertKind;
             setDraftKind(k);
-            setDraftThreshold(k === "dpd_breach" ? { days: 30 } : {});
+            setDraftThreshold(
+              k === "dpd_breach"     ? { days: 30 }     :
+              k === "mr_shortfall"   ? { usd: 100_000 } :
+              k === "concentration"  ? { pct: 25 }      :
+              {}
+            );
           }} style={inputStyle}>
             <option value="dpd_breach">DPD breach</option>
             <option value="stage_downgrade">Stage downgrade</option>
             <option value="watchlist_red">Watchlist RED</option>
             <option value="sanctions_hit">Sanctions hit</option>
+            <option value="mr_shortfall">MR shortfall</option>
+            <option value="concentration">Concentration breach</option>
           </select>
           <ThresholdEditor kind={draftKind} value={draftThreshold} onChange={setDraftThreshold} />
         </div>

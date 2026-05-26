@@ -7,7 +7,10 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
 
-export type AlertKind = "dpd_breach" | "stage_downgrade" | "watchlist_red" | "sanctions_hit";
+export type AlertKind =
+  | "dpd_breach" | "stage_downgrade"
+  | "watchlist_red" | "sanctions_hit"
+  | "mr_shortfall" | "concentration";
 
 export interface AlertRule {
   id:               string;

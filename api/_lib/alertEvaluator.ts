@@ -5,7 +5,10 @@
 // (rule, entity) pair that currently breaches the threshold. Cooldown
 // dedup happens in the caller against alert_sends.
 
-export type AlertKind = "dpd_breach" | "stage_downgrade" | "watchlist_red" | "sanctions_hit";
+export type AlertKind =
+  | "dpd_breach" | "stage_downgrade"
+  | "watchlist_red" | "sanctions_hit"
+  | "mr_shortfall" | "concentration";
 
 export interface AlertRuleInput {
   id:           string;
@@ -42,6 +45,14 @@ export interface StageMigrationSnapshot {
 export interface JurisdictionSanctionsSnapshot {
   country: string;        // ISO name as used by lessees.country
   status:  "active" | "watch" | "none";
+}
+
+/** Per-lessee MR/EAD aggregates so the new alert kinds have data. */
+export interface LesseeAggregateSnapshot {
+  lessee_id:       string;
+  lessee_name:     string;
+  mr_balance_usd:  number;    // sum of maintenance_reserves.balance_usd
+  ead_usd:         number;    // sum of provisions.ead through this lessee's leases
 }
 
 export interface AlertFire {
@@ -133,6 +144,43 @@ function evalSanctionsHit(
     }));
 }
 
+// ── New kinds ──────────────────────────────────────────────────────────
+
+function evalMrShortfall(rule: AlertRuleInput, aggregates: LesseeAggregateSnapshot[]): AlertFire[] {
+  const minShortfallUsd = Number(rule.threshold.usd ?? 100_000);
+  return aggregates
+    .filter((a) => a.mr_balance_usd < 0 && Math.abs(a.mr_balance_usd) >= minShortfallUsd)
+    .map((a) => ({
+      ruleId:      rule.id,
+      kind:        "mr_shortfall" as AlertKind,
+      entityId:    a.lessee_id,
+      entityLabel: a.lessee_name,
+      subject:     `[Aeroinsights] ${a.lessee_name} — MR shortfall $${(Math.abs(a.mr_balance_usd)/1e6).toFixed(2)}M`,
+      body:        `Maintenance reserve balance is $${(a.mr_balance_usd/1e6).toFixed(2)}M for ${a.lessee_name}. Threshold: $${(minShortfallUsd/1e6).toFixed(2)}M shortfall.`,
+      payload:     { mr_balance_usd: a.mr_balance_usd, threshold_usd: minShortfallUsd },
+      recipients:  rule.recipients,
+    }));
+}
+
+function evalConcentration(rule: AlertRuleInput, aggregates: LesseeAggregateSnapshot[]): AlertFire[] {
+  const maxPct = Number(rule.threshold.pct ?? 25);
+  const total = aggregates.reduce((s, a) => s + a.ead_usd, 0);
+  if (total <= 0) return [];
+  return aggregates
+    .map((a) => ({ a, share: (a.ead_usd / total) * 100 }))
+    .filter(({ share }) => share >= maxPct)
+    .map(({ a, share }) => ({
+      ruleId:      rule.id,
+      kind:        "concentration" as AlertKind,
+      entityId:    a.lessee_id,
+      entityLabel: a.lessee_name,
+      subject:     `[Aeroinsights] Concentration: ${a.lessee_name} = ${share.toFixed(1)}% of portfolio EAD`,
+      body:        `${a.lessee_name} is ${share.toFixed(1)}% of total portfolio EAD ($${(a.ead_usd/1e6).toFixed(1)}M of $${(total/1e6).toFixed(1)}M). Threshold: ${maxPct}%.`,
+      payload:     { share_pct: share, ead_usd: a.ead_usd, total_ead_usd: total, threshold_pct: maxPct },
+      recipients:  rule.recipients,
+    }));
+}
+
 // ── Main entry ─────────────────────────────────────────────────────────
 
 export interface EvaluatorContext {
@@ -141,10 +189,12 @@ export interface EvaluatorContext {
   migrations:    StageMigrationSnapshot[];
   leaseToLessee: Map<string, { id: string; name: string }>;
   sanctions:     Map<string, "active" | "watch" | "none">;
+  aggregates?:   LesseeAggregateSnapshot[];
 }
 
 export function evaluateRules(ctx: EvaluatorContext): AlertFire[] {
   const out: AlertFire[] = [];
+  const aggs = ctx.aggregates ?? [];
   for (const rule of ctx.rules) {
     if (!rule.enabled) continue;
     if (rule.recipients.length === 0) continue;
@@ -153,6 +203,8 @@ export function evaluateRules(ctx: EvaluatorContext): AlertFire[] {
       case "stage_downgrade":  out.push(...evalStageDowngrade(rule, ctx.migrations, ctx.leaseToLessee)); break;
       case "watchlist_red":    out.push(...evalWatchlistRed(rule, ctx.lessees)); break;
       case "sanctions_hit":    out.push(...evalSanctionsHit(rule, ctx.lessees, ctx.sanctions)); break;
+      case "mr_shortfall":     out.push(...evalMrShortfall(rule, aggs)); break;
+      case "concentration":    out.push(...evalConcentration(rule, aggs)); break;
     }
   }
   return out;
