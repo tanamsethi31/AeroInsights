@@ -137,6 +137,8 @@ to sign in again.
 | `SENTRY_TRACES_SAMPLE_RATE`   | Vercel function  | Optional, default 0.05 |
 | `VITE_SENTRY_DSN_FRONTEND`    | Browser          | T-6.3 — SPA error capture + ErrorBoundary |
 | `VITE_SENTRY_TRACES_SAMPLE_RATE` | Browser       | Optional, default 0.05 |
+| `AI_GATEWAY_API_KEY`          | Vercel function  | T-6.4 — routes /api/ai/* through Vercel AI Gateway when set |
+| `AI_GATEWAY_MODEL`            | Vercel function  | Optional, default `anthropic/claude-3.5-sonnet`. Provider/model string per AI Gateway docs |
 
 ## Known gaps
 

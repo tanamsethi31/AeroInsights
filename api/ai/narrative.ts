@@ -1,25 +1,30 @@
 /**
  * Vercel Edge Function — narrative generation proxy
  *
- * Forwards scenario narrative requests to Azure OpenAI without exposing
- * the API key to the browser. Uses the same server-side env vars as
- * the chat proxy (api/ai/chat.ts).
+ * T-6.4 — Routes through Vercel AI Gateway when AI_GATEWAY_API_KEY is
+ * set. Falls back to direct Azure OpenAI when only the Azure vars are
+ * configured. Body shape is the standard OpenAI chat/completions
+ * payload — unchanged across both paths because both upstreams are
+ * OpenAI-compatible.
  *
  * Server-side env vars (Vercel dashboard, NOT prefixed VITE_):
- *   AZURE_OPENAI_URL   Full Target URI from Azure AI Foundry
- *   AZURE_OPENAI_KEY   Azure OpenAI API key
+ *   AI_GATEWAY_API_KEY  — preferred. Routes through ai-gateway.vercel.sh
+ *   AI_GATEWAY_MODEL    — optional, default "anthropic/claude-3.5-sonnet"
+ *   AZURE_OPENAI_URL    — fallback when no gateway key set
+ *   AZURE_OPENAI_KEY    — fallback
  */
 
 export const config = { runtime: "edge" };
+
+import { resolveAiUpstream, withModel } from "../_lib/aiGateway";
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  const azureUrl = process.env.AZURE_OPENAI_URL;
-  const apiKey   = process.env.AZURE_OPENAI_KEY;
-  if (!azureUrl || !apiKey) {
+  const upstreamCfg = resolveAiUpstream();
+  if (!upstreamCfg) {
     return json({ error: "AI not configured on server." }, 503);
   }
 
@@ -29,12 +34,15 @@ export default async function handler(req: Request): Promise<Response> {
   } catch {
     return json({ error: "Invalid JSON body" }, 400);
   }
+  if (upstreamCfg.useGateway) {
+    body = withModel(body, upstreamCfg.defaultModel);
+  }
 
   let upstream: Response;
   try {
-    upstream = await fetch(azureUrl, {
+    upstream = await fetch(upstreamCfg.url, {
       method:  "POST",
-      headers: { "Content-Type": "application/json", "api-key": apiKey },
+      headers: upstreamCfg.headers,
       body:    JSON.stringify(body),
     });
   } catch (err) {

@@ -23,6 +23,8 @@
 
 export const config = { runtime: "edge" };
 
+import { resolveAiUpstream, withModel } from "../_lib/aiGateway";
+
 const USER_DAILY_LIMIT   = parseInt(process.env.AI_USER_DAILY_LIMIT   ?? "5",  10);
 const GLOBAL_DAILY_LIMIT = parseInt(process.env.AI_GLOBAL_DAILY_LIMIT ?? "50", 10);
 
@@ -184,10 +186,10 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: limit.reason, code: "RATE_LIMITED" }, 429);
   }
 
-  // Azure config.
-  const azureUrl = process.env.AZURE_OPENAI_URL;
-  const apiKey   = process.env.AZURE_OPENAI_KEY;
-  if (!azureUrl || !apiKey) {
+  // T-6.4 — Prefer Vercel AI Gateway when AI_GATEWAY_API_KEY is set.
+  // Falls back to Azure OpenAI if only the Azure vars are present.
+  const upstreamCfg = resolveAiUpstream();
+  if (!upstreamCfg) {
     return json({ error: "AI not configured on server. Contact your administrator." }, 503);
   }
 
@@ -198,14 +200,17 @@ export default async function handler(req: Request): Promise<Response> {
   } catch {
     return json({ error: "Invalid JSON body" }, 400);
   }
+  if (upstreamCfg.useGateway) {
+    body = withModel(body, upstreamCfg.defaultModel);
+  }
 
-  // Proxy to Azure OpenAI.
+  // Proxy to upstream (Gateway or Azure).
   let upstream: Response;
   try {
-    upstream = await fetch(azureUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": apiKey },
-      body:   JSON.stringify(body),
+    upstream = await fetch(upstreamCfg.url, {
+      method:  "POST",
+      headers: upstreamCfg.headers,
+      body:    JSON.stringify(body),
     });
   } catch (err) {
     return json({ error: `Upstream fetch failed: ${String(err)}` }, 502);
@@ -213,7 +218,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");
-    return json({ error: `Azure error ${upstream.status}: ${text}` }, upstream.status);
+    return json({ error: `Upstream error ${upstream.status}: ${text}` }, upstream.status);
   }
 
   // Stream SSE back to browser, exposing remaining quota in headers.
