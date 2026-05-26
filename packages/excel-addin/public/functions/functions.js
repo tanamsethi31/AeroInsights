@@ -19,7 +19,12 @@
 
 /* ── Config ──────────────────────────────────────────────────────────────── */
 
-const API_BASE  = "https://api.aerinsights.com/api/v1";
+// T-5.5 — Defaults to the Aeroinsights Vercel deployment. Override at
+// runtime by setting `window.AEROINSIGHTS_API_BASE` before Office.onReady
+// (e.g. from a config script in functions.html).
+const API_BASE  = (typeof window !== "undefined" && window.AEROINSIGHTS_API_BASE)
+  ? window.AEROINSIGHTS_API_BASE
+  : "https://aeroinsights.io/api";
 const TOKEN_KEY = "aerinsights_addin_token";
 
 /* ── Shared fetch helper ─────────────────────────────────────────────────── */

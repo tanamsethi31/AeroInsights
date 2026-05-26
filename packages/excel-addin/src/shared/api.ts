@@ -11,8 +11,11 @@
 
 export const TOKEN_KEY = "aerinsights_addin_token";
 
+// T-5.5 — Defaults to the Vercel deployment's /api root so the add-in
+// can hit the same Excel endpoints used by /api/excel/[fn].ts.
+// Override locally by setting VITE_API_BASE_URL.
 export const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
-  ?? "https://api.aerinsights.com/api/v1";
+  ?? "https://aeroinsights.io/api";
 
 /**
  * Authenticated fetch against the Aeroinsights API.
