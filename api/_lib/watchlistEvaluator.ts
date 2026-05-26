@@ -58,9 +58,17 @@ function ctcWatchlist(flag: boolean | null): WatchlistSignalValue {
   return { value: flag ? 100 : 0, rawDisplay: flag ? "On watchlist" : "Not listed" };
 }
 
-function newsKeywordHits(insolvency: boolean | null): WatchlistSignalValue {
-  // Until we wire NewsAPI keyword counts per lessee, use insolvency flag
-  // as the dominant proxy. Real news scoring lands in a follow-up slice.
+function newsKeywordHits(insolvency: boolean | null, newsScore: number | null, newsHits: number | null): WatchlistSignalValue {
+  // Polish — prefer the live news_signals row over the insolvency-only
+  // proxy. When NewsAPI isn't configured the cron leaves no row and we
+  // fall back to the original behaviour.
+  if (newsScore != null) {
+    const hits = newsHits ?? 0;
+    return {
+      value:      Math.round(newsScore),
+      rawDisplay: hits > 0 ? `${hits} matched article${hits === 1 ? "" : "s"}` : "No matches",
+    };
+  }
   return { value: insolvency ? 100 : 0, rawDisplay: insolvency ? "Insolvency filing" : "—" };
 }
 
@@ -84,13 +92,15 @@ export function evaluateLessee(
   l: WatchlistLesseeInput,
   weights: WatchlistWeights,
   thresholds: WatchlistThresholds,
+  newsByLessee?: Map<string, { score: number; hits: number }>,
 ): WatchlistResult {
+  const news = newsByLessee?.get(l.id);
   const signals: Record<SignalKey, WatchlistSignalValue> = {
     paymentLateness: paymentLateness(l.dpd_days),
     scheduleQoQ:     scheduleQoQ(l),
     ratingChange:    ratingChange(l.rating_notches_down),
     ctcWatchlist:    ctcWatchlist(l.country_watchlist),
-    newsKeywordHits: newsKeywordHits(l.insolvency_filed),
+    newsKeywordHits: newsKeywordHits(l.insolvency_filed, news?.score ?? null, news?.hits ?? null),
   };
 
   // Weighted score. Weights sum to ~100, so the result is already 0–100.
@@ -136,8 +146,9 @@ export function evaluateLessees(
   lessees: WatchlistLesseeInput[],
   weights: WatchlistWeights,
   thresholds: WatchlistThresholds,
+  newsByLessee?: Map<string, { score: number; hits: number }>,
 ): WatchlistResult[] {
-  return lessees.map((l) => evaluateLessee(l, weights, thresholds));
+  return lessees.map((l) => evaluateLessee(l, weights, thresholds, newsByLessee));
 }
 
 export const DEFAULT_WATCHLIST_WEIGHTS: WatchlistWeights = {

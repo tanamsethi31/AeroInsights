@@ -113,8 +113,15 @@ async function processPortfolio(orgId: string, portfolioId: string): Promise<{
   );
   const prevByLessee = new Map(existing.map((e) => [e.lessee_id, e]));
 
-  // 4. Evaluate.
-  const results = evaluateLessees(lessees, weights, thresholds);
+  // 4. News signals (polish) — feed real per-lessee scores into the
+  //    newsKeywordHits signal. Missing rows fall back to the proxy.
+  const newsRows = await sbSelect<{ lessee_id: string; score: number; keyword_hits: number }>(
+    `news_signals?org_id=eq.${orgId}&select=lessee_id,score,keyword_hits`,
+  );
+  const newsByLessee = new Map(newsRows.map((r) => [r.lessee_id, { score: Number(r.score), hits: r.keyword_hits }]));
+
+  // 5. Evaluate.
+  const results = evaluateLessees(lessees, weights, thresholds, newsByLessee);
 
   // 5. Upsert entries.
   const now = new Date().toISOString();
