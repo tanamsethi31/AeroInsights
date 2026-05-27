@@ -10,3 +10,9 @@ dist/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Playwright (T-6.2)
+test-results/
+playwright-report/
+tests/e2e/.auth/
+coverage/
