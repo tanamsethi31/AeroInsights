@@ -25,21 +25,24 @@ export function OrgSetupStep({ userId, onComplete }: OrgSetupStepProps) {
     setError(null);
 
     try {
-      // Create org
-      const { data: org, error: orgErr } = await supabase
-        .from("organisations")
-        .insert({ name: name.trim(), plan: "starter", base_currency: currency })
-        .select("id")
-        .single();
-      if (orgErr || !org) throw new Error(orgErr?.message ?? "Failed to create organisation");
+      // Atomic org + first-member create via SECURITY DEFINER RPC.
+      // Direct inserts are blocked by RLS during onboarding because the
+      // caller has no jwt.org_id claim yet — the function bypasses RLS
+      // and creates a private workspace tied to this user.
+      const { data: newOrgId, error: rpcErr } = await supabase.rpc(
+        "create_organisation_with_member",
+        {
+          p_name:          name.trim(),
+          p_base_currency: currency,
+          p_user_id:       userId,
+          p_role:          role,
+        },
+      );
+      if (rpcErr || !newOrgId) {
+        throw new Error(rpcErr?.message ?? "Failed to create organisation");
+      }
 
-      // Link user with selected role
-      const { error: memberErr } = await supabase
-        .from("org_members")
-        .insert({ org_id: org.id, user_id: userId, role });
-      if (memberErr) throw new Error(memberErr.message);
-
-      onComplete(org.id, role);
+      onComplete(newOrgId as string, role);
     } catch (err) {
       setError((err as Error).message);
     } finally {

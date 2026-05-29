@@ -82,19 +82,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setOrgId(exchangedOrgId);
         return;
       }
-      // Fall back to the legacy direct lookup — works only because the
-      // org_members table is readable via the existing policy. Used for
-      // local-dev environments where the token exchange endpoint isn't
-      // wired up yet.
-      const { data, error } = await supabase
-        .from("org_members")
-        .select("org_id")
-        .eq("user_id", userId)
-        .single();
-      if (error && error.code !== "PGRST116") {
-        console.error("[DataContext] resolveOrg fallback error:", error.message);
+      // Fall back to a SECURITY DEFINER RPC that returns the user's most
+      // recent org_id. Direct selects on org_members are blocked by RLS
+      // until the JWT carries an org_id claim, which is exactly what we're
+      // trying to establish — chicken-and-egg without the RPC.
+      const { data: rpcOrgId, error: rpcErr } = await supabase.rpc(
+        "get_my_latest_org_id",
+        { p_user_id: userId },
+      );
+      if (rpcErr) {
+        console.error("[DataContext] get_my_latest_org_id error:", rpcErr.message);
       }
-      if (data?.org_id) setOrgId(data.org_id);
+      if (rpcOrgId) setOrgId(rpcOrgId as string);
     } catch {
       // No org found — app runs in demo mode
     } finally {

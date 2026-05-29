@@ -1,7 +1,7 @@
 // src/app/components/onboarding/OnboardingWizard.tsx
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ArrowLeft } from "lucide-react";
 import { OrgSetupStep } from "./OrgSetupStep";
@@ -24,7 +24,12 @@ const STEPS: OnboardingStep[] = ["org", "invite", "upload", "done"];
 export function OnboardingWizard() {
   const { user } = useAuth0();
   const navigate = useNavigate();
+  const location = useLocation();
   const { refetchUploadStatus } = useData();
+
+  // When the user arrives via "Upload Your Portfolio" card, the upload step
+  // expands to a 2-column layout with a required-columns reference sidebar.
+  const templateMode = (location.state as { templateMode?: boolean } | null)?.templateMode === true;
 
   const [step, setStep] = React.useState<OnboardingStep>("org");
   const [orgId, setOrgId] = React.useState<string | null>(null);
@@ -42,7 +47,10 @@ export function OnboardingWizard() {
   function handleGoToDashboard() {
     localStorage.setItem("aero_onboarding_role", role);
     localStorage.removeItem("aero_gs_dismissed");
-    navigate("/");
+    // Hard reload so DataContext re-runs resolveOrg with the newly-created
+    // org_members row in scope. A SPA navigate() would keep the stale
+    // orgId=null in context and show demo data on the dashboard.
+    window.location.assign("/");
   }
 
   return (
@@ -64,9 +72,15 @@ export function OnboardingWizard() {
           background: "#FFFFFF",
           borderRadius: "16px",
           width: "100%",
-          maxWidth: "560px",
+          // Expand the wizard on the upload step in template mode so the
+          // columns-reference sidebar fits next to the dropzone.
+          maxWidth: step === "upload" && templateMode ? "960px" : "560px",
+          maxHeight: "92vh",
+          transition: "max-width 280ms cubic-bezier(0.23,1,0.32,1)",
           boxShadow: "0 32px 80px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.28)",
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* Header */}
@@ -116,7 +130,7 @@ export function OnboardingWizard() {
         </div>
 
         {/* Step content */}
-        <div style={{ padding: "28px" }}>
+        <div style={{ padding: "28px", overflowY: "auto", flex: 1, minHeight: 0 }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
@@ -140,6 +154,7 @@ export function OnboardingWizard() {
               {step === "upload" && orgId && (
                 <UploadStep
                   orgId={orgId}
+                  templateMode={templateMode}
                   onComplete={handleUploadComplete}
                   onSkip={() => setStep("done")}
                 />
