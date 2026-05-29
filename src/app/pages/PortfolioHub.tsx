@@ -9,6 +9,8 @@ import {
   type Portfolio,
 } from "../contexts/PortfolioContext";
 import { UploadWizard } from "../components/upload/UploadWizard";
+import { TemplateUploadWizard } from "../components/upload/TemplateUploadWizard";
+import { ManualPortfolioWizard } from "../components/portfolio-builder/ManualPortfolioWizard";
 import { useData } from "../contexts/DataContext";
 import { supabase } from "../lib/supabase";
 
@@ -99,8 +101,31 @@ export default function PortfolioHub() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
   const sampleBgRef = useRef<HTMLDivElement>(null);
   const uploadBgRef = useRef<HTMLDivElement>(null);
+
+  // Both upload paths share the same post-import handler: hydrate the new
+  // portfolio row and navigate to the dashboard with it active.
+  async function handleUploadComplete(_uploadId: string, _count: number, newPortfolioId: string) {
+    setShowCreateModal(false);
+    setShowTemplateModal(false);
+    const { data } = await supabase
+      .from("portfolios")
+      .select("id, name, created_at")
+      .eq("id", newPortfolioId)
+      .single();
+    if (data) {
+      setActivePortfolio({
+        id: data.id,
+        name: data.name,
+        aircraft_count: 0,
+        created_at: data.created_at,
+      });
+    }
+    navigate("/", { replace: true });
+  }
 
   // Fetch user's portfolios from Supabase (per ADR-002).
   useEffect(() => {
@@ -155,25 +180,23 @@ export default function PortfolioHub() {
         <UploadWizard
           orgId={orgId}
           onClose={() => setShowCreateModal(false)}
-          onComplete={async (_uploadId, _count, newPortfolioId) => {
-            setShowCreateModal(false);
-            // Hydrate the new portfolio row so the dashboard inherits a real
-            // active selection — ADR-002 Phase A.
-            const { data } = await supabase
-              .from("portfolios")
-              .select("id, name, created_at")
-              .eq("id", newPortfolioId)
-              .single();
-            if (data) {
-              setActivePortfolio({
-                id: data.id,
-                name: data.name,
-                aircraft_count: 0,
-                created_at: data.created_at,
-              });
-            }
-            navigate("/", { replace: true });
-          }}
+          onComplete={handleUploadComplete}
+        />
+      )}
+
+      {showTemplateModal && orgId && (
+        <TemplateUploadWizard
+          orgId={orgId}
+          onClose={() => setShowTemplateModal(false)}
+          onComplete={handleUploadComplete}
+        />
+      )}
+
+      {showManualModal && orgId && (
+        <ManualPortfolioWizard
+          orgId={orgId}
+          onClose={() => setShowManualModal(false)}
+          onComplete={(result) => handleUploadComplete("manual", 0, result.portfolioId)}
         />
       )}
 
@@ -324,7 +347,7 @@ export default function PortfolioHub() {
                 ))}
                 {/* Add new */}
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => orgId ? setShowCreateModal(true) : navigate("/onboarding")}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -464,7 +487,7 @@ export default function PortfolioHub() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.12, duration: 0.38, ease: [0.23, 1, 0.32, 1] }}
-                  onClick={() => navigate("/onboarding")}
+                  onClick={() => orgId ? setShowTemplateModal(true) : navigate("/onboarding", { state: { templateMode: true } })}
                   style={{
                     position: "relative",
                     display: "flex",
@@ -541,7 +564,7 @@ export default function PortfolioHub() {
                       Upload Your Portfolio
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.75)", lineHeight: 1.6 }}>
-                      Import your real fleet, leases, and lessees to unlock full platform capabilities.
+                      Download our template, fill in your fleet, and we&rsquo;ll parse it straight into your dashboard.
                     </div>
                   </div>
 
@@ -555,7 +578,7 @@ export default function PortfolioHub() {
 
                 {/* Card 3 — Create portfolio */}
                 <motion.button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => orgId ? setShowManualModal(true) : navigate("/onboarding")}
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.38, delay: 0.16, ease: [0.23, 1, 0.32, 1] }}
@@ -606,8 +629,7 @@ export default function PortfolioHub() {
                       Create Custom Portfolio
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "#64748B", lineHeight: 1.6 }}>
-                      Upload your aircraft register, lease data, and configure
-                      your IFRS 9 parameters
+                      Enter your portfolio step-by-step in our guided builder &mdash; no spreadsheet required.
                     </div>
                   </div>
 
