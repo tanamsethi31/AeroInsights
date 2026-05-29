@@ -151,7 +151,7 @@ export function DropZoneStep({ onFileParsed }: DropZoneStepProps) {
           style={{ display: "none" }}
           onChange={onInputChange}
         />
-        <Upload size={32} style={{ color: "#94A3B8", marginBottom: "12px" }} />
+        <Upload size={32} style={{ color: "#94A3B8", display: "block", margin: "0 auto 12px" }} />
         <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#0F172A", marginBottom: "4px" }}>
           {isLoading ? "Parsing file…" : "Drop your file here"}
         </div>
