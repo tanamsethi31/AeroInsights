@@ -2,6 +2,7 @@ import { Navigate } from "react-router";
 import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/layout/Layout";
 import { RequireAuth } from "./components/auth/RequireAuth";
+import { RouteErrorBoundary } from "./components/errors/RouteErrorBoundary";
 import { usePortfolio } from "./contexts/PortfolioContext";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
@@ -40,23 +41,29 @@ function PortfolioIndexGuard() {
 
 export const router = createBrowserRouter([
   // Public
-  { path: "/home", Component: Landing },
-  { path: "/login", Component: Login },
-  { path: "/docs/excel-addin", Component: ExcelAddinDocs },
+  { path: "/home", Component: Landing, ErrorBoundary: RouteErrorBoundary },
+  { path: "/login", Component: Login, ErrorBoundary: RouteErrorBoundary },
+  { path: "/docs/excel-addin", Component: ExcelAddinDocs, ErrorBoundary: RouteErrorBoundary },
 
   // Root layout — RequireAuth gates the app shell; unauthenticated "/" → /home
+  // Top-level ErrorBoundary catches anything that bubbles past the inner
+  // boundaries (auth failures, route-load failures, unknown JS errors).
   {
     path: "/",
     Component: RequireAuth,
+    ErrorBoundary: RouteErrorBoundary,
     children: [
       // Portfolio hub — full-page, no sidebar/header shell
-      { path: "portfolios", Component: PortfolioHub },
+      { path: "portfolios", Component: PortfolioHub, ErrorBoundary: RouteErrorBoundary },
       // Onboarding wizard — full-page, no sidebar/header shell
-      { path: "onboarding", Component: OnboardingWizard },
+      { path: "onboarding", Component: OnboardingWizard, ErrorBoundary: RouteErrorBoundary },
 
-      // App shell — Layout wraps everything below
+      // App shell — Layout wraps everything below. The inner ErrorBoundary
+      // means a single page crashing won't take down the rest of the app
+      // shell context (auth, data, portfolio selection).
       {
         Component: Layout,
+        ErrorBoundary: RouteErrorBoundary,
         children: [
           // Index: redirect to /portfolios until a portfolio is selected
           { index: true, Component: PortfolioIndexGuard },
