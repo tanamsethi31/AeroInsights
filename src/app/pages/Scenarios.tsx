@@ -1025,6 +1025,45 @@ export default function Scenarios() {
     setCardStates((prev) => ({ ...prev, [id]: { ...prev[id], ...updates } }));
   }, []);
 
+  // ── Live portfolio data (hoisted) ──
+  // These declarations must precede `handleTemplateRun` because its
+  // useCallback dependency array references liveBaseECL + liveStage3Lessees.
+  // React reads the deps array on every render, so a TDZ violation here
+  // breaks the whole page in production builds (where minification surfaces
+  // the const-before-init error as "Cannot access 'X' before initialization").
+  const { assets, lessees, leases, provisions, isDemo } = usePortfolioData();
+  const { jurisdictions: ingestedJurisdictions } = useJurisdictions();
+  const liveBaseECL = React.useMemo(
+    () => {
+      const kpis = toDashboardKPIs(assets, lessees, provisions);
+      return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
+    },
+    [assets, lessees, provisions]
+  );
+
+  // Derive live Stage 3 lessees from uploaded portfolio for scenario narrative
+  const liveStage3Lessees = React.useMemo(() => {
+    if (isDemo || lessees.length === 0 || provisions.length === 0) return null;
+    const assetToLesseeId = new Map<string, string>();
+    for (const lease of leases) {
+      assetToLesseeId.set(lease.asset_id, lease.lessee_id);
+    }
+    const stage3Ids = new Set<string>();
+    for (const p of provisions) {
+      if (p.stage === 3) {
+        const lid = assetToLesseeId.get(p.asset_id);
+        if (lid) stage3Ids.add(lid);
+      }
+    }
+    if (stage3Ids.size === 0) return null;
+    return lessees
+      .filter((l) => stage3Ids.has(l.id))
+      .map((l) => ({
+        name: l.name,
+        jurisdiction: (l as { country?: string }).country ?? "Unknown",
+      }));
+  }, [isDemo, lessees, leases, provisions]);
+
   const handleTemplateRun = useCallback((tpl: Template) => {
     const cs = cardStates[tpl.id];
     const seed = Math.floor(Math.random() * 9999) + 1;
@@ -1104,17 +1143,6 @@ export default function Scenarios() {
   const [customResultId, setCustomResultId] = useState<string | null>(null);
   const customResultRef = useRef<HTMLDivElement>(null);
 
-  // ── Live portfolio base ECL ──
-  const { assets, lessees, leases, provisions, isDemo } = usePortfolioData();
-  const { jurisdictions: ingestedJurisdictions } = useJurisdictions();
-  const liveBaseECL = React.useMemo(
-    () => {
-      const kpis = toDashboardKPIs(assets, lessees, provisions);
-      return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
-    },
-    [assets, lessees, provisions]
-  );
-
   // ── Probability-weighted ECL (IFRS 9 §5.5.17a) ──
   // Only templates with numeric weights contribute. Weight strings like "60%" are parsed to 0.60.
   const weightedECL = React.useMemo(() => {
@@ -1128,29 +1156,6 @@ export default function Scenarios() {
     }
     return sumW > 0 ? sumWE / sumW : null;
   }, [liveBaseECL, effectiveTemplates]);
-
-  // Derive live Stage 3 lessees from uploaded portfolio for scenario narrative
-  const liveStage3Lessees = React.useMemo(() => {
-    if (isDemo || lessees.length === 0 || provisions.length === 0) return null;
-    const assetToLesseeId = new Map<string, string>();
-    for (const lease of leases) {
-      assetToLesseeId.set(lease.asset_id, lease.lessee_id);
-    }
-    const stage3Ids = new Set<string>();
-    for (const p of provisions) {
-      if (p.stage === 3) {
-        const lid = assetToLesseeId.get(p.asset_id);
-        if (lid) stage3Ids.add(lid);
-      }
-    }
-    if (stage3Ids.size === 0) return null;
-    return lessees
-      .filter((l) => stage3Ids.has(l.id))
-      .map((l) => ({
-        name: l.name,
-        jurisdiction: (l as { country?: string }).country ?? "Unknown",
-      }));
-  }, [isDemo, lessees, leases, provisions]);
 
   // Rental-weighted CTC tier mix — used by JurisdictionRiskTab "Use in Custom Builder"
   // handler and the "From portfolio" button in the Custom Builder Jurisdiction Risk section.
