@@ -10,6 +10,11 @@
 // replacing fetchAviationNews / fetchJurisdictionNews calls with
 // fetchAviationNewsAggregate once the hang is resolved.
 
+// Edge runtime — matches fx-refresh / other working signals routes and
+// sidesteps Node ESM strict .js-extension resolution. newsapi.ts uses
+// btoa (Web API, edge-compatible).
+export const config = { runtime: "edge" };
+
 import { fetchAviationNews, fetchJurisdictionNews, type NewsArticleRaw } from "./_lib/newsapi";
 
 const JX_COUNTRIES = ["India", "Brazil", "UAE", "Sri Lanka", "Ireland", "Singapore"];
