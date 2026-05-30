@@ -41,6 +41,20 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
+  // DEBUG short-circuit — return key presence without calling any provider.
+  // Confirms the function executes; rules out cold-start / module-load issues.
+  // Remove once we've localised the hang.
+  const url = new URL(req.url);
+  if (url.searchParams.get("probe") === "1") {
+    return new Response(JSON.stringify({
+      probe: "ok",
+      keysConfigured: Object.fromEntries(
+        Object.entries(keys).map(([k, v]) => [k, !!v]),
+      ),
+      fetchedAt: new Date().toISOString(),
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+
   let result;
   try {
     result = await fetchAviationNewsAggregate(keys, 20);
