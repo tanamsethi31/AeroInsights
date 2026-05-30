@@ -1,0 +1,8 @@
+# Vercel's Python runtime switched to `uv` for dep resolution but their
+# deploy step still lstat's `.dist-info/INSTALLER` — which uv intentionally
+# does not write. Any Python function with a non-trivial requirements.txt
+# hits ENOENT at deploy time. Until Vercel fixes that, exclude the two
+# Python-backed routes from the deploy. The frontend (scenarioEngine.ts)
+# already falls back gracefully on 5xx / network errors for these endpoints.
+api/risk-engine
+api/scenarios
