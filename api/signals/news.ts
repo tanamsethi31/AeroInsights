@@ -41,7 +41,22 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
-  const result = await fetchAviationNewsAggregate(keys, 20);
+  let result;
+  try {
+    result = await fetchAviationNewsAggregate(keys, 20);
+  } catch (err) {
+    // Surface aggregation errors as a 500 with the message instead of letting
+    // them escape as FUNCTION_INVOCATION_FAILED — debug visibility for the
+    // 6-source rollout.
+    return new Response(JSON.stringify({
+      error:   "aggregator_failed",
+      message: err instanceof Error ? err.message : String(err),
+      stack:   err instanceof Error ? err.stack : null,
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   // Jurisdiction filter is now a substring match on the aggregated set —
   // cheaper than 6 separate API calls, with comparable signal quality.
