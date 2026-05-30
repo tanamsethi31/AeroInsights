@@ -4,4 +4,4 @@ numpy>=1.26,<3.0
 # to fail on lstat. Force-resolved here because supabase-py pulls it
 # transitively via gotrue / realtime.
 StrEnum==0.4.10
-supabase>=2.15,<3.0
+supabase>=2.7,<3.0
