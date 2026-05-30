@@ -1,27 +1,24 @@
 // api/signals/news.ts
 //
-// Live news feed for the Intelligence page. Now aggregates across up to 6
-// sources (newsapi.org, webz.io, newsapi.ai, worldnewsapi.com, newsdata.io,
-// thenewsapi.com) via newsAggregator.ts. Each source is optional — if its
-// env-var key isn't set, the aggregator skips it. The endpoint returns
-// 503/not_configured only when ALL sources are unset.
+// Live news feed for the Intelligence page.
+//
+// NOTE: This endpoint reverted to single-source (newsapi.org) on
+// 2026-05-30 because the multi-source aggregator path (_lib/newsAggregator)
+// triggers a Vercel runtime hang we haven't been able to root-cause.
+// The aggregator code is intact in _lib/ for local development +
+// follow-up debugging in isolation. Switch back to the aggregator by
+// replacing fetchAviationNews / fetchJurisdictionNews calls with
+// fetchAviationNewsAggregate once the hang is resolved.
 
-import type { NewsArticleRaw } from "./_lib/newsapi.js";
-import {
-  fetchAviationNewsAggregate,
-  readSourceKeysFromEnv,
-  type NewsSourceName,
-} from "./_lib/newsAggregator.js";
+import { fetchAviationNews, fetchJurisdictionNews, type NewsArticleRaw } from "./_lib/newsapi.js";
 
 const JX_COUNTRIES = ["India", "Brazil", "UAE", "Sri Lanka", "Ireland", "Singapore"];
 
 export interface LiveNewsData {
-  articles:      NewsArticleRaw[];
-  jxArticles:    NewsArticleRaw[];
-  fetchedAt:     string;
-  partial:       boolean;
-  sourceCounts:  Record<NewsSourceName, number>;
-  sourceErrors:  Partial<Record<NewsSourceName, string>>;
+  articles:   NewsArticleRaw[];
+  jxArticles: NewsArticleRaw[];
+  fetchedAt:  string;
+  partial:    boolean;
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -32,63 +29,31 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
-  const keys = readSourceKeysFromEnv();
-  const anyConfigured = Object.values(keys).some((v) => !!v);
-  if (!anyConfigured) {
+  const apiKey = process.env.NEWSAPI_KEY;
+  if (!apiKey) {
     return new Response(JSON.stringify({ error: "not_configured" }), {
       status: 503,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  // DEBUG short-circuit — return key presence without calling any provider.
-  // Confirms the function executes; rules out cold-start / module-load issues.
-  // Remove once we've localised the hang.
-  // Use a base so relative req.url ('/api/signals/news') parses.
-  const url = new URL(req.url, "http://x");
-  if (url.searchParams.get("probe") === "1") {
-    return new Response(JSON.stringify({
-      probe: "ok",
-      keysConfigured: Object.fromEntries(
-        Object.entries(keys).map(([k, v]) => [k, !!v]),
-      ),
-      fetchedAt: new Date().toISOString(),
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
-  }
-
-  let result;
-  try {
-    result = await fetchAviationNewsAggregate(keys, 20);
-  } catch (err) {
-    // Surface aggregation errors as a 500 with the message instead of letting
-    // them escape as FUNCTION_INVOCATION_FAILED — debug visibility for the
-    // 6-source rollout.
-    return new Response(JSON.stringify({
-      error:   "aggregator_failed",
-      message: err instanceof Error ? err.message : String(err),
-      stack:   err instanceof Error ? err.stack : null,
-    }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  // Jurisdiction filter is now a substring match on the aggregated set —
-  // cheaper than 6 separate API calls, with comparable signal quality.
-  const jxNeedles = JX_COUNTRIES.map((c) => c.toLowerCase());
-  const jxArticles = result.articles.filter((a) => {
-    const text = `${a.title} ${a.content}`.toLowerCase();
-    return jxNeedles.some((c) => text.includes(c));
-  });
-
   const data: LiveNewsData = {
-    articles:     result.articles,
-    jxArticles,
-    fetchedAt:    result.fetchedAt,
-    partial:      Object.keys(result.sourceErrors).length > 0,
-    sourceCounts: result.sourceCounts,
-    sourceErrors: result.sourceErrors,
+    articles:   [],
+    jxArticles: [],
+    fetchedAt:  new Date().toISOString(),
+    partial:    false,
   };
+
+  const [news, jxNews] = await Promise.allSettled([
+    fetchAviationNews(apiKey, 20),
+    fetchJurisdictionNews(apiKey, JX_COUNTRIES, 10),
+  ]);
+
+  if (news.status === "fulfilled") data.articles = news.value;
+  else data.partial = true;
+
+  if (jxNews.status === "fulfilled") data.jxArticles = jxNews.value;
+  else data.partial = true;
 
   return new Response(JSON.stringify(data), {
     status: 200,

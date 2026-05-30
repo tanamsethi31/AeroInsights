@@ -29,11 +29,14 @@
 // cold start.
 export const config = { runtime: "nodejs" };
 
-import type { NewsArticleRaw } from "../signals/_lib/newsapi.js";
-import { fetchAviationNewsAggregate, readSourceKeysFromEnv } from "../signals/_lib/newsAggregator.js";
+// Reverted to single-source NewsAPI on 2026-05-30 (see comment in
+// ../signals/news.ts). Multi-source aggregator pending Vercel runtime
+// debugging.
+import { fetchAviationNews, type NewsArticleRaw } from "../signals/_lib/newsapi.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SRV = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const NEWSAPI_KEY  = process.env.NEWSAPI_KEY ?? "";
 const CRON_SECRET  = process.env.CRON_SECRET ?? "";
 
 const DISTRESS_RE = /bankrupt|insolvency|chapter 11|liquidat|distress|default(?:ed)?|debt crisis|receivership|sanction|grounded|chapter\s*15/i;
@@ -146,19 +149,14 @@ async function _handler(req: Request): Promise<Response> {
       status: 500, headers: { "content-type": "application/json" },
     });
   }
-  const keys = readSourceKeysFromEnv();
-  if (!Object.values(keys).some((v) => !!v)) {
-    // Skip-but-200 so the cron doesn't trip Vercel error budgets when
-    // no news source is configured. Operators see this in the logs.
-    return new Response(JSON.stringify({ skipped: true, reason: "no news source configured" }), {
+  if (!NEWSAPI_KEY) {
+    return new Response(JSON.stringify({ skipped: true, reason: "NEWSAPI_KEY not set" }), {
       status: 200, headers: { "content-type": "application/json" },
     });
   }
 
   try {
-    // One aggregated fetch reused across all orgs — quota stays low.
-    const agg = await fetchAviationNewsAggregate(keys, 100);
-    const articles: NewsArticleRaw[] = agg.articles;
+    const articles = await fetchAviationNews(NEWSAPI_KEY, 100);
     const orgIds = Array.from(new Set(
       (await sbSelect<{ org_id: string }>(`lessees?select=org_id`)).map((r) => r.org_id),
     ));
@@ -171,13 +169,7 @@ async function _handler(req: Request): Promise<Response> {
         summary.push({ orgId, error: (err as Error).message });
       }
     }
-    return new Response(JSON.stringify({
-      articles:      articles.length,
-      orgs:          orgIds.length,
-      results:       summary,
-      sources:       agg.sourceCounts,
-      sourceErrors:  agg.sourceErrors,
-    }), {
+    return new Response(JSON.stringify({ articles: articles.length, orgs: orgIds.length, results: summary }), {
       status: 200, headers: { "content-type": "application/json" },
     });
   } catch (err) {
