@@ -23,7 +23,7 @@
 // pulling in jspdf-autotable (Node-only) via reportRenderers. Running on
 // nodejs avoids the unsupported-module error and is fine for an admin
 // hard-delete that's already not latency-critical.
-export const config = { runtime: "nodejs20.x" };
+export const config = { runtime: "nodejs" };
 
 import { verifyAuth0Token } from "../_lib/auth0";
 import { withSentry } from "../_lib/sentry";
