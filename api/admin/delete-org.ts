@@ -19,7 +19,11 @@
 // status='failed' + error_detail so the deletion can be retried or
 // completed manually by an operator.
 
-export const config = { runtime: "edge" };
+// Was previously "edge" but Vercel's edge bundler chunks _lib together,
+// pulling in jspdf-autotable (Node-only) via reportRenderers. Running on
+// nodejs avoids the unsupported-module error and is fine for an admin
+// hard-delete that's already not latency-critical.
+export const config = { runtime: "nodejs20.x" };
 
 import { verifyAuth0Token } from "../_lib/auth0";
 import { withSentry } from "../_lib/sentry";
