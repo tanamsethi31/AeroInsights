@@ -28,7 +28,7 @@ function parseNewsApiAi(data: NewsApiAiResponse): NewsArticleRaw[] {
   return results
     .filter((a) => a.title && a.url)
     .map((a) => ({
-      id:          a.uri ?? Buffer.from(a.url).toString("base64").slice(-24).replace(/[^a-zA-Z0-9]/g, ""),
+      id:          a.uri ?? btoa(a.url).slice(-24).replace(/[^a-zA-Z0-9]/g, ""),
       title:       a.title,
       source:      a.source?.title ?? a.source?.uri ?? "newsapi.ai",
       url:         a.url,

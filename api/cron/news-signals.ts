@@ -22,7 +22,12 @@
 // We persist score + keyword_hits + an articles JSONB array so a future
 // per-lessee panel can show evidence on click.
 
-export const config = { runtime: "edge" };
+// nodejs runtime — daily cron, no latency need. Also keeps the chunk
+// shared with api/signals/news (also nodejs) consistent: when the cron
+// was edge the bundler chunked the 6 news adapters for an edge target
+// and the request handler failed with FUNCTION_INVOCATION_FAILED at
+// cold start.
+export const config = { runtime: "nodejs" };
 
 import type { NewsArticleRaw } from "../signals/_lib/newsapi";
 import { fetchAviationNewsAggregate, readSourceKeysFromEnv } from "../signals/_lib/newsAggregator";

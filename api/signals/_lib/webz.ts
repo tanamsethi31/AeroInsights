@@ -26,7 +26,7 @@ function parseWebz(data: WebzResponse): NewsArticleRaw[] {
   return data.posts
     .filter((p) => p.title && p.url)
     .map((p) => ({
-      id:          p.uuid ?? Buffer.from(p.url).toString("base64").slice(-24).replace(/[^a-zA-Z0-9]/g, ""),
+      id:          p.uuid ?? btoa(p.url).slice(-24).replace(/[^a-zA-Z0-9]/g, ""),
       title:       p.title,
       source:      p.thread?.site_full ?? p.thread?.site ?? "webz.io",
       url:         p.url,

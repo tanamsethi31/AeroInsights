@@ -57,7 +57,7 @@ export function parseNewsApiResponse(data: NewsApiResponse): NewsArticleRaw[] {
   return data.articles
     .filter(a => a.title && a.url && !a.title.startsWith("[Removed]"))
     .map(a => ({
-      id: Buffer.from(a.url).toString("base64").slice(-24).replace(/[^a-zA-Z0-9]/g, ""),
+      id: btoa(a.url).slice(-24).replace(/[^a-zA-Z0-9]/g, ""),
       title: a.title,
       source: a.source.name,
       url: a.url,
