@@ -202,6 +202,7 @@ export function runWaterfall(
     availableCollections: totalCollections,
     seniorExpensesTotal,
     liquidityReserveTopUp,
+    // @ts-expect-error TODO(safety-net): noteClass string narrowed to 'A'|'B'|'C' — add a guard
     noteDistributions: [
       {
         noteClass: "A",

@@ -39,8 +39,10 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
 
   // T-3.3 — wrap recordExport so it carries the static metadata for THIS run.
   function makeOnBlob(format: ReportFormat) {
-    return (blob: Blob, filename: string) =>
-      recordExport({
+    return async (blob: Blob, filename: string): Promise<void> => {
+      // recordExport returns a Promise<string> (signed-URL or path); the
+      // generator API only needs void, so we await and drop the value.
+      await recordExport({
         reportId,
         reportName,
         format,
@@ -48,6 +50,7 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
         filename,
         params: { currency },
       });
+    };
   }
 
   async function handleDownload() {

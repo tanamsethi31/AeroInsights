@@ -116,13 +116,15 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
         data.currency,
         undefined,
         { ...data, managementOverlay },
-        (blob, filename) => recordExport({
-          reportId:   "RPT-001",
-          reportName: "Auditor Evidence Pack",
-          format:     "docx",
-          blob, filename,
-          params: { currency: data.currency, periodLabel: data.periodLabel },
-        }),
+        async (blob, filename) => {
+          await recordExport({
+            reportId:   "RPT-001",
+            reportName: "Auditor Evidence Pack",
+            format:     "docx",
+            blob, filename,
+            params: { currency: data.currency, periodLabel: data.periodLabel },
+          });
+        },
       );
     } finally {
       setDownloading(null);
@@ -134,13 +136,15 @@ export function AuditorPackModal({ open, onClose, data }: AuditorPackModalProps)
     try {
       await generateReportPDF(
         previewRef as RefObject<HTMLDivElement>,
-        (blob, filename) => recordExport({
-          reportId:   "RPT-001",
-          reportName: "Auditor Evidence Pack",
-          format:     "pdf",
-          blob, filename,
-          params: { currency: data.currency, periodLabel: data.periodLabel },
-        }),
+        async (blob, filename) => {
+          await recordExport({
+            reportId:   "RPT-001",
+            reportName: "Auditor Evidence Pack",
+            format:     "pdf",
+            blob, filename,
+            params: { currency: data.currency, periodLabel: data.periodLabel },
+          });
+        },
       );
     } finally {
       setDownloading(null);

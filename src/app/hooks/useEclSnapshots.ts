@@ -74,6 +74,7 @@ function mapRow(r: Record<string, unknown>): EclSnapshot {
     weighted:        r.weighted        as EclSnapshot["weighted"],
     sicrConfig:      r.sicr_config     as SicrConfig,
     eclRows:         r.ecl_rows        as EclRow[],
+    // @ts-expect-error TODO(safety-net): string narrowed to CurrencyCode — add a runtime validator
     currency:        r.currency        as string,
   };
 }

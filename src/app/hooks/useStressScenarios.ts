@@ -115,6 +115,7 @@ function rowToInputs(row: StressScenarioRow): ScenarioInputs {
 
 function synthShapley(inputs: ScenarioInputs): SyntheticTemplate["shapley"] {
   // Rank macro inputs by absolute magnitude → take top 5 → renormalise to 100.
+  // @ts-expect-error TODO(safety-net): string narrowed to keyof ScenarioInputs — validate at parse time
   const candidates: Array<{ key: keyof ScenarioInputs; mag: number; dir: "up" | "down" }> = [
     { key: "gdpDelta",        mag: Math.abs(inputs.gdpDelta),        dir: inputs.gdpDelta        < 0 ? "down" : "up" },
     { key: "rpkDelta",        mag: Math.abs(inputs.rpkDelta),        dir: inputs.rpkDelta        < 0 ? "down" : "up" },

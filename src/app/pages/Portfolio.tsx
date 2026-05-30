@@ -114,6 +114,7 @@ export default function Portfolio() {
   const liveSDMRData = useMemo<LeaseSDMR[] | undefined>(() => {
     if (isDemo || assets.length === 0) return undefined;
     return buildLiveSDMRData(
+      // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — unify the two Asset types in a follow-up
       assets, lesseeData, leaseData, provisions,
       sdMr.depositsByLease, sdMr.reservesByLease,
     );

@@ -132,15 +132,12 @@ export function RackAndStack() {
     [leases]
   );
 
-  if (portfolioAircraft.length === 0) {
-    return (
-      <div style={{ padding: "2rem", textAlign: "center", color: "#64748B", fontSize: "0.875rem" }}>
-        Loading portfolio data…
-      </div>
-    );
-  }
-
-  const aircraft = portfolioAircraft[msnIndex] ?? portfolioAircraft[0];
+  // All hooks must run before any early return. Use a defensive fallback
+  // aircraft so that the useMemo calls below always see a stable shape.
+  const hasData = portfolioAircraft.length > 0;
+  const aircraft = portfolioAircraft[msnIndex] ?? portfolioAircraft[0] ?? {
+    msn: "", leaseId: "", type: "A320neo", vintage: 2020, mvM: 0, partOutM: 0,
+  } as DealsAircraftRow;
 
   const currentLease = leaseByLeaseId.get(aircraft?.leaseId ?? "");
   const currentRent  = isDemo
@@ -165,6 +162,15 @@ export function RackAndStack() {
     const irr = computeIRR(opt.cashflows);
     return { ...opt, npv, irr };
   }), [options, discountRate]);
+
+  // Early return AFTER hooks so React's hook order stays stable.
+  if (!hasData) {
+    return (
+      <div style={{ padding: "2rem", textAlign: "center", color: "#64748B", fontSize: "0.875rem" }}>
+        Loading portfolio data…
+      </div>
+    );
+  }
 
   const bestNPV = Math.max(...results.map((r) => r.npv));
 

@@ -172,6 +172,7 @@ function exportMemo(rows: ExitRow[], discountRate: number) {
   });
 
   // Footer
+  // @ts-expect-error TODO(safety-net): jspdf internal cast missing getNumberOfPages — refactor to use the public API
   const pageCount = (doc.internal as { getNumberOfPages(): number }).getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);

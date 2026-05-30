@@ -95,14 +95,15 @@ export function BoardPackModal({ reportId, reportName, onClose }: BoardPackModal
   // T-3.3b — persist board pack exports to Storage + audit_log.
   const { recordExport } = useReportExports();
   function makeOnBlob(fmt: ReportFormat) {
-    return (blob: Blob, filename: string) =>
-      recordExport({
+    return async (blob: Blob, filename: string): Promise<void> => {
+      await recordExport({
         reportId,
         reportName,
         format: fmt,
         blob, filename,
         params: { currency, sections: Object.keys(selected).filter(k => selected[k]) },
       });
+    };
   }
 
   async function handleDownload() {

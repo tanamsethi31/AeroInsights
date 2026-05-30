@@ -16,7 +16,7 @@ function loadWorld(): Promise<GeoJSON.FeatureCollection> {
     )
       .then((r) => r.json())
       .then((topo) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // @ts-expect-error TODO(safety-net): Feature<Point> cast to FeatureCollection — should pass a real FeatureCollection
         const fc = feature(topo as any, (topo as any).objects.countries) as GeoJSON.FeatureCollection;
         cachedWorld = fc;
         return fc;

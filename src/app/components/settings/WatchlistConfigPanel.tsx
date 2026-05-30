@@ -32,6 +32,7 @@ export function WatchlistConfigPanel() {
 
   useEffect(() => { setDraftWeights(weights); setDraftThresholds(thresholds); }, [weights, thresholds]);
 
+  // @ts-expect-error TODO(safety-net): Reduce over unknown values — annotate the source array
   const sum = Object.values(draftWeights).reduce((a, b) => a + b, 0);
   const sumColor = sum === 100 ? "#15803D" : "#B45309";
 
@@ -75,7 +76,7 @@ export function WatchlistConfigPanel() {
       }}>
         <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "#0F172A", display: "flex", justifyContent: "space-between" }}>
           <span>Signal weights</span>
-          <span style={{ color: sumColor }}>Σ = {sum}</span>
+          <span style={{ color: sumColor }}>Σ = {String(sum)}</span>
         </div>
         {(Object.keys(SIGNAL_META) as WatchlistSignalKey[]).map((k) => (
           <div key={k} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "0.75rem", alignItems: "center" }}>

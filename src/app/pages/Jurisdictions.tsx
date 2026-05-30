@@ -133,7 +133,7 @@ export default function Jurisdictions() {
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
                         <CountryFlag code={j.code} size={15} />
-                        <span style={{ fontSize: "0.875rem", fontWeight: active ? 600 : 400, color: "#0F172A", truncate: "true", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "0.875rem", fontWeight: active ? 600 : 400, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {j.country}
                         </span>
                       </div>

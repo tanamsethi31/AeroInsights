@@ -1,0 +1,29 @@
+{
+  // Permissive starter. Catches the lethal class of bugs (missing names,
+  // wrong/forgotten imports, undefined identifiers, broken returns) without
+  // drowning the team in implicit-any / strict-null warnings on a codebase
+  // that's never been typechecked. Tighten incrementally.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowJs": false,
+    "types": ["vitest/globals", "node", "vite/client"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "api/**/*.ts"],
+  "exclude": ["node_modules", "dist", "graphify-out", "api/risk-engine", "api/scenarios", "src/imports/pasted_text"]
+}
