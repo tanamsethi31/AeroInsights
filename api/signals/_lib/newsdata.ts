@@ -5,7 +5,7 @@
 // Auth: query string `apikey=<key>`
 // Endpoint: /api/1/news?q=<q>&language=en
 
-import type { NewsArticleRaw } from "./newsapi";
+import type { NewsArticleRaw } from "./newsapi.js";
 
 interface NewsdataResult {
   article_id:   string;

@@ -6,12 +6,12 @@
 // env-var key isn't set, the aggregator skips it. The endpoint returns
 // 503/not_configured only when ALL sources are unset.
 
-import type { NewsArticleRaw } from "./_lib/newsapi";
+import type { NewsArticleRaw } from "./_lib/newsapi.js";
 import {
   fetchAviationNewsAggregate,
   readSourceKeysFromEnv,
   type NewsSourceName,
-} from "./_lib/newsAggregator";
+} from "./_lib/newsAggregator.js";
 
 const JX_COUNTRIES = ["India", "Brazil", "UAE", "Sri Lanka", "Ireland", "Singapore"];
 

@@ -29,8 +29,8 @@
 // cold start.
 export const config = { runtime: "nodejs" };
 
-import type { NewsArticleRaw } from "../signals/_lib/newsapi";
-import { fetchAviationNewsAggregate, readSourceKeysFromEnv } from "../signals/_lib/newsAggregator";
+import type { NewsArticleRaw } from "../signals/_lib/newsapi.js";
+import { fetchAviationNewsAggregate, readSourceKeysFromEnv } from "../signals/_lib/newsAggregator.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SRV = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -187,5 +187,5 @@ async function _handler(req: Request): Promise<Response> {
   }
 }
 
-import { withSentry as _ws_ns } from "../_lib/sentry";
+import { withSentry as _ws_ns } from "../_lib/sentry.js";
 export default _ws_ns(_handler, "cron:news-signals");

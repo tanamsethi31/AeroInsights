@@ -13,13 +13,13 @@
 // We tag each article with `_source` (the lib name) so the UI can surface
 // per-source counts and the cron can weight signals by source confidence.
 
-import type { NewsArticleRaw } from "./newsapi";
-import { fetchAviationNews }            from "./newsapi";
-import { fetchAviationNewsWebz }         from "./webz";
-import { fetchAviationNewsNewsApiAi }    from "./newsapiAi";
-import { fetchAviationNewsWorldNews }    from "./worldnews";
-import { fetchAviationNewsNewsdata }     from "./newsdata";
-import { fetchAviationNewsTheNewsApi }   from "./thenewsapi";
+import type { NewsArticleRaw } from "./newsapi.js";
+import { fetchAviationNews }            from "./newsapi.js";
+import { fetchAviationNewsWebz }         from "./webz.js";
+import { fetchAviationNewsNewsApiAi }    from "./newsapiAi.js";
+import { fetchAviationNewsWorldNews }    from "./worldnews.js";
+import { fetchAviationNewsNewsdata }     from "./newsdata.js";
+import { fetchAviationNewsTheNewsApi }   from "./thenewsapi.js";
 
 export type NewsSourceName =
   | "newsapi"
