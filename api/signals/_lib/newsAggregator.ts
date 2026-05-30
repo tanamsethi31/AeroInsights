@@ -85,17 +85,30 @@ export function dedupeArticles(articles: NewsArticleAggregated[]): NewsArticleAg
   return out;
 }
 
+/** Wraps a fetcher in a hard outer timeout. If the inner AbortSignal.timeout
+ *  doesn't fire (some servers stream slowly without closing), this guarantees
+ *  the aggregator never blocks longer than `ms`. */
+function withDeadline<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timeout ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
 export async function fetchAviationNewsAggregate(
   keys: NewsSourceKeys,
   countPerSource = 20,
+  perSourceTimeoutMs = 8000,
 ): Promise<NewsAggregateResult> {
   const fetchers: Array<[NewsSourceName, Promise<NewsArticleRaw[]>]> = [
-    ["newsapi",     keys.newsapi     ? fetchAviationNews(keys.newsapi, countPerSource)              : Promise.resolve([])],
-    ["webz",        keys.webz        ? fetchAviationNewsWebz(keys.webz, countPerSource)             : Promise.resolve([])],
-    ["newsapi_ai",  keys.newsapi_ai  ? fetchAviationNewsNewsApiAi(keys.newsapi_ai, countPerSource)  : Promise.resolve([])],
-    ["worldnews",   keys.worldnews   ? fetchAviationNewsWorldNews(keys.worldnews, countPerSource)   : Promise.resolve([])],
-    ["newsdata",    keys.newsdata    ? fetchAviationNewsNewsdata(keys.newsdata, countPerSource)     : Promise.resolve([])],
-    ["thenewsapi",  keys.thenewsapi  ? fetchAviationNewsTheNewsApi(keys.thenewsapi, countPerSource) : Promise.resolve([])],
+    ["newsapi",     keys.newsapi     ? withDeadline(fetchAviationNews(keys.newsapi, countPerSource),              perSourceTimeoutMs, "newsapi")     : Promise.resolve([])],
+    ["webz",        keys.webz        ? withDeadline(fetchAviationNewsWebz(keys.webz, countPerSource),             perSourceTimeoutMs, "webz")        : Promise.resolve([])],
+    ["newsapi_ai",  keys.newsapi_ai  ? withDeadline(fetchAviationNewsNewsApiAi(keys.newsapi_ai, countPerSource),  perSourceTimeoutMs, "newsapi_ai")  : Promise.resolve([])],
+    ["worldnews",   keys.worldnews   ? withDeadline(fetchAviationNewsWorldNews(keys.worldnews, countPerSource),   perSourceTimeoutMs, "worldnews")   : Promise.resolve([])],
+    ["newsdata",    keys.newsdata    ? withDeadline(fetchAviationNewsNewsdata(keys.newsdata, countPerSource),     perSourceTimeoutMs, "newsdata")    : Promise.resolve([])],
+    ["thenewsapi",  keys.thenewsapi  ? withDeadline(fetchAviationNewsTheNewsApi(keys.thenewsapi, countPerSource), perSourceTimeoutMs, "thenewsapi")  : Promise.resolve([])],
   ];
 
   const settled = await Promise.allSettled(fetchers.map(([, p]) => p));
