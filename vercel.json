@@ -7,7 +7,6 @@
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)",     "destination": "/index.html" }
   ],
-  "_cron_comment": "Hobby plan only allows once-per-day crons. Schedules below are downgraded from their intended frequencies (alerts/watchlist: every 30 min; news-signals/reports: hourly). Restore tighter schedules after upgrading to Pro. Staggered across 5:00-7:00 UTC to avoid simultaneous fire.",
   "crons": [
     { "path": "/api/cron/alerts",            "schedule": "0 5 * * *"  },
     { "path": "/api/cron/watchlist",         "schedule": "30 5 * * *" },
