@@ -1,0 +1,22 @@
+{
+  "/private/tmp/graphify-roadmap/PRD.md": {
+    "mtime": 1779584722.1517537,
+    "ast_hash": "d381949d4103c4ecb23206622c7d022f",
+    "semantic_hash": "d381949d4103c4ecb23206622c7d022f"
+  },
+  "/private/tmp/graphify-roadmap/PROGRESS.md": {
+    "mtime": 1779584722.150347,
+    "ast_hash": "66ef4dc68fd22c43c0f537917cbccdc8",
+    "semantic_hash": "66ef4dc68fd22c43c0f537917cbccdc8"
+  },
+  "/private/tmp/graphify-roadmap/ADR-001-backend-architecture.md": {
+    "mtime": 1779584722.1510904,
+    "ast_hash": "ad62fa983a1fed317f0836d3f63ee34d",
+    "semantic_hash": "ad62fa983a1fed317f0836d3f63ee34d"
+  },
+  "/private/tmp/graphify-roadmap/ROADMAP.md": {
+    "mtime": 1779584722.1498,
+    "ast_hash": "47b75cb9a129d33c463c7b4040a4befe",
+    "semantic_hash": "47b75cb9a129d33c463c7b4040a4befe"
+  }
+}

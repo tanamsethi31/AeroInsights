@@ -15,12 +15,14 @@
 // (PDF / DOCX) will follow once a headless rendering path is set up
 // for them.
 
-export const config = { runtime: "edge" };
+// nodejs runtime because reportRenderers uses jspdf-autotable which is
+// Node-only. Acceptable for a cron job that doesn't need edge latency.
+export const config = { runtime: "nodejs" };
 
 import {
   renderSnapshotCsv, renderSnapshotPdf, renderSnapshotDocx, renderSnapshotXlsx,
   type SnapshotRow, type RenderedReport,
-} from "../_lib/reportRenderers";
+} from "./_reportRenderers";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SRV = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
