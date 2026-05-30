@@ -10,7 +10,7 @@
 // replacing fetchAviationNews / fetchJurisdictionNews calls with
 // fetchAviationNewsAggregate once the hang is resolved.
 
-import { fetchAviationNews, fetchJurisdictionNews, type NewsArticleRaw } from "./_lib/newsapi.js";
+import { fetchAviationNews, fetchJurisdictionNews, type NewsArticleRaw } from "./_lib/newsapi";
 
 const JX_COUNTRIES = ["India", "Brazil", "UAE", "Sri Lanka", "Ireland", "Singapore"];
 

@@ -4,7 +4,7 @@
 // Docs: https://eventregistry.org/documentation
 // Auth: POST JSON body, field `apiKey: <key>`
 
-import type { NewsArticleRaw } from "./newsapi.js";
+import type { NewsArticleRaw } from "./newsapi";
 
 interface NewsApiAiArticle {
   uri?:        string;

@@ -5,7 +5,7 @@
 // Auth: query string `token=<apiKey>`
 // Query: ?q=<full-text>&size=<n>&sort=published
 
-import type { NewsArticleRaw } from "./newsapi.js";
+import type { NewsArticleRaw } from "./newsapi";
 
 interface WebzPost {
   uuid?:        string;

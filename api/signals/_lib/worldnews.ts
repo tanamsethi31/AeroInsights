@@ -5,7 +5,7 @@
 // Auth: header `x-api-key: <apiKey>`
 // Endpoint: /search-news?text=<q>&language=en&number=<n>
 
-import type { NewsArticleRaw } from "./newsapi.js";
+import type { NewsArticleRaw } from "./newsapi";
 
 interface WorldNewsArticle {
   id:            number;

@@ -5,7 +5,7 @@
 // Auth: query string `api_token=<key>`
 // Endpoint: /v1/news/all?search=<q>&language=en&limit=<n>
 
-import type { NewsArticleRaw } from "./newsapi.js";
+import type { NewsArticleRaw } from "./newsapi";
 
 interface TheNewsApiArticle {
   uuid:          string;

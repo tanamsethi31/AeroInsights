@@ -32,7 +32,7 @@ export const config = { runtime: "nodejs" };
 // Reverted to single-source NewsAPI on 2026-05-30 (see comment in
 // ../signals/news.ts). Multi-source aggregator pending Vercel runtime
 // debugging.
-import { fetchAviationNews, type NewsArticleRaw } from "../signals/_lib/newsapi.js";
+import { fetchAviationNews, type NewsArticleRaw } from "../signals/_lib/newsapi";
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_SRV = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -179,5 +179,5 @@ async function _handler(req: Request): Promise<Response> {
   }
 }
 
-import { withSentry as _ws_ns } from "../_lib/sentry.js";
+import { withSentry as _ws_ns } from "../_lib/sentry";
 export default _ws_ns(_handler, "cron:news-signals");
