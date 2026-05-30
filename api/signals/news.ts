@@ -44,7 +44,8 @@ export default async function handler(req: Request): Promise<Response> {
   // DEBUG short-circuit — return key presence without calling any provider.
   // Confirms the function executes; rules out cold-start / module-load issues.
   // Remove once we've localised the hang.
-  const url = new URL(req.url);
+  // Use a base so relative req.url ('/api/signals/news') parses.
+  const url = new URL(req.url, "http://x");
   if (url.searchParams.get("probe") === "1") {
     return new Response(JSON.stringify({
       probe: "ok",
