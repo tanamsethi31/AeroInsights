@@ -983,9 +983,32 @@ export default function Scenarios() {
   // persisted (demo continuity for first-load empty state). After that,
   // hasIngested flips and we surface DB rows only — no more mock seed.
   const { runs: dbRuns, insertRun: persistRun, hasIngested: hasPersistedRuns } = useScenarioRuns();
+
+  // Ephemeral, in-memory runs. We push every freshly-computed result here so
+  // the result panel can render even when the Supabase insert fails (e.g.
+  // on the sample portfolio where portfolio_id="global-sample" is not a
+  // valid UUID, or in any case where RLS / network blocks persistence).
+  // The dbRuns are still the source of truth for the Run History tab.
+  const [ephemeralRuns, setEphemeralRuns] = useState<ScenarioRunResult[]>([]);
+  const addEphemeralRun = useCallback((r: ScenarioRunResult) => {
+    setEphemeralRuns((prev) => {
+      // Dedupe: if a row with the same id already exists (e.g. from a later
+      // dbRuns refetch surfacing the same persisted row), drop the ephemeral.
+      if (prev.some((p) => p.id === r.id)) return prev;
+      return [r, ...prev];
+    });
+  }, []);
+
   const runs = useMemo<ScenarioRunResult[]>(
-    () => hasPersistedRuns ? dbRuns : INITIAL_RUNS,
-    [hasPersistedRuns, dbRuns]
+    () => {
+      const persisted = hasPersistedRuns ? dbRuns : INITIAL_RUNS;
+      // De-dupe ephemeralRuns against persisted by id, then prepend them
+      // (newest first).
+      const persistedIds = new Set(persisted.map((r) => r.id));
+      const eph = ephemeralRuns.filter((r) => !persistedIds.has(r.id));
+      return [...eph, ...persisted];
+    },
+    [hasPersistedRuns, dbRuns, ephemeralRuns]
   );
 
   // ── T-1.7 consumer wire — merge DB-imported scenarios with hardcoded ────
@@ -1072,9 +1095,25 @@ export default function Scenarios() {
     const duration = cs.mode === "deterministic" ? 1800 : 3200;
     setTimeout(async () => {
       const computedECL = computeECLFromBase(liveBaseECL, tpl.inputs);
-      const { p5, p95 } = computeMCRange(computedECL, seed);
+      const { p5: _p5, p95: _p95 } = computeMCRange(computedECL, seed);
+      void _p5; void _p95; // captured below in the result blob
       const stages = computeStages(computedECL, tpl.inputs);
       const runCode = nextRunId();
+      const durationSec = cs.mode === "deterministic"
+        ? `${(1.4 + seededRand(seed, 9) * 1.4).toFixed(1)}s`
+        : `${Math.round(28 + seededRand(seed, 11) * 20)}s`;
+      const resultBlob = {
+        durationSec,
+        ecl:          computedECL,
+        p5:           cs.mode === "montecarlo" ? computedECL * tpl.p5Factor : null,
+        p95:          cs.mode === "montecarlo" ? computedECL * tpl.p95Factor : null,
+        s1: stages.s1, s2: stages.s2, s3: stages.s3,
+        shapley:      tpl.shapley,
+        keyFinding:   tpl.keyFinding,
+        scenarioHash: hashFromSeed(seed).slice(0, 12),
+        topLessees:   computeTopLessees(stages.s3, seed, liveStage3Lessees ?? STAGE3_LESSEES),
+        s3LeaseCount: computeS3LeaseCount(stages.s3),
+      };
       const inserted = await persistRun({
         runCode,
         scenarioId: tpl.id,
@@ -1083,27 +1122,40 @@ export default function Scenarios() {
         paths:      cs.mode === "montecarlo" ? cs.paths : null,
         seed,
         inputs:     tpl.inputs,
-        result:     {
-          durationSec: cs.mode === "deterministic"
-            ? `${(1.4 + seededRand(seed, 9) * 1.4).toFixed(1)}s`
-            : `${Math.round(28 + seededRand(seed, 11) * 20)}s`,
-          ecl:          computedECL,
-          p5:           cs.mode === "montecarlo" ? computedECL * tpl.p5Factor : null,
-          p95:          cs.mode === "montecarlo" ? computedECL * tpl.p95Factor : null,
-          s1: stages.s1, s2: stages.s2, s3: stages.s3,
-          shapley:      tpl.shapley,
-          keyFinding:   tpl.keyFinding,
-          scenarioHash: hashFromSeed(seed).slice(0, 12),
-          topLessees:   computeTopLessees(stages.s3, seed, liveStage3Lessees ?? STAGE3_LESSEES),
-          s3LeaseCount: computeS3LeaseCount(stages.s3),
-        },
+        result:     resultBlob,
         parentRunCode: null,
       });
-      // If insert failed (no portfolio / RLS), still flip the card to "done"
-      // so the UI isn't stuck on the running spinner.
-      setCardPhase(tpl.id, { phase: "done", resultId: inserted?.id ?? runCode });
+
+      // Always materialise the result so the panel can render even when the
+      // DB persist failed (sample portfolio, RLS, network). The ephemeral
+      // row uses runCode as its id and is dedupe-merged against dbRuns.
+      const resultId = inserted?.id ?? runCode;
+      if (!inserted) {
+        addEphemeralRun({
+          id:           resultId,
+          templateId:   tpl.id,
+          name:         tpl.name,
+          mode:         cs.mode,
+          paths:        cs.mode === "montecarlo" ? cs.paths : null,
+          seed,
+          runDate:      new Date().toISOString(),
+          durationSec,
+          ecl:          resultBlob.ecl,
+          p5:           resultBlob.p5,
+          p95:          resultBlob.p95,
+          s1:           resultBlob.s1,
+          s2:           resultBlob.s2,
+          s3:           resultBlob.s3,
+          shapley:      resultBlob.shapley,
+          keyFinding:   resultBlob.keyFinding,
+          scenarioHash: resultBlob.scenarioHash,
+          topLessees:   resultBlob.topLessees,
+          s3LeaseCount: resultBlob.s3LeaseCount,
+        });
+      }
+      setCardPhase(tpl.id, { phase: "done", resultId });
     }, duration);
-  }, [cardStates, setCardPhase, persistRun, liveBaseECL, liveStage3Lessees]);
+  }, [cardStates, setCardPhase, persistRun, addEphemeralRun, liveBaseECL, liveStage3Lessees]);
 
   // ── Custom Builder state ──
   const [prefillSource, setPrefillSource] = useState<string | null>(null);
@@ -1304,7 +1356,11 @@ export default function Scenarios() {
         },
         parentRunCode: branchFromId,
       });
-      setCustomResultId(inserted?.id ?? newRun.id);
+      const resultId = inserted?.id ?? newRun.id;
+      // Always materialise the run locally so the result card renders even
+      // when persistence failed (sample portfolio / RLS / network).
+      if (!inserted) addEphemeralRun(newRun);
+      setCustomResultId(resultId);
       setCustomRunning(false);
       setBranchFromId(null);
     }, remainingSkeletonMs);
