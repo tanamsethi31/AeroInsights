@@ -1,5 +1,20 @@
 import * as React from "react";
+import { startTransition } from "react";
 import { useNavigate, useLocation } from "react-router";
+
+/**
+ * Wraps react-router's navigate() in startTransition so a sidebar click no
+ * longer forces a synchronous re-render wave across every component
+ * subscribed to useLocation (other Sidebar items' active-state checks,
+ * NavLinks, useTabSync's pathname dep, etc.). With this in place, rapid
+ * clicks on heavy tabs (Dashboard / Portfolio / Scenarios / Deals) let
+ * React 18 throw away in-flight stale work and commit only the latest
+ * navigation. Eliminates the cumulative-freeze symptom where 2-3 quick
+ * clicks would stall the main thread.
+ */
+function navigateTransition(navigate: (to: string) => void, to: string): void {
+  startTransition(() => navigate(to));
+}
 import {
   LayoutDashboard,
   BookOpen,
@@ -234,7 +249,7 @@ function NavGroupItem({ item }: { item: NavItem & { items: SubItem[] } }) {
         <SidebarMenuButton
           tooltip={item.title}
           isActive={isActive}
-          onClick={() => navigate(item.url)}
+          onClick={() => navigateTransition(navigate, item.url)}
           className="cursor-pointer"
         >
           <item.icon />
@@ -257,7 +272,7 @@ function NavGroupItem({ item }: { item: NavItem & { items: SubItem[] } }) {
             {item.items.map((sub) => (
               <SidebarMenuSubItem key={sub.title}>
                 <SidebarMenuSubButton
-                  onClick={() => navigate(sub.url)}
+                  onClick={() => navigateTransition(navigate, sub.url)}
                   className="cursor-pointer h-6 text-xs [&>svg]:size-3"
                 >
                   <sub.icon />
@@ -288,7 +303,7 @@ function NavFlatItem({ item, badge }: { item: NavItem; badge?: number }) {
       <SidebarMenuButton
         tooltip={item.title}
         isActive={isActive}
-        onClick={() => navigate(item.url)}
+        onClick={() => navigateTransition(navigate, item.url)}
         className="cursor-pointer"
       >
         <item.icon />
@@ -341,7 +356,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              onClick={() => navigate("/")}
+              onClick={() => navigateTransition(navigate, "/")}
               className="cursor-pointer"
             >
               <div
@@ -403,7 +418,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 onClick={() => {
                   setActivePortfolio(null);
-                  navigate("/portfolios");
+                  navigateTransition(navigate, "/portfolios");
                 }}
                 className="cursor-pointer"
                 tooltip="Switch Portfolio"

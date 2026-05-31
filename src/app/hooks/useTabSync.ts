@@ -19,7 +19,7 @@
 // path (when one exists). Browser back/forward + sidebar re-clicks now work
 // because the URL is the source of truth.
 
-import { useCallback, useMemo } from "react";
+import { startTransition, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 export function useTabSync<T extends string>(
@@ -44,14 +44,25 @@ export function useTabSync<T extends string>(
     (tab: T) => {
       const path = tabToPath[tab];
       if (path) {
-        // URL is the source of truth — let the page's own
-        // useEffect([pathname]) call setActiveTab. Avoids a double state
-        // update + re-render cycle on every tab click.
-        if (path !== pathname) navigate(path);
+        if (path !== pathname) {
+          // PERF: optimistically update local activeTab state SYNCHRONOUSLY
+          // so the user sees the new tab content immediately. Then push the
+          // URL change as a low-priority transition. Without this, every
+          // navigate() forced React to synchronously re-render every
+          // component subscribed to useLocation (Sidebar items, NavLink
+          // active states, useTabSync's own pathname dep) on the main
+          // thread before painting anything. Rapid clicks stacked those
+          // synchronous re-render waves and produced the observed freeze
+          // ("New Custom Scenario" button bypassed it by calling
+          // setActiveTab directly without navigate — same symptom proof).
+          setActiveTab(tab);
+          startTransition(() => {
+            navigate(path);
+          });
+        }
         return;
       }
-      // Tab has no canonical URL (e.g. sub-tabs in Scenarios's Custom Builder
-      // section) — direct state update.
+      // Tab has no canonical URL — direct state update.
       setActiveTab(tab);
     },
     [navigate, pathname, setActiveTab, tabToPath],
