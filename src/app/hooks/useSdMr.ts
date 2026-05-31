@@ -42,7 +42,7 @@ export function useSdMr(): UseSdMrResult {
 
   const [state, setState] = useState<UseSdMrResult>(EMPTY);
 
-  const fetchOnce = useCallback(async () => {
+  const fetchOnce = useCallback(async (signal?: AbortSignal) => {
       const dbId = dbPortfolioId(activePortfolioId);
     if (!orgId || !dbId) {
       setState(EMPTY);
@@ -50,18 +50,13 @@ export function useSdMr(): UseSdMrResult {
     }
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
+      const depositsQ = supabase.from("security_deposits").select("*").eq("org_id", orgId).eq("portfolio_id", dbId);
+      const reservesQ = supabase.from("maintenance_reserves").select("*").eq("org_id", orgId).eq("portfolio_id", dbId);
       const [{ data: deposits, error: dErr }, { data: reserves, error: rErr }] = await Promise.all([
-        supabase
-          .from("security_deposits")
-          .select("*")
-          .eq("org_id", orgId)
-          .eq("portfolio_id", dbId),
-        supabase
-          .from("maintenance_reserves")
-          .select("*")
-          .eq("org_id", orgId)
-          .eq("portfolio_id", dbId),
+        signal ? depositsQ.abortSignal(signal) : depositsQ,
+        signal ? reservesQ.abortSignal(signal) : reservesQ,
       ]);
+      if (signal?.aborted) return;
       if (dErr) throw dErr;
       if (rErr) throw rErr;
 
@@ -83,11 +78,16 @@ export function useSdMr(): UseSdMrResult {
         refetch: fetchOnce,
       });
     } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") return;
       setState((s) => ({ ...s, loading: false, error: (err as Error).message }));
     }
   }, [orgId, activePortfolioId]);
 
-  useEffect(() => { fetchOnce(); }, [fetchOnce]);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchOnce(ctrl.signal);
+    return () => ctrl.abort();
+  }, [fetchOnce]);
 
   return { ...state, refetch: fetchOnce };
 }

@@ -5,6 +5,58 @@ import { useNavigate } from "react-router";
 import { getWatchlistSummary } from "../components/counterparties/watchlistEngine";
 import type { WatchlistStatusEntry } from "../components/counterparties/watchlistEngine";
 import { WatchlistGlobe } from "../components/dashboard/WatchlistGlobe";
+
+/**
+ * Defers mounting expensive children until either:
+ *   1. The placeholder scrolls into view (IntersectionObserver), or
+ *   2. A short timeout elapses (fallback for above-the-fold widgets).
+ *
+ * Used to keep Dashboard's first paint cheap so rapid tab switches don't
+ * stall on the WatchlistGlobe's d3-geo world-topology fetch + RAF render
+ * loop + 200-feature country mesh. The globe still appears within a frame
+ * or two of mount — the user perceives a fully-loaded Dashboard, but the
+ * main thread isn't blocked while another tab is being entered.
+ */
+function LazyMount({
+  fallback,
+  rootMargin = "200px",
+  delayMs = 120,
+  children,
+}: {
+  fallback: React.ReactNode;
+  rootMargin?: string;
+  delayMs?: number;
+  children: React.ReactNode;
+}) {
+  const [show, setShow] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (show) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => { if (!cancelled) setShow(true); }, delayMs);
+
+    if (!ref.current) return () => { cancelled = true; window.clearTimeout(timer); };
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting) && !cancelled) {
+          setShow(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin },
+    );
+    io.observe(ref.current);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      io.disconnect();
+    };
+  }, [show, delayMs, rootMargin]);
+
+  return <div ref={ref}>{show ? children : fallback}</div>;
+}
 import {
   AreaChart,
   Area,
@@ -876,7 +928,15 @@ export default function Dashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: "400px" }}>
           {/* Left — Globe */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px", borderRight: "1px solid #E2E8F0" }}>
-            <WatchlistGlobe entries={watchlistEntries} onHover={setGlobeHovered} />
+            <LazyMount
+              fallback={
+                <div style={{ width: 340, height: 340, display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", fontSize: "0.75rem" }}>
+                  Loading globe…
+                </div>
+              }
+            >
+              <WatchlistGlobe entries={watchlistEntries} onHover={setGlobeHovered} />
+            </LazyMount>
           </div>
 
           {/* Right — Headlines feed */}

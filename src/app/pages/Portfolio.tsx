@@ -104,19 +104,50 @@ export default function Portfolio() {
   );
 
   // Memoize ALL row/KPI builders. Previously these ran on every render of
-  // Portfolio — every sidebar toggle, every hover, every state change in any
-  // child — recomputing the entire lease/aircraft/lessee tables from scratch.
-  // With 18+ aircraft and many children watching these arrays, this was a
-  // dominant cause of the cumulative main-thread pressure that produced the
-  // "freeze after 2 tab switches" symptom.
+  // Portfolio. Now they:
+  //   (a) only recompute when source data changes (memo), AND
+  //   (b) only compute at all when the active sub-tab needs them.
+  //
+  // Gating by activeTab is the bigger win: on mount of /portfolio (default
+  // tab = "Leases"), we used to build the aircraft/lessees/keyDates/payment
+  // slices even though Leases doesn't render any of them. That's 4 wasted
+  // O(N×M) walks across MOCK_ASSETS × MOCK_LEASES × MOCK_LESSEES on every
+  // single Portfolio mount, which compounded into the "freeze after 2 tab
+  // switches" symptom. Each slice now switches on the consumer's activeTab.
+  // Switching to that tab pays the compute cost LAZILY (still within one
+  // frame for 18-aircraft sample portfolios).
   const leases          = useMemo(() => toLeaseTableRows(leaseData, assets, lesseeData),    [leaseData, assets, lesseeData]);
   const mrSummary       = useMemo(() => toMRHealthSummary(leases),                          [leases]);
-  const aircraft        = useMemo(() => toAircraftTableRows(assets, leaseData, lesseeData), [assets, leaseData, lesseeData]);
-  const lessees         = useMemo(() => toLesseeTableRows(lesseeData, leaseData, provisions), [lesseeData, leaseData, provisions]);
-  const keyDateRows     = useMemo(() => toKeyDateRows(leaseData, assets, lesseeData),       [leaseData, assets, lesseeData]);
-  const keyDateKPIs     = useMemo(() => toKeyDateKPIs(keyDateRows),                         [keyDateRows]);
-  const paymentSchedule = useMemo(() => toPaymentSchedule(leaseData, assets, lesseeData),   [leaseData, assets, lesseeData]);
   const portfolioKPIs   = useMemo(() => toPortfolioKPIs(assets, leaseData, provisions),     [assets, leaseData, provisions]);
+
+  // Slices below are gated. `aircraft` is also referenced from "SD / MR" via
+  // liveSDMRByMsn, so include both tabs. Empty default is shape-stable to
+  // satisfy downstream array types without optional-chaining everywhere.
+  const aircraft        = useMemo(
+    () => (activeTab === "Aircraft" || activeTab === "SD / MR")
+      ? toAircraftTableRows(assets, leaseData, lesseeData)
+      : [],
+    [activeTab, assets, leaseData, lesseeData],
+  );
+  const lessees         = useMemo(
+    () => activeTab === "Lessees"
+      ? toLesseeTableRows(lesseeData, leaseData, provisions)
+      : [],
+    [activeTab, lesseeData, leaseData, provisions],
+  );
+  const keyDateRows     = useMemo(
+    () => activeTab === "Key Dates"
+      ? toKeyDateRows(leaseData, assets, lesseeData)
+      : [],
+    [activeTab, leaseData, assets, lesseeData],
+  );
+  const keyDateKPIs     = useMemo(() => toKeyDateKPIs(keyDateRows), [keyDateRows]);
+  const paymentSchedule = useMemo(
+    () => activeTab === "Payments"
+      ? toPaymentSchedule(leaseData, assets, lesseeData)
+      : [],
+    [activeTab, leaseData, assets, lesseeData],
+  );
 
   // T-1.4 consumer wire — pull ingested SD/MR rows so the SDMR builder can
   // override heuristic-derived numbers with real values per lease.
