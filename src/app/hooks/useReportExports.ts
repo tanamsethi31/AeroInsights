@@ -98,8 +98,17 @@ export function useReportExports(): UseReportExportsResult {
         .eq("org_id", orgId)
         .order("generated_at", { ascending: false })
         .limit(100);
-      if (activePortfolioId) {
-        q = q.or(`portfolio_id.is.null,portfolio_id.eq.${activePortfolioId}`);
+      // Only attach the portfolio_id OR clause when activePortfolioId is a
+      // real UUID. The sample portfolio uses the "global-sample" sentinel
+      // which is NOT a valid UUID; passing it into a Postgres UUID column
+      // filter produces HTTP 400 Bad Request and a red console error.
+      // Without the OR, we match only org-level (portfolio_id IS NULL)
+      // reports — which is the right behaviour for the demo portfolio.
+      const dbId = dbPortfolioId(activePortfolioId);
+      if (dbId) {
+        q = q.or(`portfolio_id.is.null,portfolio_id.eq.${dbId}`);
+      } else {
+        q = q.is("portfolio_id", null);
       }
       const { data, error: e } = await q;
       if (e) throw e;

@@ -84,9 +84,17 @@ export function useAuditLog(limit: number = 100): UseAuditLogResult {
         .eq("org_id", orgId)
         .order("occurred_at", { ascending: false })
         .limit(limit);
-      if (activePortfolioId) {
+      // Only attach the portfolio_id OR clause when activePortfolioId is a
+      // real UUID. The sample portfolio sentinel "global-sample" is NOT a
+      // valid UUID and produces HTTP 400 in the Postgres UUID column
+      // filter. Without the OR, we match only org-level (portfolio_id IS
+      // NULL) audit events — correct behaviour for demo mode.
+      const dbId = dbPortfolioId(activePortfolioId);
+      if (dbId) {
         // org-wide events (portfolio_id null) OR events for the active portfolio
-        q = q.or(`portfolio_id.is.null,portfolio_id.eq.${activePortfolioId}`);
+        q = q.or(`portfolio_id.is.null,portfolio_id.eq.${dbId}`);
+      } else {
+        q = q.is("portfolio_id", null);
       }
       const { data, error: e } = await q;
       if (e) throw e;
