@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router";
+import { useTabSync } from "../hooks/useTabSync";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { useAgent } from "../contexts/AgentContext";
 import { Card } from "../components/ui/Card";
@@ -99,6 +100,7 @@ export default function Scenarios() {
   const { pendingInputs, setPendingInputs } = useAgent();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Library"); }, [pathname]);
+  const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
   useEffect(() => {
     if (isExecutiveMode && !EXEC_SCENARIO_TABS.includes(activeTab)) {
       setActiveTab("Library");
@@ -592,7 +594,7 @@ export default function Scenarios() {
       <PillTabs
         tabs={tabs}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         style={{ marginTop: "-1.5rem" }}
         renderTab={(tab, isActive) => (
           <>

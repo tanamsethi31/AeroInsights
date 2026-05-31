@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "react-router";
+import { useTabSync } from "../hooks/useTabSync";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 
@@ -81,6 +82,7 @@ export default function Settings() {
   const { orgId } = useData();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "tenant");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "tenant"); }, [pathname]);
+  const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
   const [saved, setSaved] = useState(false);
   const [showImportWizard, setShowImportWizard] = useState(false);
 
@@ -201,7 +203,7 @@ export default function Settings() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 style={{
                   display: "flex",
                   alignItems: "center",

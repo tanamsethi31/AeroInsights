@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
 import { useLocation, useNavigate } from "react-router";
+import { useTabSync } from "../hooks/useTabSync";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";
 import { useViewMode } from "../contexts/ViewModeContext";
@@ -273,6 +274,7 @@ export default function RiskECL() {
   const { isExecutiveMode } = useViewMode();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "ECL Overview");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "ECL Overview"); }, [pathname]);
+  const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
   // When executive mode turns on, fall back to a tab that's visible in exec mode
   useEffect(() => {
     if (isExecutiveMode && !EXEC_TABS.includes(activeTab)) {
@@ -2250,7 +2252,7 @@ export default function RiskECL() {
       <PillTabs
         tabs={isExecutiveMode ? EXEC_TABS : tabs}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         renderTab={(tab) => (
           <>
             {tab === "SICR Config" && <SlidersHorizontal size={13} />}

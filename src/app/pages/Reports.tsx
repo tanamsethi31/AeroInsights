@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
+import { useTabSync } from "../hooks/useTabSync";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "../components/ui/Card";
 
@@ -133,6 +134,7 @@ export default function Reports() {
   const { pathname } = useLocation();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Report Templates");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Report Templates"); }, [pathname]);
+  const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [formatModal, setFormatModal] = React.useState<{ id: string; name: string } | null>(null);
   const [boardPackModal, setBoardPackModal] = React.useState<{ id: string; name: string } | null>(null);
@@ -214,7 +216,7 @@ export default function Reports() {
       <PillTabs
         tabs={tabs}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         style={{ marginTop: "-1.5rem" }}
       />
 

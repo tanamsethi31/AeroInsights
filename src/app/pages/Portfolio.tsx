@@ -1,5 +1,6 @@
 import { useState, useEffect, Fragment, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useTabSync } from "../hooks/useTabSync";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import {
@@ -81,6 +82,7 @@ export default function Portfolio() {
   const { isExecutiveMode } = useViewMode();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Leases");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Leases"); }, [pathname]);
+  const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
   useEffect(() => {
     if (isExecutiveMode && !EXEC_TABS.includes(activeTab)) {
       setActiveTab("Leases");
@@ -438,7 +440,7 @@ export default function Portfolio() {
       <PillTabs
         tabs={isExecutiveMode ? EXEC_TABS : tabs}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
       />
 
       {/* Leases Tab */}

@@ -1,6 +1,7 @@
 // src/app/pages/Maintenance.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
+import { useTabSync } from "../hooks/useTabSync";
 import { PageHeader } from "../components/ui/PageHeader";
 import { PillTabs } from "../components/ui/PillTabs";
 import { sdmrData } from "../components/portfolio/SDMRTab";
@@ -30,6 +31,8 @@ export default function Maintenance() {
   useEffect(() => {
     setActiveTab(PATH_TAB[pathname] ?? "Overview");
   }, [pathname]);
+  // Wraps setActiveTab to also push the matching URL — keeps state + URL in sync.
+  const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
 
   const { reports, loading: reportsLoading } = useAllServicerReports();
   const { eventsMap, loading: eventsLoading } = useAllMaintenanceEvents();
@@ -59,7 +62,7 @@ export default function Maintenance() {
       <PillTabs
         tabs={TABS}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         style={{ marginTop: "-1.5rem" }}
       />
 
