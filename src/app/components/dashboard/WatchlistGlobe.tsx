@@ -79,6 +79,13 @@ export function WatchlistGlobe({ entries, onHover }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const worldRef   = useRef<GeoJSON.FeatureCollection | null>(null);
 
+  // Single shared off-screen canvas reused for point-in-path hit testing.
+  // Previously a fresh <canvas> was created INSIDE the for-loop over world
+  // features on every pointer move → 200+ detached canvases per mouse move,
+  // each holding a 2d context (GPU memory). This was the primary cause of the
+  // Documents/Listeners growth visible in the Performance flame chart.
+  const hitCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
   // Rotation state: [lon, lat]
   const rotation  = useRef<[number, number]>([-70, -15]);
   const dragging  = useRef(false);
@@ -110,6 +117,25 @@ export function WatchlistGlobe({ entries, onHover }: Props) {
     return m;
   }, [entries]);
 
+  // ── Size + DPR setup (runs ONLY when size changes, not every frame) ──────────
+  // Previously this was inlined into draw(), which reset the canvas backing
+  // buffer + reapplied ctx.scale on every animation frame (60 Hz). That
+  // allocates a fresh GPU framebuffer per frame and leaks transform state.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width  = `${size}px`;
+    canvas.style.height = `${size}px`;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset previous scale
+      ctx.scale(dpr, dpr);
+    }
+  }, [size]);
+
   // ── Draw ─────────────────────────────────────────────────────────────────────
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -117,13 +143,9 @@ export function WatchlistGlobe({ entries, onHover }: Props) {
     if (!canvas || !world) return;
 
     const ctx    = canvas.getContext("2d")!;
-    const dpr    = window.devicePixelRatio || 1;
     const S      = size;
-    canvas.width  = S * dpr;
-    canvas.height = S * dpr;
-    canvas.style.width  = `${S}px`;
-    canvas.style.height = `${S}px`;
-    ctx.scale(dpr, dpr);
+    // Clear in CSS-pixel coords; size/scale are configured in the size effect.
+    ctx.clearRect(0, 0, S, S);
 
     const projection = geoOrthographic()
       .scale(S / 2 - 6)
@@ -220,18 +242,25 @@ export function WatchlistGlobe({ entries, onHover }: Props) {
         .clipAngle(90);
       const path = geoPath(proj);
       const hl   = highlights();
+      // Lazily create a SINGLE off-screen canvas reused across all hit
+      // tests. Previously this allocated a fresh canvas inside the for-loop
+      // body, producing up to ~200 detached canvases per pointer move.
+      if (!hitCanvasRef.current) {
+        hitCanvasRef.current = document.createElement("canvas");
+      }
+      const tmp = hitCanvasRef.current;
+      if (tmp.width !== size)  tmp.width  = size;
+      if (tmp.height !== size) tmp.height = size;
+      const tc = tmp.getContext("2d")!;
+      const tp = geoPath(proj, tc);
+
       let hit: WatchlistStatusEntry | null = null;
       // Check highlighted countries first (faster exit)
       for (const f of worldRef.current.features) {
         const code  = parseInt((f as GeoJSON.Feature).id as string, 10);
         const entry = hl.get(code);
         if (entry && path.measure(f as GeoJSON.Feature) > 0) {
-          // Use point-in-path check via a temporary canvas
-          const tmp = document.createElement("canvas");
-          tmp.width  = size;
-          tmp.height = size;
-          const tc   = tmp.getContext("2d")!;
-          const tp   = geoPath(proj, tc);
+          // Reuse the shared hit-test canvas; just rebuild the path.
           tc.beginPath();
           tp(f as GeoJSON.Feature);
           if (tc.isPointInPath(mx, my)) { hit = entry; break; }
