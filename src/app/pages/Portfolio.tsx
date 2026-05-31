@@ -98,15 +98,25 @@ export default function Portfolio() {
   const { assets, lessees: lesseeData, leases: leaseData, provisions, isLoading, isDemo, refetch } = usePortfolioData();
   const { orgId } = useData();
   const [editingLeaseId, setEditingLeaseId] = useState<string | null>(null);
-  const editingLease = editingLeaseId ? leaseData.find(l => l.id === editingLeaseId) ?? null : null;
-  const leases = toLeaseTableRows(leaseData, assets, lesseeData);
-  const mrSummary = toMRHealthSummary(leases);
-  const aircraft = toAircraftTableRows(assets, leaseData, lesseeData);
-  const lessees = toLesseeTableRows(lesseeData, leaseData, provisions);
-  const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
-  const keyDateKPIs = toKeyDateKPIs(keyDateRows);
-  const paymentSchedule = toPaymentSchedule(leaseData, assets, lesseeData);
-  const portfolioKPIs = toPortfolioKPIs(assets, leaseData, provisions);
+  const editingLease = useMemo(
+    () => (editingLeaseId ? leaseData.find((l) => l.id === editingLeaseId) ?? null : null),
+    [editingLeaseId, leaseData],
+  );
+
+  // Memoize ALL row/KPI builders. Previously these ran on every render of
+  // Portfolio — every sidebar toggle, every hover, every state change in any
+  // child — recomputing the entire lease/aircraft/lessee tables from scratch.
+  // With 18+ aircraft and many children watching these arrays, this was a
+  // dominant cause of the cumulative main-thread pressure that produced the
+  // "freeze after 2 tab switches" symptom.
+  const leases          = useMemo(() => toLeaseTableRows(leaseData, assets, lesseeData),    [leaseData, assets, lesseeData]);
+  const mrSummary       = useMemo(() => toMRHealthSummary(leases),                          [leases]);
+  const aircraft        = useMemo(() => toAircraftTableRows(assets, leaseData, lesseeData), [assets, leaseData, lesseeData]);
+  const lessees         = useMemo(() => toLesseeTableRows(lesseeData, leaseData, provisions), [lesseeData, leaseData, provisions]);
+  const keyDateRows     = useMemo(() => toKeyDateRows(leaseData, assets, lesseeData),       [leaseData, assets, lesseeData]);
+  const keyDateKPIs     = useMemo(() => toKeyDateKPIs(keyDateRows),                         [keyDateRows]);
+  const paymentSchedule = useMemo(() => toPaymentSchedule(leaseData, assets, lesseeData),   [leaseData, assets, lesseeData]);
+  const portfolioKPIs   = useMemo(() => toPortfolioKPIs(assets, leaseData, provisions),     [assets, leaseData, provisions]);
 
   // T-1.4 consumer wire — pull ingested SD/MR rows so the SDMR builder can
   // override heuristic-derived numbers with real values per lease.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useSignalRefresh } from "../services/useSignalRefresh";
 import { useNavigate } from "react-router";
@@ -198,9 +198,15 @@ const recentScenarios = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const watchlistEntries = getWatchlistSummary();
+  // Memoize: getWatchlistSummary() walks the entire watchlist engine on every
+  // call and returns a fresh array. Without this, every Dashboard re-render
+  // (sidebar toggle, agent panel toggle, hover) triggered a full recompute.
+  const watchlistEntries = useMemo(() => getWatchlistSummary(), []);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const unreadCount = watchlistEntries.filter(e => e.status !== "green" && !readIds.has(e.lesseeId)).length;
+  const unreadCount = useMemo(
+    () => watchlistEntries.filter((e) => e.status !== "green" && !readIds.has(e.lesseeId)).length,
+    [watchlistEntries, readIds],
+  );
   const [showExport, setShowExport] = useState(false);
   const { isExecutiveMode } = useViewMode();
   const { isNewTenant, checklist, checklistDismissed, toggleItem, dismissChecklist } = useOnboarding();
@@ -211,13 +217,21 @@ export default function Dashboard() {
   const [globeHovered, setGlobeHovered] = useState<WatchlistStatusEntry | null>(null);
 
   const { assets, lessees: lesseeData, leases: leaseData, provisions } = usePortfolioData();
-  const kpis = toDashboardKPIs(assets, lesseeData, provisions);
-  const leases      = toLeaseTableRows(leaseData, assets, lesseeData);
-  const mrSummary   = toMRHealthSummary(leases);
-  const keyDateRows = toKeyDateRows(leaseData, assets, lesseeData);
-  const urgentLeases = keyDateRows
-    .filter(r => r.urgency === "critical" || r.urgency === "watch" || r.urgency === "expired")
-    .slice(0, 5);
+  // Memoize every data transform. Previously these ran on every render →
+  // every state change in Dashboard or its parent reran the full KPI/lease/
+  // keyDate pipeline. Combined with the WatchlistGlobe leak that was
+  // already patched, this contributed to the main-thread pressure that
+  // produced the multi-second freeze after a few tab switches.
+  const kpis         = useMemo(() => toDashboardKPIs(assets, lesseeData, provisions), [assets, lesseeData, provisions]);
+  const leases       = useMemo(() => toLeaseTableRows(leaseData, assets, lesseeData), [leaseData, assets, lesseeData]);
+  const mrSummary    = useMemo(() => toMRHealthSummary(leases),                       [leases]);
+  const keyDateRows  = useMemo(() => toKeyDateRows(leaseData, assets, lesseeData),    [leaseData, assets, lesseeData]);
+  const urgentLeases = useMemo(
+    () => keyDateRows
+      .filter((r) => r.urgency === "critical" || r.urgency === "watch" || r.urgency === "expired")
+      .slice(0, 5),
+    [keyDateRows],
+  );
 
   const [expandedTiles, setExpandedTiles] = useState<Set<string>>(new Set());
   function toggleTile(id: string) {
