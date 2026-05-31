@@ -27,28 +27,27 @@
 //   import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 // and call sites stay identical.
 
-import { startTransition, useCallback } from "react";
 import { useNavigate, type NavigateOptions, type To } from "react-router";
 
-export function useTransitionNavigate(): {
-  (to: To, options?: NavigateOptions): void;
-  (delta: number): void;
-} {
-  const raw = useNavigate();
-
-  return useCallback(
-    (toOrDelta: To | number, options?: NavigateOptions) => {
-      startTransition(() => {
-        if (typeof toOrDelta === "number") {
-          raw(toOrDelta);
-        } else {
-          raw(toOrDelta, options);
-        }
-      });
-    },
-    [raw],
-  ) as {
-    (to: To, options?: NavigateOptions): void;
-    (delta: number): void;
-  };
+// NOTE: previously wrapped every navigate call in startTransition. That
+// turned out to be wrong for cross-page navigation. `navigate()` updates
+// the URL SYNCHRONOUSLY via history.pushState, but the React state
+// update that triggers Outlet/Layout re-renders is what startTransition
+// defers. When the deferred re-render gets abandoned by a subsequent
+// click, the URL stays at the new value while the Outlet keeps showing
+// the OLD route's component — visible as the "URL says /, content shows
+// Scenarios" desync the user (and an independent reviewer) caught.
+//
+// useTabSync still uses startTransition internally, but only because it
+// pairs the deferred URL push with a SYNCHRONOUS setActiveTab() — the
+// optimistic local state keeps the visible content consistent.
+//
+// This hook stays as an API-compatible drop-in for useNavigate so the
+// 18 consumer files don't need touching. It is now effectively a pass-
+// through; callers see the standard react-router behaviour.
+export function useTransitionNavigate(): ReturnType<typeof useNavigate> {
+  return useNavigate();
 }
+
+// Re-export types for consumers that imported them indirectly.
+export type { NavigateOptions, To };

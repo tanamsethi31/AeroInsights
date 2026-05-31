@@ -249,7 +249,7 @@ function NavGroupItem({ item }: { item: NavItem & { items: SubItem[] } }) {
         <SidebarMenuButton
           tooltip={item.title}
           isActive={isActive}
-          onClick={() => navigateTransition(navigate, item.url)}
+          onClick={() => navigate(item.url)}
           className="cursor-pointer"
         >
           <item.icon />
@@ -272,7 +272,7 @@ function NavGroupItem({ item }: { item: NavItem & { items: SubItem[] } }) {
             {item.items.map((sub) => (
               <SidebarMenuSubItem key={sub.title}>
                 <SidebarMenuSubButton
-                  onClick={() => navigateTransition(navigate, sub.url)}
+                  onClick={() => navigate(sub.url)}
                   className="cursor-pointer h-6 text-xs [&>svg]:size-3"
                 >
                   <sub.icon />
@@ -303,7 +303,7 @@ function NavFlatItem({ item, badge }: { item: NavItem; badge?: number }) {
       <SidebarMenuButton
         tooltip={item.title}
         isActive={isActive}
-        onClick={() => navigateTransition(navigate, item.url)}
+        onClick={() => navigate(item.url)}
         className="cursor-pointer"
       >
         <item.icon />
@@ -356,7 +356,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              onClick={() => navigateTransition(navigate, "/")}
+              onClick={() => navigate("/")}
               className="cursor-pointer"
             >
               <div
@@ -418,7 +418,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton
                 onClick={() => {
                   setActivePortfolio(null);
-                  navigateTransition(navigate, "/portfolios");
+                  navigate("/portfolios");
                 }}
                 className="cursor-pointer"
                 tooltip="Switch Portfolio"
