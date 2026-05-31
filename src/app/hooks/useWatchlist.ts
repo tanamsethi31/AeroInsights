@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export type WatchlistStatus = "green" | "amber" | "red";
 
@@ -56,14 +57,15 @@ export function useWatchlist(): UseWatchlistResult {
   const [error,   setError]   = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) { setEntries([]); return; }
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) { setEntries([]); return; }
     setLoading(true); setError(null);
     try {
       const { data, error: e } = await supabase
         .from("watchlist_entries")
         .select("lessee_id,status,score,signals,triggered_by,reason,evaluated_at")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId);
+        .eq("portfolio_id", dbId);
       if (e) throw e;
       setEntries(((data ?? []) as Row[]).map(map));
     } catch (err) {

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export type WatchlistSignalKey =
   | "paymentLateness" | "scheduleQoQ" | "ratingChange"
@@ -40,14 +41,15 @@ export function useWatchlistConfig(): UseWatchlistConfigResult {
   const [error,   setError]   = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) return;
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) return;
     setLoading(true); setError(null);
     try {
       const { data, error: e } = await supabase
         .from("watchlist_config")
         .select("weights, thresholds")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .maybeSingle();
       if (e) throw e;
       if (data) {

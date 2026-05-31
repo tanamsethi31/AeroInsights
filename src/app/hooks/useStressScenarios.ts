@@ -17,6 +17,7 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
 import { ZERO_INPUTS, BASE_ECL, computeECL, type ScenarioInputs } from "../utils/eclCalculator";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 // ─── Row types (mirror migration 20260524180000) ────────────────────────────
 
@@ -195,14 +196,15 @@ export function useStressScenarios(): UseStressScenariosResult {
   const [error, setError]     = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) { setRows([]); return; }
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) { setRows([]); return; }
     setLoading(true); setError(null);
     try {
       const { data, error: e } = await supabase
         .from("stress_scenarios")
         .select("*")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .order("name", { ascending: true });
       if (e) throw e;
       setRows((data ?? []) as StressScenarioRow[]);

@@ -28,6 +28,7 @@ import {
   jurisdictions as HARDCODED_JURISDICTIONS,
   type Jurisdiction,
 } from "../components/jurisdictions/jurisdictionData";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 // ─── DB row type (mirror migration 20260524190000) ──────────────────────────
 
@@ -157,14 +158,15 @@ export function useJurisdictions(): UseJurisdictionsResult {
   const [error, setError] = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) { setDbRows([]); return; }
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) { setDbRows([]); return; }
     setLoading(true); setError(null);
     try {
       const { data, error: e } = await supabase
         .from("jurisdiction_lgd_overlays")
         .select("*")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId);
+        .eq("portfolio_id", dbId);
       if (e) throw e;
       setDbRows((data ?? []) as JurisdictionLgdRow[]);
     } catch (err) {

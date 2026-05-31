@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export type LesseeTimelineEventType =
   | "stage-change"
@@ -59,7 +60,8 @@ export function useLesseeTimeline(lesseeUuid: string | null | undefined): UseLes
   const [error,   setError]   = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId || !lesseeUuid) {
+    const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId || !lesseeUuid) {
       setEvents([]);
       return;
     }
@@ -70,7 +72,7 @@ export function useLesseeTimeline(lesseeUuid: string | null | undefined): UseLes
         .from("leases")
         .select("external_id")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .eq("lessee_id", lesseeUuid);
       if (leaseErr) throw leaseErr;
       const externalIds = (leaseRows ?? [])
@@ -84,7 +86,7 @@ export function useLesseeTimeline(lesseeUuid: string | null | undefined): UseLes
           .from("stage_migrations")
           .select("id, lease_external_id, from_stage, to_stage, direction, reason, signal, occurred_at")
           .eq("org_id", orgId)
-          .eq("portfolio_id", activePortfolioId)
+          .eq("portfolio_id", dbId)
           .in("lease_external_id", externalIds)
           .order("occurred_at", { ascending: false })
           .limit(50);
@@ -118,7 +120,7 @@ export function useLesseeTimeline(lesseeUuid: string | null | undefined): UseLes
         .from("audit_log")
         .select("id, entity_type, entity_id, action, after, occurred_at")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .in("action", ["lock"])
         .eq("entity_type", "ecl_period_snapshot")
         .order("occurred_at", { ascending: false })

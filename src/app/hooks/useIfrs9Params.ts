@@ -9,6 +9,7 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
 import { logAudit } from "../services/auditLog";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export interface Ifrs9Params {
   discount_rate:              number;
@@ -51,7 +52,8 @@ export function useIfrs9Params(): UseIfrs9ParamsResult {
   const [error, setError]         = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) return;
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) return;
     setLoading(true);
     setError(null);
     try {
@@ -59,7 +61,7 @@ export function useIfrs9Params(): UseIfrs9ParamsResult {
         .from("ifrs9_parameters")
         .select("*")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .maybeSingle();
       if (e) throw e;
       if (data) {

@@ -7,6 +7,7 @@ import { logAudit } from "../services/auditLog";
 import type { CurrencyCode } from "../contexts/CurrencyContext";
 import type { ScenarioInputs } from "../utils/eclCalculator";
 import type { EclRow } from "../utils/eclRollForward";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export interface SicrConfig {
   dpdEnabled:              boolean;
@@ -88,7 +89,8 @@ export function useEclSnapshots(): Result {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!orgId || !activePortfolioId) {
+      const dbId = dbPortfolioId(activePortfolioId);
+      if (!orgId || !dbId) {
         setSnapshots([]);
         setIsLoading(false);
         return;
@@ -98,7 +100,7 @@ export function useEclSnapshots(): Result {
         .from("ecl_period_snapshots")
         .select("*")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .order("locked_at", { ascending: false })
         .limit(20);
       if (cancelled) return;
@@ -113,14 +115,15 @@ export function useEclSnapshots(): Result {
 
   const lockPeriod = useCallback(
     async (payload: LockPeriodPayload) => {
-      if (!orgId || !activePortfolioId) {
+      const dbId = dbPortfolioId(activePortfolioId);
+      if (!orgId || !dbId) {
         throw new Error("No active portfolio — cannot lock a period.");
       }
       const user = (await supabase.auth.getUser()).data.user;
       const lockedBy = user?.email ?? "unknown";
       const { error } = await supabase.from("ecl_period_snapshots").insert({
         org_id:           orgId,
-        portfolio_id:     activePortfolioId,
+        portfolio_id:     dbId,
         period_label:     payload.periodLabel,
         locked_by:        lockedBy,
         stage1_ecl:       payload.stage1Ecl,
@@ -152,7 +155,7 @@ export function useEclSnapshots(): Result {
         .from("ecl_period_snapshots")
         .select("*")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .order("locked_at", { ascending: false })
         .limit(20);
       if (data) {

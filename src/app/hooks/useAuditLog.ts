@@ -11,6 +11,7 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
 import type { AuditAction } from "../services/auditLog";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export interface AuditLogEntry {
   id:          string;

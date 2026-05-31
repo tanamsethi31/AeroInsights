@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export type ReportFrequency = "daily" | "weekly" | "monthly";
 export type ReportFormat = "csv" | "pdf" | "docx" | "xlsx";

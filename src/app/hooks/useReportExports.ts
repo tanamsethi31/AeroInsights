@@ -12,6 +12,7 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
 import { logAudit } from "../services/auditLog";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export type ReportFormat = "pdf" | "docx" | "xlsx";
 

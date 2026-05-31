@@ -16,6 +16,7 @@ import type {
   MaintenanceReserve,
   SecurityDeposit,
 } from "../types/portfolio";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export interface UseSdMrResult {
   /** Deposits keyed by lease_id. */
@@ -42,7 +43,8 @@ export function useSdMr(): UseSdMrResult {
   const [state, setState] = useState<UseSdMrResult>(EMPTY);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) {
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) {
       setState(EMPTY);
       return;
     }
@@ -53,12 +55,12 @@ export function useSdMr(): UseSdMrResult {
           .from("security_deposits")
           .select("*")
           .eq("org_id", orgId)
-          .eq("portfolio_id", activePortfolioId),
+          .eq("portfolio_id", dbId),
         supabase
           .from("maintenance_reserves")
           .select("*")
           .eq("org_id", orgId)
-          .eq("portfolio_id", activePortfolioId),
+          .eq("portfolio_id", dbId),
       ]);
       if (dErr) throw dErr;
       if (rErr) throw rErr;

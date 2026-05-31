@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 export type StageMigrationReason = "ingestion" | "sicr" | "manual" | "scenario_run";
 export type StageMigrationDirection = "up" | "down";
@@ -71,14 +72,15 @@ export function useStageMigrations(limit: number = 100): UseStageMigrationsResul
   const [error,      setError]      = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) { setMigrations([]); return; }
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) { setMigrations([]); return; }
     setLoading(true); setError(null);
     try {
       const { data, error: e } = await supabase
         .from("stage_migrations")
         .select("*")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .order("occurred_at", { ascending: false })
         .limit(limit);
       if (e) throw e;

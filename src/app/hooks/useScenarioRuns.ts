@@ -21,6 +21,7 @@ import { usePortfolio } from "../contexts/PortfolioContext";
 import { logAudit } from "../services/auditLog";
 import type { ScenarioRunResult, ShapleyDriver } from "../components/scenarios/RunResultPanel";
 import type { ScenarioInputs } from "../utils/eclCalculator";
+import { dbPortfolioId } from "../utils/portfolioId";
 
 // ─── DB row shape (mirror migration 20260525120000) ─────────────────────────
 
@@ -142,14 +143,15 @@ export function useScenarioRuns(): UseScenarioRunsResult {
   const [error,   setError]   = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !activePortfolioId) { setRows([]); return; }
+      const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) { setRows([]); return; }
     setLoading(true); setError(null);
     try {
       const { data, error: e } = await supabase
         .from("scenario_runs")
         .select("*")
         .eq("org_id", orgId)
-        .eq("portfolio_id", activePortfolioId)
+        .eq("portfolio_id", dbId)
         .order("run_at", { ascending: false })
         .limit(200);
       if (e) throw e;
@@ -164,7 +166,8 @@ export function useScenarioRuns(): UseScenarioRunsResult {
   useEffect(() => { fetchOnce(); }, [fetchOnce]);
 
   const insertRun = useCallback(async (args: InsertRunArgs): Promise<ScenarioRunResult | null> => {
-    if (!orgId || !activePortfolioId) {
+    const dbId = dbPortfolioId(activePortfolioId);
+    if (!orgId || !dbId) {
       setError("No active portfolio — cannot persist run.");
       return null;
     }
@@ -178,7 +181,7 @@ export function useScenarioRuns(): UseScenarioRunsResult {
     }
     const insertPayload = {
       org_id:        orgId,
-      portfolio_id:  activePortfolioId,
+      portfolio_id:  dbId,
       run_code:      args.runCode,
       scenario_id:   args.scenarioId,
       name:          args.name,
