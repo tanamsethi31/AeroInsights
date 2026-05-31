@@ -8,6 +8,7 @@ import { AgentProvider, useAgent } from "../../contexts/AgentContext";
 import { AgentPanel } from "../agent/AgentPanel";
 import { CurrencyProvider } from "../../contexts/CurrencyContext";
 import { DemoBanner } from "./DemoBanner";
+import { preloadAllPages } from "../../routes";
 
 /**
  * Inner layout shell — must live inside both SidebarProvider (to call useSidebar)
@@ -41,6 +42,14 @@ function LayoutContent() {
     if (isOpen && !prevIsOpen.current) setOpen(false);
     prevIsOpen.current = isOpen;
   }, [isOpen, setOpen]);
+
+  // Warm chunk cache for every lazy page once the layout is mounted. Runs
+  // on requestIdleCallback (or microtask fallback) so the initial render
+  // isn't impacted. After this completes (~750 ms total, staggered), every
+  // top-level tab click resolves instantly from cache with no Suspense
+  // fallback — eliminating the "first click cold-loads the chunk, second
+  // rapid click queues another mount, freeze" pattern.
+  React.useEffect(() => { preloadAllPages(); }, []);
 
   return (
     <>

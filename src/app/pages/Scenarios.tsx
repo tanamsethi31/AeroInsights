@@ -615,8 +615,18 @@ export default function Scenarios() {
         )}
       />
 
-      {/* ══ LIBRARY TAB ══════════════════════════════════════════════════════ */}
-      {activeTab === "Library" && (
+      {/*
+        ══ HEAVY TABS — Library / Custom Builder / Run History ══════════════
+        These three components are large (Library 766 lines, Custom Builder
+        1570 lines, Run History 285 lines). When they were conditionally
+        rendered via `activeTab === "X" && <X />`, switching between them
+        unmounted one and mounted another on every click. The mount cost
+        for Custom Builder in particular blew the main-thread frame budget
+        and rapid switching choked. Now they stay permanently mounted once
+        Scenarios is open — switches become a CSS visibility flip. Memory
+        cost is bounded (three mounts total per Scenarios visit).
+      */}
+      <div style={{ display: activeTab === "Library" ? "block" : "none" }}>
         <LibraryTab
           weightedECL={weightedECL}
           effectiveTemplates={effectiveTemplates}
@@ -629,10 +639,10 @@ export default function Scenarios() {
           getNarrative={getNarrative}
           onRequestNarrative={handleRequestNarrative}
         />
-      )}
+      </div>
 
       {/* ══ CUSTOM BUILDER TAB ═══════════════════════════════════════════════ */}
-      {activeTab === "Custom Builder" && (
+      <div style={{ display: activeTab === "Custom Builder" ? "block" : "none" }}>
         <CustomBuilderTab
           prefillSource={prefillSource}
           setPrefillSource={setPrefillSource}
@@ -682,10 +692,10 @@ export default function Scenarios() {
           getNarrative={getNarrative}
           onRequestNarrative={handleRequestNarrative}
         />
-      )}
+      </div>
 
       {/* ══ RUN HISTORY TAB ══════════════════════════════════════════════════ */}
-      {activeTab === "Run History" && (
+      <div style={{ display: activeTab === "Run History" ? "block" : "none" }}>
         <RunHistoryTab
           runs={runs}
           compareIds={compareIds}
@@ -699,7 +709,7 @@ export default function Scenarios() {
           getNarrative={getNarrative}
           onRequestNarrative={handleRequestNarrative}
         />
-      )}
+      </div>
 
       {/* ══ INSOLVENCY REGIMES TAB ══════════════════════════════════════ */}
       {activeTab === "Insolvency Regimes" && <InsolvencyTab />}
