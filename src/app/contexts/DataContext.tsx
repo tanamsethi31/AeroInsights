@@ -24,7 +24,11 @@ const DataContext = createContext<DataContextValue>({
 // T-4.2 — endpoint that swaps an Auth0 token for a Supabase-signed JWT
 // carrying the `org_id` custom claim. Same VITE_API_BASE_URL pattern as
 // the other API calls; falls back to a local dev origin.
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+const RAW_API_BASE = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").trim();
+// Treat localhost URLs the same as "missing" — they're build-time leftovers
+// from local dev and just produce noisy 404s in production. Real backends
+// have a non-localhost URL.
+const API_BASE = RAW_API_BASE.includes("localhost") ? "" : RAW_API_BASE;
 const TOKEN_REFRESH_BUFFER_SECONDS = 60; // refresh 1 min before expiry
 
 export function DataProvider({ children }: { children: ReactNode }) {

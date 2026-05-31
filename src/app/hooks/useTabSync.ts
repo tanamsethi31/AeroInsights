@@ -42,11 +42,17 @@ export function useTabSync<T extends string>(
 
   return useCallback(
     (tab: T) => {
-      setActiveTab(tab);
       const path = tabToPath[tab];
-      if (path && path !== pathname) {
-        navigate(path);
+      if (path) {
+        // URL is the source of truth — let the page's own
+        // useEffect([pathname]) call setActiveTab. Avoids a double state
+        // update + re-render cycle on every tab click.
+        if (path !== pathname) navigate(path);
+        return;
       }
+      // Tab has no canonical URL (e.g. sub-tabs in Scenarios's Custom Builder
+      // section) — direct state update.
+      setActiveTab(tab);
     },
     [navigate, pathname, setActiveTab, tabToPath],
   );

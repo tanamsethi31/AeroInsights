@@ -2,8 +2,13 @@ import { useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Outlet, useNavigate, useLocation } from "react-router";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
-  ?? "http://localhost:8000/api/v1";
+// Only the value actually set in env counts — empty/missing means "no
+// backend wired up, skip optional fetches". Previously this fell through
+// to http://localhost:8000/api/v1 which fired noisy 404s on every page
+// load in production.
+const RAW_API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
+const API_BASE = RAW_API_BASE.trim();
+const HAS_API_BASE = API_BASE.length > 0 && !API_BASE.includes("localhost");
 
 // Comma-separated email allowlist from env var.
 // If not set, no app-level restriction is enforced (rely on Auth0 Action).
@@ -34,8 +39,11 @@ export function RequireAuth() {
     }
   }, [isLoading, isAuthenticated, navigate, location]);
 
-  // Sync user to backend on first authenticated render
+  // Sync user to backend on first authenticated render.
+  // Skipped entirely when no real backend is configured (HAS_API_BASE),
+  // because this app runs Auth0 + Supabase direct with no /auth/me endpoint.
   useEffect(() => {
+    if (!HAS_API_BASE) return;
     if (!isAuthenticated || !user || synced.current) return;
     synced.current = true;
 
