@@ -1,6 +1,6 @@
 // src/app/components/layout/Layout.tsx
 import * as React from "react";
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { SidebarProvider, SidebarInset, useSidebar } from "../ui/sidebar";
 import { AppSidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -16,6 +16,17 @@ import { DemoBanner } from "./DemoBanner";
 function LayoutContent() {
   const { isOpen } = useAgent();
   const { setOpen } = useSidebar();
+  const { pathname } = useLocation();
+
+  // Key the Outlet wrapper on the *top-level* path segment so a sidebar
+  // navigation between top-level pages (e.g. /scenarios → /portfolio)
+  // guarantees a clean unmount + remount of the routed component.
+  // Without this, fast sequential clicks on heavy pages (Dashboard, Portfolio,
+  // Scenarios) occasionally left the URL updated while React's reconciler
+  // skipped the swap, leaving the previous page on screen until a hard
+  // reload. Sub-tab navigation (e.g. /scenarios/library → /scenarios/run)
+  // keeps the same key so the page handles its own internal tab transition.
+  const routeKey = pathname.split("/").slice(0, 2).join("/") || "/";
 
   // Collapse the sidebar only at the moment the AI panel is opened (false → true).
   // After that the user is free to re-open the sidebar independently.
@@ -39,6 +50,7 @@ function LayoutContent() {
             style={{ minWidth: 0 }}
           >
             <div
+              key={routeKey}
               style={{
                 maxWidth: "1400px",
                 width: "100%",
