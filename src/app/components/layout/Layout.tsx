@@ -72,15 +72,15 @@ function LayoutContent() {
                 padding: "clamp(1rem, 2vw, 1.75rem)",
               }}
             >
-              <React.Suspense
-                fallback={
-                  <div style={{ padding: "2rem", color: "#64748B", fontSize: "0.875rem" }}>
-                    Loading…
-                  </div>
-                }
-              >
-                <Outlet />
-              </React.Suspense>
+              {/*
+                Suspense boundary removed alongside the move from React.lazy
+                to static page imports. Every page component is in memory
+                the moment its route matches, so there is nothing to
+                suspend on. Keeping the boundary here would only invite
+                the Suspense "stale content" throttling behaviour that
+                caused the URL ↔ content desync we just fixed.
+              */}
+              <Outlet />
             </div>
           </main>
 
