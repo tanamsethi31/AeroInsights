@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ export function useServicerReport(leaseId: string | null): UseServicerReportRetu
   // ── Load on mount / leaseId change ────────────────────────────────────────
 
   useEffect(() => {
-    if (!orgId || !leaseId || !HAS_AUTH_BACKEND) { setReport(null); return; }
+    if (!orgId || !leaseId || !hasAuthSession()) { setReport(null); return; }
 
     let cancelled = false;
     const load = async () => {

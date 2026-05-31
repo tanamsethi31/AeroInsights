@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { mapEventRow } from "../utils/maintenanceEvents";
 import type { MaintenanceEvent } from "../utils/maintenanceEvents";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 export function useMaintenanceEvents(leaseId: string | null): {
   events:      MaintenanceEvent[];
@@ -85,7 +85,7 @@ export function useMaintenanceEvents(leaseId: string | null): {
   }, [orgId, leaseId]);
 
   const deleteEvent = useCallback(async (id: string) => {
-    if (!orgId || !HAS_AUTH_BACKEND) return;
+    if (!orgId || !hasAuthSession()) return;
     setSaving(true);
 
     const snapshot = events;

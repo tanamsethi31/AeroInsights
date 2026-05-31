@@ -1,19 +1,24 @@
 // src/app/utils/authBackend.ts
 //
-// Single source of truth for "is there a real Auth0 → Supabase JWT-exchange
-// backend wired up?" When this is false (no VITE_API_BASE_URL, or it
-// points at localhost), every RLS-gated Supabase query will return 401
-// because the supabase client only has the anon JWT — no `org_id` claim
-// for RLS to authorize. The 401 is logged by the browser to the console
-// as a red network error which JS cannot suppress, so the only way to
-// stop the noise is to skip the request entirely.
+// Tracks whether the Supabase client actually has an authenticated session
+// (the Auth0 → Supabase JWT exchange succeeded). Returning the URL-presence
+// of VITE_API_BASE_URL turned out to be wrong: production has that env var
+// set to a backend that does NOT serve /auth/supabase-token, so the
+// exchange silently fails, the supabase client stays on the anon JWT, and
+// every RLS-gated query returns 401.
 //
-// Hooks that read RLS-protected tables should early-return when this is
-// false. The app already falls back to MOCK_* data in demo mode, so the
-// UI continues to function normally.
+// DataContext.exchangeAndSetSession calls setAuthSession(true) on success
+// and leaves it false on failure. Hooks read the live value via
+// hasAuthSession() and skip queries when it's false.
 
-const RAW = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").trim();
+let _hasSession = false;
 
-/** True when a non-localhost API base URL is configured. */
-export const HAS_AUTH_BACKEND: boolean =
-  RAW.length > 0 && !RAW.includes("localhost");
+/** Read the current session-ready flag synchronously. */
+export function hasAuthSession(): boolean {
+  return _hasSession;
+}
+
+/** Set by DataContext after the JWT exchange completes (or fails). */
+export function setAuthSession(v: boolean): void {
+  _hasSession = v;
+}

@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 export interface NewsArticleEvidence {
   title:       string;
@@ -42,7 +42,7 @@ export function useNewsSignal(lesseeUuid: string | null | undefined): UseNewsSig
   const [error,   setError]   = useState<string | null>(null);
 
   const fetchOnce = useCallback(async () => {
-    if (!orgId || !lesseeUuid || !HAS_AUTH_BACKEND) { setSignal(null); return; }
+    if (!orgId || !lesseeUuid || !hasAuthSession()) { setSignal(null); return; }
     setLoading(true); setError(null);
     try {
       const { data, error: e } = await supabase

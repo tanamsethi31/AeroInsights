@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 export interface AssumptionLogEntry {
   id:             string;
@@ -29,7 +29,7 @@ export function useAssumptionLog(): Result {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!orgId || !HAS_AUTH_BACKEND) { setIsLoading(false); return; }
+      if (!orgId || !hasAuthSession()) { setIsLoading(false); return; }
       setIsLoading(true);
       const { data, error } = await supabase
         .from("assumption_change_log")

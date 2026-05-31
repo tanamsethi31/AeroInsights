@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 import type { AbsDeal } from "../utils/absWaterfall";
 
 function mapRow(r: Record<string, unknown>): AbsDeal {
@@ -40,7 +40,7 @@ export function useAbsDeals(): UseAbsDealsReturn {
       // the browser auto-logs in red and JS cannot suppress. Returns
       // empty deals silently; UI falls through to its "no deals yet"
       // state.
-      if (!orgId || !HAS_AUTH_BACKEND) { setDeals([]); setLoading(false); return; }
+      if (!orgId || !hasAuthSession()) { setDeals([]); setLoading(false); return; }
       setLoading(true);
       const { data, error } = await supabase
         .from("abs_deals")

@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { CurrencyCode } from "../contexts/CurrencyContext";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 interface FxRow {
   date:  string;
@@ -38,7 +38,7 @@ export function useFxRates(): UseFxRatesResult {
   const fetchOnce = useCallback(async () => {
     // Skip when there's no JWT-exchange backend: the anon JWT cannot satisfy
     // RLS on fx_rates → query 401s and the browser auto-logs in red.
-    if (!HAS_AUTH_BACKEND) { setLoading(false); return; }
+    if (!hasAuthSession()) { setLoading(false); return; }
     setLoading(true);
     try {
       // Step 1: most recent date with EUR-base rows.

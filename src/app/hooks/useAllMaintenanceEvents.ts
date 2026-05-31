@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { mapEventRow } from "../utils/maintenanceEvents";
 import type { MaintenanceEvent } from "../utils/maintenanceEvents";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 export function useAllMaintenanceEvents(): {
   eventsMap: Map<string, MaintenanceEvent[]>;
@@ -15,7 +15,7 @@ export function useAllMaintenanceEvents(): {
   const [loading,   setLoading  ] = useState(false);
 
   useEffect(() => {
-    if (!orgId || !HAS_AUTH_BACKEND) { setEventsMap(new Map()); return; }
+    if (!orgId || !hasAuthSession()) { setEventsMap(new Map()); return; }
 
     let cancelled = false;
     const load = async () => {

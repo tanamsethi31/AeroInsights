@@ -7,7 +7,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useData } from "../../contexts/DataContext";
-import { HAS_AUTH_BACKEND } from "../../utils/authBackend";
+import { hasAuthSession } from "../../utils/authBackend";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
 
@@ -26,7 +26,7 @@ export function DangerZonePanel() {
   // + org_members and the browser would auto-log red errors. Fall back to
   // an "unknown" org name; the delete button only enables for admins
   // anyway and that path needs the backend regardless.
-  if (orgId && orgName === null && HAS_AUTH_BACKEND) {
+  if (orgId && orgName === null && hasAuthSession()) {
     void (async () => {
       const [{ data: org }, { data: member }] = await Promise.all([
         supabase.from("organisations").select("name").eq("id", orgId).maybeSingle(),

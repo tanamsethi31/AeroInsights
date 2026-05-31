@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { supabase } from "../lib/supabase";
+import { setAuthSession } from "../utils/authBackend";
 
 type UploadStatus = "none" | "pending" | "processing" | "complete" | "error";
 
@@ -69,9 +70,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         access_token,
         refresh_token: access_token,
       });
+      // Notify the global session flag so every data hook can drop its
+      // skip-when-anon guard and start issuing real RLS-gated queries.
+      setAuthSession(true);
       return org_id;
     } catch (err) {
       console.warn("[DataContext] supabase-token exchange threw:", err);
+      setAuthSession(false);
       return null;
     }
   }, [getAccessTokenSilently]);

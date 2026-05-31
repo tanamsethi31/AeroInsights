@@ -7,7 +7,7 @@ import { buildLiveSDMRData, sdmrData as staticSdmrData } from "../components/por
 import { DEMO_LEASES } from "../data/demoCashFlowLeases";
 import { forecastCashFlows, mergeForecastEvents } from "../utils/cashFlowForecast";
 import type { CashEvent, CashEventType, CashEventSource, NewCashEvent } from "../utils/cashFlowForecast";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 // ── Return type ───────────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ export function useCashFlow(): UseCashFlowReturn {
   // ── Load on mount / orgId change ──────────────────────────────────────────
 
   useEffect(() => {
-    if (!orgId || !HAS_AUTH_BACKEND) { setPersisted([]); setLoading(false); return; }
+    if (!orgId || !hasAuthSession()) { setPersisted([]); setLoading(false); return; }
 
     let cancelled = false;
     const load = async () => {
@@ -130,7 +130,7 @@ export function useCashFlow(): UseCashFlowReturn {
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   const addEvent = useCallback(async (event: NewCashEvent) => {
-    if (!orgId || !HAS_AUTH_BACKEND) return;
+    if (!orgId || !hasAuthSession()) return;
     setSaving(true);
 
     // Optimistic insert with temp id

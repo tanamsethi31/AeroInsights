@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { DEFAULT_RECOVERY_FACTOR } from "../data/lgdCurves";
 import { logAssumptionChange } from "../utils/assumptionLog";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 export interface LgdCurvesState {
   recoveryFactor:       number;
@@ -23,7 +23,7 @@ export function useLgdCurves(): LgdCurvesState {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!orgId || !HAS_AUTH_BACKEND) {
+      if (!orgId || !hasAuthSession()) {
         if (!cancelled) {
           setRecoveryFactor(DEFAULT_RECOVERY_FACTOR);
           setIsOverridden(false);

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import type { ServicerReport } from "./useServicerReport";
-import { HAS_AUTH_BACKEND } from "../utils/authBackend";
+import { hasAuthSession } from "../utils/authBackend";
 
 function mapRow(row: Record<string, unknown>): ServicerReport {
   return {
@@ -26,7 +26,7 @@ export function useAllServicerReports(): {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!orgId || !HAS_AUTH_BACKEND) { setReports(new Map()); return; }
+    if (!orgId || !hasAuthSession()) { setReports(new Map()); return; }
 
     let cancelled = false;
     const load = async () => {
