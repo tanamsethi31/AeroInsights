@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import { Navigate } from "react-router";
 import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/layout/Layout";
@@ -6,24 +7,32 @@ import { RouteErrorBoundary } from "./components/errors/RouteErrorBoundary";
 import { usePortfolio } from "./contexts/PortfolioContext";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
-import Dashboard from "./pages/Dashboard";
-import Portfolio from "./pages/Portfolio";
-import Scenarios from "./pages/Scenarios";
-import RiskECL from "./pages/RiskECL";
-import Counterparties from "./pages/Counterparties";
-import Jurisdictions from "./pages/Jurisdictions";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
 import PortfolioHub from "./pages/PortfolioHub";
-import Deals from "./pages/Deals";
-import Intelligence from "./pages/Intelligence";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import ExcelAddinDocs from "./pages/ExcelAddinDocs";
-import Transactions from "./pages/Transactions";
-import Reconciliation from "./pages/Reconciliation";
-import CashFlow from "./pages/CashFlow";
-import Maintenance from "./pages/Maintenance";
-import RateOutlook from "./pages/RateOutlook";
+
+// Heavy app pages are code-split via React.lazy so that:
+//   1. Initial bundle is smaller — first nav into the app shell loads only the
+//      shell + landing/login.
+//   2. Each page becomes a separate chunk that resolves asynchronously,
+//      letting the <Suspense> boundary in Layout show a fallback the moment
+//      the user clicks a nav item. This eliminates the "I clicked but the
+//      page froze" perception even when the actual render is heavy.
+const Dashboard       = lazy(() => import("./pages/Dashboard"));
+const Portfolio       = lazy(() => import("./pages/Portfolio"));
+const Scenarios       = lazy(() => import("./pages/Scenarios"));
+const RiskECL         = lazy(() => import("./pages/RiskECL"));
+const Counterparties  = lazy(() => import("./pages/Counterparties"));
+const Jurisdictions   = lazy(() => import("./pages/Jurisdictions"));
+const Reports         = lazy(() => import("./pages/Reports"));
+const Settings        = lazy(() => import("./pages/Settings"));
+const Deals           = lazy(() => import("./pages/Deals"));
+const Intelligence    = lazy(() => import("./pages/Intelligence"));
+const Transactions    = lazy(() => import("./pages/Transactions"));
+const Reconciliation  = lazy(() => import("./pages/Reconciliation"));
+const CashFlow        = lazy(() => import("./pages/CashFlow"));
+const Maintenance     = lazy(() => import("./pages/Maintenance"));
+const RateOutlook     = lazy(() => import("./pages/RateOutlook"));
 
 /**
  * Guards the dashboard index route.
