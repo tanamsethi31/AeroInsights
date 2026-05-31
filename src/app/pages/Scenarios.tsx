@@ -101,6 +101,25 @@ export default function Scenarios() {
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
   useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Library"); }, [pathname]);
   const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
+
+  // Track which of the three URL-mapped heavy sub-tabs the user has visited
+  // during this Scenarios session. Each tab mounts ONCE on first visit and
+  // then stays alive (display: none) so sub-tab switching is instant. The
+  // crucial property vs. the previous "always-mount-all-three" pattern is
+  // that leaving Scenarios only unmounts what the user actually opened —
+  // mass-unmounting Library (766 lines) + CustomBuilder (1570 lines) +
+  // RunHistory (285 lines) in one tick was choking the next page's mount.
+  const [visitedSubTabs, setVisitedSubTabs] = useState<Set<string>>(
+    () => new Set([PATH_TAB[pathname] ?? "Library"]),
+  );
+  useEffect(() => {
+    setVisitedSubTabs((prev) => {
+      if (prev.has(activeTab)) return prev;
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
   useEffect(() => {
     if (isExecutiveMode && !EXEC_SCENARIO_TABS.includes(activeTab)) {
       setActiveTab("Library");
@@ -627,7 +646,7 @@ export default function Scenarios() {
         cost is bounded (three mounts total per Scenarios visit).
       */}
       <div style={{ display: activeTab === "Library" ? "block" : "none" }}>
-        <LibraryTab
+        {visitedSubTabs.has("Library") && <LibraryTab
           weightedECL={weightedECL}
           effectiveTemplates={effectiveTemplates}
           cardStates={cardStates}
@@ -638,12 +657,12 @@ export default function Scenarios() {
           liveBaseECL={liveBaseECL}
           getNarrative={getNarrative}
           onRequestNarrative={handleRequestNarrative}
-        />
+        />}
       </div>
 
       {/* ══ CUSTOM BUILDER TAB ═══════════════════════════════════════════════ */}
       <div style={{ display: activeTab === "Custom Builder" ? "block" : "none" }}>
-        <CustomBuilderTab
+        {visitedSubTabs.has("Custom Builder") && <CustomBuilderTab
           prefillSource={prefillSource}
           setPrefillSource={setPrefillSource}
           calBannerDismissed={calBannerDismissed}
@@ -691,12 +710,12 @@ export default function Scenarios() {
           findRun={findRun}
           getNarrative={getNarrative}
           onRequestNarrative={handleRequestNarrative}
-        />
+        />}
       </div>
 
       {/* ══ RUN HISTORY TAB ══════════════════════════════════════════════════ */}
       <div style={{ display: activeTab === "Run History" ? "block" : "none" }}>
-        <RunHistoryTab
+        {visitedSubTabs.has("Run History") && <RunHistoryTab
           runs={runs}
           compareIds={compareIds}
           toggleCompare={toggleCompare}
@@ -708,7 +727,7 @@ export default function Scenarios() {
           getRunInputs={getRunInputs}
           getNarrative={getNarrative}
           onRequestNarrative={handleRequestNarrative}
-        />
+        />}
       </div>
 
       {/* ══ INSOLVENCY REGIMES TAB ══════════════════════════════════════ */}
