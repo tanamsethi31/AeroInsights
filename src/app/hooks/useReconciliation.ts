@@ -8,6 +8,7 @@ import type {
   MatchResult, MatchType, ReconciliationResult, LeaseCandidate,
 } from "../utils/reconciliationMatcher";
 import type { BankTransaction } from "./useBankStatements";
+import { HAS_AUTH_BACKEND } from "../utils/authBackend";
 
 // ── Return type ───────────────────────────────────────────────────────────────
 
@@ -66,6 +67,9 @@ export function useReconciliation(
 
   useEffect(() => {
     if (!statementId) { setResult(null); return; }
+    // Skip when there's no JWT-exchange backend wired up — the anon JWT
+    // can't satisfy RLS on reconciliation_matches → 401 in console.
+    if (!HAS_AUTH_BACKEND) { setResult(null); return; }
     // Defer until transactions and portfolio data are loaded
     if (txnMap.size === 0 || leaseMap.size === 0) return;
 

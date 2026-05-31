@@ -10,6 +10,7 @@ import {
   type PdTermStructure,
 } from "../data/pdCurves";
 import { logAssumptionChange } from "../utils/assumptionLog";
+import { HAS_AUTH_BACKEND } from "../utils/authBackend";
 
 export interface EffectiveCurves {
   curves: PdCurveLibrary;
@@ -40,7 +41,7 @@ export function usePdCurves(): EffectiveCurves {
   const [loading, setLoading] = useState(false);
 
   const fetchOverrides = useCallback(async () => {
-    if (!orgId) {
+    if (!orgId || !HAS_AUTH_BACKEND) {
       setCurves(DEFAULT_PD_CURVES);
       setIsOverridden(EMPTY_OVERRIDDEN);
       setLoading(false);

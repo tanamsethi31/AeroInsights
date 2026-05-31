@@ -4,6 +4,7 @@ import { useData } from "../contexts/DataContext";
 import { supabase } from "../lib/supabase";
 import { MOCK_ASSETS, MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS } from "../data/mockPortfolioData";
 import type { Asset, Lessee, Lease, Provision, PortfolioData } from "../types/portfolio";
+import { HAS_AUTH_BACKEND } from "../utils/authBackend";
 
 export function usePortfolioData(): PortfolioData {
   const { orgId, hasUpload } = useData();
@@ -14,7 +15,7 @@ export function usePortfolioData(): PortfolioData {
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchAll = useCallback(async (signal?: AbortSignal) => {
-    if (!hasUpload || !orgId) {
+    if (!hasUpload || !orgId || !HAS_AUTH_BACKEND) {
       setAssets([]);
       setLessees([]);
       setLeases([]);

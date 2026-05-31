@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import type { ParsedTransaction } from "../utils/bankStatementParser";
+import { HAS_AUTH_BACKEND } from "../utils/authBackend";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ export function useBankStatements(): UseBankStatementsReturn {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!orgId) { setLoading(false); return; }
+      if (!orgId || !HAS_AUTH_BACKEND) { setLoading(false); return; }
       setLoading(true);
       const { data, error } = await supabase
         .from("bank_statements")
