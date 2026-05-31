@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useSignalRefresh } from "../services/useSignalRefresh";
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { getWatchlistSummary } from "../components/counterparties/watchlistEngine";
 import type { WatchlistStatusEntry } from "../components/counterparties/watchlistEngine";
 import { WatchlistGlobe } from "../components/dashboard/WatchlistGlobe";

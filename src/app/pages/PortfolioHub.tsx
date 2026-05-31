@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { useAuth0 } from "@auth0/auth0-react";
 import { motion } from "framer-motion";
 import { BarChart3, Plus, ArrowRight, Loader2, FolderOpen, Clock, Database } from "lucide-react";

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 import { AlertTriangle, Check } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,

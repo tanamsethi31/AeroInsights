@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation} from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { motion } from "framer-motion";
 import { Check, X, Circle, Plane, Zap } from "lucide-react";
 import { type ScenarioInputs } from "../utils/eclCalculator";

@@ -1,7 +1,8 @@
 // src/app/components/onboarding/OnboardingWizard.tsx
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, useLocation } from "react-router";
+import { useLocation} from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ArrowLeft } from "lucide-react";
 import { OrgSetupStep } from "./OrgSetupStep";

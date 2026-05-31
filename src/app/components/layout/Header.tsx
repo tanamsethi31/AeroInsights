@@ -5,7 +5,7 @@ import { useCurrency, CURRENCIES, type CurrencyCode } from "../../contexts/Curre
 import { AgentButton } from "../agent/AgentButton";
 import { Bell, Search, Mail, ChevronDown, LogOut, CircleUser, LayoutDashboard, FileText, Plane } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 import { SidebarTrigger } from "../ui/sidebar";
 import { Separator } from "../ui/separator";
 import { search, type SearchResult } from "../../data/searchIndex";

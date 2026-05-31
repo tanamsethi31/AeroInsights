@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 import { Database, X } from "lucide-react";
 import { useData } from "../../contexts/DataContext";
 

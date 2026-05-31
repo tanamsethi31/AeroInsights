@@ -1,5 +1,5 @@
 // src/app/components/risk-ecl/JurisdictionRiskSummaryCard.tsx
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 import { Card } from "../ui/Card";
 
 interface Props {

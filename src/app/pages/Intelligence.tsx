@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useLocation} from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fuel, Globe, BarChart3, ArrowLeftRight, Plane, RefreshCw } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";

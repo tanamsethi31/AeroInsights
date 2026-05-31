@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation} from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { motion, AnimatePresence } from "framer-motion";
 import { LeaseGenerator } from "../components/deals/LeaseGenerator";
 import { RackAndStack } from "../components/deals/RackAndStack";

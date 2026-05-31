@@ -1,5 +1,6 @@
 import { useState, useEffect, Fragment, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation} from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { useTabSync } from "../hooks/useTabSync";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { usePortfolioData } from "../hooks/usePortfolioData";

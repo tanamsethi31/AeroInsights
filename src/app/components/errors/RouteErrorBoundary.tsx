@@ -16,9 +16,9 @@ import * as React from "react";
 import {
   useRouteError,
   isRouteErrorResponse,
-  useNavigate,
   Link,
 } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 import { AlertTriangle, RotateCcw, Home, ChevronDown, ExternalLink } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

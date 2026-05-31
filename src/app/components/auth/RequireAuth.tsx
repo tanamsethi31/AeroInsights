@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Outlet, useNavigate, useLocation } from "react-router";
+import { Outlet, useLocation} from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 
 // Only the value actually set in env counts — empty/missing means "no
 // backend wired up, skip optional fetches". Previously this fell through

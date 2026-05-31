@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation} from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { useTabSync } from "../hooks/useTabSync";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSortable, sortIcon, sortIconStyle } from "../components/ui/useSortable";

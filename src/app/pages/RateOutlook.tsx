@@ -1,7 +1,7 @@
 // src/app/pages/RateOutlook.tsx
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { ArrowLeft } from "lucide-react";
 import { useRateOutlook } from "../hooks/useRateOutlook";
 import { useData } from "../contexts/DataContext";

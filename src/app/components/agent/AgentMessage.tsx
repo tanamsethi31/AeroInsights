@@ -1,6 +1,6 @@
 // src/app/components/agent/AgentMessage.tsx
 import * as React from "react";
-import { useNavigate } from "react-router";
+import { useTransitionNavigate as useNavigate } from "../../hooks/useTransitionNavigate";
 import { Zap } from "lucide-react";
 import { useAgent } from "../../contexts/AgentContext";
 
