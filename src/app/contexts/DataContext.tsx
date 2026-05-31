@@ -124,9 +124,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
-      // PGRST116 = no rows — org has no uploads yet, that's fine
-      if (error && error.code !== "PGRST116") {
-        console.error("[DataContext] fetchUploadStatus error:", error.message);
+      if (error) {
+        // PGRST116 = no rows — org has no uploads yet, that's fine.
+        // 42501 / "permission denied" = RLS gating the anon JWT; expected
+        // when there's no Supabase session (e.g. JWT exchange backend is
+        // not wired up). Falls back to "none" silently — no noisy log.
+        const code = (error as { code?: string }).code;
+        const msg  = String((error as { message?: string }).message ?? "");
+        const isRls = code === "42501" || /permission denied/i.test(msg);
+        if (code !== "PGRST116" && !isRls) {
+          console.error("[DataContext] fetchUploadStatus error:", error.message);
+        }
       }
       setUploadStatus((data?.status as UploadStatus) ?? "none");
     } catch {
