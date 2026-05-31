@@ -347,7 +347,7 @@ export function TemplateUploadWizard({ orgId, portfolioId, onClose, onComplete }
                       style={{ display: "none" }}
                       onChange={onInputChange}
                     />
-                    <Upload size={32} style={{ color: "#94A3B8", marginBottom: "12px" }} />
+                    <Upload size={32} style={{ color: "#94A3B8", display: "block", margin: "0 auto 12px" }} />
                     <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#0F172A", marginBottom: "4px" }}>
                       {isParsing ? "Parsing file…" : "Drop your filled template here"}
                     </div>
