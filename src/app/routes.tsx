@@ -1,5 +1,57 @@
-import { lazy } from "react";
+import { lazy, type LazyExoticComponent, type ComponentType } from "react";
 import { Navigate } from "react-router";
+
+/**
+ * Wraps React.lazy so chunk-load failures auto-recover by reloading the
+ * page once. This handles the very common deploy-mid-session edge case:
+ *
+ *   1. User loads /  → browser caches index.html referencing chunk
+ *      `Portfolio-OLDHASH.js`.
+ *   2. We deploy. New `index.html` references `Portfolio-NEWHASH.js`.
+ *      The OLDHASH file is purged from the CDN.
+ *   3. User clicks "Portfolio" — the cached JS tries to import OLDHASH
+ *      → 404 → "Failed to fetch dynamically imported module".
+ *
+ * Without recovery, the page is permanently broken until the user
+ * manually hard-refreshes. With this wrapper, we detect the chunk-load
+ * error, set a sessionStorage flag to prevent reload loops, and force
+ * a full page navigation so the browser picks up the new index.html
+ * and the new chunk hashes.
+ */
+const CHUNK_RELOAD_FLAG = "aeroinsights:chunk-reload-attempted";
+
+function lazyWithRetry<T extends ComponentType<unknown>>(
+  loader: () => Promise<{ default: T }>,
+): LazyExoticComponent<T> {
+  return lazy(async () => {
+    try {
+      const mod = await loader();
+      // Successful load — clear any stale reload flag from a prior recovery.
+      sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+      return mod;
+    } catch (err) {
+      const msg = String((err as Error)?.message ?? "");
+      const isChunkError =
+        /Failed to fetch dynamically imported module|Loading chunk \d+ failed|Loading CSS chunk/i.test(msg) ||
+        msg.includes("error loading dynamically imported module");
+
+      if (!isChunkError) throw err;
+
+      if (sessionStorage.getItem(CHUNK_RELOAD_FLAG)) {
+        // Already tried once this session; don't loop. Surface the error
+        // to the route boundary so the user sees something instead of
+        // a blank reload cycle.
+        throw err;
+      }
+
+      sessionStorage.setItem(CHUNK_RELOAD_FLAG, "1");
+      window.location.reload();
+      // The reload is in flight; return a promise that never resolves so
+      // React.lazy doesn't render anything before the page unloads.
+      return new Promise<{ default: T }>(() => {});
+    }
+  });
+}
 import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/layout/Layout";
 import { RequireAuth } from "./components/auth/RequireAuth";
@@ -41,21 +93,21 @@ const loadCashFlow       = () => import("./pages/CashFlow");
 const loadMaintenance    = () => import("./pages/Maintenance");
 const loadRateOutlook    = () => import("./pages/RateOutlook");
 
-const Dashboard       = lazy(loadDashboard);
-const Portfolio       = lazy(loadPortfolio);
-const Scenarios       = lazy(loadScenarios);
-const RiskECL         = lazy(loadRiskECL);
-const Counterparties  = lazy(loadCounterparties);
-const Jurisdictions   = lazy(loadJurisdictions);
-const Reports         = lazy(loadReports);
-const Settings        = lazy(loadSettings);
-const Deals           = lazy(loadDeals);
-const Intelligence    = lazy(loadIntelligence);
-const Transactions    = lazy(loadTransactions);
-const Reconciliation  = lazy(loadReconciliation);
-const CashFlow        = lazy(loadCashFlow);
-const Maintenance     = lazy(loadMaintenance);
-const RateOutlook     = lazy(loadRateOutlook);
+const Dashboard       = lazyWithRetry(loadDashboard);
+const Portfolio       = lazyWithRetry(loadPortfolio);
+const Scenarios       = lazyWithRetry(loadScenarios);
+const RiskECL         = lazyWithRetry(loadRiskECL);
+const Counterparties  = lazyWithRetry(loadCounterparties);
+const Jurisdictions   = lazyWithRetry(loadJurisdictions);
+const Reports         = lazyWithRetry(loadReports);
+const Settings        = lazyWithRetry(loadSettings);
+const Deals           = lazyWithRetry(loadDeals);
+const Intelligence    = lazyWithRetry(loadIntelligence);
+const Transactions    = lazyWithRetry(loadTransactions);
+const Reconciliation  = lazyWithRetry(loadReconciliation);
+const CashFlow        = lazyWithRetry(loadCashFlow);
+const Maintenance     = lazyWithRetry(loadMaintenance);
+const RateOutlook     = lazyWithRetry(loadRateOutlook);
 
 /**
  * Warm the chunk cache for every lazy page. Called from Layout after first
