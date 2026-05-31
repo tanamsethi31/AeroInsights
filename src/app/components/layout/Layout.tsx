@@ -7,6 +7,7 @@ import { Header } from "./Header";
 import { AgentProvider, useAgent } from "../../contexts/AgentContext";
 import { AgentPanel } from "../agent/AgentPanel";
 import { CurrencyProvider } from "../../contexts/CurrencyContext";
+import { ScenariosProvider } from "../../contexts/ScenariosContext";
 import { DemoBanner } from "./DemoBanner";
 import { preloadAllPages } from "../../routes";
 
@@ -96,6 +97,19 @@ export function Layout() {
   return (
     <CurrencyProvider>
       <AgentProvider>
+        {/*
+          ScenariosProvider holds ~30 useState hooks + four data hooks
+          (useScenarioRuns, useStressScenarios, usePortfolioData,
+          useJurisdictions) + memoised portfolio-derived metrics for the
+          Scenarios feature. Mounting it HERE in Layout — rather than
+          inside any of the four Scenarios pages — guarantees that state
+          survives navigation between Scenarios sub-pages AND between
+          Scenarios and any other top-level page. The previous monolithic
+          Scenarios.tsx unmounted the entire graph on every cross-page
+          nav, and the synchronous GC pressure that produced choked the
+          destination page's mount.
+        */}
+        <ScenariosProvider>
         <SidebarProvider
           style={
             {
@@ -112,6 +126,7 @@ export function Layout() {
         >
           <LayoutContent />
         </SidebarProvider>
+        </ScenariosProvider>
       </AgentProvider>
     </CurrencyProvider>
   );
