@@ -34,7 +34,19 @@ export function usePortfolioData(): PortfolioData {
       setLeases((ls.data as Lease[]) ?? []);
       setProvisions((p.data as Provision[]) ?? []);
     } catch (err) {
-      console.error("[usePortfolioData] fetch error:", err);
+      {
+
+        const _e = err as { code?: string; message?: string };
+
+        const _msg = String(_e?.message ?? "");
+
+        if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+          console.error("[usePortfolioData] fetch error:", err);
+
+        }
+
+      }
     } finally {
       setIsLoading(false);
     }

@@ -62,7 +62,19 @@ export function useServicerReport(leaseId: string | null): UseServicerReportRetu
 
       if (cancelled) { setLoading(false); return; }
       if (error) {
-        console.error("[useServicerReport] load error:", error);
+        {
+
+          const _e = error as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useServicerReport] load error:", error);
+
+          }
+
+        }
         setLoading(false);
         return;
       }
@@ -104,7 +116,19 @@ export function useServicerReport(leaseId: string | null): UseServicerReportRetu
         .single();
 
       if (error) {
-        console.error("[useServicerReport] saveReport error:", error);
+        {
+
+          const _e = error as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useServicerReport] saveReport error:", error);
+
+          }
+
+        }
         setReport(snapshot as ServicerReport | null); // rollback
         throw error;
       } else if (row) {
@@ -130,7 +154,19 @@ export function useServicerReport(leaseId: string | null): UseServicerReportRetu
         .eq("lease_id", leaseId);
 
       if (error) {
-        console.error("[useServicerReport] clearReport error:", error);
+        {
+
+          const _e = error as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useServicerReport] clearReport error:", error);
+
+          }
+
+        }
         setReport(snapshot as ServicerReport | null); // rollback
         throw error;
       }

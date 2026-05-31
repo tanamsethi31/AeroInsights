@@ -59,7 +59,19 @@ export function useMaintenanceEvents(leaseId: string | null): {
         .single();
 
       if (error) {
-        console.error("[useMaintenanceEvents] logEvent error:", error);
+        {
+
+          const _e = error as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useMaintenanceEvents] logEvent error:", error);
+
+          }
+
+        }
         setEvents(prev => prev.filter(e => e.id !== tempId)); // rollback
         throw error;
       } else if (row) {
@@ -86,7 +98,19 @@ export function useMaintenanceEvents(leaseId: string | null): {
         .eq("org_id", orgId);
 
       if (error) {
-        console.error("[useMaintenanceEvents] deleteEvent error:", error);
+        {
+
+          const _e = error as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useMaintenanceEvents] deleteEvent error:", error);
+
+          }
+
+        }
         setEvents(snapshot); // rollback
         throw error;
       }

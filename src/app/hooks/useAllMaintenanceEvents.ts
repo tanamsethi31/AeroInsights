@@ -27,7 +27,19 @@ export function useAllMaintenanceEvents(): {
 
       if (cancelled) { setLoading(false); return; }
       if (error) {
-        console.error("[useAllMaintenanceEvents] load error:", error);
+        {
+
+          const _e = error as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useAllMaintenanceEvents] load error:", error);
+
+          }
+
+        }
         setLoading(false);
         return;
       }

@@ -191,7 +191,19 @@ export function useReconciliation(
         supabase.from("cash_events").insert(insertRows).then(({ error: ceErr }) => {
           // Ignore unique constraint violations (23505) — means events already exist
           if (ceErr && ceErr.code !== "23505") {
-            console.error("[useReconciliation] acceptAll cash_events error:", ceErr);
+            {
+
+              const _e = ceErr as { code?: string; message?: string };
+
+              const _msg = String(_e?.message ?? "");
+
+              if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+                console.error("[useReconciliation] acceptAll cash_events error:", ceErr);
+
+              }
+
+            }
           }
         });
       }
@@ -229,7 +241,19 @@ export function useReconciliation(
         }).then(({ error: ceErr }) => {
           // Ignore unique constraint violations (23505) — means event already exists
           if (ceErr && ceErr.code !== "23505") {
-            console.error("[useReconciliation] cash_events insert error:", ceErr);
+            {
+
+              const _e = ceErr as { code?: string; message?: string };
+
+              const _msg = String(_e?.message ?? "");
+
+              if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+                console.error("[useReconciliation] cash_events insert error:", ceErr);
+
+              }
+
+            }
           }
         });
       }
@@ -310,7 +334,19 @@ export function useReconciliation(
       .eq("statement_id", sId);
 
     if (delError) {
-      console.error("[useReconciliation] rerun delete error:", delError);
+      {
+
+        const _e = delError as { code?: string; message?: string };
+
+        const _msg = String(_e?.message ?? "");
+
+        if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+          console.error("[useReconciliation] rerun delete error:", delError);
+
+        }
+
+      }
       setSaving(false);
       return;
     }

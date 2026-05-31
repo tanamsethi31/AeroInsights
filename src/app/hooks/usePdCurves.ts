@@ -79,7 +79,19 @@ export function usePdCurves(): EffectiveCurves {
       setCurves(mergeCurves(DEFAULT_PD_CURVES, overrideMap));
       setIsOverridden(overriddenFlags);
     } catch (err) {
-      console.error("[usePdCurves] fetchOverrides error:", err);
+      {
+
+        const _e = err as { code?: string; message?: string };
+
+        const _msg = String(_e?.message ?? "");
+
+        if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+          console.error("[usePdCurves] fetchOverrides error:", err);
+
+        }
+
+      }
       // Fall back to defaults on error
       setCurves(DEFAULT_PD_CURVES);
       setIsOverridden(EMPTY_OVERRIDDEN);
@@ -138,7 +150,19 @@ export function usePdCurves(): EffectiveCurves {
           setIsOverridden(overriddenFlags);
         }
       } catch (err) {
-        console.error("[usePdCurves] fetchOverrides error:", err);
+        {
+
+          const _e = err as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[usePdCurves] fetchOverrides error:", err);
+
+          }
+
+        }
         if (!cancelled) {
           setCurves(DEFAULT_PD_CURVES);
           setIsOverridden(EMPTY_OVERRIDDEN);

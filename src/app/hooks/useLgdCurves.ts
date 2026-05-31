@@ -48,7 +48,19 @@ export function useLgdCurves(): LgdCurvesState {
           }
         }
       } catch (err) {
-        console.error("[useLgdCurves] fetch error:", err);
+        {
+
+          const _e = err as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useLgdCurves] fetch error:", err);
+
+          }
+
+        }
         if (!cancelled) {
           setRecoveryFactor(DEFAULT_RECOVERY_FACTOR);
           setIsOverridden(false);

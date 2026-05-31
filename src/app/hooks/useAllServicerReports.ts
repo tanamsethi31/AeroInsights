@@ -37,7 +37,13 @@ export function useAllServicerReports(): {
 
       if (cancelled) { setLoading(false); return; }
       if (error) {
-        console.error("[useAllServicerReports] load error:", error);
+        // 42501 / "permission denied" is the expected RLS response when the
+        // Supabase session is anon (no org_id claim) — falls back to empty
+        // map silently. Real errors still log.
+        const code = (error as { code?: string }).code;
+        const msg  = String((error as { message?: string }).message ?? "");
+        const isRls = code === "42501" || /permission denied/i.test(msg);
+        if (!isRls) console.error("[useAllServicerReports] load error:", error);
         setLoading(false);
         return;
       }

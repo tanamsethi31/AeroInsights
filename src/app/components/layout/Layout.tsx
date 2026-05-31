@@ -18,15 +18,14 @@ function LayoutContent() {
   const { setOpen } = useSidebar();
   const { pathname } = useLocation();
 
-  // Key the Outlet wrapper on the *top-level* path segment so a sidebar
-  // navigation between top-level pages (e.g. /scenarios → /portfolio)
-  // guarantees a clean unmount + remount of the routed component.
-  // Without this, fast sequential clicks on heavy pages (Dashboard, Portfolio,
-  // Scenarios) occasionally left the URL updated while React's reconciler
-  // skipped the swap, leaving the previous page on screen until a hard
-  // reload. Sub-tab navigation (e.g. /scenarios/library → /scenarios/run)
-  // keeps the same key so the page handles its own internal tab transition.
-  const routeKey = pathname.split("/").slice(0, 2).join("/") || "/";
+  // Key the Outlet wrapper on the FULL pathname so every navigation forces
+  // a clean unmount + remount. The previous top-level-only key reduced the
+  // freeze rate but didn't fully eliminate it on Dashboard / Portfolio /
+  // Scenarios. Full pathname keying is more expensive (sub-tab clicks now
+  // remount the parent page too) but guarantees the reconciler can't get
+  // stuck between mounts. Pages that need state to persist across sub-tab
+  // navs already use localStorage (Custom Builder form, DSL editor).
+  const routeKey = pathname;
 
   // Collapse the sidebar only at the moment the AI panel is opened (false → true).
   // After that the user is free to re-open the sidebar independently.

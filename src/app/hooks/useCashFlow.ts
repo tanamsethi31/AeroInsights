@@ -102,7 +102,19 @@ export function useCashFlow(): UseCashFlowReturn {
 
       if (cancelled) { setLoading(false); return; }
       if (error) {
-        console.error("[useCashFlow] load error:", error);
+        {
+
+          const _e = error as { code?: string; message?: string };
+
+          const _msg = String(_e?.message ?? "");
+
+          if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+            console.error("[useCashFlow] load error:", error);
+
+          }
+
+        }
         setLoading(false);
         return;
       }
@@ -157,7 +169,19 @@ export function useCashFlow(): UseCashFlowReturn {
       .single();
 
     if (error) {
-      console.error("[useCashFlow] addEvent error:", error);
+      {
+
+        const _e = error as { code?: string; message?: string };
+
+        const _msg = String(_e?.message ?? "");
+
+        if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+          console.error("[useCashFlow] addEvent error:", error);
+
+        }
+
+      }
       setPersisted(prev => prev.filter(e => e.id !== tempId)); // rollback
     } else if (data) {
       setPersisted(prev =>
@@ -208,7 +232,19 @@ export function useCashFlow(): UseCashFlowReturn {
       .eq("id", id);
 
     if (error) {
-      console.error("[useCashFlow] editEvent error:", error);
+      {
+
+        const _e = error as { code?: string; message?: string };
+
+        const _msg = String(_e?.message ?? "");
+
+        if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+          console.error("[useCashFlow] editEvent error:", error);
+
+        }
+
+      }
       if (snapshot) setPersisted(prev => prev.map(e => e.id === id ? snapshot! : e)); // rollback
     }
     setSaving(false);
@@ -230,7 +266,19 @@ export function useCashFlow(): UseCashFlowReturn {
       .eq("id", id);
 
     if (error) {
-      console.error("[useCashFlow] deleteEvent error:", error);
+      {
+
+        const _e = error as { code?: string; message?: string };
+
+        const _msg = String(_e?.message ?? "");
+
+        if (_e?.code !== "42501" && !/permission denied/i.test(_msg)) {
+
+          console.error("[useCashFlow] deleteEvent error:", error);
+
+        }
+
+      }
       if (deleted) setPersisted(prev => [...prev, deleted!].sort((a, b) => a.eventDate.localeCompare(b.eventDate))); // rollback
     }
     setSaving(false);
