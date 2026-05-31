@@ -116,6 +116,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fetchUploadStatus = useCallback(async () => {
     if (!orgId) return;
+    // Skip when there's no JWT-exchange backend configured. Without it,
+    // the anon JWT cannot satisfy RLS on uploads → query returns HTTP 401,
+    // which the browser auto-logs as a red console error JS cannot
+    // suppress. Falls back to uploadStatus = "none" silently.
+    if (!API_BASE) {
+      setUploadStatus("none");
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from("uploads")
