@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
 import { Play, RefreshCw, Download, Clock, X, Layers } from "lucide-react";
 import {
   RunResultPanel,
@@ -41,7 +42,12 @@ export interface LibraryTabProps {
   onRequestNarrative: (run: ScenarioRunResult) => Promise<void>;
 }
 
-export function LibraryTab({
+// Internal implementation. Wrapped in React.memo at the bottom so that
+// pathname-driven re-renders of the parent Scenarios component don't
+// cascade into this 766-line tree on every navigation. All prop refs are
+// memoised in Scenarios (templates, cardStates, callbacks) so the shallow
+// equality check skips this subtree's render entirely on cross-page nav.
+function LibraryTabImpl({
   weightedECL,
   effectiveTemplates,
   cardStates,
@@ -764,3 +770,8 @@ export function LibraryTab({
         </div>
   );
 }
+
+// Public memoised export. With every prop reference stable upstream
+// (Scenarios memoises templates, cardStates, the callbacks), the default
+// shallow equality check skips re-render on cross-page navigations.
+export const LibraryTab = React.memo(LibraryTabImpl);

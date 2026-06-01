@@ -13,7 +13,7 @@
 // switches.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type React from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, RefreshCw, X, CheckCircle, AlertTriangle, Zap } from "lucide-react";
 import { Card } from "../../components/ui/Card";
@@ -109,7 +109,13 @@ export interface CustomBuilderTabProps {
   onRequestNarrative: (run: ScenarioRunResult) => Promise<void>;
 }
 
-export function CustomBuilderTab({
+// Internal implementation. Wrapped in React.memo at the bottom — without
+// it, a pathname-driven re-render of the parent Scenarios component would
+// cascade through this 1570-line tree on every navigation, producing the
+// "leaving Scenarios freezes next tab" symptom. Every prop reference is
+// memoised in Scenarios so shallow equality skips the subtree's render
+// entirely on cross-page nav.
+function CustomBuilderTabImpl({
   prefillSource,
   setPrefillSource,
   calBannerDismissed,
@@ -1568,3 +1574,6 @@ export function CustomBuilderTab({
         </div>
   );
 }
+
+// Public memoised export — see comment above CustomBuilderTabImpl.
+export const CustomBuilderTab = React.memo(CustomBuilderTabImpl);

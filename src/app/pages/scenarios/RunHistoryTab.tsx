@@ -37,7 +37,8 @@ export interface RunHistoryTabProps {
   onRequestNarrative: (run: ScenarioRunResult) => Promise<void>;
 }
 
-export function RunHistoryTab({
+// Internal impl. Wrapped in React.memo at the bottom — see siblings.
+function RunHistoryTabImpl({
   runs,
   compareIds,
   toggleCompare,
@@ -283,3 +284,6 @@ export function RunHistoryTab({
     </>
   );
 }
+
+// Public memoised export — see comment above RunHistoryTabImpl.
+export const RunHistoryTab = React.memo(RunHistoryTabImpl);
