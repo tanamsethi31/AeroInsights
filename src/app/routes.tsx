@@ -34,6 +34,7 @@ import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 // active state, deep links, browser history all keep working) while the
 // actual rendering happens in Layout. See Layout.tsx for the pattern.
 import CustomBuilderPage from "./pages/CustomBuilderPage";
+import Scenarios       from "./pages/Scenarios";
 import RiskECL         from "./pages/RiskECL";
 import Counterparties  from "./pages/Counterparties";
 import Jurisdictions   from "./pages/Jurisdictions";
@@ -108,12 +109,16 @@ export const router = createBrowserRouter([
           { path: "portfolio/aircraft-mix",     Component: NoOpRoute },
           { path: "portfolio/performance",      Component: NoOpRoute },
 
-          // Scenarios — see comment at the import block. Routes resolve to
-          // NoOpRoute so react-router matches the URL but renders nothing;
-          // Layout's <ScenariosShell /> handles the actual rendering.
-          { path: "scenarios",                  Component: NoOpRoute },
-          { path: "scenarios/library",          Component: NoOpRoute },
-          { path: "scenarios/history",          Component: NoOpRoute },
+          // Scenarios — normal Outlet-rendered route now (no longer in
+          // Layout's persistent shell). With Custom Builder lifted out
+          // to its own /build page the surface here is Library + Run
+          // History + the analysis sub-tabs — light enough to mount and
+          // unmount through the normal react-router path. Persistent
+          // mount was forcing a Scenarios re-render on every cross-page
+          // nav via its useLocation subscription.
+          { path: "scenarios",                  Component: Scenarios },
+          { path: "scenarios/library",          Component: Scenarios },
+          { path: "scenarios/history",          Component: Scenarios },
 
           // Custom Builder is its OWN top-level page at /build (same
           // Outlet-rendered style as /intelligence/rate-outlook — fresh

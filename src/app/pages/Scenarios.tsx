@@ -404,6 +404,41 @@ export default function Scenarios() {
     inputs: ScenarioInputs; name: string; mode: RunMode; paths: number;
   } | null>(null);
 
+  // Send a partial-inputs payload to the standalone Custom Builder page at
+  // /build. Used by:
+  //   - Library / Run History "Clone" callbacks (full payload override)
+  //   - The 8 calibration sub-tab "Use in Custom Builder" CTAs (partial
+  //     merge with current localStorage form state)
+  // sessionStorage acts as the bridge — CustomBuilderPage reads it once on
+  // mount and clears it.
+  const sendToBuilder = useCallback((partial: Partial<ScenarioInputs>) => {
+    let baseInputs: ScenarioInputs = ZERO_INPUTS;
+    try {
+      const stored = localStorage.getItem("aero_custom_inputs");
+      if (stored) baseInputs = { ...ZERO_INPUTS, ...JSON.parse(stored) } as ScenarioInputs;
+    } catch { /* corrupt storage — fall back to zero */ }
+    const merged = { ...baseInputs, ...partial };
+    sessionStorage.setItem(
+      "aero_clone_pending",
+      JSON.stringify({
+        inputs: merged,
+        name: "My Custom Scenario",
+        mode: "deterministic" as RunMode,
+        paths: 10000,
+      }),
+    );
+    navigate("/build");
+  }, [navigate]);
+
+  // Full-payload clone (Library template / Run History run → Custom Builder)
+  const sendCloneToBuilder = useCallback(
+    (p: { inputs: ScenarioInputs; name: string; mode: RunMode; paths: number }) => {
+      sessionStorage.setItem("aero_clone_pending", JSON.stringify(p));
+      navigate("/build");
+    },
+    [navigate],
+  );
+
   const updateFormInputs = useCallback((partial: Partial<ScenarioInputs>) => {
     const next = { ...formInputsRef.current, ...partial };
     setFormInputs(next);
@@ -698,7 +733,7 @@ export default function Scenarios() {
           effectiveTemplates={effectiveTemplates}
           cardStates={cardStates}
           setCardPhase={setCardPhase}
-          setClonePending={setClonePending}
+          setClonePending={sendCloneToBuilder}
           handleTemplateRun={handleTemplateRun}
           findRun={findRun}
           liveBaseECL={liveBaseECL}
@@ -720,7 +755,7 @@ export default function Scenarios() {
           expandedRunId={expandedRunId}
           setExpandedRunId={setExpandedRunId}
           setCompareIds={setCompareIds}
-          setClonePending={setClonePending}
+          setClonePending={sendCloneToBuilder}
           setBranchFromId={setBranchFromId}
           getRunInputs={getRunInputs}
           getNarrative={getNarrative}
@@ -734,92 +769,75 @@ export default function Scenarios() {
       {/* ══ JURISDICTION RISK TAB ═══════════════════════════════════════ */}
       {activeTab === "Jurisdiction Risk" && (
         <JurisdictionRiskTab
-          onUseInCustomBuilder={(gold, nonCtc, repossMonths) => {
-            updateFormInputs({ ctcGoldPct: gold, nonCtcPct: nonCtc, repossWeightedMonths: repossMonths });
-            setJurisdictionOpen(true);
-            setActiveTab("Custom Builder");
-          }}
+          onUseInCustomBuilder={(gold, nonCtc, repossMonths) =>
+            sendToBuilder({ ctcGoldPct: gold, nonCtcPct: nonCtc, repossWeightedMonths: repossMonths })
+          }
         />
       )}
 
       {/* ══ ASSET RISK TAB ══════════════════════════════════════════════ */}
       {activeTab === "Asset Risk" && (
         <AssetRiskTab
-          onUseInCustomBuilder={(months, adj) => {
-            updateFormInputs({ remarketingMonths: months, lgdDecayAdjFactor: adj });
-            setAssetRiskOpen(true);
-            setActiveTab("Custom Builder");
-          }}
+          onUseInCustomBuilder={(months, adj) =>
+            sendToBuilder({ remarketingMonths: months, lgdDecayAdjFactor: adj })
+          }
         />
       )}
 
       {/* ══ RATING / PD TAB ════════════════════════════════════════════ */}
       {activeTab === "Rating / PD" && (
         <RatingPDTab
-          onUseInCustomBuilder={(s2Multi, s3Multi) => {
-            updateFormInputs({ pdS2Multi: s2Multi, pdS3Multi: s3Multi });
-            setActiveTab("Custom Builder");
-          }}
+          onUseInCustomBuilder={(s2Multi, s3Multi) =>
+            sendToBuilder({ pdS2Multi: s2Multi, pdS3Multi: s3Multi })
+          }
         />
       )}
 
       {/* ══ SECURITY DEPOSITS TAB ═══════════════════════════════════════ */}
       {activeTab === "Security Deposits" && (
         <CreditDepositTab
-          onUseInCustomBuilder={(cov) => {
-            setActiveTab("Custom Builder");
-            updateFormInputs({ depositCoverage: cov });
-          }}
+          onUseInCustomBuilder={(cov) => sendToBuilder({ depositCoverage: cov })}
         />
       )}
 
       {/* ══ DEFERRAL RISK TAB ════════════════════════════════════════════ */}
       {activeTab === "Deferral Risk" && (
         <DeferralRiskTab
-          onUseInCustomBuilder={(type, months, govtProb, forgiveness) => {
-            setActiveTab("Custom Builder");
-            updateFormInputs({
+          onUseInCustomBuilder={(type, months, govtProb, forgiveness) =>
+            sendToBuilder({
               restructuringType: type,
               deferralMonths:    months,
               govtSupportProb:   govtProb,
               forgivenessRate:   forgiveness,
-            });
-          }}
+            })
+          }
         />
       )}
 
       {/* ══ LESSOR MITIGATION TAB ═══════════════════════════════════════ */}
       {activeTab === "Lessor Mitigation" && (
         <LessorMitigationTab
-          onUseInCustomBuilder={(pbh, etp, lec) => {
-            setActiveTab("Custom Builder");
-            updateFormInputs({
+          onUseInCustomBuilder={(pbh, etp, lec) =>
+            sendToBuilder({
               pbhConversionPct: pbh,
               etpRate:          etp,
               lecRate:          lec,
-            });
-          }}
+            })
+          }
         />
       )}
 
       {/* ══ PAYMENT BEHAVIOUR TAB ═══════════════════════════════════════ */}
       {activeTab === "Payment Behaviour" && (
         <PaymentBehaviourTab
-          onUseInCustomBuilder={(coop, adv) => {
-            setActiveTab("Custom Builder");
-            updateFormInputs({ payBehaviourCoopPct: coop, payBehaviourAdvPct: adv });
-          }}
+          onUseInCustomBuilder={(coop, adv) => sendToBuilder({ payBehaviourCoopPct: coop, payBehaviourAdvPct: adv })}
         />
       )}
 
       {/* ══ CONCENTRATION STRESS TAB ════════════════════════════════════ */}
       {activeTab === "Concentration Stress" && (
         <ConcentrationStressTab
-          onUseInCustomBuilder={(pdS3Multi) => {
-            setActiveTab("Custom Builder");
-            updateFormInputs({ pdS3Multi });
-            setDistressOpen(true);
-          }}
+          onUseInCustomBuilder={(pdS3Multi) => sendToBuilder({ pdS3Multi })}
         />
       )}
 

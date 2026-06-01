@@ -146,7 +146,10 @@ export default function Portfolio() {
   const paymentSchedule = useMemo(
     () => activeTab === "Payments"
       ? toPaymentSchedule(leaseData, assets, lesseeData)
-      : [],
+      // Empty-shape fallback matches the PaymentSchedule interface so
+      // TypeScript's strict check (CI runs tsc --noEmit) doesn't reject
+      // the union with PaymentsTab's expected prop type.
+      : { months: [], monthKeys: [], rows: [], monthlyTotals: [], grandTotal: 0 },
     [activeTab, leaseData, assets, lesseeData],
   );
 

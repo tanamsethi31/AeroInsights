@@ -12,7 +12,7 @@
 // Synthesised IDs: `DB-${slug}` so they never collide with hardcoded
 // `TPL-001`…`TPL-I03` ids that INITIAL_RUNS references.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
@@ -217,9 +217,19 @@ export function useStressScenarios(): UseStressScenariosResult {
 
   useEffect(() => { fetchOnce(); }, [fetchOnce]);
 
+  // CRITICAL: must be useMemo. Without it `rows.map(...)` returned a fresh
+  // array reference on every hook call, which in Scenarios.tsx cascaded
+  // through `effectiveTemplates` (useMemo dep) → useEffect on
+  // effectiveTemplates → setCardStates → re-render → useStressScenarios
+  // returns YET ANOTHER new templates ref → infinite render loop. That
+  // loop manifested as "navigating away from /scenarios updates the URL
+  // but the destination page never paints" because Scenarios was hogging
+  // the main thread re-rendering itself.
+  const templates = useMemo(() => rows.map(rowToSyntheticTemplate), [rows]);
+
   return {
     rows,
-    templates: rows.map(rowToSyntheticTemplate),
+    templates,
     loading,
     error,
     refetch: fetchOnce,

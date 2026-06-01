@@ -12,7 +12,6 @@ import { preloadAllPages } from "../../routes";
 import { usePortfolio } from "../../contexts/PortfolioContext";
 import Dashboard from "../../pages/Dashboard";
 import Portfolio from "../../pages/Portfolio";
-import Scenarios from "../../pages/Scenarios";
 import Deals from "../../pages/Deals";
 
 /**
@@ -85,9 +84,10 @@ function LayoutContent() {
   // page's content.
   const onDashboard = p === "/";
   const onPortfolio = p === "/portfolio" || p.startsWith("/portfolio/");
-  const onScenarios = p === "/scenarios" || p.startsWith("/scenarios/");
+  // Scenarios is no longer persistent — see comment further down. It
+  // renders via the Outlet like normal pages do.
   const onDeals = p === "/deals" || p.startsWith("/deals/");
-  const anyPersistent = onDashboard || onPortfolio || onScenarios || onDeals;
+  const anyPersistent = onDashboard || onPortfolio || onDeals;
 
   // (Custom Builder now lives as its own top-level page at /scenarios/build
   //  rendered through the Outlet — same architecture as RateOutlook. The
@@ -137,7 +137,15 @@ function LayoutContent() {
               </div>
               <DashboardShell isActive={onDashboard} />
               <PersistentPage isActive={onPortfolio}><Portfolio /></PersistentPage>
-              <PersistentPage isActive={onScenarios}><Scenarios /></PersistentPage>
+              {/* Scenarios is NO LONGER persistent. Custom Builder is now a
+                  standalone page at /build (not inside Scenarios) so the
+                  remaining /scenarios/* surface is just Library +
+                  Run History + the analysis sub-tabs — light enough to
+                  mount/unmount through the normal Outlet path. Keeping it
+                  persistent forced a re-render of Scenarios on every
+                  cross-page nav via its useLocation subscription, which
+                  was the most likely remaining source of the freeze the
+                  user reports leaving /scenarios. */}
               <PersistentPage isActive={onDeals}><Deals /></PersistentPage>
             </div>
           </main>
