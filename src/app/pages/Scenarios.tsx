@@ -598,9 +598,13 @@ export default function Scenarios() {
     [] // run object passed directly — no runs array lookup needed
   );
 
+  // "Custom Builder" intentionally absent — it's its own top-level page at
+  // /build, accessed from the sidebar or the "New Custom Scenario" button
+  // above. Keeping it as a Scenarios pill would imply it lives under
+  // /scenarios; it doesn't any more.
   const tabs = isExecutiveMode
-    ? EXEC_SCENARIO_TABS
-    : ["Library", "Custom Builder", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Asset Risk", "Rating / PD", "Security Deposits", "Deferral Risk", "Lessor Mitigation", "Payment Behaviour", "Concentration Stress", "Lease Pricing"];
+    ? EXEC_SCENARIO_TABS.filter((t) => t !== "Custom Builder")
+    : ["Library", "Run History", "Insolvency Regimes", "Jurisdiction Risk", "Asset Risk", "Rating / PD", "Security Deposits", "Deferral Risk", "Lessor Mitigation", "Payment Behaviour", "Concentration Stress", "Lease Pricing"];
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -617,7 +621,7 @@ export default function Scenarios() {
       >
         <button
           style={BTN_PRIMARY}
-          onClick={() => navigate("/scenarios/build")}
+          onClick={() => navigate("/build")}
         >
           <Play size={14} /> New Custom Scenario
         </button>

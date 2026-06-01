@@ -24,10 +24,13 @@ import type { ScenarioRunResult } from "../../components/scenarios/RunResultPane
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+// Path → PillTabs activeTab. Custom Builder is intentionally NOT here —
+// it's a separate top-level page at /build, not a Scenarios sub-tab any
+// more. The PillTabs row inside Scenarios only switches between Library
+// and Run History; clicking "Custom Builder" in the sidebar takes the
+// user out of /scenarios entirely.
 export const PATH_TAB: Record<string, string> = {
   "/scenarios/library": "Library",
-  "/scenarios/run":     "Custom Builder", // legacy alias
-  "/scenarios/build":   "Custom Builder", // full-page workspace route
   "/scenarios/history": "Run History",
 };
 

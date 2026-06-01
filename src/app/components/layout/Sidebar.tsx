@@ -116,7 +116,7 @@ const navGroups: NavGroup[] = [
         icon: Target,
         items: [
           { title: "Library",         url: "/scenarios/library", icon: Library },
-          { title: "Custom Builder",  url: "/scenarios/run",     icon: Play    },
+          { title: "Custom Builder",  url: "/build",             icon: Play    },
           { title: "Run History",     url: "/scenarios/history", icon: History },
         ],
       },

@@ -114,13 +114,17 @@ export const router = createBrowserRouter([
           { path: "scenarios",                  Component: NoOpRoute },
           { path: "scenarios/library",          Component: NoOpRoute },
           { path: "scenarios/history",          Component: NoOpRoute },
-          // Custom Builder is its OWN page — same Outlet-rendered style as
-          // RateOutlook. NOT part of the persistent Scenarios shell. Each
-          // visit creates a fresh mount, leaving is a normal unmount. The
-          // form state survives via localStorage; clone-from-Library or
-          // clone-from-RunHistory are bridged via sessionStorage.
+
+          // Custom Builder is its OWN top-level page at /build (same
+          // Outlet-rendered style as /intelligence/rate-outlook — fresh
+          // mount per visit, clean unmount on leave). NOT a sub-route of
+          // /scenarios so leaving Scenarios doesn't drag it through any
+          // shared rendering tree. Form state persists via localStorage;
+          // clones bridge via sessionStorage.
+          { path: "build",                      Component: CustomBuilderPage },
+          // Legacy aliases — keep working for bookmarks/deep links.
           { path: "scenarios/build",            Component: CustomBuilderPage },
-          { path: "scenarios/run",              Component: CustomBuilderPage }, // legacy alias
+          { path: "scenarios/run",              Component: CustomBuilderPage },
 
           // Deals — persistent shell in Layout
           { path: "deals",                      Component: NoOpRoute },
