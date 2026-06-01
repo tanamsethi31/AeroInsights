@@ -121,7 +121,9 @@ function SectionPill({ children, dark = false }: { children: React.ReactNode; da
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-3.5 py-1 text-xs font-semibold tracking-wide",
+        // `w-fit` + `self-start` prevent the pill from being stretched by a
+        // flex-col parent's default `align-items: stretch`.
+        "inline-flex w-fit max-w-fit self-start items-center rounded-full border px-3.5 py-1 text-xs font-semibold tracking-wide whitespace-nowrap",
         dark
           ? "border-white/15 bg-white/8 text-blue-300"
           : "border-[#002147]/20 bg-[#002147]/5 text-[#002147]"
@@ -273,6 +275,93 @@ function HeroGlow() {
   );
 }
 
+/* ─── HERO STARFIELD — parallax dots that drift with the cursor ─────────────
+ * A constellation of tiny soft-blue dots, each on its own "depth layer". As
+ * the cursor moves, each star translates by `cursor * -depth`, producing a
+ * gentle parallax that feels like looking through space.
+ * GPU-only (only transform), and disabled under reduced motion.
+ * ─────────────────────────────────────────────────────────────────────────── */
+const HERO_STARS = (() => {
+  // Deterministic pseudo-random so layout is stable across renders.
+  const rand = (() => {
+    let s = 9173;
+    return () => {
+      s = (s * 9301 + 49297) % 233280;
+      return s / 233280;
+    };
+  })();
+  return Array.from({ length: 48 }, () => {
+    const size = rand() * 2.2 + 0.6;            // 0.6–2.8px
+    const opacity = rand() * 0.55 + 0.15;       // 0.15–0.70
+    const depth = rand() * 0.06 + 0.02;         // parallax strength (px per cursor px)
+    const x = rand() * 100;                     // % across hero
+    const y = rand() * 100;                     // % down hero
+    const twinkleDelay = rand() * 6;            // 0–6s
+    return { size, opacity, depth, x, y, twinkleDelay };
+  });
+})();
+
+function HeroStarfield() {
+  const fieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const field = fieldRef.current;
+    if (!field) return;
+    const section = field.parentElement;
+    if (!section) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const stars = Array.from(field.children) as HTMLElement[];
+    let targetX = 0, targetY = 0, curX = 0, curY = 0;
+    let raf: number;
+
+    const onMove = (e: MouseEvent) => {
+      const rect = section.getBoundingClientRect();
+      // Cursor offset from section centre, in pixels
+      targetX = e.clientX - rect.left - rect.width / 2;
+      targetY = e.clientY - rect.top - rect.height / 2;
+    };
+
+    const tick = () => {
+      curX += (targetX - curX) * 0.06;
+      curY += (targetY - curY) * 0.06;
+      // Translate each star by cursor * its depth (so further stars move more)
+      stars.forEach((s, i) => {
+        const d = HERO_STARS[i].depth;
+        s.style.transform = `translate3d(${-curX * d}px, ${-curY * d}px, 0)`;
+      });
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    section.addEventListener("mousemove", onMove);
+    return () => {
+      section.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return (
+    <div ref={fieldRef} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {HERO_STARS.map((s, i) => (
+        <span
+          key={i}
+          className="absolute rounded-full bg-[#002147] will-change-transform"
+          style={{
+            width: s.size,
+            height: s.size,
+            top: `${s.y}%`,
+            left: `${s.x}%`,
+            opacity: s.opacity,
+            // Subtle twinkle animation, very slow & low-amplitude so it doesn't distract
+            animation: `starTwinkle 5.5s ease-in-out ${s.twinkleDelay}s infinite`,
+            boxShadow: s.size > 1.6 ? "0 0 4px rgba(0,33,71,0.35)" : undefined,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /* ─── NAVBAR ───────────────────────────────────────────────────────────────── */
 const CONTACT_MAILTO = "mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Hello";
 const DEMO_LINK = "https://cal.com/tanam-sethi/30min";
@@ -281,6 +370,7 @@ const NAV_LINKS = [
   { label: "Platform", href: "#platform" },
   { label: "Pricing", href: "#pricing" },
   { label: "Solution", href: "#solution" },
+  { label: "About", href: "/about", route: true as const },
   { label: "Contact", href: CONTACT_MAILTO, external: true as const },
 ];
 
@@ -311,32 +401,45 @@ function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              onClick={(e) => {
-                if (l.external) return; // mailto / external — let browser handle
-                e.preventDefault();
-                document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
-            >
-              {l.label}
-            </a>
-          ))}
+          {NAV_LINKS.map((l) =>
+            l.route ? (
+              <Link
+                key={l.label}
+                to={l.href}
+                className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
+              >
+                {l.label}
+              </Link>
+            ) : (
+              <a
+                key={l.label}
+                href={l.href}
+                onClick={(e) => {
+                  if (l.external) return; // mailto / external — let browser handle
+                  e.preventDefault();
+                  document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
+              >
+                {l.label}
+              </a>
+            )
+          )}
         </nav>
 
         {/* Right CTAs */}
         <div className="hidden items-center gap-2 md:flex">
           {isAuthenticated ? (
-            <Link
-              to="/portfolios"
+            <a
+              href="/portfolios"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
               <i className="bi bi-grid-1x2" />
               Dashboard
-            </Link>
+              <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
+            </a>
           ) : (
             <>
               <Link
@@ -374,16 +477,27 @@ function Navbar() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden border-b border-gray-200 bg-white px-4 pb-4 md:hidden"
           >
-            {NAV_LINKS.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                onClick={() => setMobileOpen(false)}
-                className="block py-2.5 text-sm text-gray-600"
-              >
-                {l.label}
-              </a>
-            ))}
+            {NAV_LINKS.map((l) =>
+              l.route ? (
+                <Link
+                  key={l.label}
+                  to={l.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block py-2.5 text-sm text-gray-600"
+                >
+                  {l.label}
+                </Link>
+              ) : (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block py-2.5 text-sm text-gray-600"
+                >
+                  {l.label}
+                </a>
+              )
+            )}
             <div className="mt-3 flex flex-col gap-2">
               <Link
                 to="/login"
@@ -515,6 +629,7 @@ function Hero() {
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16">
       {/* Mouse-tracking radial glow — GPU-only transform, lerp for smooth follow */}
       <HeroGlow />
+      <HeroStarfield />
 
       <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-20 sm:px-6 sm:py-28">
         {/* Badge */}
@@ -756,6 +871,84 @@ function PortfolioSparkline() {
         />
       ))}
     </div>
+  );
+}
+
+/* ─── ADAPTABILITY — “Built for every side of the industry” ─────────────────── */
+const ADAPT_SIDES = [
+  { icon: "bi-buildings", label: "Lessor", desc: "Portfolio analytics, ECL, re-lease pipelines." },
+  { icon: "bi-bank", label: "Financing", desc: "Debt structuring, covenant monitoring, LTV." },
+  { icon: "bi-briefcase", label: "Advisory", desc: "Comparable benchmarks, scenario decks." },
+  { icon: "bi-airplane-engines", label: "Technical", desc: "Maintenance forecasting, fleet condition." },
+  { icon: "bi-arrow-left-right", label: "Trading", desc: "Deal feed, comparable transactions, valuations." },
+];
+const ADAPT_FIRMS = ["Aerfin", "ELFC", "Grant Thornton"];
+
+function Adaptability() {
+  return (
+    <section className="relative py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div
+          className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/75 p-8 shadow-lg shadow-[#002147]/10 backdrop-blur-md sm:p-12"
+        >
+          <FadeIn className="flex flex-col items-center text-center">
+            <SectionPill>Adaptable by Design</SectionPill>
+            <h2 className="mt-4 max-w-3xl text-3xl font-black tracking-tight text-gray-950 sm:text-4xl leading-[1.1]">
+              Built from scratch — configurable for{" "}
+              <span className="text-[#002147]">every seat at the table</span>
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-600">
+              AeroInsights wasn't bolted onto a legacy system. Because every module is purpose-built,
+              the platform can be adapted and configured around the specific workflow of any team
+              — whether on the lessor, financing, advisory, technical, or trading side of the industry.
+            </p>
+          </FadeIn>
+
+          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {ADAPT_SIDES.map((s, i) => (
+              <FadeIn key={s.label} delay={i * 0.06}>
+                <motion.div
+                  whileHover={{ y: -4 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 22 }}
+                  className="group flex h-full flex-col items-center rounded-2xl border border-[#002147]/8 bg-white/80 p-5 text-center shadow-sm backdrop-blur-md transition-colors duration-300 hover:border-[#002147]/22"
+                >
+                  <div className="mb-3 flex size-11 items-center justify-center rounded-xl bg-[#002147]/8 transition-colors duration-300 group-hover:bg-[#002147]">
+                    <i
+                      className={cn(
+                        "group-hover:icon-pop bi text-lg text-[#002147] transition-colors duration-300 group-hover:text-white",
+                        s.icon
+                      )}
+                    />
+                  </div>
+                  <p className="text-sm font-bold text-gray-950">{s.label}</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-gray-500">{s.desc}</p>
+                </motion.div>
+              </FadeIn>
+            ))}
+          </div>
+
+          <FadeIn delay={0.2} className="mt-10 flex flex-col items-center gap-3 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+              Refined with feedback from
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-sm font-bold text-gray-500">
+              {ADAPT_FIRMS.map((f, i) => (
+                <span key={f} className="flex items-center gap-x-7">
+                  {f}
+                  {i < ADAPT_FIRMS.length - 1 && (
+                    <span className="text-gray-300" aria-hidden>·</span>
+                  )}
+                </span>
+              ))}
+            </div>
+            <p className="mt-1 max-w-xl text-xs text-gray-400">
+              Aerfin, ELFC, and Grant Thornton&apos;s aviation team helped refine several of the
+              assumptions and risk frameworks within the platform.
+            </p>
+          </FadeIn>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1483,9 +1676,10 @@ function CTABanner() {
             }}
           />
           <FadeIn className="relative flex flex-col items-center gap-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-blue-300/60">
-            ✦ Purpose-built for aviation lessors
-          </p>
+          <span className="pill-shimmer inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-100/85">
+            <i className="bi bi-stars text-xs text-amber-300" />
+            Purpose-built for aviation lessors
+          </span>
           <h2 className="max-w-2xl text-4xl font-black tracking-tight text-white sm:text-5xl leading-[1.08]">
             Ready to transform your aviation finance operation?
           </h2>
@@ -1719,23 +1913,51 @@ function Newsletter() {
 }
 
 /* ─── FOOTER ────────────────────────────────────────────────────────────────── */
-const FOOTER_COLS = [
+type FooterLink = string | { label: string; href: string };
+const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
   { heading: "Platform", links: ["Portfolio Analytics", "Scenario Engine", "Risk & ECL", "Deal Generator", "Intelligence", "Excel Add-In"] },
-  { heading: "Company", links: ["About", "Careers", "Blog", "Press"] },
+  {
+    heading: "Company",
+    links: [
+      { label: "About the builder", href: "/about" },
+      "Careers",
+      "Blog",
+      "Press",
+    ],
+  },
   { heading: "Resources", links: ["Documentation", "Help Centre", "API Reference", "Status Page"] },
   { heading: "Legal", links: ["Privacy Policy", "Terms of Service", "Security", "Cookie Policy"] },
 ];
 
 function Footer() {
   return (
-    <footer
-      className="relative overflow-hidden pb-14 pt-32"
-      style={{
-        // Soft vertical gradient: ambient base → deep navy, anchored to the bottom.
-        background:
-          "linear-gradient(180deg, rgba(10,26,51,0) 0%, rgba(10,26,51,0.40) 12%, rgba(10,26,51,0.88) 28%, #0a1a33 45%, #0a1a33 100%)",
-      }}
-    >
+    <footer className="relative overflow-hidden pb-14 pt-56">
+      {/*
+        Two-layer fade for a really long, smooth dive into the dark.
+        Layer 1: very gentle pale-blue tint that picks up where the ambient
+                 background ends, so the join is not a hard transparency edge.
+        Layer 2: the deep-navy build, slowly ramping in over the top ~60% of
+                 the footer's height.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.55) 18%, rgba(120,142,184,0.70) 32%, rgba(45,72,116,0.85) 46%, rgba(15,33,62,0.96) 60%, #0a1a33 72%, #0a1a33 100%)",
+        }}
+      />
+      {/* Subtle radial bloom at the top of the dark zone to feel atmospheric */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[18%] -translate-x-1/2"
+        style={{
+          width: 1200,
+          height: 360,
+          background:
+            "radial-gradient(ellipse at center, rgba(91,143,216,0.18), transparent 70%)",
+        }}
+      />
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
           {/* Brand */}
@@ -1771,11 +1993,28 @@ function Footer() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
                   {col.heading}
                 </p>
-                {col.links.map((link) => (
-                  <a key={link} href="#" className="text-sm text-blue-200/45 transition hover:text-white">
-                    {link}
-                  </a>
-                ))}
+                {col.links.map((link) => {
+                  const label = typeof link === "string" ? link : link.label;
+                  const href = typeof link === "string" ? "#" : link.href;
+                  const isInternal = typeof link !== "string" && link.href.startsWith("/");
+                  return isInternal ? (
+                    <Link
+                      key={label}
+                      to={href}
+                      className="text-sm text-blue-200/45 transition hover:text-white"
+                    >
+                      {label}
+                    </Link>
+                  ) : (
+                    <a
+                      key={label}
+                      href={href}
+                      className="text-sm text-blue-200/45 transition hover:text-white"
+                    >
+                      {label}
+                    </a>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -1806,6 +2045,7 @@ export default function Landing() {
         <Hero />
         <LogoMarquee />
         <Stats />
+        <Adaptability />
         <SolutionBento />
         <PlatformFeatures />
         <ExtraFeatures />

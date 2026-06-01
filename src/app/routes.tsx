@@ -6,6 +6,7 @@ import { RouteErrorBoundary } from "./components/errors/RouteErrorBoundary";
 import { usePortfolio } from "./contexts/PortfolioContext";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
+import About from "./pages/About";
 import PortfolioHub from "./pages/PortfolioHub";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import ExcelAddinDocs from "./pages/ExcelAddinDocs";
@@ -76,6 +77,7 @@ function PortfolioIndexGuard() {
 export const router = createBrowserRouter([
   // Public
   { path: "/home", Component: Landing, ErrorBoundary: RouteErrorBoundary },
+  { path: "/about", Component: About, ErrorBoundary: RouteErrorBoundary },
   { path: "/login", Component: Login, ErrorBoundary: RouteErrorBoundary },
   { path: "/docs/excel-addin", Component: ExcelAddinDocs, ErrorBoundary: RouteErrorBoundary },
 
