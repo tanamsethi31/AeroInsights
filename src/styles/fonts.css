@@ -31,28 +31,35 @@ body {
   animation: iconPop 0.5s ease-out;
 }
 
-/* ── Ambient floating blobs (landing page background) ───────── */
+/* ── Ambient floating blobs (landing page background) ───────────
+ * Wider travel + bigger scale swings so the motion is clearly
+ * visible as the user scrolls or pauses on a section. Faster cycle
+ * times keep it lively without feeling busy.
+ */
 @keyframes blobA {
   0%   { transform: translate3d(0, 0, 0) scale(1); }
-  33%  { transform: translate3d(40px, -60px, 0) scale(1.06); }
-  66%  { transform: translate3d(-30px, 30px, 0) scale(0.96); }
+  25%  { transform: translate3d(110px, -90px, 0) scale(1.12); }
+  50%  { transform: translate3d(60px,  80px, 0) scale(0.95); }
+  75%  { transform: translate3d(-90px, 30px, 0) scale(1.08); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 @keyframes blobB {
   0%   { transform: translate3d(0, 0, 0) scale(1); }
-  33%  { transform: translate3d(-55px, 45px, 0) scale(0.94); }
-  66%  { transform: translate3d(35px, -45px, 0) scale(1.08); }
+  25%  { transform: translate3d(-120px, 70px, 0) scale(0.92); }
+  50%  { transform: translate3d(80px, 100px, 0) scale(1.14); }
+  75%  { transform: translate3d(50px, -80px, 0) scale(0.98); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 @keyframes blobC {
   0%   { transform: translate3d(0, 0, 0) scale(1); }
-  33%  { transform: translate3d(50px, 55px, 0) scale(1.05); }
-  66%  { transform: translate3d(-40px, -35px, 0) scale(0.97); }
+  25%  { transform: translate3d(95px, 85px, 0) scale(1.10); }
+  50%  { transform: translate3d(-70px, -60px, 0) scale(0.94); }
+  75%  { transform: translate3d(110px, -40px, 0) scale(1.06); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
-.animate-blob-a { animation: blobA 24s ease-in-out infinite; will-change: transform; }
-.animate-blob-b { animation: blobB 32s ease-in-out infinite; will-change: transform; }
-.animate-blob-c { animation: blobC 28s ease-in-out infinite; will-change: transform; }
+.animate-blob-a { animation: blobA 18s ease-in-out infinite; will-change: transform; }
+.animate-blob-b { animation: blobB 22s ease-in-out infinite; will-change: transform; }
+.animate-blob-c { animation: blobC 20s ease-in-out infinite; will-change: transform; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-blob-a, .animate-blob-b, .animate-blob-c, .animate-marquee {

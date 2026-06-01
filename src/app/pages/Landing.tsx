@@ -181,37 +181,50 @@ function SectionHeader({
 function AmbientBackground() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      {/* Soft base — slight vertical gradient gives subtle depth */}
+      {/* Slight vertical gradient base for depth */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, #fafcff 0%, #f4f7fd 38%, #f6f8fd 72%, #f0f4fb 100%)",
+            "linear-gradient(180deg, #f4f8ff 0%, #ecf0fb 38%, #eef2fb 72%, #e6ecf8 100%)",
         }}
       />
-      {/* Floating colour blobs */}
+
+      {/*
+        Bolder colour blobs.
+        Stronger saturation, higher opacity, slightly larger radii — the
+        motion is now clearly visible at a glance, not just on close
+        inspection. mix-blend-multiply keeps text legibility intact even
+        with the punchier colour.
+      */}
       <div
-        className="animate-blob-a absolute -left-32 top-[6%] h-[640px] w-[640px] rounded-full opacity-[0.55] mix-blend-multiply blur-[140px]"
-        style={{ background: "radial-gradient(circle, #b7d0ff 0%, transparent 70%)" }}
+        className="animate-blob-a absolute -left-20 top-[4%] h-[760px] w-[760px] rounded-full opacity-90 mix-blend-multiply blur-[110px]"
+        style={{ background: "radial-gradient(circle, #84b1ff 0%, rgba(132,177,255,0.30) 45%, transparent 72%)" }}
       />
       <div
-        className="animate-blob-b absolute -right-40 top-[28%] h-[720px] w-[720px] rounded-full opacity-[0.50] mix-blend-multiply blur-[150px]"
-        style={{ background: "radial-gradient(circle, #d8caff 0%, transparent 70%)" }}
+        className="animate-blob-b absolute -right-32 top-[22%] h-[820px] w-[820px] rounded-full opacity-85 mix-blend-multiply blur-[120px]"
+        style={{ background: "radial-gradient(circle, #c2a4ff 0%, rgba(194,164,255,0.28) 45%, transparent 72%)" }}
       />
       <div
-        className="animate-blob-c absolute -left-32 top-[58%] h-[680px] w-[680px] rounded-full opacity-[0.55] mix-blend-multiply blur-[140px]"
-        style={{ background: "radial-gradient(circle, #b8e3ff 0%, transparent 70%)" }}
+        className="animate-blob-c absolute -left-24 top-[52%] h-[780px] w-[780px] rounded-full opacity-90 mix-blend-multiply blur-[115px]"
+        style={{ background: "radial-gradient(circle, #8ed3ff 0%, rgba(142,211,255,0.30) 45%, transparent 72%)" }}
       />
       <div
-        className="animate-blob-a absolute -right-20 bottom-[4%] h-[560px] w-[560px] rounded-full opacity-[0.45] mix-blend-multiply blur-[130px]"
-        style={{ background: "radial-gradient(circle, #c5d9ff 0%, transparent 70%)" }}
+        className="animate-blob-a absolute -right-16 bottom-[6%] h-[680px] w-[680px] rounded-full opacity-85 mix-blend-multiply blur-[110px]"
+        style={{ background: "radial-gradient(circle, #9fc1ff 0%, rgba(159,193,255,0.28) 45%, transparent 72%)" }}
       />
-      {/* Fine dot-grid — subtle SaaS texture */}
+      {/* A warm accent blob — gives the cool palette a hint of contrast */}
       <div
-        className="absolute inset-0 opacity-[0.35]"
+        className="animate-blob-b absolute left-[40%] top-[38%] h-[540px] w-[540px] rounded-full opacity-70 mix-blend-multiply blur-[120px]"
+        style={{ background: "radial-gradient(circle, #ffc4dc 0%, rgba(255,196,220,0.22) 50%, transparent 75%)" }}
+      />
+
+      {/* Fine dot-grid — subtle SaaS texture, slightly stronger so it reads */}
+      <div
+        className="absolute inset-0 opacity-[0.45]"
         style={{
           backgroundImage:
-            "radial-gradient(circle, rgba(0,33,71,0.07) 1px, transparent 1px)",
+            "radial-gradient(circle, rgba(0,33,71,0.08) 1px, transparent 1px)",
           backgroundSize: "32px 32px",
         }}
       />
@@ -718,16 +731,16 @@ function Hero() {
 }
 
 /* ─── LOGO MARQUEE — revolving rail of demo partners ───────────────────────── */
-const PARTNER_LOGOS: { name: string; icon?: string }[] = [
-  { name: "Aerfin", icon: "bi-airplane-engines" },
-  { name: "Grant Thornton", icon: "bi-graph-up" },
-  { name: "ELFC", icon: "bi-globe-europe-africa" },
-  { name: "KPMG", icon: "bi-building" },
-  { name: "TGIS Aviation", icon: "bi-broadcast-pin" },
-  { name: "Ishka Airglobal Finance", icon: "bi-bullseye" },
-  { name: "Skyworks", icon: "bi-cloud" },
-  { name: "EY", icon: "bi-diamond" },
-  { name: "Cloudcards", icon: "bi-credit-card-2-front" },
+const PARTNER_LOGOS: { name: string; src: string; h?: number }[] = [
+  { name: "Aerfin",                   src: "/logos/aerfin.png",         h: 44 },
+  { name: "Grant Thornton",           src: "/logos/grant-thornton.png", h: 48 },
+  { name: "ELFC",                     src: "/logos/elfc.png",           h: 40 },
+  { name: "KPMG",                     src: "/logos/kpmg.png",           h: 38 },
+  { name: "TGIS Aviation",            src: "/logos/tgis.webp",          h: 44 },
+  { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",         h: 38 },
+  { name: "Skyworks",                 src: "/logos/skyworks.png",       h: 40 },
+  { name: "EY",                       src: "/logos/ey.png",             h: 48 },
+  { name: "Cloudcards",               src: "/logos/cloudcards.png",     h: 36 },
 ];
 
 function LogoMarquee() {
@@ -735,7 +748,7 @@ function LogoMarquee() {
   const rail = [...PARTNER_LOGOS, ...PARTNER_LOGOS];
   return (
     <section className="relative py-14">
-      <div className="mx-auto mb-9 max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto mb-10 max-w-7xl px-4 sm:px-6">
         <FadeIn>
           <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
             Demoed with &amp; shaped by aviation finance leaders
@@ -745,32 +758,42 @@ function LogoMarquee() {
       <div
         className="marquee-pause relative overflow-hidden"
         style={{
-          // Mask the marquee so it feathers via opacity (lets the ambient bg show through)
+          // Mask so the rail feathers into the ambient background at both ends
           WebkitMaskImage:
-            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+            "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
           maskImage:
-            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+            "linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)",
         }}
       >
-        <div className="animate-marquee flex w-max gap-14 will-change-transform">
+        <div className="animate-marquee flex w-max items-center gap-16 will-change-transform">
           {rail.map((logo, i) => (
             <div
               key={`${logo.name}-${i}`}
-              className="flex shrink-0 items-center gap-2.5 px-2 text-gray-400 transition-colors duration-300 hover:text-[#002147]"
+              className="flex h-14 shrink-0 items-center justify-center px-2"
               aria-hidden={i >= PARTNER_LOGOS.length}
             >
-              {logo.icon && <i className={cn("bi text-xl", logo.icon)} />}
-              <span className="whitespace-nowrap text-base font-bold tracking-tight sm:text-lg">
-                {logo.name}
-              </span>
+              <img
+                src={logo.src}
+                alt={logo.name}
+                loading="lazy"
+                draggable={false}
+                style={{ height: logo.h ?? 42 }}
+                className={cn(
+                  "max-w-none select-none object-contain",
+                  // Subtle greyscale with hover restoring full colour — keeps the
+                  // rail visually quiet but lets each brand pop on inspection.
+                  "opacity-70 grayscale transition-all duration-300",
+                  "hover:opacity-100 hover:grayscale-0"
+                )}
+              />
             </div>
           ))}
         </div>
       </div>
       <FadeIn delay={0.15}>
         <p className="mx-auto mt-10 max-w-2xl px-4 text-center text-xs text-gray-400 sm:px-6">
-          Insights, assumptions &amp; frameworks shaped by ≥10-minute review sessions with execs at
-          each of these firms.
+          Insights, assumptions &amp; frameworks shaped by review sessions with execs at each of
+          these firms.
         </p>
       </FadeIn>
     </section>
