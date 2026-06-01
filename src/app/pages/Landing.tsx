@@ -43,25 +43,77 @@ function FadeIn({
   );
 }
 
-/* ─── section blend (smooths background transitions) ──────────────────────── */
-function Blend({
+/* ─── shared brand colour constants ────────────────────────────────────────── */
+const BRAND = "#002147";       // Oxford Blue — primary
+const DARK_BG = "#0a1a33";     // softer dark navy used for atmospheric sections
+const SOFT_BG = "#f4f7fd";     // subtle off-white used for alternating light sections
+
+/**
+ * Stand-alone transition section.
+ *
+ * Sits between two flat-coloured sections — its full height IS the gradient.
+ * Adjacent sections start/end with their flat fill, so there is no overlap
+ * and no visible seam where overlays would otherwise meet the page.
+ *
+ * Multi-stop curve passes through carefully picked mid-tones so light↔dark
+ * transitions don't smear through muddy grey.
+ */
+function TransitionBand({
   from,
   to,
-  position = "top",
-  h = 96,
+  height = 260,
+  glow,
 }: {
   from: string;
   to: string;
-  position?: "top" | "bottom";
-  h?: number;
+  height?: number;
+  /** Optional accent colour for a soft radial glow centred at top — usually only
+   *  used when transitioning INTO a dark section so the join feels lifted */
+  glow?: string;
 }) {
+  // Pick 2 intermediate stops by interpolating in oklab-ish perceptual space
+  // (simple weighted hex mix is good enough — we keep colours warm-blue, no grey).
+  const stops = buildSmoothStops(from, to);
   return (
     <div
       aria-hidden
-      className={cn("pointer-events-none absolute inset-x-0", position === "top" ? "top-0" : "bottom-0")}
-      style={{ height: h, background: `linear-gradient(to bottom, ${from}, ${to})` }}
-    />
+      className="relative w-full"
+      style={{
+        height,
+        background: `linear-gradient(to bottom, ${stops[0]} 0%, ${stops[1]} 35%, ${stops[2]} 70%, ${stops[3]} 100%)`,
+      }}
+    >
+      {glow && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto"
+          style={{
+            height: Math.round(height * 0.9),
+            background: `radial-gradient(ellipse at 50% 100%, ${glow}, transparent 65%)`,
+          }}
+        />
+      )}
+    </div>
   );
+}
+
+/** Mix two hex colours by ratio (0 = colour A, 1 = colour B). */
+function mixHex(a: string, b: string, t: number): string {
+  const pa = parseInt(a.replace("#", ""), 16);
+  const pb = parseInt(b.replace("#", ""), 16);
+  const ar = (pa >> 16) & 0xff, ag = (pa >> 8) & 0xff, ab = pa & 0xff;
+  const br = (pb >> 16) & 0xff, bg = (pb >> 8) & 0xff, bb = pb & 0xff;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1)}`;
+}
+
+/** Build 4 stops for a smooth perceptual-feeling gradient between two colours. */
+function buildSmoothStops(from: string, to: string): [string, string, string, string] {
+  // Bias the curve so the transition spends more time near the dark colour
+  // (eyes are more sensitive to changes at the dark end).
+  return [from, mixHex(from, to, 0.28), mixHex(from, to, 0.62), to];
 }
 
 /* ─── shared sub-components ────────────────────────────────────────────────── */
@@ -110,6 +162,58 @@ function SectionHeader({
         </p>
       )}
     </FadeIn>
+  );
+}
+
+/* ─── AMBIENT BLOB BACKGROUND ───────────────────────────────────────────────
+ * One continuous atmospheric layer behind the entire landing page.
+ * Large, low-opacity, heavily-blurred colour blobs drift slowly with organic
+ * keyframes — creates a smooth, modern SaaS feel and removes hard section
+ * colour breaks entirely.
+ *  • Fixed positioning so blobs stay anchored as the user scrolls.
+ *  • `mix-blend-multiply` keeps blobs subtle on the pale base — they add
+ *    *colour*, never blowing out content.
+ *  • Each blob has its own keyframe + duration so they never sync.
+ *  • GPU-friendly transform-only animation. Disabled under reduced-motion.
+ * ─────────────────────────────────────────────────────────────────────────── */
+function AmbientBackground() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      {/* Soft base — slight vertical gradient gives subtle depth */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, #fafcff 0%, #f4f7fd 38%, #f6f8fd 72%, #f0f4fb 100%)",
+        }}
+      />
+      {/* Floating colour blobs */}
+      <div
+        className="animate-blob-a absolute -left-32 top-[6%] h-[640px] w-[640px] rounded-full opacity-[0.55] mix-blend-multiply blur-[140px]"
+        style={{ background: "radial-gradient(circle, #b7d0ff 0%, transparent 70%)" }}
+      />
+      <div
+        className="animate-blob-b absolute -right-40 top-[28%] h-[720px] w-[720px] rounded-full opacity-[0.50] mix-blend-multiply blur-[150px]"
+        style={{ background: "radial-gradient(circle, #d8caff 0%, transparent 70%)" }}
+      />
+      <div
+        className="animate-blob-c absolute -left-32 top-[58%] h-[680px] w-[680px] rounded-full opacity-[0.55] mix-blend-multiply blur-[140px]"
+        style={{ background: "radial-gradient(circle, #b8e3ff 0%, transparent 70%)" }}
+      />
+      <div
+        className="animate-blob-a absolute -right-20 bottom-[4%] h-[560px] w-[560px] rounded-full opacity-[0.45] mix-blend-multiply blur-[130px]"
+        style={{ background: "radial-gradient(circle, #c5d9ff 0%, transparent 70%)" }}
+      />
+      {/* Fine dot-grid — subtle SaaS texture */}
+      <div
+        className="absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(0,33,71,0.07) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+    </div>
   );
 }
 
@@ -170,12 +274,14 @@ function HeroGlow() {
 }
 
 /* ─── NAVBAR ───────────────────────────────────────────────────────────────── */
+const CONTACT_MAILTO = "mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Hello";
+const DEMO_LINK = "https://cal.com/tanam-sethi/30min";
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "Platform", href: "#platform" },
   { label: "Pricing", href: "#pricing" },
   { label: "Solution", href: "#solution" },
-  { label: "Contact", href: "#contact" },
+  { label: "Contact", href: CONTACT_MAILTO, external: true as const },
 ];
 
 function Navbar() {
@@ -207,13 +313,14 @@ function Navbar() {
         <nav className="hidden items-center gap-1 md:flex">
           {NAV_LINKS.map((l) => (
             <a
-              key={l.href}
+              key={l.label}
               href={l.href}
               onClick={(e) => {
+                if (l.external) return; // mailto / external — let browser handle
                 e.preventDefault();
                 document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="rounded-md px-3 py-1.5 text-sm transition-colors text-gray-600 hover:bg-gray-100 hover:text-gray-950"
+              className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
             >
               {l.label}
             </a>
@@ -238,13 +345,13 @@ function Navbar() {
               >
                 Sign In
               </Link>
-              <Link
-                to="/login"
+              <a
+                href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
               >
                 Request Demo
                 <i className="bi bi-arrow-right text-xs" />
-              </Link>
+              </a>
             </>
           )}
         </div>
@@ -269,7 +376,7 @@ function Navbar() {
           >
             {NAV_LINKS.map((l) => (
               <a
-                key={l.href}
+                key={l.label}
                 href={l.href}
                 onClick={() => setMobileOpen(false)}
                 className="block py-2.5 text-sm text-gray-600"
@@ -284,12 +391,12 @@ function Navbar() {
               >
                 Sign In
               </Link>
-              <Link
-                to="/login"
+              <a
+                href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
                 className="rounded-lg bg-[#002147] px-4 py-2 text-center text-sm font-semibold text-white"
               >
                 Request Demo
-              </Link>
+              </a>
             </div>
           </motion.div>
         )}
@@ -405,14 +512,7 @@ function DashboardMock() {
 
 function Hero() {
   return (
-    <section
-      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16"
-      style={{
-        background: "#f8faff",
-        backgroundImage: "radial-gradient(circle, rgba(0,33,71,0.03) 1px, transparent 1px)",
-        backgroundSize: "28px 28px",
-      }}
-    >
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16">
       {/* Mouse-tracking radial glow — GPU-only transform, lerp for smooth follow */}
       <HeroGlow />
 
@@ -468,13 +568,13 @@ function Hero() {
           transition={{ duration: 0.48, delay: 0.24 }}
           className="flex flex-wrap items-center justify-center gap-3"
         >
-          <Link
-            to="/login"
+          <a
+            href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
           >
             Request a Demo
             <i className="bi bi-arrow-right text-xs" />
-          </Link>
+          </a>
           <a
             href="#platform"
             onClick={(e) => {
@@ -502,37 +602,62 @@ function Hero() {
   );
 }
 
-/* ─── TRUSTED BY ────────────────────────────────────────────────────────────── */
-const LOGOS = [
-  "AerCap Holdings",
-  "Air Lease Corp",
-  "SMBC Aviation",
-  "BOC Aviation",
-  "Avolon",
-  "Avolon Capital",
-  "ICBC Leasing",
-  "Atlas Air",
+/* ─── LOGO MARQUEE — revolving rail of demo partners ───────────────────────── */
+const PARTNER_LOGOS: { name: string; icon?: string }[] = [
+  { name: "Aerfin", icon: "bi-airplane-engines" },
+  { name: "Grant Thornton", icon: "bi-graph-up" },
+  { name: "ELFC", icon: "bi-globe-europe-africa" },
+  { name: "KPMG", icon: "bi-building" },
+  { name: "TGIS Aviation", icon: "bi-broadcast-pin" },
+  { name: "Ishka Airglobal Finance", icon: "bi-bullseye" },
+  { name: "Skyworks", icon: "bi-cloud" },
+  { name: "EY", icon: "bi-diamond" },
+  { name: "Cloudcards", icon: "bi-credit-card-2-front" },
 ];
 
-function TrustedBy() {
+function LogoMarquee() {
+  // Duplicate the array so the marquee can scroll seamlessly (translateX -50% loops)
+  const rail = [...PARTNER_LOGOS, ...PARTNER_LOGOS];
   return (
-    <section className="border-y border-gray-100 bg-white py-10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+    <section className="relative py-14">
+      <div className="mx-auto mb-9 max-w-7xl px-4 sm:px-6">
         <FadeIn>
-          <p className="mb-6 text-center text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Trusted by aviation finance teams worldwide
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+            Demoed with &amp; shaped by aviation finance leaders
           </p>
         </FadeIn>
-        <FadeIn delay={0.1}>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {LOGOS.map((name) => (
-              <span key={name} className="text-sm font-semibold text-gray-300 transition hover:text-[#002147]/50">
-                {name}
-              </span>
-            ))}
-          </div>
-        </FadeIn>
       </div>
+      <div
+        className="marquee-pause relative overflow-hidden"
+        style={{
+          // Mask the marquee so it feathers via opacity (lets the ambient bg show through)
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+          maskImage:
+            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+        }}
+      >
+        <div className="animate-marquee flex w-max gap-14 will-change-transform">
+          {rail.map((logo, i) => (
+            <div
+              key={`${logo.name}-${i}`}
+              className="flex shrink-0 items-center gap-2.5 px-2 text-gray-400 transition-colors duration-300 hover:text-[#002147]"
+              aria-hidden={i >= PARTNER_LOGOS.length}
+            >
+              {logo.icon && <i className={cn("bi text-xl", logo.icon)} />}
+              <span className="whitespace-nowrap text-base font-bold tracking-tight sm:text-lg">
+                {logo.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <FadeIn delay={0.15}>
+        <p className="mx-auto mt-10 max-w-2xl px-4 text-center text-xs text-gray-400 sm:px-6">
+          Insights, assumptions &amp; frameworks shaped by ≥10-minute review sessions with execs at
+          each of these firms.
+        </p>
+      </FadeIn>
     </section>
   );
 }
@@ -547,19 +672,28 @@ const STATS = [
 
 function Stats() {
   return (
-    <section className="bg-white py-8 pb-20">
+    <section className="py-12 pb-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
           {STATS.map((s, i) => (
             <FadeIn key={s.label} delay={i * 0.07}>
-              <div className="flex flex-col items-center rounded-2xl border border-[#002147]/8 bg-white p-6 text-center shadow-sm">
-                <div className="mb-3 flex size-11 items-center justify-center rounded-xl bg-[#002147]/8">
-                  <i className={cn("bi text-xl text-[#002147]", s.icon)} />
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 260, damping: 22 }}
+                className="group flex h-full flex-col items-center rounded-2xl border border-white/60 bg-white/70 p-7 text-center shadow-sm backdrop-blur-md transition-shadow duration-300 hover:border-[#002147]/18 hover:shadow-lg hover:shadow-[#002147]/10"
+              >
+                <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-[#002147]/8 transition-colors duration-300 group-hover:bg-[#002147]">
+                  <i
+                    className={cn(
+                      "group-hover:icon-pop bi text-xl text-[#002147] transition-colors duration-300 group-hover:text-white",
+                      s.icon
+                    )}
+                  />
                 </div>
-                <p className="text-2xl font-black text-gray-950">{s.value}</p>
-                <p className="text-sm font-semibold text-gray-700">{s.label}</p>
-                <p className="mt-0.5 text-xs text-gray-400">{s.sub}</p>
-              </div>
+                <p className="text-2xl font-black tracking-tight text-gray-950">{s.value}</p>
+                <p className="mt-1 text-sm font-semibold text-gray-700">{s.label}</p>
+                <p className="mt-1 text-xs text-gray-400">{s.sub}</p>
+              </motion.div>
             </FadeIn>
           ))}
         </div>
@@ -581,17 +715,28 @@ function BentoCard({
   return (
     <motion.div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/8 p-6",
-        "bg-gradient-to-br from-white/7 to-white/2",
-        "transition-all duration-300 hover:border-white/18 hover:from-white/10",
+        "group relative overflow-hidden rounded-2xl border border-white/10 p-6",
+        "bg-gradient-to-br from-white/[0.07] to-white/[0.02]",
+        "transition-all duration-300 hover:border-white/25 hover:from-white/[0.11]",
+        "hover:shadow-2xl hover:shadow-blue-500/10",
         className
       )}
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={{ y: -4 }}
     >
-      {children}
+      {/* soft hover glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+        style={{
+          background:
+            "radial-gradient(420px circle at 30% 0%, rgba(91,143,216,0.10), transparent 60%)",
+        }}
+      />
+      <div className="relative">{children}</div>
     </motion.div>
   );
 }
@@ -616,28 +761,33 @@ function PortfolioSparkline() {
 
 function SolutionBento() {
   return (
-    <section id="solution" style={{ background: "#001228" }} className="relative overflow-hidden py-24">
-      {/* blend FROM previous white section */}
-      <Blend from="#ffffff" to="#001228" position="top" h={110} />
-      {/* blend INTO next white section */}
-      <Blend from="#001228" to="#ffffff" position="bottom" h={110} />
-      {/* subtle top glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
-        style={{
-          width: 900,
-          height: 280,
-          background: "radial-gradient(ellipse at top, rgba(59,130,246,0.18), transparent 65%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        <SectionHeader
-          pill="The Solution"
-          heading={<>One platform for every lessor workflow</>}
-          sub="From portfolio onboarding to AI-driven deal origination — AeroInsights is the operating system for modern aircraft lessors."
-          dark
-        />
+    <section id="solution" className="relative py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div
+          className="relative overflow-hidden rounded-[2rem] p-8 shadow-2xl shadow-[#001228]/25 sm:p-12"
+          style={{
+            background:
+              "linear-gradient(165deg, #0a1a33 0%, #0e2347 60%, #0a1a33 100%)",
+          }}
+        >
+          {/* Top atmospheric glow inside the card */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
+            style={{
+              width: 1100,
+              height: 320,
+              background:
+                "radial-gradient(ellipse at top, rgba(91,143,216,0.30), rgba(91,143,216,0.06) 45%, transparent 75%)",
+            }}
+          />
+          <div className="relative">
+            <SectionHeader
+              pill="The Solution"
+              heading={<>One platform for every lessor workflow</>}
+              sub="From portfolio onboarding to AI-driven deal origination — AeroInsights is the operating system for modern aircraft lessors."
+              dark
+            />
 
         <div
           className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-3"
@@ -743,6 +893,8 @@ function SolutionBento() {
               ))}
             </div>
           </BentoCard>
+          </div>
+          </div>
         </div>
       </div>
     </section>
@@ -752,7 +904,7 @@ function SolutionBento() {
 /* ─── PLATFORM FEATURES ─────────────────────────────────────────────────────── */
 function PortfolioMock() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-[#002147]/5">
+    <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-xl shadow-[#002147]/10 backdrop-blur-md">
       <div className="border-b border-gray-100 bg-[#002147]/4 px-5 py-3 text-xs font-semibold text-[#002147]/70">
         Portfolio Overview — Q2 2025
       </div>
@@ -787,7 +939,7 @@ function PortfolioMock() {
 
 function IntelligenceMock() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl shadow-[#002147]/5">
+    <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-xl shadow-[#002147]/10 backdrop-blur-md">
       <div className="border-b border-gray-100 bg-[#002147]/4 px-5 py-3 text-xs font-semibold text-[#002147]/70">
         AI Intelligence — Lessee Radar
       </div>
@@ -851,7 +1003,7 @@ const PLATFORM_FEATURES = [
 
 function PlatformFeatures() {
   return (
-    <section id="platform" className="bg-white py-24">
+    <section id="platform" className="py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHeader
           pill="Platform Features"
@@ -859,7 +1011,7 @@ function PlatformFeatures() {
           sub="From day-one portfolio setup to sophisticated AI-driven origination — AeroInsights covers the full workflow."
         />
 
-        <div className="mt-20 flex flex-col gap-24">
+        <div className="mt-24 flex flex-col gap-28">
           {PLATFORM_FEATURES.map((feat) => (
             <div
               key={feat.id}
@@ -892,12 +1044,8 @@ function PlatformFeatures() {
                     <i className="bi bi-arrow-right text-xs" />
                   </Link>
                   <a
-                    href="#contact"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="flex items-center gap-1.5 rounded-xl border border-[#002147]/20 px-5 py-2.5 text-sm font-semibold text-[#002147] hover:bg-[#002147]/5 transition-colors"
+                    href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Platform%20enquiry"
+                    className="flex items-center gap-1.5 rounded-xl border border-[#002147]/20 px-5 py-2.5 text-sm font-semibold text-[#002147] transition-colors hover:bg-[#002147]/5"
                   >
                     Talk to Us
                   </a>
@@ -923,27 +1071,41 @@ const EXTRA_FEATURES = [
 
 function ExtraFeatures() {
   return (
-    <section id="features" className="bg-[#f4f7fd] py-24">
+    <section id="features" className="py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHeader
           pill="Full Feature Set"
           heading={<>Built for modern aviation finance workflows</>}
           sub="Every module follows aviation finance best practices with real-time data, regulatory alignment, and seamless team collaboration."
         />
-        <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {EXTRA_FEATURES.map((f, i) => (
             <FadeIn key={f.title} delay={i * 0.06}>
-              <div className="flex flex-col gap-3 rounded-2xl border border-[#002147]/8 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#002147]/18">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-[#002147]/8">
-                  <i className={cn("bi text-lg text-[#002147]", f.icon)} />
+              <motion.div
+                whileHover={{ y: -5 }}
+                transition={{ type: "spring", stiffness: 280, damping: 22 }}
+                className="group relative flex h-full flex-col gap-4 overflow-hidden rounded-2xl border border-white/60 bg-white/75 p-7 shadow-sm backdrop-blur-md transition-shadow duration-300 hover:border-[#002147]/20 hover:shadow-xl hover:shadow-[#002147]/10"
+              >
+                {/* gentle hover corner glow */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -right-10 -top-10 size-36 rounded-full bg-[#002147]/0 transition-all duration-500 group-hover:bg-[#002147]/4"
+                />
+                <div className="relative flex size-11 items-center justify-center rounded-xl bg-[#002147]/8 transition-colors duration-300 group-hover:bg-[#002147]">
+                  <i
+                    className={cn(
+                      "group-hover:icon-pop bi text-lg text-[#002147] transition-colors duration-300 group-hover:text-white",
+                      f.icon
+                    )}
+                  />
                 </div>
-                <p className="font-bold text-gray-950">{f.title}</p>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-              </div>
+                <p className="relative font-bold text-gray-950">{f.title}</p>
+                <p className="relative text-sm leading-relaxed text-gray-500">{f.desc}</p>
+              </motion.div>
             </FadeIn>
           ))}
         </div>
-        <FadeIn className="mt-10 text-center">
+        <FadeIn className="mt-12 text-center">
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-gray-500">
             <Link
               to="/login"
@@ -953,8 +1115,7 @@ function ExtraFeatures() {
             </Link>
             <span>·</span>
             <a
-              href="#contact"
-              onClick={(e) => { e.preventDefault(); document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" }); }}
+              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Talk%20to%20our%20team"
               className="hover:text-[#002147] hover:underline transition-colors"
             >
               Talk to our team
@@ -1000,7 +1161,7 @@ function Pricing() {
   const [billing, setBilling] = useState<BillingCycle>("monthly");
 
   return (
-    <section id="pricing" className="bg-white py-24">
+    <section id="pricing" className="py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHeader
           pill="Pricing Plans"
@@ -1008,7 +1169,7 @@ function Pricing() {
           sub="Start with a free pilot, scale as you grow. All plans include our core portfolio analytics."
         />
 
-        <FadeIn delay={0.1} className="mt-8 flex items-center justify-center gap-4">
+        <FadeIn delay={0.1} className="mt-10 flex items-center justify-center gap-4">
           <div className="flex rounded-full border border-gray-200 bg-gray-50 p-1">
             {(["monthly", "annually"] as BillingCycle[]).map((c) => (
               <button
@@ -1030,7 +1191,7 @@ function Pricing() {
           )}
         </FadeIn>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+        <div className="mt-12 grid gap-5 sm:grid-cols-3">
           {PLANS.map((plan, i) => {
             const price =
               plan.monthlyPrice === null
@@ -1038,14 +1199,17 @@ function Pricing() {
                 : billing === "annually"
                 ? Math.round(plan.monthlyPrice * 0.8)
                 : plan.monthlyPrice;
+            const isContact = plan.cta === "Contact Us";
             return (
               <FadeIn key={plan.name} delay={i * 0.08}>
-                <div
+                <motion.div
+                  whileHover={{ y: plan.highlight ? -6 : -4 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 22 }}
                   className={cn(
-                    "flex h-full flex-col rounded-2xl border p-7 shadow-sm transition hover:shadow-md",
+                    "flex h-full flex-col rounded-2xl border p-7 shadow-sm transition-shadow duration-300",
                     plan.highlight
-                      ? "border-[#002147] bg-[#002147] text-white"
-                      : "border-gray-200 bg-white"
+                      ? "border-[#002147] bg-[#002147] text-white shadow-lg shadow-[#002147]/20 hover:shadow-2xl hover:shadow-[#002147]/30"
+                      : "border-white/60 bg-white/80 backdrop-blur-md hover:border-[#002147]/25 hover:shadow-lg hover:shadow-[#002147]/10"
                   )}
                 >
                   <div className="flex-1">
@@ -1080,28 +1244,39 @@ function Pricing() {
                       ))}
                     </ul>
                   </div>
-                  <Link
-                    to="/login"
-                    className={cn(
-                      "mt-8 block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition",
-                      plan.highlight
-                        ? "bg-white text-[#002147] hover:bg-blue-50"
-                        : "border border-[#002147]/20 bg-white text-[#002147] hover:bg-[#002147]/5"
-                    )}
-                  >
-                    {plan.cta}
-                  </Link>
-                </div>
+                  {isContact ? (
+                    <a
+                      href="mailto:sethit@tcd.ie?subject=AeroInsights%20Enterprise%20%E2%80%94%20Contact"
+                      className={cn(
+                        "mt-8 block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition",
+                        "border border-[#002147]/20 bg-white text-[#002147] hover:bg-[#002147] hover:text-white"
+                      )}
+                    >
+                      {plan.cta}
+                    </a>
+                  ) : (
+                    <Link
+                      to="/login"
+                      className={cn(
+                        "mt-8 block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition",
+                        plan.highlight
+                          ? "bg-white text-[#002147] hover:bg-blue-50"
+                          : "border border-[#002147]/20 bg-white text-[#002147] hover:bg-[#002147]/5"
+                      )}
+                    >
+                      {plan.cta}
+                    </Link>
+                  )}
+                </motion.div>
               </FadeIn>
             );
           })}
         </div>
 
-        <FadeIn className="mt-6 text-center text-sm text-gray-500">
+        <FadeIn className="mt-8 text-center text-sm text-gray-500">
           Need a custom pilot or have questions?{" "}
           <a
-            href="#contact"
-            onClick={(e) => { e.preventDefault(); document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" }); }}
+            href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Custom%20pilot%20enquiry"
             className="font-semibold text-[#002147] hover:underline"
           >
             Contact our team
@@ -1154,28 +1329,33 @@ const TESTIMONIALS = [
 
 function Testimonials() {
   return (
-    <section className="bg-[#f4f7fd] py-24">
+    <section className="py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHeader
           pill="Testimonials"
           heading="Trusted by aviation finance leaders"
           sub="Hear from the portfolio managers, risk directors, and analysts who use AeroInsights every day."
         />
-        <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {TESTIMONIALS.map((t, i) => (
             <FadeIn key={t.name} delay={i * 0.07}>
-              <div className="flex flex-col gap-4 rounded-2xl border border-[#002147]/8 bg-white p-6 shadow-sm">
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 260, damping: 22 }}
+                className="group relative flex h-full flex-col gap-4 rounded-2xl border border-white/60 bg-white/75 p-7 shadow-sm backdrop-blur-md transition-shadow duration-300 hover:border-[#002147]/20 hover:shadow-xl hover:shadow-[#002147]/10"
+              >
+                <i className="bi bi-quote absolute right-5 top-4 text-3xl leading-none text-[#002147]/8 transition-colors duration-300 group-hover:text-[#002147]/18" />
                 <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-[#002147] text-sm font-bold text-white">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#002147] text-sm font-bold text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
                     {t.initials}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-950">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.role}</p>
+                    <p className="truncate text-xs text-gray-400">{t.role}</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 leading-relaxed">"{t.quote}"</p>
-              </div>
+                <p className="text-sm leading-relaxed text-gray-600">"{t.quote}"</p>
+              </motion.div>
             </FadeIn>
           ))}
         </div>
@@ -1216,7 +1396,7 @@ function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <section className="bg-white py-24">
+    <section className="py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <SectionHeader
           pill="FAQ"
@@ -1224,7 +1404,7 @@ function FAQ() {
           sub="Everything you need to know about AeroInsights. Can't find the answer? Contact our team."
         />
 
-        <div className="mt-12 flex flex-col divide-y divide-gray-100 rounded-2xl border border-[#002147]/10 bg-white shadow-sm overflow-hidden">
+        <div className="mt-12 flex flex-col divide-y divide-gray-100 overflow-hidden rounded-2xl border border-white/60 bg-white/75 shadow-sm backdrop-blur-md">
           {FAQS.map((faq, i) => (
             <FadeIn key={faq.q} delay={i * 0.05}>
               <button
@@ -1263,12 +1443,11 @@ function FAQ() {
           ))}
         </div>
 
-        <FadeIn delay={0.1} className="mt-6 text-center">
+        <FadeIn delay={0.1} className="mt-8 text-center">
           <p className="text-sm text-gray-500">
             Still have questions?{" "}
             <a
-              href="#contact"
-              onClick={(e) => { e.preventDefault(); document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" }); }}
+              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20FAQ%20follow-up"
               className="font-semibold text-[#002147] hover:underline"
             >
               We&apos;re here to help.
@@ -1283,20 +1462,27 @@ function FAQ() {
 /* ─── CTA BANNER ────────────────────────────────────────────────────────────── */
 function CTABanner() {
   return (
-    <section style={{ background: "#001228" }} className="relative overflow-hidden py-24">
-      <Blend from="#ffffff" to="#001228" position="top" h={110} />
-      <Blend from="#001228" to="#ffffff" position="bottom" h={110} />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
-        style={{
-          width: 900,
-          height: 260,
-          background: "radial-gradient(ellipse at top, rgba(59,130,246,0.18), transparent 65%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        <FadeIn className="flex flex-col items-center gap-6 text-center">
+    <section className="relative py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div
+          className="relative overflow-hidden rounded-[2rem] px-6 py-20 shadow-2xl shadow-[#001228]/25 sm:px-12 sm:py-24"
+          style={{
+            background:
+              "linear-gradient(150deg, #0a1a33 0%, #143268 55%, #0a1a33 100%)",
+          }}
+        >
+          {/* Top atmospheric glow inside the card */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
+            style={{
+              width: 1100,
+              height: 300,
+              background:
+                "radial-gradient(ellipse at top, rgba(91,143,216,0.32), rgba(91,143,216,0.05) 45%, transparent 75%)",
+            }}
+          />
+          <FadeIn className="relative flex flex-col items-center gap-6 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-blue-300/60">
             ✦ Purpose-built for aviation lessors
           </p>
@@ -1308,17 +1494,16 @@ function CTABanner() {
             risk, and close deals faster.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              to="/login"
-              className="flex items-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-[#002147] shadow-lg shadow-black/25 hover:bg-blue-50 transition-colors"
+            <a
+              href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-[#002147] shadow-lg shadow-black/25 transition-colors hover:bg-blue-50"
             >
               Request a Demo
               <i className="bi bi-arrow-right text-xs" />
-            </Link>
+            </a>
             <a
-              href="#contact"
-              onClick={(e) => { e.preventDefault(); document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" }); }}
-              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3 text-sm font-semibold text-white/85 hover:bg-white/14 transition-colors"
+              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Demo%20request"
+              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3 text-sm font-semibold text-white/85 transition-colors hover:bg-white/14"
             >
               Contact Us
             </a>
@@ -1338,108 +1523,153 @@ function CTABanner() {
             </span>
           </div>
         </FadeIn>
+        </div>
       </div>
     </section>
   );
 }
 
 /* ─── CONTACT ───────────────────────────────────────────────────────────────── */
+const CONTACT_EMAIL = "sethit@tcd.ie";
+
 function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", firm: "", message: "" });
-  const [sent, setSent] = useState(false);
+  const [form, setForm] = useState({ name: "", firm: "", message: "" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    const subject = encodeURIComponent(
+      `AeroInsights — Enquiry from ${form.name || "the website"}${form.firm ? ` (${form.firm})` : ""}`
+    );
+    const body = encodeURIComponent(
+      `Hi,\n\n${form.message}\n\n—\n${form.name}${form.firm ? `\n${form.firm}` : ""}`
+    );
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
   };
 
+  const cards = [
+    {
+      icon: "bi-envelope",
+      title: "Email",
+      desc: "Reach me directly — usually a reply within a day.",
+      action: CONTACT_EMAIL,
+      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%E2%80%94%20Hello`,
+    },
+    {
+      icon: "bi-calendar-check",
+      title: "Book a Demo",
+      desc: "Schedule a 30-minute walkthrough — same address.",
+      action: "Request a slot",
+      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%E2%80%94%20Book%20a%20demo&body=Hi%2C%20I%27d%20like%20to%20schedule%20a%2030-minute%20walkthrough.`,
+    },
+    {
+      icon: "bi-chat-square-text",
+      title: "Partnerships",
+      desc: "Discussing integration, distribution, or co-build.",
+      action: "Start a conversation",
+      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%E2%80%94%20Partnership`,
+    },
+  ];
+
   return (
-    <section id="contact" className="bg-white py-24">
+    <section id="contact" className="py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHeader
           pill="Get In Touch"
           heading="Need help or want a demo?"
-          sub="Our team of aviation finance specialists is here to help you evaluate AeroInsights for your portfolio."
+          sub="Drop a line — every enquiry goes straight to my inbox and gets a personal reply."
         />
 
-        <div className="mt-14 grid gap-6 sm:grid-cols-3">
+        <div className="mt-16 grid gap-6 sm:grid-cols-3">
           <div className="flex flex-col gap-4">
-            {[
-              { icon: "bi-envelope", title: "Email Us", desc: "For sales, onboarding, or support enquiries.", action: "hello@aeroinsights.io" },
-              { icon: "bi-calendar-check", title: "Book a Demo", desc: "Schedule a 30-minute walkthrough with our team.", action: "Schedule a Call" },
-              { icon: "bi-book", title: "Documentation", desc: "Browse our guides, tutorials, and API reference.", action: "View Docs" },
-            ].map((card) => (
-              <FadeIn key={card.title}>
-                <div className="flex flex-col gap-3 rounded-2xl border border-[#002147]/10 bg-white p-5 shadow-sm">
-                  <div className="flex size-9 items-center justify-center rounded-xl bg-[#002147]/8">
-                    <i className={cn("bi text-lg text-[#002147]", card.icon)} />
+            {cards.map((card, i) => (
+              <FadeIn key={card.title} delay={i * 0.05}>
+                <motion.a
+                  href={card.href}
+                  whileHover={{ y: -3 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 22 }}
+                  className="group flex flex-col gap-2.5 rounded-2xl border border-white/60 bg-white/75 p-5 shadow-sm backdrop-blur-md transition-shadow duration-300 hover:border-[#002147]/22 hover:shadow-lg hover:shadow-[#002147]/10"
+                >
+                  <div className="flex size-9 items-center justify-center rounded-xl bg-[#002147]/8 transition-colors duration-300 group-hover:bg-[#002147]">
+                    <i
+                      className={cn(
+                        "group-hover:icon-pop bi text-lg text-[#002147] transition-colors duration-300 group-hover:text-white",
+                        card.icon
+                      )}
+                    />
                   </div>
                   <p className="font-semibold text-gray-950">{card.title}</p>
-                  <p className="text-sm text-gray-500 leading-relaxed">{card.desc}</p>
-                  <span className="text-sm font-semibold text-[#002147]">{card.action}</span>
-                </div>
+                  <p className="text-sm leading-relaxed text-gray-500">{card.desc}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-[#002147]">
+                    {card.action}
+                    <i className="bi bi-arrow-right text-xs transition-transform duration-300 group-hover:translate-x-1" />
+                  </span>
+                </motion.a>
               </FadeIn>
             ))}
           </div>
 
           <FadeIn delay={0.1} className="sm:col-span-2">
-            <div className="rounded-2xl border border-[#002147]/10 bg-white p-8 shadow-sm">
-              {sent ? (
-                <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-full bg-emerald-50">
-                    <i className="bi bi-check2-circle text-3xl text-emerald-600" />
-                  </div>
-                  <p className="text-lg font-bold text-gray-950">Message sent!</p>
-                  <p className="text-sm text-gray-500">We'll be in touch within one business day.</p>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="rounded-2xl border border-white/60 bg-white/80 p-8 shadow-sm backdrop-blur-md">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
                   <p className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                     <i className="bi bi-envelope-paper" />
-                    Send us a message
+                    Send a message
                   </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-medium text-gray-600">Full name</label>
-                      <input
-                        required type="text" placeholder="Jane Smith"
-                        value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#002147]/25"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-medium text-gray-600">Work email</label>
-                      <input
-                        required type="email" placeholder="jane@lessor.com"
-                        value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#002147]/25"
-                      />
-                    </div>
+                  <a
+                    href={`mailto:${CONTACT_EMAIL}`}
+                    className="text-xs font-medium text-gray-400 hover:text-[#002147]"
+                  >
+                    or email {CONTACT_EMAIL} ↗
+                  </a>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-gray-600">Your name</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="Jane Smith"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-950 placeholder-gray-400 transition focus:border-[#002147]/40 focus:outline-none focus:ring-2 focus:ring-[#002147]/15"
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-gray-600">Firm / Organisation</label>
                     <input
-                      type="text" placeholder="AerCap Holdings"
-                      value={form.firm} onChange={(e) => setForm({ ...form, firm: e.target.value })}
-                      className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#002147]/25"
+                      type="text"
+                      placeholder="AerCap Holdings"
+                      value={form.firm}
+                      onChange={(e) => setForm({ ...form, firm: e.target.value })}
+                      className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-950 placeholder-gray-400 transition focus:border-[#002147]/40 focus:outline-none focus:ring-2 focus:ring-[#002147]/15"
                     />
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-gray-600">Message</label>
-                    <textarea
-                      required rows={4} placeholder="Tell us about your portfolio and what you're looking to solve..."
-                      value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-                      className="resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-950 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#002147]/25"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full rounded-xl bg-[#002147] py-3 text-sm font-semibold text-white transition hover:opacity-85"
-                  >
-                    Send Message
-                  </button>
-                </form>
-              )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-gray-600">Message</label>
+                  <textarea
+                    required
+                    rows={5}
+                    placeholder="Tell us about your portfolio and what you're looking to solve..."
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    className="resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-950 placeholder-gray-400 transition focus:border-[#002147]/40 focus:outline-none focus:ring-2 focus:ring-[#002147]/15"
+                  />
+                </div>
+                <motion.button
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.99 }}
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#002147] py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/15 transition hover:bg-[#001a38]"
+                >
+                  Open in mail
+                  <i className="bi bi-send text-xs" />
+                </motion.button>
+                <p className="text-center text-xs text-gray-400">
+                  Submitting opens your mail client with this message pre-filled.
+                </p>
+              </form>
             </div>
           </FadeIn>
         </div>
@@ -1453,7 +1683,7 @@ function Newsletter() {
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   return (
-    <section className="border-t border-[#002147]/8 bg-[#f4f7fd] py-14">
+    <section className="py-16">
       <div className="mx-auto max-w-xl px-4 text-center sm:px-6">
         <FadeIn>
           <p className="text-lg font-bold text-gray-950">Stay updated</p>
@@ -1498,9 +1728,15 @@ const FOOTER_COLS = [
 
 function Footer() {
   return (
-    <footer style={{ background: "#001228" }} className="relative overflow-hidden py-14">
-      <Blend from="#f4f7fd" to="#001228" position="top" h={90} />
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+    <footer
+      className="relative overflow-hidden pb-14 pt-32"
+      style={{
+        // Soft vertical gradient: ambient base → deep navy, anchored to the bottom.
+        background:
+          "linear-gradient(180deg, rgba(10,26,51,0) 0%, rgba(10,26,51,0.40) 12%, rgba(10,26,51,0.88) 28%, #0a1a33 45%, #0a1a33 100%)",
+      }}
+    >
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
           {/* Brand */}
           <div className="flex flex-col gap-4 lg:max-w-xs">
@@ -1561,11 +1797,14 @@ function Footer() {
 /* ─── PAGE ──────────────────────────────────────────────────────────────────── */
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-950 antialiased">
+    <div className="relative min-h-screen font-sans text-gray-950 antialiased">
+      {/* One continuous animated colour-blob layer behind everything */}
+      <AmbientBackground />
+
       <Navbar />
-      <main>
+      <main className="relative">
         <Hero />
-        <TrustedBy />
+        <LogoMarquee />
         <Stats />
         <SolutionBento />
         <PlatformFeatures />

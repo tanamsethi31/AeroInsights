@@ -8,3 +8,54 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
+/* ── Landing page marquee (logo rail) ───────────────────────── */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 38s linear infinite;
+}
+.marquee-pause:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* ── Soft icon pop (landing card hovers) ────────────────────── */
+@keyframes iconPop {
+  0%   { transform: scale(1) rotate(0deg); }
+  50%  { transform: scale(1.12) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.group:hover .group-hover\:icon-pop {
+  animation: iconPop 0.5s ease-out;
+}
+
+/* ── Ambient floating blobs (landing page background) ───────── */
+@keyframes blobA {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(40px, -60px, 0) scale(1.06); }
+  66%  { transform: translate3d(-30px, 30px, 0) scale(0.96); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes blobB {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(-55px, 45px, 0) scale(0.94); }
+  66%  { transform: translate3d(35px, -45px, 0) scale(1.08); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes blobC {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(50px, 55px, 0) scale(1.05); }
+  66%  { transform: translate3d(-40px, -35px, 0) scale(0.97); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.animate-blob-a { animation: blobA 24s ease-in-out infinite; will-change: transform; }
+.animate-blob-b { animation: blobB 32s ease-in-out infinite; will-change: transform; }
+.animate-blob-c { animation: blobC 28s ease-in-out infinite; will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blob-a, .animate-blob-b, .animate-blob-c, .animate-marquee {
+    animation: none !important;
+  }
+}
