@@ -26,20 +26,18 @@ import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 // disappears — every page component is in memory the moment React-Router
 // matches its route, so the Outlet swap is a pure synchronous render. No
 // chunk fetches, no Suspense fallback, no commit-ordering races.
-import Dashboard       from "./pages/Dashboard";
-import Portfolio       from "./pages/Portfolio";
-// Scenarios is no longer rendered through the router. It lives persistently
-// inside Layout's <ScenariosShell /> so its mount cost is paid once on first
-// visit and never again, eliminating the unmount-choking-next-page-mount
-// freeze. The /scenarios routes below still need entries so react-router
-// matches the URL (sidebar active state, deep links, browser history) —
-// they render `NoOpRoute` (null) and the actual page comes from Layout.
+// Dashboard, Portfolio, Scenarios, Deals are no longer rendered through the
+// router — they live persistently inside Layout's PersistentPage shells.
+// Their mount cost is paid once on first visit and never again, eliminating
+// the unmount-choking-next-page-mount freeze. The route entries below
+// resolve to NoOpRoute so react-router still matches the URL (sidebar
+// active state, deep links, browser history all keep working) while the
+// actual rendering happens in Layout. See Layout.tsx for the pattern.
 import RiskECL         from "./pages/RiskECL";
 import Counterparties  from "./pages/Counterparties";
 import Jurisdictions   from "./pages/Jurisdictions";
 import Reports         from "./pages/Reports";
 import Settings        from "./pages/Settings";
-import Deals           from "./pages/Deals";
 import Intelligence    from "./pages/Intelligence";
 import Transactions    from "./pages/Transactions";
 import Reconciliation  from "./pages/Reconciliation";
@@ -51,22 +49,26 @@ import RateOutlook     from "./pages/RateOutlook";
 // Layout's import of this function is now a no-op for back-compat.
 export function preloadAllPages(): void { /* no-op */ }
 
-// Placeholder for routes whose actual rendering happens elsewhere in Layout
-// (currently just Scenarios — see ScenariosShell in Layout.tsx).
+// Placeholder for routes whose actual rendering happens in Layout's
+// PersistentPage shells. React-router still matches these URLs (sidebar
+// active state, deep links, browser history) but the route itself renders
+// nothing; the persistent component lives in Layout.
 function NoOpRoute() { return null; }
 
 /**
  * Guards the dashboard index route.
- * If no portfolio has been selected, send the user to /portfolios.
- * After they pick one, setActivePortfolio navigates them back to / and this
- * component renders the Dashboard.
+ * If no portfolio has been selected, sends the user to /portfolios. After
+ * they pick one, setActivePortfolio navigates them back to / where the
+ * Dashboard persistent shell takes over.
  */
 function PortfolioIndexGuard() {
   const { activePortfolioId } = usePortfolio();
   if (!activePortfolioId) {
     return <Navigate to="/portfolios" replace />;
   }
-  return <Dashboard />;
+  // Dashboard is rendered by Layout's persistent shell. Returning null
+  // here lets that shell own the screen.
+  return null;
 }
 
 export const router = createBrowserRouter([
@@ -98,12 +100,12 @@ export const router = createBrowserRouter([
           // Index: redirect to /portfolios until a portfolio is selected
           { index: true, Component: PortfolioIndexGuard },
 
-          // Portfolio
-          { path: "portfolio",                  Component: Portfolio },
-          { path: "portfolio/register",         Component: Portfolio },
-          { path: "portfolio/analytics",        Component: Portfolio },
-          { path: "portfolio/aircraft-mix",     Component: Portfolio },
-          { path: "portfolio/performance",      Component: Portfolio },
+          // Portfolio — persistent shell in Layout
+          { path: "portfolio",                  Component: NoOpRoute },
+          { path: "portfolio/register",         Component: NoOpRoute },
+          { path: "portfolio/analytics",        Component: NoOpRoute },
+          { path: "portfolio/aircraft-mix",     Component: NoOpRoute },
+          { path: "portfolio/performance",      Component: NoOpRoute },
 
           // Scenarios — see comment at the import block. Routes resolve to
           // NoOpRoute so react-router matches the URL but renders nothing;
@@ -113,11 +115,11 @@ export const router = createBrowserRouter([
           { path: "scenarios/run",              Component: NoOpRoute },
           { path: "scenarios/history",          Component: NoOpRoute },
 
-          // Deals
-          { path: "deals",                      Component: Deals },
-          { path: "deals/generator",            Component: Deals },
-          { path: "deals/rack-stack",           Component: Deals },
-          { path: "deals/exit-npv",             Component: Deals },
+          // Deals — persistent shell in Layout
+          { path: "deals",                      Component: NoOpRoute },
+          { path: "deals/generator",            Component: NoOpRoute },
+          { path: "deals/rack-stack",           Component: NoOpRoute },
+          { path: "deals/exit-npv",             Component: NoOpRoute },
 
           // Transactions
           { path: "transactions",       Component: Transactions },

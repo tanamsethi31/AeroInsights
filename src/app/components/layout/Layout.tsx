@@ -9,81 +9,84 @@ import { AgentPanel } from "../agent/AgentPanel";
 import { CurrencyProvider } from "../../contexts/CurrencyContext";
 import { DemoBanner } from "./DemoBanner";
 import { preloadAllPages } from "../../routes";
+import { usePortfolio } from "../../contexts/PortfolioContext";
+import Dashboard from "../../pages/Dashboard";
+import Portfolio from "../../pages/Portfolio";
 import Scenarios from "../../pages/Scenarios";
+import Deals from "../../pages/Deals";
 
 /**
- * Renders the Scenarios page persistently after the user first visits it.
+ * Persistent-mount shell for heavy pages.
  *
- * Why: Scenarios is the single component in the app whose mount/unmount cost
- * exceeds React's synchronous commit budget. When the user navigated away
- * from Scenarios, the unmount cleanup choked the destination page's mount,
- * producing the freeze the user reported across many sessions.
+ * The architectural constraint: Dashboard, Portfolio, Scenarios, and Deals
+ * each have mount and unmount costs that exceed React's synchronous commit
+ * budget (~16 ms). Mounting one fresh while a previous one is being torn
+ * down chokes the main thread and produces the freeze the user has been
+ * reporting across many sessions.
  *
  * This shell:
- *   - Lazily mounts Scenarios on first /scenarios/* visit
+ *   - Lazily mounts each page on FIRST visit
  *   - Keeps it mounted forever after — navigating away just toggles
- *     display:none, no unmount, no cleanup work
- *   - Returning to Scenarios is instant (already mounted, just shown)
+ *     display:none. No unmount, no cleanup, no GC pressure.
+ *   - Returning is instant (already mounted, just shown).
  *
- * The /scenarios routes in routes.tsx render a `NoOpRoute` component so the
- * router still matches them (sidebar active-state highlighting works, deep
- * links work, browser back/forward works) while leaving the actual content
- * rendering to this shell.
+ * Memory cost: ~10-15 MB per heavy page retained for the whole session
+ * (Dashboard + Portfolio + Scenarios + Deals ≈ 40-60 MB total). Acceptable
+ * for a desktop analytics SPA — the alternative is the freeze itself.
  *
- * Other heavy pages (Dashboard / Portfolio / Deals) are NOT given the same
- * treatment because their mount cost is already within budget after the
- * memoisation + activeTab-gating fixes from earlier commits. Memory
- * footprint stays bounded.
+ * Each persistent page is paired with a NoOpRoute entry in routes.tsx so
+ * react-router still matches the URL (sidebar active state, deep links,
+ * browser history all keep working) while the actual rendering lives here.
  */
-function ScenariosShell() {
-  const location = useLocation();
-  const isScenarios =
-    location.pathname === "/scenarios" || location.pathname.startsWith("/scenarios/");
-  const [hasMounted, setHasMounted] = React.useState(false);
-
+function PersistentPage({
+  isActive,
+  children,
+}: {
+  isActive: boolean;
+  children: React.ReactNode;
+}) {
+  const [hasMounted, setHasMounted] = React.useState(isActive);
   React.useEffect(() => {
-    if (isScenarios && !hasMounted) setHasMounted(true);
-  }, [isScenarios, hasMounted]);
-
+    if (isActive && !hasMounted) setHasMounted(true);
+  }, [isActive, hasMounted]);
   if (!hasMounted) return null;
-
-  return (
-    <div style={{ display: isScenarios ? "block" : "none" }}>
-      <Scenarios />
-    </div>
-  );
+  return <div style={{ display: isActive ? "block" : "none" }}>{children}</div>;
 }
 
 /**
- * Inner layout shell — must live inside both SidebarProvider (to call useSidebar)
- * and AgentProvider (to call useAgent).
+ * Same as PersistentPage but guards the Dashboard's "no portfolio selected"
+ * redirect (originally lived in PortfolioIndexGuard inside routes.tsx).
  */
+function DashboardShell({ isActive }: { isActive: boolean }) {
+  const { activePortfolioId } = usePortfolio();
+  if (isActive && !activePortfolioId) {
+    // Mirror the legacy redirect — keep the visit history but punt the
+    // user to /portfolios. PortfolioHub renders via Outlet (it's not
+    // persistent) when this happens, so its mount cost is acceptable.
+    return null;
+  }
+  return (
+    <PersistentPage isActive={isActive}>
+      <Dashboard />
+    </PersistentPage>
+  );
+}
+
 function LayoutContent() {
   const { isOpen } = useAgent();
   const { setOpen } = useSidebar();
   const location = useLocation();
-  // When on /scenarios/*, ScenariosShell renders the page; we hide the
-  // Outlet so the route's NoOpRoute component (which renders nothing)
-  // doesn't leave an empty padded block under the Scenarios content.
-  const isScenarios =
-    location.pathname === "/scenarios" || location.pathname.startsWith("/scenarios/");
+  const p = location.pathname;
 
-  // No routeKey on the Outlet wrapper. Earlier we forced full unmount/remount
-  // on every pathname change to defeat a "URL changes but page doesn't"
-  // reconciler bug. That root cause has since been fixed by useTabSync
-  // (every tab click drives navigate() with the canonical URL) and per-page
-  // useEffect([pathname]) syncing internal sub-tab state.
-  //
-  // Keying on pathname here was actively harmful: every sub-tab click
-  // (e.g. /portfolio → /portfolio/aircraft) forced the entire 800-line
-  // Portfolio component to unmount and rebuild. Rapid sub-tab clicks piled
-  // up synchronous remount work on the main thread and produced the
-  // ~1 second freeze visible in the DevTools Performance flame chart.
-  //
-  // Letting react-router handle Outlet naturally means:
-  //   - Cross-page navs (sidebar) → matched component changes → swap.
-  //   - Within-page navs (sub-tab) → same component stays mounted →
-  //     useEffect([pathname]) updates the internal activeTab.
+  // Compute "which persistent page is active" once per render. The Outlet
+  // is hidden when any persistent page owns the screen so its NoOpRoute
+  // render doesn't reserve an empty layout block beneath the persistent
+  // page's content.
+  const onDashboard = p === "/";
+  const onPortfolio = p === "/portfolio" || p.startsWith("/portfolio/");
+  const onScenarios = p === "/scenarios" || p.startsWith("/scenarios/");
+  const onDeals = p === "/deals" || p.startsWith("/deals/");
+  const anyPersistent = onDashboard || onPortfolio || onScenarios || onDeals;
 
   // Collapse the sidebar only at the moment the AI panel is opened (false → true).
   // After that the user is free to re-open the sidebar independently.
@@ -93,12 +96,8 @@ function LayoutContent() {
     prevIsOpen.current = isOpen;
   }, [isOpen, setOpen]);
 
-  // Warm chunk cache for every lazy page once the layout is mounted. Runs
-  // on requestIdleCallback (or microtask fallback) so the initial render
-  // isn't impacted. After this completes (~750 ms total, staggered), every
-  // top-level tab click resolves instantly from cache with no Suspense
-  // fallback — eliminating the "first click cold-loads the chunk, second
-  // rapid click queues another mount, freeze" pattern.
+  // preloadAllPages is now a no-op (every page is in the main bundle since
+  // we moved away from React.lazy). Left here for any future use.
   React.useEffect(() => { preloadAllPages(); }, []);
 
   return (
@@ -123,16 +122,18 @@ function LayoutContent() {
               }}
             >
               {/*
-                Scenarios is rendered persistently by <ScenariosShell />
-                below to avoid the unmount-cost freeze. When the user is on
-                a /scenarios/* route, the matched route is `NoOpRoute` which
-                renders null — we hide the Outlet entirely in that case so
-                react-router's empty render doesn't reserve layout space.
+                Persistent shells. Each mounts on first visit and stays in
+                the DOM thereafter, toggled by display:none. Outlet is
+                hidden whenever any of them is active so the underlying
+                NoOpRoute render doesn't reserve layout space.
               */}
-              <div style={{ display: isScenarios ? "none" : "block" }}>
+              <div style={{ display: anyPersistent ? "none" : "block" }}>
                 <Outlet />
               </div>
-              <ScenariosShell />
+              <DashboardShell isActive={onDashboard} />
+              <PersistentPage isActive={onPortfolio}><Portfolio /></PersistentPage>
+              <PersistentPage isActive={onScenarios}><Scenarios /></PersistentPage>
+              <PersistentPage isActive={onDeals}><Deals /></PersistentPage>
             </div>
           </main>
 
