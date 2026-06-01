@@ -99,7 +99,20 @@ export default function Scenarios() {
   const { isExecutiveMode } = useViewMode();
   const { pendingInputs, setPendingInputs } = useAgent();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
-  useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "Library"); }, [pathname]);
+  useEffect(() => {
+    // Gate: when the user navigates AWAY from /scenarios/* (Layout keeps us
+    // mounted but hidden via display:none), don't react to the pathname
+    // change. Without this gate, every cross-page navigation triggered a
+    // setActiveTab call here which, even when the new value matched the
+    // old, ran the entire Scenarios function body again. With React.memo on
+    // the heavy sub-tab children that's still cheap on paper, but in
+    // browsers running React DevTools or other profiling extensions the
+    // wrapper instrumentation makes even a "noop" re-render measurable —
+    // exactly the discrepancy between the freeze users report and the
+    // clean Chrome instance MCP measures.
+    if (!pathname.startsWith("/scenarios")) return;
+    setActiveTab(PATH_TAB[pathname] ?? "Library");
+  }, [pathname]);
   const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
 
   // Track which of the three URL-mapped heavy sub-tabs the user has visited
