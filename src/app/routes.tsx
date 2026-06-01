@@ -28,7 +28,12 @@ import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 // chunk fetches, no Suspense fallback, no commit-ordering races.
 import Dashboard       from "./pages/Dashboard";
 import Portfolio       from "./pages/Portfolio";
-import Scenarios       from "./pages/Scenarios";
+// Scenarios is no longer rendered through the router. It lives persistently
+// inside Layout's <ScenariosShell /> so its mount cost is paid once on first
+// visit and never again, eliminating the unmount-choking-next-page-mount
+// freeze. The /scenarios routes below still need entries so react-router
+// matches the URL (sidebar active state, deep links, browser history) —
+// they render `NoOpRoute` (null) and the actual page comes from Layout.
 import RiskECL         from "./pages/RiskECL";
 import Counterparties  from "./pages/Counterparties";
 import Jurisdictions   from "./pages/Jurisdictions";
@@ -45,6 +50,10 @@ import RateOutlook     from "./pages/RateOutlook";
 // preloadAllPages no longer needed — every page is in the main bundle.
 // Layout's import of this function is now a no-op for back-compat.
 export function preloadAllPages(): void { /* no-op */ }
+
+// Placeholder for routes whose actual rendering happens elsewhere in Layout
+// (currently just Scenarios — see ScenariosShell in Layout.tsx).
+function NoOpRoute() { return null; }
 
 /**
  * Guards the dashboard index route.
@@ -96,11 +105,13 @@ export const router = createBrowserRouter([
           { path: "portfolio/aircraft-mix",     Component: Portfolio },
           { path: "portfolio/performance",      Component: Portfolio },
 
-          // Scenarios
-          { path: "scenarios",                  Component: Scenarios },
-          { path: "scenarios/library",          Component: Scenarios },
-          { path: "scenarios/run",              Component: Scenarios },
-          { path: "scenarios/history",          Component: Scenarios },
+          // Scenarios — see comment at the import block. Routes resolve to
+          // NoOpRoute so react-router matches the URL but renders nothing;
+          // Layout's <ScenariosShell /> handles the actual rendering.
+          { path: "scenarios",                  Component: NoOpRoute },
+          { path: "scenarios/library",          Component: NoOpRoute },
+          { path: "scenarios/run",              Component: NoOpRoute },
+          { path: "scenarios/history",          Component: NoOpRoute },
 
           // Deals
           { path: "deals",                      Component: Deals },

@@ -1,6 +1,6 @@
 // src/app/components/layout/Layout.tsx
 import * as React from "react";
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { SidebarProvider, SidebarInset, useSidebar } from "../ui/sidebar";
 import { AppSidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -9,6 +9,50 @@ import { AgentPanel } from "../agent/AgentPanel";
 import { CurrencyProvider } from "../../contexts/CurrencyContext";
 import { DemoBanner } from "./DemoBanner";
 import { preloadAllPages } from "../../routes";
+import Scenarios from "../../pages/Scenarios";
+
+/**
+ * Renders the Scenarios page persistently after the user first visits it.
+ *
+ * Why: Scenarios is the single component in the app whose mount/unmount cost
+ * exceeds React's synchronous commit budget. When the user navigated away
+ * from Scenarios, the unmount cleanup choked the destination page's mount,
+ * producing the freeze the user reported across many sessions.
+ *
+ * This shell:
+ *   - Lazily mounts Scenarios on first /scenarios/* visit
+ *   - Keeps it mounted forever after — navigating away just toggles
+ *     display:none, no unmount, no cleanup work
+ *   - Returning to Scenarios is instant (already mounted, just shown)
+ *
+ * The /scenarios routes in routes.tsx render a `NoOpRoute` component so the
+ * router still matches them (sidebar active-state highlighting works, deep
+ * links work, browser back/forward works) while leaving the actual content
+ * rendering to this shell.
+ *
+ * Other heavy pages (Dashboard / Portfolio / Deals) are NOT given the same
+ * treatment because their mount cost is already within budget after the
+ * memoisation + activeTab-gating fixes from earlier commits. Memory
+ * footprint stays bounded.
+ */
+function ScenariosShell() {
+  const location = useLocation();
+  const isScenarios =
+    location.pathname === "/scenarios" || location.pathname.startsWith("/scenarios/");
+  const [hasMounted, setHasMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isScenarios && !hasMounted) setHasMounted(true);
+  }, [isScenarios, hasMounted]);
+
+  if (!hasMounted) return null;
+
+  return (
+    <div style={{ display: isScenarios ? "block" : "none" }}>
+      <Scenarios />
+    </div>
+  );
+}
 
 /**
  * Inner layout shell — must live inside both SidebarProvider (to call useSidebar)
@@ -17,6 +61,12 @@ import { preloadAllPages } from "../../routes";
 function LayoutContent() {
   const { isOpen } = useAgent();
   const { setOpen } = useSidebar();
+  const location = useLocation();
+  // When on /scenarios/*, ScenariosShell renders the page; we hide the
+  // Outlet so the route's NoOpRoute component (which renders nothing)
+  // doesn't leave an empty padded block under the Scenarios content.
+  const isScenarios =
+    location.pathname === "/scenarios" || location.pathname.startsWith("/scenarios/");
 
   // No routeKey on the Outlet wrapper. Earlier we forced full unmount/remount
   // on every pathname change to defeat a "URL changes but page doesn't"
@@ -73,14 +123,16 @@ function LayoutContent() {
               }}
             >
               {/*
-                Suspense boundary removed alongside the move from React.lazy
-                to static page imports. Every page component is in memory
-                the moment its route matches, so there is nothing to
-                suspend on. Keeping the boundary here would only invite
-                the Suspense "stale content" throttling behaviour that
-                caused the URL ↔ content desync we just fixed.
+                Scenarios is rendered persistently by <ScenariosShell />
+                below to avoid the unmount-cost freeze. When the user is on
+                a /scenarios/* route, the matched route is `NoOpRoute` which
+                renders null — we hide the Outlet entirely in that case so
+                react-router's empty render doesn't reserve layout space.
               */}
-              <Outlet />
+              <div style={{ display: isScenarios ? "none" : "block" }}>
+                <Outlet />
+              </div>
+              <ScenariosShell />
             </div>
           </main>
 
