@@ -112,7 +112,8 @@ export const router = createBrowserRouter([
           // Layout's <ScenariosShell /> handles the actual rendering.
           { path: "scenarios",                  Component: NoOpRoute },
           { path: "scenarios/library",          Component: NoOpRoute },
-          { path: "scenarios/run",              Component: NoOpRoute },
+          { path: "scenarios/run",              Component: NoOpRoute }, // legacy alias
+          { path: "scenarios/build",            Component: NoOpRoute }, // full-page workspace
           { path: "scenarios/history",          Component: NoOpRoute },
 
           // Deals — persistent shell in Layout

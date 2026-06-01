@@ -26,7 +26,8 @@ import type { ScenarioRunResult } from "../../components/scenarios/RunResultPane
 
 export const PATH_TAB: Record<string, string> = {
   "/scenarios/library": "Library",
-  "/scenarios/run":     "Custom Builder",
+  "/scenarios/run":     "Custom Builder", // legacy alias
+  "/scenarios/build":   "Custom Builder", // full-page workspace route
   "/scenarios/history": "Run History",
 };
 

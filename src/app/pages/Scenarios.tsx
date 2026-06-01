@@ -608,44 +608,53 @@ export default function Scenarios() {
     return narrativeCache.get(runId) as string | null | "loading";
   }
 
+  // Full-page Custom Builder workspace: hide the Scenarios page header
+  // and PillTabs so Custom Builder owns the screen. Layout has already
+  // removed the sidebar and global header for this route.
+  const isBuilderFullPage = pathname === "/scenarios/build";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <PageHeader
-        title="Scenario Engine"
-        subtitle="Run deterministic or Monte Carlo scenarios across your full portfolio"
-      >
-        <button
-          style={BTN_PRIMARY}
-          onClick={() => setActiveTab("Custom Builder")}
-        >
-          <Play size={14} /> New Custom Scenario
-        </button>
-      </PageHeader>
+      {!isBuilderFullPage && (
+        <>
+          <PageHeader
+            title="Scenario Engine"
+            subtitle="Run deterministic or Monte Carlo scenarios across your full portfolio"
+          >
+            <button
+              style={BTN_PRIMARY}
+              onClick={() => setActiveTab("Custom Builder")}
+            >
+              <Play size={14} /> New Custom Scenario
+            </button>
+          </PageHeader>
 
-      {/* ── Tabs ── */}
-      <PillTabs
-        tabs={tabs}
-        activeTab={activeTab}
-        onChange={handleTabChange}
-        style={{ marginTop: "-1.5rem" }}
-        renderTab={(tab, isActive) => (
-          <>
-            {tab}
-            {tab === "Run History" && (
-              <span
-                style={{
-                  fontSize: "0.6875rem", fontWeight: 600,
-                  background: isActive ? "rgba(255,255,255,0.25)" : "#002147",
-                  color: "#FFFFFF",
-                  borderRadius: "0.75rem", padding: "0.1rem 0.4rem",
-                }}
-              >
-                {runs.length}
-              </span>
+          {/* ── Tabs ── */}
+          <PillTabs
+            tabs={tabs}
+            activeTab={activeTab}
+            onChange={handleTabChange}
+            style={{ marginTop: "-1.5rem" }}
+            renderTab={(tab, isActive) => (
+              <>
+                {tab}
+                {tab === "Run History" && (
+                  <span
+                    style={{
+                      fontSize: "0.6875rem", fontWeight: 600,
+                      background: isActive ? "rgba(255,255,255,0.25)" : "#002147",
+                      color: "#FFFFFF",
+                      borderRadius: "0.75rem", padding: "0.1rem 0.4rem",
+                    }}
+                  >
+                    {runs.length}
+                  </span>
+                )}
+              </>
             )}
-          </>
-        )}
-      />
+          />
+        </>
+      )}
 
       {/*
         ══ HEAVY TABS — Library / Custom Builder / Run History ══════════════
