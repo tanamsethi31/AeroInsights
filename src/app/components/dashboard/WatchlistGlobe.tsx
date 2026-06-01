@@ -93,14 +93,17 @@ export function WatchlistGlobe({ entries, onHover }: Props) {
   const rafId     = useRef<number>(0);
   const [hovered, setHovered] = useState<WatchlistStatusEntry | null>(null);
   const [ready,   setReady]   = useState(false);
-  const [size,    setSize]    = useState(340);
+  const [size,    setSize]    = useState(480);
 
   // ── Responsive size ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!wrapperRef.current) return;
     const ro = new ResizeObserver((entries) => {
       const w = entries[0].contentRect.width;
-      setSize(Math.max(260, Math.min(400, w - 32)));
+      // Bumped cap 400 → 560. The globe sits in a half-width card column;
+      // at 400 px it only filled ~58% of its container which looked
+      // undersized on standard widescreen viewports.
+      setSize(Math.max(320, Math.min(560, w - 32)));
     });
     ro.observe(wrapperRef.current);
     return () => ro.disconnect();
