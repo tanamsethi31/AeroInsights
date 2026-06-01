@@ -492,6 +492,15 @@ function Footer() {
               <i className="bi bi-linkedin text-sm" />
             </a>
             <a
+              href="https://github.com/tanamsethi31/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-white/60 transition hover:bg-white/8 hover:text-white"
+              aria-label="GitHub"
+            >
+              <i className="bi bi-github text-sm" />
+            </a>
+            <a
               href={DEMO_LINK}
               target="_blank"
               rel="noopener noreferrer"

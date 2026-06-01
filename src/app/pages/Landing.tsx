@@ -363,7 +363,7 @@ function HeroStarfield() {
 }
 
 /* ─── NAVBAR ───────────────────────────────────────────────────────────────── */
-const CONTACT_MAILTO = "mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Hello";
+const CONTACT_MAILTO = "mailto:sethit@tcd.ie?subject=AeroInsights%20%C2%B7%20Hello";
 const DEMO_LINK = "https://cal.com/tanam-sethi/30min";
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
@@ -672,8 +672,8 @@ function Hero() {
           transition={{ duration: 0.5, delay: 0.16 }}
           className="max-w-2xl text-center text-lg text-gray-600 leading-relaxed"
         >
-          AeroInsights unifies portfolio analytics, scenario modelling, risk &amp; ECL,
-          and AI-powered deal intelligence — purpose-built for aviation finance teams.
+          Portfolio analytics, scenario modelling, risk &amp; ECL, and AI-powered deal
+          intelligence in one platform, purpose-built for aviation finance teams.
         </motion.p>
 
         {/* CTAs */}
@@ -894,13 +894,14 @@ function Adaptability() {
           <FadeIn className="flex flex-col items-center text-center">
             <SectionPill>Adaptable by Design</SectionPill>
             <h2 className="mt-4 max-w-3xl text-3xl font-black tracking-tight text-gray-950 sm:text-4xl leading-[1.1]">
-              Built from scratch — configurable for{" "}
-              <span className="text-[#002147]">every seat at the table</span>
+              Built from scratch. Configurable for{" "}
+              <span className="text-[#002147]">every seat at the table.</span>
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-600">
-              AeroInsights wasn't bolted onto a legacy system. Because every module is purpose-built,
-              the platform can be adapted and configured around the specific workflow of any team
-              — whether on the lessor, financing, advisory, technical, or trading side of the industry.
+              AeroInsights wasn&apos;t bolted onto a legacy system. Because every module is
+              purpose-built, the platform can be adapted and configured around the specific
+              workflow of any team, whether on the lessor, financing, advisory, technical, or
+              trading side of the industry.
             </p>
           </FadeIn>
 
@@ -978,7 +979,7 @@ function SolutionBento() {
             <SectionHeader
               pill="The Solution"
               heading={<>One platform for every lessor workflow</>}
-              sub="From portfolio onboarding to AI-driven deal origination — AeroInsights is the operating system for modern aircraft lessors."
+              sub="From portfolio onboarding to AI-driven deal origination, AeroInsights is the operating system for modern aircraft lessors."
               dark
             />
 
@@ -994,7 +995,7 @@ function SolutionBento() {
               </div>
               <p className="text-lg font-black text-white">Portfolio Analytics</p>
               <p className="mt-1.5 text-sm text-blue-200/65 leading-relaxed">
-                Real-time lease register, LTV monitoring, concentration risk, and fleet-level performance — all in one live dashboard.
+                Real-time lease register, LTV monitoring, concentration risk, and fleet-level performance, all in one live dashboard.
               </p>
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {[
@@ -1055,7 +1056,7 @@ function SolutionBento() {
             </div>
             <p className="font-bold text-white">Excel Add-In</p>
             <p className="text-xs text-blue-200/60 leading-relaxed">
-              Pull live portfolio data directly into Excel — no API wrangling required.
+              Pull live portfolio data directly into Excel. No API wrangling required.
             </p>
             <div className="mt-auto rounded-lg border border-white/8 bg-[#001228] px-3 py-2 font-mono text-[10px] text-blue-300">
               =AI.Portfolio("fleet_size")
@@ -1099,7 +1100,7 @@ function PortfolioMock() {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-xl shadow-[#002147]/10 backdrop-blur-md">
       <div className="border-b border-gray-100 bg-[#002147]/4 px-5 py-3 text-xs font-semibold text-[#002147]/70">
-        Portfolio Overview — Q2 2025
+        Portfolio Overview · Q2 2025
       </div>
       <div className="p-5 space-y-4">
         {[
@@ -1134,13 +1135,13 @@ function IntelligenceMock() {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-xl shadow-[#002147]/10 backdrop-blur-md">
       <div className="border-b border-gray-100 bg-[#002147]/4 px-5 py-3 text-xs font-semibold text-[#002147]/70">
-        AI Intelligence — Lessee Radar
+        AI Intelligence · Lessee Radar
       </div>
       <div className="divide-y divide-gray-100">
         {[
           { name: "AtlanticJet", flag: "🇮🇪", signal: "Covenant breach risk", score: "High", color: "bg-rose-100 text-rose-700" },
           { name: "SkyWave Air", flag: "🇸🇬", signal: "Traffic recovery +18% MoM", score: "Low", color: "bg-emerald-100 text-emerald-700" },
-          { name: "Pacific Wings", flag: "🇯🇵", signal: "Fleet expansion — new RFP", score: "Medium", color: "bg-amber-100 text-amber-700" },
+          { name: "Pacific Wings", flag: "🇯🇵", signal: "Fleet expansion · new RFP", score: "Medium", color: "bg-amber-100 text-amber-700" },
           { name: "NordicFly", flag: "🇸🇪", signal: "CAPA restructuring alert", score: "High", color: "bg-rose-100 text-rose-700" },
         ].map((l) => (
           <div key={l.name} className="flex items-center justify-between px-5 py-3">
@@ -1166,7 +1167,7 @@ const PLATFORM_FEATURES = [
     id: "portfolio",
     pill: "Portfolio Analytics",
     heading: "Complete visibility across your entire fleet",
-    sub: "Live lease register, LTV analytics, maturity profiles, concentration risk heatmaps — all in one place. No more spreadsheets.",
+    sub: "Live lease register, LTV analytics, maturity profiles, and concentration risk heatmaps, all in one place. No more spreadsheets.",
     bullets: [
       "Real-time lease register with XLSX export",
       "LTV & DSC ratio monitoring by aircraft",
@@ -1201,7 +1202,7 @@ function PlatformFeatures() {
         <SectionHeader
           pill="Platform Features"
           heading={<>Everything you need to manage aircraft assets</>}
-          sub="From day-one portfolio setup to sophisticated AI-driven origination — AeroInsights covers the full workflow."
+          sub="From day-one portfolio setup to sophisticated AI-driven origination, AeroInsights covers the full workflow."
         />
 
         <div className="mt-24 flex flex-col gap-28">
@@ -1237,7 +1238,7 @@ function PlatformFeatures() {
                     <i className="bi bi-arrow-right text-xs" />
                   </Link>
                   <a
-                    href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Platform%20enquiry"
+                    href="mailto:sethit@tcd.ie?subject=AeroInsights%20%C2%B7%20Platform%20enquiry"
                     className="flex items-center gap-1.5 rounded-xl border border-[#002147]/20 px-5 py-2.5 text-sm font-semibold text-[#002147] transition-colors hover:bg-[#002147]/5"
                   >
                     Talk to Us
@@ -1308,7 +1309,7 @@ function ExtraFeatures() {
             </Link>
             <span>·</span>
             <a
-              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Talk%20to%20our%20team"
+              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%C2%B7%20Talk%20to%20our%20team"
               className="hover:text-[#002147] hover:underline transition-colors"
             >
               Talk to our team
@@ -1439,7 +1440,7 @@ function Pricing() {
                   </div>
                   {isContact ? (
                     <a
-                      href="mailto:sethit@tcd.ie?subject=AeroInsights%20Enterprise%20%E2%80%94%20Contact"
+                      href="mailto:sethit@tcd.ie?subject=AeroInsights%20Enterprise%20%C2%B7%20Contact"
                       className={cn(
                         "mt-8 block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition",
                         "border border-[#002147]/20 bg-white text-[#002147] hover:bg-[#002147] hover:text-white"
@@ -1469,7 +1470,7 @@ function Pricing() {
         <FadeIn className="mt-8 text-center text-sm text-gray-500">
           Need a custom pilot or have questions?{" "}
           <a
-            href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Custom%20pilot%20enquiry"
+            href="mailto:sethit@tcd.ie?subject=AeroInsights%20%C2%B7%20Custom%20pilot%20enquiry"
             className="font-semibold text-[#002147] hover:underline"
           >
             Contact our team
@@ -1492,7 +1493,7 @@ const TESTIMONIALS = [
     initials: "SL",
     name: "Sarah Lin",
     role: "VP Risk, Air Lease Corporation",
-    quote: "The IFRS 9 ECL module is exactly what our team needed. Staging migration, PD curves, waterfall — all in one auditable workflow. Our auditors love it.",
+    quote: "The IFRS 9 ECL module is exactly what our team needed. Staging migration, PD curves, and waterfall, all in one auditable workflow. Our auditors love it.",
   },
   {
     initials: "RK",
@@ -1561,7 +1562,7 @@ function Testimonials() {
 const FAQS = [
   {
     q: "What types of aircraft lessors does AeroInsights serve?",
-    a: "AeroInsights is designed for commercial aircraft lessors of all sizes — from specialist boutique lessors to the world's largest lessor groups. We support narrowbody, widebody, and regional fleets.",
+    a: "AeroInsights is designed for commercial aircraft lessors of all sizes, from specialist boutique lessors to the world's largest lessor groups. We support narrowbody, widebody, and regional fleets.",
   },
   {
     q: "Is AeroInsights IFRS 9 compliant?",
@@ -1640,7 +1641,7 @@ function FAQ() {
           <p className="text-sm text-gray-500">
             Still have questions?{" "}
             <a
-              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20FAQ%20follow-up"
+              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%C2%B7%20FAQ%20follow-up"
               className="font-semibold text-[#002147] hover:underline"
             >
               We&apos;re here to help.
@@ -1696,7 +1697,7 @@ function CTABanner() {
               <i className="bi bi-arrow-right text-xs" />
             </a>
             <a
-              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%E2%80%94%20Demo%20request"
+              href="mailto:sethit@tcd.ie?subject=AeroInsights%20%C2%B7%20Demo%20request"
               className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3 text-sm font-semibold text-white/85 transition-colors hover:bg-white/14"
             >
               Contact Us
@@ -1732,10 +1733,10 @@ function Contact() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const subject = encodeURIComponent(
-      `AeroInsights — Enquiry from ${form.name || "the website"}${form.firm ? ` (${form.firm})` : ""}`
+      `AeroInsights%20%C2%B7%20Enquiry from ${form.name || "the website"}${form.firm ? ` (${form.firm})` : ""}`
     );
     const body = encodeURIComponent(
-      `Hi,\n\n${form.message}\n\n—\n${form.name}${form.firm ? `\n${form.firm}` : ""}`
+      `Hi,\n\n${form.message}\n\n--\n${form.name}${form.firm ? `\n${form.firm}` : ""}`
     );
     window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
   };
@@ -1744,23 +1745,23 @@ function Contact() {
     {
       icon: "bi-envelope",
       title: "Email",
-      desc: "Reach me directly — usually a reply within a day.",
+      desc: "Reach me directly. Usually a reply within a day.",
       action: CONTACT_EMAIL,
-      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%E2%80%94%20Hello`,
+      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%C2%B7%20Hello`,
     },
     {
       icon: "bi-calendar-check",
       title: "Book a Demo",
-      desc: "Schedule a 30-minute walkthrough — same address.",
+      desc: "Schedule a 30-minute walkthrough at the same address.",
       action: "Request a slot",
-      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%E2%80%94%20Book%20a%20demo&body=Hi%2C%20I%27d%20like%20to%20schedule%20a%2030-minute%20walkthrough.`,
+      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%C2%B7%20Book%20a%20demo&body=Hi%2C%20I%27d%20like%20to%20schedule%20a%2030-minute%20walkthrough.`,
     },
     {
       icon: "bi-chat-square-text",
       title: "Partnerships",
       desc: "Discussing integration, distribution, or co-build.",
       action: "Start a conversation",
-      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%E2%80%94%20Partnership`,
+      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%C2%B7%20Partnership`,
     },
   ];
 
@@ -1770,7 +1771,7 @@ function Contact() {
         <SectionHeader
           pill="Get In Touch"
           heading="Need help or want a demo?"
-          sub="Drop a line — every enquiry goes straight to my inbox and gets a personal reply."
+          sub="Drop a line. Every enquiry goes straight to my inbox and gets a personal reply."
         />
 
         <div className="mt-16 grid gap-6 sm:grid-cols-3">
@@ -1972,16 +1973,41 @@ function Footer() {
             </Link>
             <p className="text-sm text-blue-200/50 leading-relaxed">
               The decision intelligence platform for aircraft lessors. Portfolio analytics,
-              scenario modelling, risk &amp; ECL, and AI-powered deal intelligence — in one place.
+              scenario modelling, risk &amp; ECL, and AI-powered deal intelligence, all in one place.
             </p>
             <div className="flex gap-3 text-white/30">
-              {["bi-linkedin", "bi-twitter-x", "bi-github", "bi-globe"].map((icon) => (
-                <button
-                  key={icon}
+              {[
+                {
+                  icon: "bi-linkedin",
+                  label: "LinkedIn",
+                  href: "https://www.linkedin.com/in/tanam-sethi/",
+                },
+                {
+                  icon: "bi-github",
+                  label: "GitHub",
+                  href: "https://github.com/tanamsethi31/",
+                },
+                {
+                  icon: "bi-envelope",
+                  label: "Email",
+                  href: CONTACT_MAILTO,
+                },
+                {
+                  icon: "bi-calendar-event",
+                  label: "Book a call",
+                  href: DEMO_LINK,
+                },
+              ].map((s) => (
+                <a
+                  key={s.icon}
+                  href={s.href}
+                  target={s.href.startsWith("http") ? "_blank" : undefined}
+                  rel={s.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  aria-label={s.label}
                   className="flex size-8 items-center justify-center rounded-lg border border-white/8 transition hover:bg-white/8 hover:text-white/70"
                 >
-                  <i className={cn("bi text-sm", icon)} />
-                </button>
+                  <i className={cn("bi text-sm", s.icon)} />
+                </a>
               ))}
             </div>
           </div>
