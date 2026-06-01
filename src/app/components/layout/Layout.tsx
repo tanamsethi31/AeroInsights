@@ -53,42 +53,6 @@ function PersistentPage({
   return <div style={{ display: isActive ? "block" : "none" }}>{children}</div>;
 }
 
-/**
- * Minimal top bar shown only in Custom Builder full-page workspace mode.
- * Provides a way back to Scenarios (Library) — without it the user would
- * be stranded because the sidebar is hidden in this mode.
- */
-function BuilderTopBar() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0.75rem 1.25rem",
-        borderBottom: "1px solid #e2e8f0",
-        background: "#ffffff",
-        flexShrink: 0,
-      }}
-    >
-      <a
-        href="/scenarios"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          color: "#0f172a",
-          fontSize: "0.875rem",
-          fontWeight: 500,
-          textDecoration: "none",
-        }}
-      >
-        ← Back to Scenarios
-      </a>
-      <span style={{ fontSize: "0.875rem", color: "#64748b" }}>Custom Scenario Builder</span>
-    </div>
-  );
-}
 
 /**
  * Same as PersistentPage but guards the Dashboard's "no portfolio selected"
@@ -125,13 +89,9 @@ function LayoutContent() {
   const onDeals = p === "/deals" || p.startsWith("/deals/");
   const anyPersistent = onDashboard || onPortfolio || onScenarios || onDeals;
 
-  // Full-page workspace mode: Custom Builder is the heaviest interaction
-  // surface in the app (1570 lines of form). When the user is actively
-  // building a scenario we hide the entire app shell (sidebar + header)
-  // and let Custom Builder own the screen. The persistent ScenariosShell
-  // still renders Custom Builder underneath — Scenarios itself detects
-  // this path and hides its page header + PillTabs.
-  const isBuilderFullPage = p === "/scenarios/build";
+  // (Custom Builder now lives as its own top-level page at /scenarios/build
+  //  rendered through the Outlet — same architecture as RateOutlook. The
+  //  earlier full-page workspace mode is no longer needed.)
 
   // Collapse the sidebar only at the moment the AI panel is opened (false → true).
   // After that the user is free to re-open the sidebar independently.
@@ -144,35 +104,6 @@ function LayoutContent() {
   // preloadAllPages is now a no-op (every page is in the main bundle since
   // we moved away from React.lazy). Left here for any future use.
   React.useEffect(() => { preloadAllPages(); }, []);
-
-  // Full-page Custom Builder workspace: no sidebar, no header, no demo
-  // banner. Just a minimal top bar with a "Back to Scenarios" link and the
-  // persistent Custom Builder content underneath.
-  if (isBuilderFullPage) {
-    return (
-      <main
-        className="flex flex-col overflow-auto bg-[#f8fafc]"
-        style={{ minWidth: 0, height: "100vh" }}
-      >
-        <BuilderTopBar />
-        <div
-          style={{
-            maxWidth: "1400px",
-            width: "100%",
-            margin: "0 auto",
-            padding: "clamp(1rem, 2vw, 1.75rem)",
-            flex: 1,
-          }}
-        >
-          {/* The persistent shells. Only Scenarios is active here. */}
-          <DashboardShell isActive={false} />
-          <PersistentPage isActive={false}><Portfolio /></PersistentPage>
-          <PersistentPage isActive={true}><Scenarios /></PersistentPage>
-          <PersistentPage isActive={false}><Deals /></PersistentPage>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <>

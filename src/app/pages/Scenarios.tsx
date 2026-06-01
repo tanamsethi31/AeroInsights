@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useTabSync } from "../hooks/useTabSync";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { useAgent } from "../contexts/AgentContext";
@@ -96,6 +96,7 @@ import { CustomBuilderTab } from "./scenarios/CustomBuilderTab";
 
 export default function Scenarios() {
   const { pathname, state: locationState } = useLocation();
+  const navigate = useNavigate();
   const { isExecutiveMode } = useViewMode();
   const { pendingInputs, setPendingInputs } = useAgent();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
@@ -608,53 +609,44 @@ export default function Scenarios() {
     return narrativeCache.get(runId) as string | null | "loading";
   }
 
-  // Full-page Custom Builder workspace: hide the Scenarios page header
-  // and PillTabs so Custom Builder owns the screen. Layout has already
-  // removed the sidebar and global header for this route.
-  const isBuilderFullPage = pathname === "/scenarios/build";
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {!isBuilderFullPage && (
-        <>
-          <PageHeader
-            title="Scenario Engine"
-            subtitle="Run deterministic or Monte Carlo scenarios across your full portfolio"
-          >
-            <button
-              style={BTN_PRIMARY}
-              onClick={() => setActiveTab("Custom Builder")}
-            >
-              <Play size={14} /> New Custom Scenario
-            </button>
-          </PageHeader>
+      <PageHeader
+        title="Scenario Engine"
+        subtitle="Run deterministic or Monte Carlo scenarios across your full portfolio"
+      >
+        <button
+          style={BTN_PRIMARY}
+          onClick={() => navigate("/scenarios/build")}
+        >
+          <Play size={14} /> New Custom Scenario
+        </button>
+      </PageHeader>
 
-          {/* ── Tabs ── */}
-          <PillTabs
-            tabs={tabs}
-            activeTab={activeTab}
-            onChange={handleTabChange}
-            style={{ marginTop: "-1.5rem" }}
-            renderTab={(tab, isActive) => (
-              <>
-                {tab}
-                {tab === "Run History" && (
-                  <span
-                    style={{
-                      fontSize: "0.6875rem", fontWeight: 600,
-                      background: isActive ? "rgba(255,255,255,0.25)" : "#002147",
-                      color: "#FFFFFF",
-                      borderRadius: "0.75rem", padding: "0.1rem 0.4rem",
-                    }}
-                  >
-                    {runs.length}
-                  </span>
-                )}
-              </>
+      {/* ── Tabs ── */}
+      <PillTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={handleTabChange}
+        style={{ marginTop: "-1.5rem" }}
+        renderTab={(tab, isActive) => (
+          <>
+            {tab}
+            {tab === "Run History" && (
+              <span
+                style={{
+                  fontSize: "0.6875rem", fontWeight: 600,
+                  background: isActive ? "rgba(255,255,255,0.25)" : "#002147",
+                  color: "#FFFFFF",
+                  borderRadius: "0.75rem", padding: "0.1rem 0.4rem",
+                }}
+              >
+                {runs.length}
+              </span>
             )}
-          />
-        </>
-      )}
+          </>
+        )}
+      />
 
       {/*
         ══ HEAVY TABS — Library / Custom Builder / Run History ══════════════
@@ -682,58 +674,9 @@ export default function Scenarios() {
         />}
       </div>
 
-      {/* ══ CUSTOM BUILDER TAB ═══════════════════════════════════════════════ */}
-      <div style={{ display: activeTab === "Custom Builder" ? "block" : "none" }}>
-        {visitedSubTabs.has("Custom Builder") && <CustomBuilderTab
-          prefillSource={prefillSource}
-          setPrefillSource={setPrefillSource}
-          calBannerDismissed={calBannerDismissed}
-          setCalBannerDismissed={setCalBannerDismissed}
-          customName={customName}
-          setCustomName={setCustomName}
-          formInputs={formInputs}
-          setFormInputs={setFormInputs}
-          updateFormInputs={updateFormInputs}
-          customMode={customMode}
-          setCustomMode={setCustomMode}
-          customPaths={customPaths}
-          setCustomPaths={setCustomPaths}
-          customSeed={customSeed}
-          editorMode={editorMode}
-          setEditorMode={setEditorMode}
-          distressOpen={distressOpen}
-          setDistressOpen={setDistressOpen}
-          insolvencyOpen={insolvencyOpen}
-          setInsolvencyOpen={setInsolvencyOpen}
-          jurisdictionOpen={jurisdictionOpen}
-          setJurisdictionOpen={setJurisdictionOpen}
-          depositOpen={depositOpen}
-          setDepositOpen={setDepositOpen}
-          payBehaviourOpen={payBehaviourOpen}
-          setPayBehaviourOpen={setPayBehaviourOpen}
-          assetRiskOpen={assetRiskOpen}
-          setAssetRiskOpen={setAssetRiskOpen}
-          dslText={dslText}
-          setDslText={setDslText}
-          dslErrors={dslErrors}
-          handleDslChange={handleDslChange}
-          customRunning={customRunning}
-          setCustomRunning={setCustomRunning}
-          customResultId={customResultId}
-          setCustomResultId={setCustomResultId}
-          customResultRef={customResultRef}
-          handleCustomRun={handleCustomRun}
-          liveBaseECL={liveBaseECL}
-          portfolioJurisdictionMix={portfolioJurisdictionMix}
-          portfolioAssetRisk={portfolioAssetRisk}
-          portfolioDepositMix={portfolioDepositMix}
-          portfolioDepositCoverage={portfolioDepositCoverage}
-          portfolioPayBehaviourMix={portfolioPayBehaviourMix}
-          findRun={findRun}
-          getNarrative={getNarrative}
-          onRequestNarrative={handleRequestNarrative}
-        />}
-      </div>
+      {/* Custom Builder is now its OWN route at /scenarios/build. The
+          "Custom Builder" entry in the PillTabs above navigates there
+          via useTabSync; this file no longer renders the form. */}
 
       {/* ══ RUN HISTORY TAB ══════════════════════════════════════════════════ */}
       <div style={{ display: activeTab === "Run History" ? "block" : "none" }}>

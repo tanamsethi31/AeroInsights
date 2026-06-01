@@ -33,6 +33,7 @@ import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 // resolve to NoOpRoute so react-router still matches the URL (sidebar
 // active state, deep links, browser history all keep working) while the
 // actual rendering happens in Layout. See Layout.tsx for the pattern.
+import CustomBuilderPage from "./pages/CustomBuilderPage";
 import RiskECL         from "./pages/RiskECL";
 import Counterparties  from "./pages/Counterparties";
 import Jurisdictions   from "./pages/Jurisdictions";
@@ -112,9 +113,14 @@ export const router = createBrowserRouter([
           // Layout's <ScenariosShell /> handles the actual rendering.
           { path: "scenarios",                  Component: NoOpRoute },
           { path: "scenarios/library",          Component: NoOpRoute },
-          { path: "scenarios/run",              Component: NoOpRoute }, // legacy alias
-          { path: "scenarios/build",            Component: NoOpRoute }, // full-page workspace
           { path: "scenarios/history",          Component: NoOpRoute },
+          // Custom Builder is its OWN page — same Outlet-rendered style as
+          // RateOutlook. NOT part of the persistent Scenarios shell. Each
+          // visit creates a fresh mount, leaving is a normal unmount. The
+          // form state survives via localStorage; clone-from-Library or
+          // clone-from-RunHistory are bridged via sessionStorage.
+          { path: "scenarios/build",            Component: CustomBuilderPage },
+          { path: "scenarios/run",              Component: CustomBuilderPage }, // legacy alias
 
           // Deals — persistent shell in Layout
           { path: "deals",                      Component: NoOpRoute },
