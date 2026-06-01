@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useTabSync } from "../hooks/useTabSync";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { useAgent } from "../contexts/AgentContext";
@@ -558,12 +558,17 @@ export default function Scenarios() {
   }, [clonePending, customSeed]);
 
   // Derive template inputs for a run (custom runs fall back to ZERO_INPUTS)
-  function getRunInputs(run: ScenarioRunResult): ScenarioInputs {
-    if (run.templateId) {
-      return templateById.get(run.templateId)?.inputs ?? ZERO_INPUTS;
-    }
-    return ZERO_INPUTS;
-  }
+  // useCallback so the memoised RunHistoryTab's shallow prop check passes
+  // on cross-page nav re-renders.
+  const getRunInputs = useCallback(
+    (run: ScenarioRunResult): ScenarioInputs => {
+      if (run.templateId) {
+        return templateById.get(run.templateId)?.inputs ?? ZERO_INPUTS;
+      }
+      return ZERO_INPUTS;
+    },
+    [templateById],
+  );
 
   // ── Run History state ──
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
@@ -579,7 +584,11 @@ export default function Scenarios() {
   }, []);
 
   // ── Result lookup ──
-  const findRun = (id: string) => runs.find((r) => r.id === id);
+  // CRITICAL: must be useCallback. LibraryTab and RunHistoryTab are
+  // wrapped in React.memo; if findRun is a fresh function ref on every
+  // render they re-render too, defeating the memo and producing the
+  // freeze the user reports on cross-page nav.
+  const findRun = useCallback((id: string) => runs.find((r) => r.id === id), [runs]);
 
   // ── Narrative cache ──
   const [narrativeCache, setNarrativeCache] = useState<Map<string, string | null | "loading">>(
@@ -608,10 +617,17 @@ export default function Scenarios() {
 
   // ─────────────────────────────────────────────────────────────────────────────
 
-  function getNarrative(runId: string): string | null | "loading" {
-    if (!narrativeCache.has(runId)) return "loading";
-    return narrativeCache.get(runId) as string | null | "loading";
-  }
+  // useCallback for the same reason as findRun above — passed into the
+  // memoised LibraryTab and RunHistoryTab. A function declaration here
+  // would produce a fresh reference on every Scenarios render and defeat
+  // their React.memo shallow equality check.
+  const getNarrative = useCallback(
+    (runId: string): string | null | "loading" => {
+      if (!narrativeCache.has(runId)) return "loading";
+      return narrativeCache.get(runId) as string | null | "loading";
+    },
+    [narrativeCache],
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -619,12 +635,25 @@ export default function Scenarios() {
         title="Scenario Engine"
         subtitle="Run deterministic or Monte Carlo scenarios across your full portfolio"
       >
-        <button
-          style={BTN_PRIMARY}
-          onClick={() => navigate("/build")}
+        {/* Use Link instead of a button + manual navigate so the browser
+            treats this exactly like a sidebar click — react-router's Link
+            component handles the location update + Outlet swap synchronously
+            with React's commit phase. Manually calling navigate() inside an
+            onClick handler from a component that is itself a child of the
+            persistent ScenariosShell occasionally lost the Outlet swap on
+            the user's machine (URL updated, content stayed). */}
+        <Link
+          to="/build"
+          style={{
+            ...BTN_PRIMARY,
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.4rem",
+          }}
         >
           <Play size={14} /> New Custom Scenario
-        </button>
+        </Link>
       </PageHeader>
 
       {/* ── Tabs ── */}
