@@ -14,7 +14,7 @@
 //   ScenarioRunResult shape that bundles everything together. The hook
 //   bridges both directions so callers never touch snake_case.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
@@ -215,12 +215,19 @@ export function useScenarioRuns(): UseScenarioRunsResult {
     return rowToResult(newRow, codeToUuid);
   }, [orgId, activePortfolioId, rows]);
 
-  // Build (uuid → run_code) lookup once per fetch so parent translation is O(1).
-  const codeToUuid = new Map<string, string>();
-  for (const r of rows) codeToUuid.set(r.id, r.run_code);
+  // CRITICAL: must be useMemo. Without it `rows.map(...)` returned a fresh
+  // array reference on every hook call, which cascaded through any consumer
+  // that puts `runs` in a useMemo/useEffect dep array (Scenarios.tsx,
+  // CustomBuilderPage.tsx) → infinite render loop. Same bug class as the
+  // useStressScenarios freeze fix.
+  const runs = useMemo(() => {
+    const codeToUuid = new Map<string, string>();
+    for (const r of rows) codeToUuid.set(r.id, r.run_code);
+    return rows.map((r) => rowToResult(r, codeToUuid));
+  }, [rows]);
 
   return {
-    runs:        rows.map((r) => rowToResult(r, codeToUuid)),
+    runs,
     loading,
     error,
     insertRun,

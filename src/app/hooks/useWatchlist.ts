@@ -1,7 +1,7 @@
 // src/app/hooks/useWatchlist.ts
 // T-5.3 — Reads watchlist_entries for the active portfolio.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
@@ -77,6 +77,12 @@ export function useWatchlist(): UseWatchlistResult {
 
   useEffect(() => { void fetchOnce(); }, [fetchOnce]);
 
-  const byLesseeId = new Map(entries.map((e) => [e.lesseeId, e]));
+  // CRITICAL: must be useMemo. Fresh Map ref every call → consumers using it
+  // in deps re-run on every parent render. Same bug class as useStressScenarios.
+  const byLesseeId = useMemo(
+    () => new Map(entries.map((e) => [e.lesseeId, e])),
+    [entries],
+  );
+
   return { entries, byLesseeId, loading, error, refetch: fetchOnce };
 }

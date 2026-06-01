@@ -20,7 +20,7 @@
 // LeasePricingTab + RestructuringTab + reportGenerators without any of
 // those consumers needing to know about the DB at all.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
 import { usePortfolio } from "../contexts/PortfolioContext";
@@ -178,8 +178,19 @@ export function useJurisdictions(): UseJurisdictionsResult {
 
   useEffect(() => { fetchOnce(); }, [fetchOnce]);
 
+  // CRITICAL: must be useMemo. Without it `mergeJurisdictions(...)` returned
+  // a fresh array reference on every hook call, which cascaded through every
+  // consumer that uses `jurisdictions` in a useMemo dep
+  // (Scenarios.tsx → computePortfolioJurisdictionMix, CustomBuilderPage.tsx,
+  // RiskECL.tsx, JurisdictionRiskTab, RestructuringTab) → re-render loop.
+  // Same bug class as the useStressScenarios freeze fix.
+  const jurisdictions = useMemo(
+    () => mergeJurisdictions(HARDCODED_JURISDICTIONS, dbRows),
+    [dbRows],
+  );
+
   return {
-    jurisdictions: mergeJurisdictions(HARDCODED_JURISDICTIONS, dbRows),
+    jurisdictions,
     dbRows,
     hasIngested: dbRows.length > 0,
     loading,
