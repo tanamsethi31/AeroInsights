@@ -28,10 +28,7 @@ import ExcelAddinDocs from "./pages/ExcelAddinDocs";
 // chunk fetches, no Suspense fallback, no commit-ordering races.
 import Dashboard       from "./pages/Dashboard";
 import Portfolio       from "./pages/Portfolio";
-import LibraryPage         from "./pages/scenarios/LibraryPage";
-import CustomBuilderPage   from "./pages/scenarios/CustomBuilderPage";
-import RunHistoryPage      from "./pages/scenarios/RunHistoryPage";
-import CalibrationToolsPage from "./pages/scenarios/CalibrationToolsPage";
+import Scenarios       from "./pages/Scenarios";
 import RiskECL         from "./pages/RiskECL";
 import Counterparties  from "./pages/Counterparties";
 import Jurisdictions   from "./pages/Jurisdictions";
@@ -99,16 +96,11 @@ export const router = createBrowserRouter([
           { path: "portfolio/aircraft-mix",     Component: Portfolio },
           { path: "portfolio/performance",      Component: Portfolio },
 
-          // Scenarios — split into 4 independent pages (commit: stop the
-          // monolithic Scenarios.tsx from choking the next-page mount when
-          // the user leaves Scenarios). Shared state lives in
-          // ScenariosProvider mounted in Layout.
-          { path: "scenarios",          Component: LibraryPage         },
-          { path: "scenarios/library",  Component: LibraryPage         },
-          { path: "scenarios/build",    Component: CustomBuilderPage   },
-          { path: "scenarios/run",      Component: CustomBuilderPage   }, // legacy alias
-          { path: "scenarios/history",  Component: RunHistoryPage      },
-          { path: "scenarios/tools",    Component: CalibrationToolsPage },
+          // Scenarios
+          { path: "scenarios",                  Component: Scenarios },
+          { path: "scenarios/library",          Component: Scenarios },
+          { path: "scenarios/run",              Component: Scenarios },
+          { path: "scenarios/history",          Component: Scenarios },
 
           // Deals
           { path: "deals",                      Component: Deals },
