@@ -455,7 +455,6 @@ function Navbar() {
                 key={l.label}
                 href={l.href}
                 onClick={(e) => {
-                  if (l.external) return; // mailto / external — let browser handle
                   e.preventDefault();
                   document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
                 }}
