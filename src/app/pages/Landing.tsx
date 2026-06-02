@@ -474,8 +474,9 @@ function Navbar() {
                 href={DEMO_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg border border-[#002147]/20 px-4 py-2 text-sm font-medium text-[#002147] transition-colors hover:bg-[#002147]/5"
+                className="flex items-center gap-1.5 rounded-lg border border-[#002147]/20 px-4 py-2 text-sm font-medium text-[#002147] transition-colors hover:bg-[#002147]/5"
               >
+                <i className="bi bi-calendar-event text-xs" />
                 Book a Demo
               </a>
               <a
@@ -503,6 +504,7 @@ function Navbar() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
               >
+                <i className="bi bi-calendar-event text-xs" />
                 Book a Demo
                 <i className="bi bi-arrow-right text-xs" />
               </a>
@@ -558,8 +560,9 @@ function Navbar() {
               </Link>
               <a
                 href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
-                className="rounded-lg bg-[#002147] px-4 py-2 text-center text-sm font-semibold text-white"
+                className="flex items-center justify-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-center text-sm font-semibold text-white"
               >
+                <i className="bi bi-calendar-event text-xs" />
                 Book a Demo
               </a>
             </div>
@@ -782,6 +785,7 @@ function Hero() {
             href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
           >
+            <i className="bi bi-calendar-event text-sm" />
             Book a Demo
             <i className="bi bi-arrow-right text-xs" />
           </a>
@@ -1884,6 +1888,7 @@ function CTABanner() {
               href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-[#002147] shadow-lg shadow-black/25 transition-colors hover:bg-blue-50"
             >
+              <i className="bi bi-calendar-event text-sm" />
               Book a Demo
               <i className="bi bi-arrow-right text-xs" />
             </a>

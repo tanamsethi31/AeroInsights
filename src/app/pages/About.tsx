@@ -147,6 +147,7 @@ function Navbar() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
           >
+            <i className="bi bi-calendar-event text-xs" />
             Book a Demo
             <i className="bi bi-arrow-right text-xs" />
           </a>
