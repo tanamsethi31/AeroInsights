@@ -410,7 +410,8 @@ const NAV_LINKS = [
   { label: "Platform", href: "#platform" },
   { label: "Pricing", href: "#pricing" },
   { label: "About", href: "/about", route: true as const },
-  { label: "Contact", href: CONTACT_MAILTO, external: true as const },
+  // Contact scrolls to the in-page "Get In Touch" section (id="contact").
+  { label: "Contact", href: "#contact" },
 ];
 
 function Navbar() {
