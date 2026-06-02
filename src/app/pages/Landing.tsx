@@ -916,10 +916,17 @@ function Stats() {
 /* ─── SOLUTION BENTO (saas-magicui style) ───────────────────────────────────── */
 function BentoCard({
   className,
+  contentClassName,
   delay = 0,
   children,
 }: {
+  /** Outer-card classes: grid placement (col-span / row-span), padding override, etc. */
   className?: string;
+  /** Inner-content layout: flex / grid / items-* / gap-* / justify-* etc.
+   *  Must go on the inner wrapper because the hover-glow overlay forces a
+   *  single inner block child — flex set on the outer card never reaches
+   *  the actual content. */
+  contentClassName?: string;
   delay?: number;
   children: React.ReactNode;
 }) {
@@ -947,7 +954,9 @@ function BentoCard({
             "radial-gradient(420px circle at 30% 0%, rgba(91,143,216,0.10), transparent 60%)",
         }}
       />
-      <div className="relative">{children}</div>
+      {/* h-full so flex/grid layouts on the inner can vertically distribute
+          inside the card's fixed-height grid cell. */}
+      <div className={cn("relative h-full", contentClassName)}>{children}</div>
     </motion.div>
   );
 }
@@ -1084,7 +1093,11 @@ function SolutionBento() {
           style={{ gridAutoRows: "190px" }}
         >
           {/* Large card — portfolio analytics */}
-          <BentoCard className="md:col-span-2 md:row-span-2 flex flex-col justify-between p-7" delay={0}>
+          <BentoCard
+            className="md:col-span-2 md:row-span-2 p-7"
+            contentClassName="flex flex-col justify-between"
+            delay={0}
+          >
             <div>
               <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-[#002147]">
                 <i className="bi bi-bar-chart-fill text-lg text-white" />
@@ -1110,7 +1123,7 @@ function SolutionBento() {
           </BentoCard>
 
           {/* IFRS 9 */}
-          <BentoCard delay={0.08} className="flex flex-col gap-3">
+          <BentoCard delay={0.08} contentClassName="flex flex-col gap-3">
             <div className="flex size-9 items-center justify-center rounded-xl bg-[#002147]">
               <i className="bi bi-shield-check text-base text-white" />
             </div>
@@ -1125,7 +1138,7 @@ function SolutionBento() {
           </BentoCard>
 
           {/* AI Intelligence */}
-          <BentoCard delay={0.14} className="flex flex-col gap-3">
+          <BentoCard delay={0.14} contentClassName="flex flex-col gap-3">
             <div className="flex size-9 items-center justify-center rounded-xl bg-[#002147]">
               <i className="bi bi-stars text-base text-white" />
             </div>
@@ -1146,7 +1159,7 @@ function SolutionBento() {
           </BentoCard>
 
           {/* Excel integration */}
-          <BentoCard delay={0.2} className="flex flex-col gap-3">
+          <BentoCard delay={0.2} contentClassName="flex flex-col gap-3">
             <div className="flex size-9 items-center justify-center rounded-xl bg-[#002147]">
               <i className="bi bi-file-earmark-spreadsheet text-base text-white" />
             </div>
@@ -1159,26 +1172,30 @@ function SolutionBento() {
             </div>
           </BentoCard>
 
-          {/* Scenario engine — wide */}
-          <BentoCard delay={0.26} className="md:col-span-2 flex items-center gap-6">
-            <div className="flex-1">
-              <div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-[#002147]">
+          {/* Scenario engine — wide, two-column inside */}
+          <BentoCard
+            delay={0.26}
+            className="md:col-span-2"
+            contentClassName="flex items-center gap-6"
+          >
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="mb-3 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#002147]">
                 <i className="bi bi-sliders text-base text-white" />
               </div>
               <p className="font-bold text-white">Scenario Engine</p>
-              <p className="mt-1.5 text-xs text-blue-200/60 leading-relaxed">
+              <p className="mt-1.5 text-xs leading-relaxed text-blue-200/60">
                 Model base, stress, and upside scenarios across your full portfolio in one click. IFRS 9 aligned, regulatory-ready.
               </p>
             </div>
-            <div className="hidden shrink-0 flex-col gap-2 sm:flex">
+            <div className="hidden shrink-0 flex-col gap-1.5 sm:flex">
               {[
                 { label: "Base", val: "$2.41B", color: "text-emerald-400" },
                 { label: "Stress", val: "$1.87B", color: "text-amber-400" },
                 { label: "Upside", val: "$2.74B", color: "text-blue-400" },
               ].map((sc) => (
-                <div key={sc.label} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/5 px-4 py-2">
-                  <span className="text-[10px] text-white/45 w-12">{sc.label}</span>
-                  <span className={cn("text-sm font-bold", sc.color)}>{sc.val}</span>
+                <div key={sc.label} className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-1.5">
+                  <span className="w-10 text-[10px] text-white/45">{sc.label}</span>
+                  <span className={cn("text-xs font-bold", sc.color)}>{sc.val}</span>
                 </div>
               ))}
             </div>
