@@ -117,16 +117,27 @@ function buildSmoothStops(from: string, to: string): [string, string, string, st
 }
 
 /* ─── shared sub-components ────────────────────────────────────────────────── */
-function SectionPill({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
+function SectionPill({
+  children,
+  dark = false,
+  className,
+}: {
+  children: React.ReactNode;
+  dark?: boolean;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
-        // `w-fit` + `self-start` prevent the pill from being stretched by a
-        // flex-col parent's default `align-items: stretch`.
-        "inline-flex w-fit max-w-fit self-start items-center rounded-full border px-3.5 py-1 text-xs font-semibold tracking-wide whitespace-nowrap",
+        // `w-fit` keeps width to content. Alignment is owned by the parent
+        // (so SectionHeader's `items-center` actually centres the pill).
+        // Pass `self-start` via `className` where the pill needs to hug left
+        // inside a stretch-default flex-col (e.g. PlatformFeatures side card).
+        "inline-flex w-fit max-w-fit items-center whitespace-nowrap rounded-full border px-3.5 py-1 text-xs font-semibold tracking-wide",
         dark
           ? "border-white/15 bg-white/8 text-blue-300"
-          : "border-[#002147]/20 bg-[#002147]/5 text-[#002147]"
+          : "border-[#002147]/20 bg-[#002147]/5 text-[#002147]",
+        className
       )}
     >
       {children}
@@ -732,15 +743,17 @@ function Hero() {
 
 /* ─── LOGO MARQUEE — revolving rail of demo partners ───────────────────────── */
 const PARTNER_LOGOS: { name: string; src: string; h?: number }[] = [
-  { name: "Aerfin",                   src: "/logos/aerfin.png",         h: 44 },
-  { name: "Grant Thornton",           src: "/logos/grant-thornton.png", h: 48 },
-  { name: "ELFC",                     src: "/logos/elfc.png",           h: 40 },
-  { name: "KPMG",                     src: "/logos/kpmg.png",           h: 38 },
-  { name: "TGIS Aviation",            src: "/logos/tgis.webp",          h: 44 },
-  { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",         h: 38 },
-  { name: "Skyworks",                 src: "/logos/skyworks.png",       h: 40 },
-  { name: "EY",                       src: "/logos/ey.png",             h: 48 },
-  { name: "Cloudcards",               src: "/logos/cloudcards.png",     h: 36 },
+  // Per-brand heights tuned so visual weights match across the rail. The
+  // logos with very thin lockups (tgis, aerfin, skyworks) get extra height.
+  { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 60 },
+  { name: "Grant Thornton",           src: "/logos/grant-thornton.webp", h: 48 },
+  { name: "ELFC",                     src: "/logos/elfc.png",            h: 40 },
+  { name: "KPMG",                     src: "/logos/kpmg.webp",           h: 38 },
+  { name: "TGIS Aviation",            src: "/logos/tgis.webp",           h: 64 },
+  { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",          h: 38 },
+  { name: "Skyworks",                 src: "/logos/skyworks.webp",       h: 58 },
+  { name: "EY",                       src: "/logos/ey.webp",             h: 48 },
+  { name: "Cloudcards",               src: "/logos/cloudcards.png",      h: 36 },
 ];
 
 function LogoMarquee() {
@@ -769,7 +782,7 @@ function LogoMarquee() {
           {rail.map((logo, i) => (
             <div
               key={`${logo.name}-${i}`}
-              className="flex h-14 shrink-0 items-center justify-center px-2"
+              className="flex h-20 shrink-0 items-center justify-center px-2"
               aria-hidden={i >= PARTNER_LOGOS.length}
             >
               <img
@@ -1239,7 +1252,7 @@ function PlatformFeatures() {
             >
               <FadeIn className="flex-1">{feat.mock}</FadeIn>
               <FadeIn delay={0.1} className="flex flex-1 flex-col gap-5">
-                <SectionPill>{feat.pill}</SectionPill>
+                <SectionPill className="self-start">{feat.pill}</SectionPill>
                 <h3 className="text-3xl font-black tracking-tight text-gray-950 leading-tight">
                   {feat.heading}
                 </h3>
