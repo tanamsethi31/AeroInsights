@@ -488,7 +488,7 @@ function Footer() {
                 target={s.external ? "_blank" : undefined}
                 rel={s.external ? "noopener noreferrer" : undefined}
                 aria-label={s.label}
-                className="flex size-9 items-center justify-center rounded-lg border border-[#002147]/12 bg-white/60 text-gray-500 backdrop-blur-sm transition hover:border-[#002147]/30 hover:bg-white hover:text-[#002147]"
+                className="flex size-9 items-center justify-center rounded-lg border border-[#002147]/18 bg-white/75 text-gray-700 backdrop-blur-sm transition hover:border-[#002147]/35 hover:bg-white hover:text-[#002147]"
               >
                 <i className={cn("bi text-sm", s.icon)} />
               </a>

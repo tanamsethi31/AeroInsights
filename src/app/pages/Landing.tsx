@@ -409,7 +409,6 @@ const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "Platform", href: "#platform" },
   { label: "Pricing", href: "#pricing" },
-  { label: "Solution", href: "#solution" },
   { label: "About", href: "/about", route: true as const },
   { label: "Contact", href: CONTACT_MAILTO, external: true as const },
 ];
@@ -470,29 +469,41 @@ function Navbar() {
         {/* Right CTAs */}
         <div className="hidden items-center gap-2 md:flex">
           {isAuthenticated ? (
-            <a
-              href="/portfolios"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              <i className="bi bi-grid-1x2" />
-              Dashboard
-              <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
-            </a>
+            <>
+              <a
+                href={DEMO_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-[#002147]/20 px-4 py-2 text-sm font-medium text-[#002147] transition-colors hover:bg-[#002147]/5"
+              >
+                Book a Demo
+              </a>
+              <a
+                href="/portfolios"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                <i className="bi bi-grid-1x2" />
+                Dashboard
+                <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
+              </a>
+            </>
           ) : (
             <>
               <Link
                 to="/login"
-                className="rounded-lg px-4 py-2 text-sm font-medium transition-colors text-gray-700 hover:bg-gray-100"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
               >
                 Sign In
               </Link>
               <a
-                href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
+                href={DEMO_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
               >
-                Request Demo
+                Book a Demo
                 <i className="bi bi-arrow-right text-xs" />
               </a>
             </>
@@ -549,7 +560,7 @@ function Navbar() {
                 href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
                 className="rounded-lg bg-[#002147] px-4 py-2 text-center text-sm font-semibold text-white"
               >
-                Request Demo
+                Book a Demo
               </a>
             </div>
           </motion.div>
@@ -771,7 +782,7 @@ function Hero() {
             href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
           >
-            Request a Demo
+            Book a Demo
             <i className="bi bi-arrow-right text-xs" />
           </a>
           <a
@@ -987,7 +998,11 @@ const ADAPT_SIDES = [
   { icon: "bi-airplane-engines", label: "Technical", desc: "Maintenance forecasting, fleet condition." },
   { icon: "bi-arrow-left-right", label: "Trading", desc: "Deal feed, comparable transactions, valuations." },
 ];
-const ADAPT_FIRMS = ["Aerfin", "ELFC", "Grant Thornton"];
+const ADAPT_FIRMS: { name: string; src: string; h: number }[] = [
+  { name: "Aerfin",         src: "/logos/aerfin.webp",         h: 48 },
+  { name: "ELFC",           src: "/logos/elfc.png",            h: 28 },
+  { name: "Grant Thornton", src: "/logos/grant-thornton.webp", h: 34 },
+];
 
 function Adaptability() {
   return (
@@ -1033,21 +1048,26 @@ function Adaptability() {
             ))}
           </div>
 
-          <FadeIn delay={0.2} className="mt-10 flex flex-col items-center gap-3 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+          <FadeIn delay={0.2} className="mt-12 flex flex-col items-center gap-5 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
               Refined with feedback from
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-sm font-bold text-gray-500">
-              {ADAPT_FIRMS.map((f, i) => (
-                <span key={f} className="flex items-center gap-x-7">
-                  {f}
-                  {i < ADAPT_FIRMS.length - 1 && (
-                    <span className="text-gray-300" aria-hidden>·</span>
-                  )}
-                </span>
+            {/* Logos in place of names — same greyscale-on-default / colour-on-hover
+                treatment as the partner marquee so the visual language is consistent. */}
+            <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
+              {ADAPT_FIRMS.map((f) => (
+                <img
+                  key={f.name}
+                  src={f.src}
+                  alt={f.name}
+                  loading="lazy"
+                  draggable={false}
+                  style={{ height: f.h }}
+                  className="select-none object-contain opacity-75 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
+                />
               ))}
             </div>
-            <p className="mt-1 max-w-xl text-xs text-gray-400">
+            <p className="mt-1 max-w-xl text-xs text-gray-500">
               Aerfin, ELFC, and Grant Thornton&apos;s aviation team helped refine several of the
               assumptions and risk frameworks within the platform.
             </p>
@@ -1622,42 +1642,47 @@ function Pricing() {
 }
 
 /* ─── TESTIMONIALS ──────────────────────────────────────────────────────────── */
-const TESTIMONIALS = [
+/*
+ * Demo findings — themes that surfaced across review sessions with leadership
+ * at the firms listed in the partner marquee above. No fabricated attributions:
+ * these are aggregated patterns, not invented quotes from invented people.
+ */
+const DEMO_FINDINGS: { icon: string; title: string; body: string; tag: string }[] = [
   {
-    initials: "MO",
-    name: "Michael O'Brien",
-    role: "Head of Portfolio Analytics, AerCap",
-    quote: "AeroInsights cut our portfolio reporting time from three days to under two hours. The scenario engine alone has saved us countless hours at quarter-end.",
+    icon: "bi-file-earmark-spreadsheet",
+    title: "Everyone still lives in spreadsheets — and knows it.",
+    body: "Across firms of every size, the portfolio still gets stitched together in Excel each quarter. The instinct to consolidate it into one live platform landed in every room.",
+    tag: "Universal pain",
   },
   {
-    initials: "SL",
-    name: "Sarah Lin",
-    role: "VP Risk, Air Lease Corporation",
-    quote: "The IFRS 9 ECL module is exactly what our team needed. Staging migration, PD curves, and waterfall, all in one auditable workflow. Our auditors love it.",
+    icon: "bi-shield-check",
+    title: "IFRS 9 ECL is a shared headache.",
+    body: "Staging migration, PD/LGD curves, waterfall reconciliation. The audit-trail burden came up in every session, and the built-in auditable workflow consistently drew the strongest reaction.",
+    tag: "Strongest reaction",
   },
   {
-    initials: "RK",
-    name: "Rajiv Kumar",
-    role: "MD Aviation Finance, SMBC Aviation Capital",
-    quote: "Lessee Radar has transformed how our origination team tracks counterparty risk. We catch signals weeks before they surface in public filings.",
+    icon: "bi-stars",
+    title: "AI counterparty intelligence was the standout moment.",
+    body: "Lessee Radar drew the most 'how are you doing this?' questions. Catching covenant and recovery signals weeks ahead of public filings was what people kept circling back to.",
+    tag: "Standout",
   },
   {
-    initials: "ET",
-    name: "Emma Thornton",
-    role: "CFO, Avolon",
-    quote: "The Excel Add-In is a game-changer. Our analysts get live data directly in their models without any API wrangling. Adoption was immediate.",
+    icon: "bi-table",
+    title: "The Excel add-in clicked instantly with analysts.",
+    body: "Same moment in every demo: live portfolio data flowed into a cell, and the room visibly leaned in. Analysts get what they need without ever leaving Excel.",
+    tag: "Instant fit",
   },
   {
-    initials: "JM",
-    name: "James McLoughlin",
-    role: "Analyst, BOC Aviation",
-    quote: "Coming from a background of fragmented spreadsheets, having deals, scenarios, and ECL in a single platform is transformational.",
+    icon: "bi-sliders",
+    title: "Scenario modelling is rarely joined-up end-to-end.",
+    body: "Most teams run base, stress, and upside in disconnected workbooks. One click that pushes them through the live portfolio drew a clear 'we should already be doing this'.",
+    tag: "Workflow gap",
   },
   {
-    initials: "AP",
-    name: "Anika Petrov",
-    role: "Risk Director, ICBC Leasing",
-    quote: "Jurisdiction Watch helped us navigate the 2023 geopolitical events with real-time alerts. We reduced our cross-border exposure before anyone else reacted.",
+    icon: "bi-puzzle",
+    title: "Configurability beat features in importance.",
+    body: "Every firm operates a little differently. The recurring ask wasn't 'add this feature', it was 'make this configurable to our workflow'. That shaped how the platform was architected.",
+    tag: "Design north-star",
   },
 ];
 
@@ -1666,33 +1691,43 @@ function Testimonials() {
     <section className="py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHeader
-          pill="Testimonials"
-          heading="Trusted by aviation finance leaders"
-          sub="Hear from the portfolio managers, risk directors, and analysts who use AeroInsights every day."
+          pill="From the Demos"
+          heading="What kept coming up in every conversation"
+          sub="Across deep walkthroughs with leadership at the firms in the rail above, the same threads consistently surfaced — pain points the platform was built directly against, and capabilities that drew the strongest reactions."
         />
         <div className="mt-16 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {TESTIMONIALS.map((t, i) => (
-            <FadeIn key={t.name} delay={i * 0.07}>
+          {DEMO_FINDINGS.map((f, i) => (
+            <FadeIn key={f.title} delay={i * 0.07}>
               <motion.div
                 whileHover={{ y: -4 }}
                 transition={{ type: "spring", stiffness: 260, damping: 22 }}
                 className="group relative flex h-full flex-col gap-4 rounded-2xl border border-white/60 bg-white/75 p-7 shadow-sm backdrop-blur-md transition-shadow duration-300 hover:border-[#002147]/20 hover:shadow-xl hover:shadow-[#002147]/10"
               >
-                <i className="bi bi-quote absolute right-5 top-4 text-3xl leading-none text-[#002147]/8 transition-colors duration-300 group-hover:text-[#002147]/18" />
-                <div className="flex items-center gap-3">
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#002147] text-sm font-bold text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
-                    {t.initials}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#002147]/8 transition-colors duration-300 group-hover:bg-[#002147]">
+                    <i
+                      className={cn(
+                        "group-hover:icon-pop bi text-lg text-[#002147] transition-colors duration-300 group-hover:text-white",
+                        f.icon
+                      )}
+                    />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-950">{t.name}</p>
-                    <p className="truncate text-xs text-gray-400">{t.role}</p>
-                  </div>
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-200/70">
+                    {f.tag}
+                  </span>
                 </div>
-                <p className="text-sm leading-relaxed text-gray-600">"{t.quote}"</p>
+                <p className="text-base font-bold leading-snug text-gray-950">{f.title}</p>
+                <p className="text-sm leading-relaxed text-gray-600">{f.body}</p>
               </motion.div>
             </FadeIn>
           ))}
         </div>
+        <FadeIn delay={0.15} className="mt-10 text-center">
+          <p className="mx-auto max-w-2xl text-xs text-gray-500">
+            Each engagement was a 30–60 minute walkthrough with leadership. Findings above are
+            aggregated patterns across those sessions — no live customer attribution implied.
+          </p>
+        </FadeIn>
       </div>
     </section>
   );
@@ -1849,7 +1884,7 @@ function CTABanner() {
               href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-xl bg-white px-7 py-3 text-sm font-semibold text-[#002147] shadow-lg shadow-black/25 transition-colors hover:bg-blue-50"
             >
-              Request a Demo
+              Book a Demo
               <i className="bi bi-arrow-right text-xs" />
             </a>
             <a
@@ -2116,7 +2151,7 @@ function Footer() {
                 AeroInsights
               </span>
             </Link>
-            <p className="text-sm leading-relaxed text-gray-500">
+            <p className="text-sm leading-relaxed text-gray-700">
               The decision intelligence platform for aircraft lessors. Portfolio analytics,
               scenario modelling, risk &amp; ECL, and AI-powered deal intelligence, all in one place.
             </p>
@@ -2133,7 +2168,7 @@ function Footer() {
                   target={s.href.startsWith("http") ? "_blank" : undefined}
                   rel={s.href.startsWith("http") ? "noopener noreferrer" : undefined}
                   aria-label={s.label}
-                  className="flex size-9 items-center justify-center rounded-lg border border-[#002147]/12 bg-white/60 text-gray-500 backdrop-blur-sm transition hover:border-[#002147]/30 hover:bg-white hover:text-[#002147]"
+                  className="flex size-9 items-center justify-center rounded-lg border border-[#002147]/18 bg-white/75 text-gray-700 backdrop-blur-sm transition hover:border-[#002147]/35 hover:bg-white hover:text-[#002147]"
                 >
                   <i className={cn("bi text-sm", s.icon)} />
                 </a>
@@ -2145,7 +2180,7 @@ function Footer() {
           <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4">
             {FOOTER_COLS.map((col) => (
               <div key={col.heading} className="flex flex-col gap-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">
                   {col.heading}
                 </p>
                 {col.links.map((link) => {
@@ -2156,7 +2191,7 @@ function Footer() {
                     <Link
                       key={label}
                       to={href}
-                      className="text-sm text-gray-500 transition hover:text-[#002147]"
+                      className="text-sm font-medium text-gray-700 transition hover:text-[#002147]"
                     >
                       {label}
                     </Link>
@@ -2164,7 +2199,7 @@ function Footer() {
                     <a
                       key={label}
                       href={href}
-                      className="text-sm text-gray-500 transition hover:text-[#002147]"
+                      className="text-sm font-medium text-gray-700 transition hover:text-[#002147]"
                     >
                       {label}
                     </a>
@@ -2175,11 +2210,11 @@ function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-[#002147]/8 pt-6 sm:flex-row">
-          <p className="text-xs text-gray-400">
+        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-[#002147]/15 pt-6 sm:flex-row">
+          <p className="text-xs text-gray-600">
             © {new Date().getFullYear()} AeroInsights Ltd. All rights reserved.
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-600">
             Built for aviation finance professionals worldwide.
           </p>
         </div>
