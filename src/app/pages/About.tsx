@@ -455,14 +455,20 @@ function Contact() {
 /* ─── FOOTER (lightweight) ─────────────────────────────────────────────────── */
 function Footer() {
   return (
-    <footer className="relative overflow-hidden pb-14 pt-56">
+    <footer className="relative overflow-hidden pb-14 pt-44">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-x-0 top-0"
         style={{
+          height: 280,
           background:
-            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.55) 18%, rgba(120,142,184,0.70) 32%, rgba(45,72,116,0.85) 46%, rgba(15,33,62,0.96) 60%, #0a1a33 72%, #0a1a33 100%)",
+            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 15%, rgba(120,142,184,0.62) 28%, rgba(45,72,116,0.82) 44%, rgba(15,33,62,0.96) 65%, #0a1a33 88%, #0a1a33 100%)",
         }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0"
+        style={{ top: 280, background: "#0a1a33" }}
       />
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col items-center gap-6 text-center">

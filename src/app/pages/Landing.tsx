@@ -314,10 +314,12 @@ const HERO_STARS = (() => {
       return s / 233280;
     };
   })();
-  return Array.from({ length: 48 }, () => {
-    const size = rand() * 2.2 + 0.6;            // 0.6–2.8px
-    const opacity = rand() * 0.55 + 0.15;       // 0.15–0.70
-    const depth = rand() * 0.06 + 0.02;         // parallax strength (px per cursor px)
+  return Array.from({ length: 140 }, () => {
+    // Bigger range + more weight toward visible sizes (squared distribution)
+    const r1 = rand();
+    const size = 1 + r1 * r1 * 4.5;             // ~1–5.5px, biased small but enough big ones to read
+    const opacity = rand() * 0.55 + 0.35;       // 0.35–0.90 (was 0.15–0.70 — much brighter)
+    const depth = rand() * 0.10 + 0.04;         // wider parallax range
     const x = rand() * 100;                     // % across hero
     const y = rand() * 100;                     // % down hero
     const twinkleDelay = rand() * 6;            // 0–6s
@@ -376,9 +378,18 @@ function HeroStarfield() {
             top: `${s.y}%`,
             left: `${s.x}%`,
             opacity: s.opacity,
-            // Subtle twinkle animation, very slow & low-amplitude so it doesn't distract
+            // Soft halo scaled with size — bigger stars get a brighter glow so
+            // they read like distant suns, smaller ones like dust.
+            boxShadow:
+              s.size > 3
+                ? `0 0 ${Math.round(s.size * 3)}px rgba(0,33,71,0.55), 0 0 ${Math.round(s.size * 7)}px rgba(91,143,216,0.25)`
+                : s.size > 1.5
+                ? `0 0 ${Math.round(s.size * 2.5)}px rgba(0,33,71,0.40)`
+                : "0 0 2px rgba(0,33,71,0.25)",
+            // Twinkle uses CSS var so we can scale to each star's base opacity
+            // (defined in fonts.css with @keyframes starTwinkle).
+            ["--star-base" as any]: s.opacity.toString(),
             animation: `starTwinkle 5.5s ease-in-out ${s.twinkleDelay}s infinite`,
-            boxShadow: s.size > 1.6 ? "0 0 4px rgba(0,33,71,0.35)" : undefined,
           }}
         />
       ))}
@@ -745,15 +756,15 @@ function Hero() {
 const PARTNER_LOGOS: { name: string; src: string; h?: number }[] = [
   // Per-brand heights tuned so visual weights match across the rail. The
   // logos with very thin lockups (tgis, aerfin, skyworks) get extra height.
-  { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 60 },
-  { name: "Grant Thornton",           src: "/logos/grant-thornton.webp", h: 48 },
-  { name: "ELFC",                     src: "/logos/elfc.png",            h: 40 },
-  { name: "KPMG",                     src: "/logos/kpmg.webp",           h: 38 },
-  { name: "TGIS Aviation",            src: "/logos/tgis.webp",           h: 64 },
-  { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",          h: 38 },
-  { name: "Skyworks",                 src: "/logos/skyworks.webp",       h: 58 },
-  { name: "EY",                       src: "/logos/ey.webp",             h: 48 },
-  { name: "Cloudcards",               src: "/logos/cloudcards.png",      h: 36 },
+  { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 84 },
+  { name: "Grant Thornton",           src: "/logos/grant-thornton.webp", h: 50 },
+  { name: "ELFC",                     src: "/logos/elfc.png",            h: 42 },
+  { name: "KPMG",                     src: "/logos/kpmg.webp",           h: 40 },
+  { name: "TGIS Aviation",            src: "/logos/tgis.webp",           h: 88 },
+  { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",          h: 40 },
+  { name: "Skyworks",                 src: "/logos/skyworks.webp",       h: 82 },
+  { name: "EY",                       src: "/logos/ey.webp",             h: 50 },
+  { name: "Cloudcards",               src: "/logos/cloudcards.png",      h: 38 },
 ];
 
 function LogoMarquee() {
@@ -782,7 +793,7 @@ function LogoMarquee() {
           {rail.map((logo, i) => (
             <div
               key={`${logo.name}-${i}`}
-              className="flex h-20 shrink-0 items-center justify-center px-2"
+              className="flex h-28 shrink-0 items-center justify-center px-2"
               aria-hidden={i >= PARTNER_LOGOS.length}
             >
               <img
@@ -1400,25 +1411,48 @@ function Pricing() {
         />
 
         <FadeIn delay={0.1} className="mt-10 flex items-center justify-center gap-4">
-          <div className="flex rounded-full border border-gray-200 bg-gray-50 p-1">
-            {(["monthly", "annually"] as BillingCycle[]).map((c) => (
-              <button
-                key={c}
-                onClick={() => setBilling(c)}
-                className={cn(
-                  "rounded-full px-5 py-1.5 text-sm font-medium transition-all",
-                  billing === c ? "bg-white text-gray-950 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                )}
-              >
-                {c.charAt(0).toUpperCase() + c.slice(1)}
-              </button>
-            ))}
+          {/* Animated toggle: a single white indicator slides under the active
+              label via framer-motion's shared layout. */}
+          <div className="relative flex rounded-full border border-gray-200 bg-gray-50 p-1">
+            {(["monthly", "annually"] as BillingCycle[]).map((c) => {
+              const active = billing === c;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setBilling(c)}
+                  className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors duration-200"
+                  style={{ color: active ? "#0a0a0a" : undefined }}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="billing-pill-indicator"
+                      className="absolute inset-0 -z-10 rounded-full bg-white shadow-sm"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className={cn(!active && "text-gray-500 hover:text-gray-700 transition-colors")}>
+                    {c.charAt(0).toUpperCase() + c.slice(1)}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          {billing === "annually" && (
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-              Save 20%
-            </span>
-          )}
+          {/* Save 20% chip: pop-in when annually, pop-out when monthly */}
+          <AnimatePresence mode="wait">
+            {billing === "annually" && (
+              <motion.span
+                key="save-chip"
+                initial={{ opacity: 0, scale: 0.7, x: -8 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.7, x: -6 }}
+                transition={{ type: "spring", stiffness: 420, damping: 24 }}
+                className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+              >
+                <i className="bi bi-piggy-bank text-[10px]" />
+                Save 20%
+              </motion.span>
+            )}
+          </AnimatePresence>
         </FadeIn>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-3">
@@ -1968,29 +2002,34 @@ const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
 
 function Footer() {
   return (
-    <footer className="relative overflow-hidden pb-14 pt-56">
-      {/*
-        Two-layer fade for a really long, smooth dive into the dark.
-        Layer 1: very gentle pale-blue tint that picks up where the ambient
-                 background ends, so the join is not a hard transparency edge.
-        Layer 2: the deep-navy build, slowly ramping in over the top ~60% of
-                 the footer's height.
-      */}
+    // pt-44 leaves room for the gradient ramp above the content; the actual
+    // footer text now sits firmly in the solid-navy zone (full #0a1a33).
+    <footer className="relative overflow-hidden pb-14 pt-44">
+      {/* Top fade band: ramps from transparent → solid navy over ~280px so the
+          join into the ambient background is still smooth, but it tops out at
+          full navy well before any text starts. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-x-0 top-0"
         style={{
+          height: 280,
           background:
-            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.55) 18%, rgba(120,142,184,0.70) 32%, rgba(45,72,116,0.85) 46%, rgba(15,33,62,0.96) 60%, #0a1a33 72%, #0a1a33 100%)",
+            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 15%, rgba(120,142,184,0.62) 28%, rgba(45,72,116,0.82) 44%, rgba(15,33,62,0.96) 65%, #0a1a33 88%, #0a1a33 100%)",
         }}
       />
-      {/* Subtle radial bloom at the top of the dark zone to feel atmospheric */}
+      {/* Solid navy carries the rest of the footer so content reads cleanly. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[18%] -translate-x-1/2"
+        className="pointer-events-none absolute inset-x-0 bottom-0"
+        style={{ top: 280, background: "#0a1a33" }}
+      />
+      {/* Subtle radial bloom sits behind the fade for atmospheric depth */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[8%] -translate-x-1/2"
         style={{
           width: 1200,
-          height: 360,
+          height: 320,
           background:
             "radial-gradient(ellipse at center, rgba(91,143,216,0.18), transparent 70%)",
         }}
