@@ -2089,77 +2089,22 @@ const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
 function Footer() {
   return (
     /*
-     * Built with the same primitives as SolutionBento / CTABanner / the
-     * AmbientBackground layer — so it lives in the same visual family:
-     *   1) a top fade band that dissolves smoothly from the ambient bg
-     *      into the dark zone (no hard seam)
-     *   2) the same 165° navy gradient used on the dark cards
-     *   3) the same blob keyframes (animate-blob-a / animate-blob-c) for
-     *      atmospheric motion, but tinted brighter and composited with
-     *      mix-blend-screen so they LIFT colour on the dark base
-     *   4) the same top radial atmospheric glow
-     *   5) the same dot-grid texture as the ambient layer (lighter alpha
-     *      so it reads on dark)
+     * Footer is now a part OF the page, not a separate decorative block.
+     * No background of its own — sits transparent on top of AmbientBackground
+     * like every other section. The only visual separator is a thin top hr.
+     * All text uses the same dark palette as the rest of the body.
      */
-    <footer className="relative overflow-hidden pb-14 pt-44">
-      {/* 1. Top fade: ambient → dark navy (transparent at 0%, fully #0a1a33 by 85%) */}
+    <footer className="relative pt-16 pb-10">
+      {/* Hairline divider — sits flush with ambient bg, doesn't break it */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0"
+        className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-px max-w-7xl"
         style={{
-          height: 320,
           background:
-            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 14%, rgba(120,142,184,0.62) 26%, rgba(45,72,116,0.82) 42%, rgba(15,33,62,0.96) 62%, #0a1a33 85%, #0a1a33 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(0,33,71,0.18) 35%, rgba(0,33,71,0.18) 65%, transparent 100%)",
         }}
       />
-      {/* 2. Solid base — same 165° gradient as SolutionBento & CTABanner cards */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0"
-        style={{
-          top: 320,
-          background:
-            "linear-gradient(165deg, #0a1a33 0%, #0e2347 55%, #0a1a33 100%)",
-        }}
-      />
-      {/* 3. Atmospheric drift blobs — reuse the page-wide keyframes, but
-            screen-blend so colour LIFTS the dark base instead of darkening it */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="animate-blob-a absolute -left-32 top-[35%] h-[620px] w-[620px] rounded-full opacity-[0.55] mix-blend-screen blur-[120px]"
-          style={{ background: "radial-gradient(circle, #2e5fa8 0%, transparent 70%)" }}
-        />
-        <div
-          className="animate-blob-c absolute -right-20 bottom-[10%] h-[540px] w-[540px] rounded-full opacity-[0.50] mix-blend-screen blur-[110px]"
-          style={{ background: "radial-gradient(circle, #5a7dc8 0%, transparent 70%)" }}
-        />
-        <div
-          className="animate-blob-b absolute left-[40%] top-[45%] h-[440px] w-[440px] rounded-full opacity-[0.40] mix-blend-screen blur-[115px]"
-          style={{ background: "radial-gradient(circle, #6b95d8 0%, transparent 70%)" }}
-        />
-      </div>
-      {/* 4. Top atmospheric radial glow — matches SolutionBento / CTABanner */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[6%] -translate-x-1/2"
-        style={{
-          width: 1200,
-          height: 340,
-          background:
-            "radial-gradient(ellipse at center, rgba(91,143,216,0.28), rgba(91,143,216,0.05) 45%, transparent 75%)",
-        }}
-      />
-      {/* 5. Dot grid — same cadence as AmbientBackground, light alpha for dark */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
           {/* Brand */}
           <div className="flex flex-col gap-4 lg:max-w-xs">
@@ -2167,36 +2112,20 @@ function Footer() {
               <div className="flex size-8 items-center justify-center rounded-lg bg-[#002147] p-1.5">
                 <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
               </div>
-              <span className="text-[1.05rem] font-extrabold tracking-tight text-white">
+              <span className="text-[1.05rem] font-extrabold tracking-tight text-gray-950">
                 AeroInsights
               </span>
             </Link>
-            <p className="text-sm text-blue-200/50 leading-relaxed">
+            <p className="text-sm leading-relaxed text-gray-500">
               The decision intelligence platform for aircraft lessors. Portfolio analytics,
               scenario modelling, risk &amp; ECL, and AI-powered deal intelligence, all in one place.
             </p>
-            <div className="flex gap-3 text-white/30">
+            <div className="flex gap-2">
               {[
-                {
-                  icon: "bi-linkedin",
-                  label: "LinkedIn",
-                  href: "https://www.linkedin.com/in/tanam-sethi/",
-                },
-                {
-                  icon: "bi-github",
-                  label: "GitHub",
-                  href: "https://github.com/tanamsethi31/",
-                },
-                {
-                  icon: "bi-envelope",
-                  label: "Email",
-                  href: CONTACT_MAILTO,
-                },
-                {
-                  icon: "bi-calendar-event",
-                  label: "Book a call",
-                  href: DEMO_LINK,
-                },
+                { icon: "bi-linkedin",       label: "LinkedIn",    href: "https://www.linkedin.com/in/tanam-sethi/" },
+                { icon: "bi-github",         label: "GitHub",      href: "https://github.com/tanamsethi31/" },
+                { icon: "bi-envelope",       label: "Email",       href: CONTACT_MAILTO },
+                { icon: "bi-calendar-event", label: "Book a call", href: DEMO_LINK },
               ].map((s) => (
                 <a
                   key={s.icon}
@@ -2204,7 +2133,7 @@ function Footer() {
                   target={s.href.startsWith("http") ? "_blank" : undefined}
                   rel={s.href.startsWith("http") ? "noopener noreferrer" : undefined}
                   aria-label={s.label}
-                  className="flex size-8 items-center justify-center rounded-lg border border-white/8 transition hover:bg-white/8 hover:text-white/70"
+                  className="flex size-9 items-center justify-center rounded-lg border border-[#002147]/12 bg-white/60 text-gray-500 backdrop-blur-sm transition hover:border-[#002147]/30 hover:bg-white hover:text-[#002147]"
                 >
                   <i className={cn("bi text-sm", s.icon)} />
                 </a>
@@ -2216,7 +2145,7 @@ function Footer() {
           <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-4">
             {FOOTER_COLS.map((col) => (
               <div key={col.heading} className="flex flex-col gap-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                   {col.heading}
                 </p>
                 {col.links.map((link) => {
@@ -2227,7 +2156,7 @@ function Footer() {
                     <Link
                       key={label}
                       to={href}
-                      className="text-sm text-blue-200/45 transition hover:text-white"
+                      className="text-sm text-gray-500 transition hover:text-[#002147]"
                     >
                       {label}
                     </Link>
@@ -2235,7 +2164,7 @@ function Footer() {
                     <a
                       key={label}
                       href={href}
-                      className="text-sm text-blue-200/45 transition hover:text-white"
+                      className="text-sm text-gray-500 transition hover:text-[#002147]"
                     >
                       {label}
                     </a>
@@ -2246,11 +2175,11 @@ function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/5 pt-6 sm:flex-row">
-          <p className="text-xs text-white/25">
+        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-[#002147]/8 pt-6 sm:flex-row">
+          <p className="text-xs text-gray-400">
             © {new Date().getFullYear()} AeroInsights Ltd. All rights reserved.
           </p>
-          <p className="text-xs text-white/25">
+          <p className="text-xs text-gray-400">
             Built for aviation finance professionals worldwide.
           </p>
         </div>

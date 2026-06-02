@@ -455,113 +455,46 @@ function Contact() {
 /* ─── FOOTER (lightweight) ─────────────────────────────────────────────────── */
 function Footer() {
   return (
-    /* Same build primitives as the Landing footer: top fade, 165° navy
-       gradient base, screen-blended atmospheric blobs, top radial glow,
-       dot grid texture — keeps both pages in the same visual family. */
-    <footer className="relative overflow-hidden pb-14 pt-44">
-      {/* 1. Top fade: ambient → dark navy */}
+    /* Part of the page — transparent on the ambient bg, dark text, hairline divider. */
+    <footer className="relative pt-16 pb-10">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0"
+        className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-px max-w-3xl"
         style={{
-          height: 320,
           background:
-            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 14%, rgba(120,142,184,0.62) 26%, rgba(45,72,116,0.82) 42%, rgba(15,33,62,0.96) 62%, #0a1a33 85%, #0a1a33 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(0,33,71,0.18) 35%, rgba(0,33,71,0.18) 65%, transparent 100%)",
         }}
       />
-      {/* 2. Solid base — 165° gradient matching SolutionBento + CTABanner */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0"
-        style={{
-          top: 320,
-          background:
-            "linear-gradient(165deg, #0a1a33 0%, #0e2347 55%, #0a1a33 100%)",
-        }}
-      />
-      {/* 3. Atmospheric drift blobs (mix-blend-screen so they lift on dark) */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="animate-blob-a absolute -left-32 top-[35%] h-[620px] w-[620px] rounded-full opacity-[0.55] mix-blend-screen blur-[120px]"
-          style={{ background: "radial-gradient(circle, #2e5fa8 0%, transparent 70%)" }}
-        />
-        <div
-          className="animate-blob-c absolute -right-20 bottom-[10%] h-[540px] w-[540px] rounded-full opacity-[0.50] mix-blend-screen blur-[110px]"
-          style={{ background: "radial-gradient(circle, #5a7dc8 0%, transparent 70%)" }}
-        />
-        <div
-          className="animate-blob-b absolute left-[40%] top-[45%] h-[440px] w-[440px] rounded-full opacity-[0.40] mix-blend-screen blur-[115px]"
-          style={{ background: "radial-gradient(circle, #6b95d8 0%, transparent 70%)" }}
-        />
-      </div>
-      {/* 4. Top atmospheric radial glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[6%] -translate-x-1/2"
-        style={{
-          width: 1200,
-          height: 340,
-          background:
-            "radial-gradient(ellipse at center, rgba(91,143,216,0.28), rgba(91,143,216,0.05) 45%, transparent 75%)",
-        }}
-      />
-      {/* 5. Dot grid — same cadence as AmbientBackground */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col items-center gap-6 text-center">
           <Link to="/home" className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-[#002147] p-1.5">
               <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
             </div>
-            <span className="text-[1.05rem] font-extrabold tracking-tight text-white">
+            <span className="text-[1.05rem] font-extrabold tracking-tight text-gray-950">
               AeroInsights
             </span>
           </Link>
-          <div className="flex items-center gap-3">
-            <a
-              href={EMAIL_HREF}
-              className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-white/60 transition hover:bg-white/8 hover:text-white"
-              aria-label="Email"
-            >
-              <i className="bi bi-envelope text-sm" />
-            </a>
-            <a
-              href={LINKEDIN}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-white/60 transition hover:bg-white/8 hover:text-white"
-              aria-label="LinkedIn"
-            >
-              <i className="bi bi-linkedin text-sm" />
-            </a>
-            <a
-              href="https://github.com/tanamsethi31/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-white/60 transition hover:bg-white/8 hover:text-white"
-              aria-label="GitHub"
-            >
-              <i className="bi bi-github text-sm" />
-            </a>
-            <a
-              href={DEMO_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex size-9 items-center justify-center rounded-lg border border-white/10 text-white/60 transition hover:bg-white/8 hover:text-white"
-              aria-label="Book a demo"
-            >
-              <i className="bi bi-calendar-event text-sm" />
-            </a>
+          <div className="flex items-center gap-2">
+            {[
+              { icon: "bi-envelope",       label: "Email",       href: EMAIL_HREF,                       external: false },
+              { icon: "bi-linkedin",       label: "LinkedIn",    href: LINKEDIN,                          external: true  },
+              { icon: "bi-github",         label: "GitHub",      href: "https://github.com/tanamsethi31/", external: true  },
+              { icon: "bi-calendar-event", label: "Book a demo", href: DEMO_LINK,                         external: true  },
+            ].map((s) => (
+              <a
+                key={s.icon}
+                href={s.href}
+                target={s.external ? "_blank" : undefined}
+                rel={s.external ? "noopener noreferrer" : undefined}
+                aria-label={s.label}
+                className="flex size-9 items-center justify-center rounded-lg border border-[#002147]/12 bg-white/60 text-gray-500 backdrop-blur-sm transition hover:border-[#002147]/30 hover:bg-white hover:text-[#002147]"
+              >
+                <i className={cn("bi text-sm", s.icon)} />
+              </a>
+            ))}
           </div>
-          <p className="text-xs text-white/30">
+          <p className="text-xs text-gray-400">
             © {new Date().getFullYear()} AeroInsights — built by Tanam Sethi.
           </p>
         </div>
