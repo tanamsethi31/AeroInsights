@@ -34,10 +34,27 @@ const COLUMNS = [
   { name: "monthly_rent",  label: "Monthly Rent (USD)",  required: false, example: "285000",           note: "USD, no commas — optional" },
 ] as const;
 
+// Second sample row — deliberately contrasts row 1 (Boeing / US carrier /
+// different vintage + rating) so users see how the schema flexes before
+// adding their own aircraft.
+const SECOND_SAMPLE: Record<string, string> = {
+  lessee_name:   "Alaska Airlines",
+  country:       "United States",
+  aircraft_type: "737-800",
+  msn:           "41728",
+  ead_usd_m:     "18.50",
+  lease_end:     "2027-06-15",
+  credit_rating: "BB+",
+  registration:  "N562AS",
+  vintage:       "2017",
+  monthly_rent:  "215000",
+};
+
 function downloadTemplate() {
   const header = COLUMNS.map((c) => c.name).join(",");
-  const row    = COLUMNS.map((c) => c.example).join(",");
-  const csv    = [header, row].join("\n");
+  const row1   = COLUMNS.map((c) => c.example).join(",");
+  const row2   = COLUMNS.map((c) => SECOND_SAMPLE[c.name] ?? "").join(",");
+  const csv    = [header, row1, row2].join("\n");
   const blob   = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url    = URL.createObjectURL(blob);
   const a      = document.createElement("a");

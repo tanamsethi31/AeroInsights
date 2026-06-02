@@ -32,6 +32,64 @@ export const OUR_FIELDS: FieldDef[] = [
   { id: "ead",             label: "EAD",               required: false, example: "24200000",        description: "Exposure at default" },
 ];
 
+/**
+ * Sample rows written into the downloadable portfolio template so users can
+ * see TWO concrete, distinct examples before filling in their own data.
+ *
+ * Row 1 mirrors the per-field `example` values (IndiGo / A320neo / India /
+ * Stage 2 / amber watchlist). Row 2 deliberately varies almost every field
+ * (Boeing / US carrier / Stage 1 / green watchlist) so the user can see how
+ * the schema flexes across manufacturers, regions, and risk profiles.
+ */
+export const SAMPLE_ROWS: Record<string, string>[] = [
+  {
+    registration:     "VT-IYC",
+    msn:              "9218",
+    aircraft_type:    "A320neo",
+    lessee_name:      "IndiGo Airlines",
+    start_date:       "2019-03-01",
+    end_date:         "2028-03-01",
+    manufacturer:     "Airbus",
+    vintage:          "2019",
+    current_operator: "IndiGo",
+    iata_code:        "6E",
+    country:          "India",
+    credit_rating:    "BB-",
+    pd_estimate:      "0.12",
+    watchlist_status: "amber",
+    monthly_rental:   "285000",
+    currency:         "USD",
+    stage:            "2",
+    ecl_amount:       "4200000",
+    pd:               "0.12",
+    lgd:              "0.45",
+    ead:              "24200000",
+  },
+  {
+    registration:     "N562AS",
+    msn:              "41728",
+    aircraft_type:    "737-800",
+    lessee_name:      "Alaska Airlines",
+    start_date:       "2017-06-15",
+    end_date:         "2027-06-15",
+    manufacturer:     "Boeing",
+    vintage:          "2017",
+    current_operator: "Alaska Airlines",
+    iata_code:        "AS",
+    country:          "United States",
+    credit_rating:    "BB+",
+    pd_estimate:      "0.06",
+    watchlist_status: "green",
+    monthly_rental:   "215000",
+    currency:         "USD",
+    stage:            "1",
+    ecl_amount:       "1800000",
+    pd:               "0.06",
+    lgd:              "0.40",
+    ead:              "18500000",
+  },
+];
+
 // Derives the union of all field ID strings from OUR_FIELDS at compile time
 type FieldId = typeof OUR_FIELDS[number]["id"];
 

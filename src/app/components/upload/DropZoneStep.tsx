@@ -1,21 +1,19 @@
 // src/app/components/upload/DropZoneStep.tsx
 import * as React from "react";
 import { Upload, FileSpreadsheet, Download } from "lucide-react";
-import { OUR_FIELDS } from "../../lib/columnMapper";
+import { OUR_FIELDS, SAMPLE_ROWS } from "../../lib/columnMapper";
 import * as XLSX from "xlsx";
 
 interface DropZoneStepProps {
   onFileParsed: (headers: string[], rows: Record<string, string>[], file: File) => void;
 }
 
-// Generate and download the Excel template
+// Generate and download the Excel template (two pre-filled sample rows so
+// users see the schema with concrete contrasting examples before filling in
+// their own data).
 function downloadTemplate() {
   const headers = OUR_FIELDS.map(f => f.id);
-  const exampleRow = OUR_FIELDS.reduce<Record<string, string>>((acc, f) => {
-    acc[f.id] = f.example;
-    return acc;
-  }, {});
-  const ws = XLSX.utils.json_to_sheet([exampleRow], { header: headers });
+  const ws = XLSX.utils.json_to_sheet(SAMPLE_ROWS, { header: headers });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Portfolio");
   XLSX.writeFile(wb, "aeroinsights-portfolio-template.xlsx");

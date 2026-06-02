@@ -13,7 +13,7 @@ import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, FileSpreadsheet, Download, X, CheckCircle2, ChevronDown } from "lucide-react";
 import * as XLSX from "xlsx";
-import { OUR_FIELDS } from "../../lib/columnMapper";
+import { OUR_FIELDS, SAMPLE_ROWS } from "../../lib/columnMapper";
 import { suggestMapping } from "../../lib/columnMapper";
 import { detectCanonical } from "../../utils/excelParser";
 import { ReviewImportStep } from "./ReviewImportStep";
@@ -32,11 +32,9 @@ type Step = "intro" | "review";
 
 function downloadTemplate() {
   const headers = OUR_FIELDS.map(f => f.id);
-  const exampleRow = OUR_FIELDS.reduce<Record<string, string>>((acc, f) => {
-    acc[f.id] = f.example;
-    return acc;
-  }, {});
-  const ws = XLSX.utils.json_to_sheet([exampleRow], { header: headers });
+  // Two pre-filled sample rows — contrasting carrier / region / stage so the
+  // user sees the schema with concrete examples before adding their own.
+  const ws = XLSX.utils.json_to_sheet(SAMPLE_ROWS, { header: headers });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Portfolio");
   XLSX.writeFile(wb, "aeroinsights-portfolio-template.xlsx");
