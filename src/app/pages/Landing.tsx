@@ -2088,36 +2088,75 @@ const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
 
 function Footer() {
   return (
-    // pt-44 leaves room for the gradient ramp above the content; the actual
-    // footer text now sits firmly in the solid-navy zone (full #0a1a33).
+    /*
+     * Built with the same primitives as SolutionBento / CTABanner / the
+     * AmbientBackground layer — so it lives in the same visual family:
+     *   1) a top fade band that dissolves smoothly from the ambient bg
+     *      into the dark zone (no hard seam)
+     *   2) the same 165° navy gradient used on the dark cards
+     *   3) the same blob keyframes (animate-blob-a / animate-blob-c) for
+     *      atmospheric motion, but tinted brighter and composited with
+     *      mix-blend-screen so they LIFT colour on the dark base
+     *   4) the same top radial atmospheric glow
+     *   5) the same dot-grid texture as the ambient layer (lighter alpha
+     *      so it reads on dark)
+     */
     <footer className="relative overflow-hidden pb-14 pt-44">
-      {/* Top fade band: ramps from transparent → solid navy over ~280px so the
-          join into the ambient background is still smooth, but it tops out at
-          full navy well before any text starts. */}
+      {/* 1. Top fade: ambient → dark navy (transparent at 0%, fully #0a1a33 by 85%) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0"
         style={{
-          height: 280,
+          height: 320,
           background:
-            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 15%, rgba(120,142,184,0.62) 28%, rgba(45,72,116,0.82) 44%, rgba(15,33,62,0.96) 65%, #0a1a33 88%, #0a1a33 100%)",
+            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 14%, rgba(120,142,184,0.62) 26%, rgba(45,72,116,0.82) 42%, rgba(15,33,62,0.96) 62%, #0a1a33 85%, #0a1a33 100%)",
         }}
       />
-      {/* Solid navy carries the rest of the footer so content reads cleanly. */}
+      {/* 2. Solid base — same 165° gradient as SolutionBento & CTABanner cards */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0"
-        style={{ top: 280, background: "#0a1a33" }}
+        style={{
+          top: 320,
+          background:
+            "linear-gradient(165deg, #0a1a33 0%, #0e2347 55%, #0a1a33 100%)",
+        }}
       />
-      {/* Subtle radial bloom sits behind the fade for atmospheric depth */}
+      {/* 3. Atmospheric drift blobs — reuse the page-wide keyframes, but
+            screen-blend so colour LIFTS the dark base instead of darkening it */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="animate-blob-a absolute -left-32 top-[35%] h-[620px] w-[620px] rounded-full opacity-[0.55] mix-blend-screen blur-[120px]"
+          style={{ background: "radial-gradient(circle, #2e5fa8 0%, transparent 70%)" }}
+        />
+        <div
+          className="animate-blob-c absolute -right-20 bottom-[10%] h-[540px] w-[540px] rounded-full opacity-[0.50] mix-blend-screen blur-[110px]"
+          style={{ background: "radial-gradient(circle, #5a7dc8 0%, transparent 70%)" }}
+        />
+        <div
+          className="animate-blob-b absolute left-[40%] top-[45%] h-[440px] w-[440px] rounded-full opacity-[0.40] mix-blend-screen blur-[115px]"
+          style={{ background: "radial-gradient(circle, #6b95d8 0%, transparent 70%)" }}
+        />
+      </div>
+      {/* 4. Top atmospheric radial glow — matches SolutionBento / CTABanner */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-[8%] -translate-x-1/2"
+        className="pointer-events-none absolute left-1/2 top-[6%] -translate-x-1/2"
         style={{
           width: 1200,
-          height: 320,
+          height: 340,
           background:
-            "radial-gradient(ellipse at center, rgba(91,143,216,0.18), transparent 70%)",
+            "radial-gradient(ellipse at center, rgba(91,143,216,0.28), rgba(91,143,216,0.05) 45%, transparent 75%)",
+        }}
+      />
+      {/* 5. Dot grid — same cadence as AmbientBackground, light alpha for dark */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
         }}
       />
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">

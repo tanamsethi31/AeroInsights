@@ -455,20 +455,65 @@ function Contact() {
 /* ─── FOOTER (lightweight) ─────────────────────────────────────────────────── */
 function Footer() {
   return (
+    /* Same build primitives as the Landing footer: top fade, 165° navy
+       gradient base, screen-blended atmospheric blobs, top radial glow,
+       dot grid texture — keeps both pages in the same visual family. */
     <footer className="relative overflow-hidden pb-14 pt-44">
+      {/* 1. Top fade: ambient → dark navy */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0"
         style={{
-          height: 280,
+          height: 320,
           background:
-            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 15%, rgba(120,142,184,0.62) 28%, rgba(45,72,116,0.82) 44%, rgba(15,33,62,0.96) 65%, #0a1a33 88%, #0a1a33 100%)",
+            "linear-gradient(180deg, rgba(200,212,236,0) 0%, rgba(184,200,228,0.45) 14%, rgba(120,142,184,0.62) 26%, rgba(45,72,116,0.82) 42%, rgba(15,33,62,0.96) 62%, #0a1a33 85%, #0a1a33 100%)",
         }}
       />
+      {/* 2. Solid base — 165° gradient matching SolutionBento + CTABanner */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0"
-        style={{ top: 280, background: "#0a1a33" }}
+        style={{
+          top: 320,
+          background:
+            "linear-gradient(165deg, #0a1a33 0%, #0e2347 55%, #0a1a33 100%)",
+        }}
+      />
+      {/* 3. Atmospheric drift blobs (mix-blend-screen so they lift on dark) */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="animate-blob-a absolute -left-32 top-[35%] h-[620px] w-[620px] rounded-full opacity-[0.55] mix-blend-screen blur-[120px]"
+          style={{ background: "radial-gradient(circle, #2e5fa8 0%, transparent 70%)" }}
+        />
+        <div
+          className="animate-blob-c absolute -right-20 bottom-[10%] h-[540px] w-[540px] rounded-full opacity-[0.50] mix-blend-screen blur-[110px]"
+          style={{ background: "radial-gradient(circle, #5a7dc8 0%, transparent 70%)" }}
+        />
+        <div
+          className="animate-blob-b absolute left-[40%] top-[45%] h-[440px] w-[440px] rounded-full opacity-[0.40] mix-blend-screen blur-[115px]"
+          style={{ background: "radial-gradient(circle, #6b95d8 0%, transparent 70%)" }}
+        />
+      </div>
+      {/* 4. Top atmospheric radial glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[6%] -translate-x-1/2"
+        style={{
+          width: 1200,
+          height: 340,
+          background:
+            "radial-gradient(ellipse at center, rgba(91,143,216,0.28), rgba(91,143,216,0.05) 45%, transparent 75%)",
+        }}
+      />
+      {/* 5. Dot grid — same cadence as AmbientBackground */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
       />
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col items-center gap-6 text-center">
