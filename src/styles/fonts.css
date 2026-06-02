@@ -65,12 +65,49 @@ body {
   .animate-blob-a, .animate-blob-b, .animate-blob-c, .animate-marquee {
     animation: none !important;
   }
+  /* Hero stars: keep them visible but kill drift + twinkle */
+  [aria-hidden] [style*="starDrift"] {
+    animation: none !important;
+  }
 }
 
-/* ── Hero starfield twinkle ─────────────────────────────────── */
+/* ── Hero starfield: autonomous drift + twinkle ──────────────────
+ * Each star animates `translate` (the individual transform property)
+ * so it composes with whatever `transform` JS writes for cursor
+ * parallax. Result: stars float on their own, cursor adds a layer
+ * of parallax on top.
+ */
 @keyframes starTwinkle {
   0%, 100% { opacity: var(--star-base, 0.35); }
   50%      { opacity: calc(var(--star-base, 0.35) * 0.35); }
+}
+
+@keyframes starDriftA {
+  0%   { translate:   0px   0px; }
+  25%  { translate:   8px  -6px; }
+  50%  { translate:  -4px   7px; }
+  75%  { translate:  -7px  -3px; }
+  100% { translate:   0px   0px; }
+}
+@keyframes starDriftB {
+  0%   { translate:   0px   0px; }
+  25%  { translate:  -6px   5px; }
+  50%  { translate:   7px   8px; }
+  75%  { translate:   4px  -7px; }
+  100% { translate:   0px   0px; }
+}
+@keyframes starDriftC {
+  0%   { translate:   0px   0px; }
+  25%  { translate:   5px   9px; }
+  50%  { translate:  -8px  -4px; }
+  75%  { translate:   6px  -6px; }
+  100% { translate:   0px   0px; }
+}
+@keyframes starDriftD {
+  0%   { translate:   0px   0px; }
+  33%  { translate:  -9px  -5px; }
+  66%  { translate:   3px   8px; }
+  100% { translate:   0px   0px; }
 }
 
 /* ── Animated gradient pill (CTA banner) ────────────────────── */

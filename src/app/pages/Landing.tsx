@@ -314,16 +314,20 @@ const HERO_STARS = (() => {
       return s / 233280;
     };
   })();
-  return Array.from({ length: 140 }, () => {
-    // Bigger range + more weight toward visible sizes (squared distribution)
+  return Array.from({ length: 140 }, (_, i) => {
     const r1 = rand();
-    const size = 1 + r1 * r1 * 4.5;             // ~1–5.5px, biased small but enough big ones to read
-    const opacity = rand() * 0.55 + 0.35;       // 0.35–0.90 (was 0.15–0.70 — much brighter)
-    const depth = rand() * 0.10 + 0.04;         // wider parallax range
+    const size = 1 + r1 * r1 * 4.5;             // ~1–5.5px, biased small
+    const opacity = rand() * 0.55 + 0.35;       // 0.35–0.90
+    const depth = rand() * 0.10 + 0.04;         // cursor-parallax strength
     const x = rand() * 100;                     // % across hero
     const y = rand() * 100;                     // % down hero
     const twinkleDelay = rand() * 6;            // 0–6s
-    return { size, opacity, depth, x, y, twinkleDelay };
+    // Autonomous drift: 4 keyframe variants, varied duration + delay so no
+    // two stars sync. Bigger stars drift a touch slower (feel farther away).
+    const driftVariant = ["A", "B", "C", "D"][i % 4];
+    const driftDuration = 8 + rand() * 9 + (size > 3 ? 4 : 0);  // 8–17s, +4 if big
+    const driftDelay = rand() * 8;
+    return { size, opacity, depth, x, y, twinkleDelay, driftVariant, driftDuration, driftDelay };
   });
 })();
 
@@ -378,18 +382,19 @@ function HeroStarfield() {
             top: `${s.y}%`,
             left: `${s.x}%`,
             opacity: s.opacity,
-            // Soft halo scaled with size — bigger stars get a brighter glow so
-            // they read like distant suns, smaller ones like dust.
             boxShadow:
               s.size > 3
                 ? `0 0 ${Math.round(s.size * 3)}px rgba(0,33,71,0.55), 0 0 ${Math.round(s.size * 7)}px rgba(91,143,216,0.25)`
                 : s.size > 1.5
                 ? `0 0 ${Math.round(s.size * 2.5)}px rgba(0,33,71,0.40)`
                 : "0 0 2px rgba(0,33,71,0.25)",
-            // Twinkle uses CSS var so we can scale to each star's base opacity
-            // (defined in fonts.css with @keyframes starTwinkle).
             ["--star-base" as any]: s.opacity.toString(),
-            animation: `starTwinkle 5.5s ease-in-out ${s.twinkleDelay}s infinite`,
+            // Two animations: starDrift{A|B|C|D} writes `translate`,
+            // starTwinkle writes `opacity`. JS still writes `transform` for
+            // cursor parallax. `translate` + `transform` compose cleanly.
+            animation:
+              `starDrift${s.driftVariant} ${s.driftDuration}s ease-in-out ${s.driftDelay}s infinite, ` +
+              `starTwinkle 5.5s ease-in-out ${s.twinkleDelay}s infinite`,
           }}
         />
       ))}
@@ -659,6 +664,50 @@ function DashboardMock() {
   );
 }
 
+/* ─── ROTATING ROLE — cycles the last word of the headline ──────────────────
+ * Industries the platform configures around. One-word labels chosen so the
+ * cycle reads cleanly inside the headline cadence.
+ */
+const HEADLINE_ROLES = [
+  "Lessors",
+  "Financiers",
+  "Advisors",
+  "Technicians",
+  "Components",
+  "Engines",
+  "Manufacturers",
+  "Traders",
+];
+// Reserve layout width using the longest word so the headline never reflows
+const LONGEST_ROLE = HEADLINE_ROLES.reduce((a, b) => (b.length > a.length ? b : a));
+
+function RotatingRole() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => setI((p) => (p + 1) % HEADLINE_ROLES.length), 2200);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="relative inline-block align-baseline text-[#002147]">
+      {/* Invisible spacer holds the widest possible width — no reflow on swap */}
+      <span aria-hidden className="invisible">{LONGEST_ROLE}</span>
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={HEADLINE_ROLES[i]}
+          initial={{ opacity: 0, y: 36, filter: "blur(6px)" }}
+          animate={{ opacity: 1, y: 0,  filter: "blur(0px)" }}
+          exit={{    opacity: 0, y: -36, filter: "blur(6px)" }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0 whitespace-nowrap"
+        >
+          {HEADLINE_ROLES[i]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
+
 function Hero() {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16">
@@ -697,7 +746,7 @@ function Hero() {
         >
           Aviation Finance{" "}
           <span className="text-[#002147]">Intelligence,</span>{" "}
-          Engineered for Lessors
+          Engineered for <RotatingRole />
         </motion.h1>
 
         {/* Subtitle */}
@@ -1410,49 +1459,53 @@ function Pricing() {
           sub="Start with a free pilot, scale as you grow. All plans include our core portfolio analytics."
         />
 
-        <FadeIn delay={0.1} className="mt-10 flex items-center justify-center gap-4">
-          {/* Animated toggle: a single white indicator slides under the active
-              label via framer-motion's shared layout. */}
-          <div className="relative flex rounded-full border border-gray-200 bg-gray-50 p-1">
-            {(["monthly", "annually"] as BillingCycle[]).map((c) => {
-              const active = billing === c;
-              return (
-                <button
-                  key={c}
-                  onClick={() => setBilling(c)}
-                  className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors duration-200"
-                  style={{ color: active ? "#0a0a0a" : undefined }}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="billing-pill-indicator"
-                      className="absolute inset-0 -z-10 rounded-full bg-white shadow-sm"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                    />
-                  )}
-                  <span className={cn(!active && "text-gray-500 hover:text-gray-700 transition-colors")}>
-                    {c.charAt(0).toUpperCase() + c.slice(1)}
-                  </span>
-                </button>
-              );
-            })}
+        <FadeIn delay={0.1} className="mt-10 flex justify-center">
+          {/*
+            Layout strategy:
+              outer:  flex justify-center                 — anchors pill to viewport centre
+              pill:   relative (so layoutId can absolute) — stays fixed-width, never shifts
+              chip:   absolute, sits to the right of pill — does NOT push the pill off-centre
+            Save 20% is ALWAYS rendered; only its colours change.
+          */}
+          <div className="relative">
+            <div className="flex rounded-full border border-gray-200 bg-gray-50 p-1">
+              {(["monthly", "annually"] as BillingCycle[]).map((c) => {
+                const active = billing === c;
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setBilling(c)}
+                    className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors duration-200"
+                    style={{ color: active ? "#0a0a0a" : undefined }}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="billing-pill-indicator"
+                        className="absolute inset-0 -z-10 rounded-full bg-white shadow-sm"
+                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      />
+                    )}
+                    <span className={cn(!active && "text-gray-500 hover:text-gray-700 transition-colors")}>
+                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Save 20% always visible; dims when monthly, glows when annual */}
+            <span
+              className={cn(
+                "absolute left-[calc(100%+12px)] top-1/2 flex -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold",
+                "transition-all duration-300",
+                billing === "annually"
+                  ? "scale-100 bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300/60 shadow-sm shadow-emerald-200/60"
+                  : "scale-95 bg-emerald-50/60 text-emerald-700/45 ring-1 ring-emerald-100/40"
+              )}
+            >
+              <i className="bi bi-piggy-bank text-[10px]" />
+              Save 20%
+            </span>
           </div>
-          {/* Save 20% chip: pop-in when annually, pop-out when monthly */}
-          <AnimatePresence mode="wait">
-            {billing === "annually" && (
-              <motion.span
-                key="save-chip"
-                initial={{ opacity: 0, scale: 0.7, x: -8 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.7, x: -6 }}
-                transition={{ type: "spring", stiffness: 420, damping: 24 }}
-                className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-              >
-                <i className="bi bi-piggy-bank text-[10px]" />
-                Save 20%
-              </motion.span>
-            )}
-          </AnimatePresence>
         </FadeIn>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-3">
@@ -1729,7 +1782,7 @@ function CTABanner() {
     <section className="relative py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div
-          className="relative overflow-hidden rounded-[2rem] px-6 py-20 shadow-2xl shadow-[#001228]/25 sm:px-12 sm:py-24"
+          className="group relative overflow-hidden rounded-[2rem] px-6 py-20 shadow-2xl shadow-[#001228]/25 sm:px-12 sm:py-24"
           style={{
             background:
               "linear-gradient(150deg, #0a1a33 0%, #143268 55%, #0a1a33 100%)",
@@ -1745,6 +1798,22 @@ function CTABanner() {
               background:
                 "radial-gradient(ellipse at top, rgba(91,143,216,0.32), rgba(91,143,216,0.05) 45%, transparent 75%)",
             }}
+          />
+          {/* Background airplane silhouette — sits behind content, slides
+              forward to the right on hover (group:hover on parent box). */}
+          <i
+            aria-hidden
+            className={cn(
+              "bi bi-airplane-fill",
+              "pointer-events-none absolute -right-16 top-1/2 -translate-y-1/2 select-none",
+              "text-[480px] leading-none text-white/[0.06]",
+              // Default slight tilt so it reads as "in flight" not "parked"
+              "rotate-[-12deg]",
+              // Hover: drift right + tilt a touch more, soft easing for glide
+              "transition-all duration-[1200ms] ease-out",
+              "group-hover:translate-x-24 group-hover:rotate-[-6deg] group-hover:text-white/[0.10]"
+            )}
+            style={{ filter: "drop-shadow(0 0 60px rgba(91,143,216,0.35))" }}
           />
           <FadeIn className="relative flex flex-col items-center gap-6 text-center">
           <span className="pill-shimmer inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-100/85">
