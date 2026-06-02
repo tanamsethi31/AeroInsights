@@ -274,36 +274,49 @@ function Story() {
 }
 
 /* ─── DEMOED WITH ──────────────────────────────────────────────────────────── */
-const DEMOED_WITH = [
-  "Aerfin", "Grant Thornton", "ELFC", "KPMG",
-  "TGIS Aviation", "Ishka Airglobal Finance",
-  "Skyworks", "EY", "Cloudcards",
+/* Per-brand heights tuned so thin lockups (aerfin, tgis, skyworks) read at
+   similar visual weight to chunkier wordmarks (ey, kpmg, grant thornton). */
+const DEMOED_WITH: { name: string; src: string; h: number }[] = [
+  { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 60 },
+  { name: "Grant Thornton",           src: "/logos/grant-thornton.webp", h: 38 },
+  { name: "ELFC",                     src: "/logos/elfc.png",            h: 32 },
+  { name: "KPMG",                     src: "/logos/kpmg.webp",           h: 30 },
+  { name: "TGIS Aviation",            src: "/logos/tgis.webp",           h: 62 },
+  { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",          h: 30 },
+  { name: "Skyworks",                 src: "/logos/skyworks.webp",       h: 58 },
+  { name: "EY",                       src: "/logos/ey.webp",             h: 38 },
+  { name: "Cloudcards",               src: "/logos/cloudcards.png",      h: 28 },
 ];
 
 function DemoedWith() {
   return (
     <section className="relative py-16">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 text-center">
+      <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
         <FadeIn>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
             Demoed with &amp; shaped by execs at
           </p>
         </FadeIn>
         <FadeIn delay={0.1}>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-base font-bold text-gray-500">
-            {DEMOED_WITH.map((f, i) => (
-              <span key={f} className="flex items-center gap-8">
-                {f}
-                {i < DEMOED_WITH.length - 1 && (
-                  <span className="text-gray-300" aria-hidden>·</span>
-                )}
-              </span>
+          {/* Same greyscale-by-default / colour-on-hover treatment as the
+              Landing marquee so both pages share one visual language. */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
+            {DEMOED_WITH.map((f) => (
+              <img
+                key={f.name}
+                src={f.src}
+                alt={f.name}
+                loading="lazy"
+                draggable={false}
+                style={{ height: f.h }}
+                className="select-none object-contain opacity-75 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0"
+              />
             ))}
           </div>
         </FadeIn>
         <FadeIn delay={0.18}>
-          <p className="mx-auto mt-6 max-w-xl text-xs text-gray-400">
-            Each engagement was a ≥10-minute review session, often longer — assumptions,
+          <p className="mx-auto mt-8 max-w-xl text-xs text-gray-500">
+            Each engagement was a 30 to 60 minute review session. Assumptions,
             frameworks, and module priorities were refined directly from that feedback.
           </p>
         </FadeIn>

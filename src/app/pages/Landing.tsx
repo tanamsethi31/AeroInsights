@@ -583,7 +583,7 @@ function DashboardMock() {
         <span className="size-2.5 rounded-full bg-amber-400/70" />
         <span className="size-2.5 rounded-full bg-green-400/70" />
         <div className="ml-2 flex-1 rounded-md bg-white/5 px-3 py-1 text-[10px] text-white/35">
-          app.aeroinsights.io/portfolio
+          aeroinsights.vercel.app/portfolios
         </div>
       </div>
 
