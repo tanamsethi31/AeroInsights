@@ -202,32 +202,35 @@ function AmbientBackground() {
       />
 
       {/*
-        Bolder colour blobs.
-        Stronger saturation, higher opacity, slightly larger radii — the
-        motion is now clearly visible at a glance, not just on close
-        inspection. mix-blend-multiply keeps text legibility intact even
-        with the punchier colour.
+        Blue-only palette, all in the Oxford Blue family. Depth and variety
+        come from luminosity (light sky → deep cobalt → steel slate), not
+        from hue, so the bg reads as cohesive with the brand colour #002147
+        rather than wandering off into purple / pink territory.
       */}
       <div
         className="animate-blob-a absolute -left-20 top-[4%] h-[760px] w-[760px] rounded-full opacity-90 mix-blend-multiply blur-[110px]"
-        style={{ background: "radial-gradient(circle, #84b1ff 0%, rgba(132,177,255,0.30) 45%, transparent 72%)" }}
+        style={{ background: "radial-gradient(circle, #6fa6ff 0%, rgba(111,166,255,0.30) 45%, transparent 72%)" }}
       />
+      {/* Deep cobalt royal — replaces the old violet */}
       <div
         className="animate-blob-b absolute -right-32 top-[22%] h-[820px] w-[820px] rounded-full opacity-85 mix-blend-multiply blur-[120px]"
-        style={{ background: "radial-gradient(circle, #c2a4ff 0%, rgba(194,164,255,0.28) 45%, transparent 72%)" }}
+        style={{ background: "radial-gradient(circle, #4f7fd6 0%, rgba(79,127,214,0.28) 45%, transparent 72%)" }}
       />
+      {/* Cyan-leaning blue — keeps the airy top-half feel */}
       <div
         className="animate-blob-c absolute -left-24 top-[52%] h-[780px] w-[780px] rounded-full opacity-90 mix-blend-multiply blur-[115px]"
-        style={{ background: "radial-gradient(circle, #8ed3ff 0%, rgba(142,211,255,0.30) 45%, transparent 72%)" }}
+        style={{ background: "radial-gradient(circle, #6fcdf2 0%, rgba(111,205,242,0.30) 45%, transparent 72%)" }}
       />
+      {/* Soft cornflower — fills the lower right with mid-tone blue */}
       <div
         className="animate-blob-a absolute -right-16 bottom-[6%] h-[680px] w-[680px] rounded-full opacity-85 mix-blend-multiply blur-[110px]"
-        style={{ background: "radial-gradient(circle, #9fc1ff 0%, rgba(159,193,255,0.28) 45%, transparent 72%)" }}
+        style={{ background: "radial-gradient(circle, #8ab4f0 0%, rgba(138,180,240,0.28) 45%, transparent 72%)" }}
       />
-      {/* A warm accent blob — gives the cool palette a hint of contrast */}
+      {/* Steel slate-blue centre accent — replaces the warm rose. Gives the
+          composition a darker anchor without leaving the blue family. */}
       <div
-        className="animate-blob-b absolute left-[40%] top-[38%] h-[540px] w-[540px] rounded-full opacity-70 mix-blend-multiply blur-[120px]"
-        style={{ background: "radial-gradient(circle, #ffc4dc 0%, rgba(255,196,220,0.22) 50%, transparent 75%)" }}
+        className="animate-blob-b absolute left-[40%] top-[38%] h-[540px] w-[540px] rounded-full opacity-75 mix-blend-multiply blur-[120px]"
+        style={{ background: "radial-gradient(circle, #5d83b8 0%, rgba(93,131,184,0.24) 50%, transparent 75%)" }}
       />
 
       {/* Fine dot-grid — subtle SaaS texture, slightly stronger so it reads */}

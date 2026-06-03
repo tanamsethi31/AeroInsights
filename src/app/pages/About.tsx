@@ -60,21 +60,25 @@ function AmbientBackground() {
             "linear-gradient(180deg, #fafcff 0%, #f4f7fd 38%, #f6f8fd 72%, #f0f4fb 100%)",
         }}
       />
+      {/* Blue-only palette matching the Landing page — depth from luminosity
+          (sky → cobalt → cyan → soft cornflower), nothing wandering into
+          violet / pink. Opacity slightly softer than Landing for a quieter
+          feel on the founder page. */}
       <div
-        className="animate-blob-a absolute -left-32 top-[6%] h-[640px] w-[640px] rounded-full opacity-[0.55] mix-blend-multiply blur-[140px]"
-        style={{ background: "radial-gradient(circle, #b7d0ff 0%, transparent 70%)" }}
+        className="animate-blob-a absolute -left-32 top-[6%] h-[640px] w-[640px] rounded-full opacity-[0.65] mix-blend-multiply blur-[140px]"
+        style={{ background: "radial-gradient(circle, #6fa6ff 0%, transparent 70%)" }}
       />
       <div
-        className="animate-blob-b absolute -right-40 top-[28%] h-[720px] w-[720px] rounded-full opacity-[0.50] mix-blend-multiply blur-[150px]"
-        style={{ background: "radial-gradient(circle, #d8caff 0%, transparent 70%)" }}
+        className="animate-blob-b absolute -right-40 top-[28%] h-[720px] w-[720px] rounded-full opacity-[0.60] mix-blend-multiply blur-[150px]"
+        style={{ background: "radial-gradient(circle, #4f7fd6 0%, transparent 70%)" }}
       />
       <div
-        className="animate-blob-c absolute -left-32 top-[58%] h-[680px] w-[680px] rounded-full opacity-[0.55] mix-blend-multiply blur-[140px]"
-        style={{ background: "radial-gradient(circle, #b8e3ff 0%, transparent 70%)" }}
+        className="animate-blob-c absolute -left-32 top-[58%] h-[680px] w-[680px] rounded-full opacity-[0.65] mix-blend-multiply blur-[140px]"
+        style={{ background: "radial-gradient(circle, #6fcdf2 0%, transparent 70%)" }}
       />
       <div
-        className="animate-blob-a absolute -right-20 bottom-[4%] h-[560px] w-[560px] rounded-full opacity-[0.45] mix-blend-multiply blur-[130px]"
-        style={{ background: "radial-gradient(circle, #c5d9ff 0%, transparent 70%)" }}
+        className="animate-blob-a absolute -right-20 bottom-[4%] h-[560px] w-[560px] rounded-full opacity-[0.55] mix-blend-multiply blur-[130px]"
+        style={{ background: "radial-gradient(circle, #8ab4f0 0%, transparent 70%)" }}
       />
       <div
         className="absolute inset-0 opacity-[0.35]"

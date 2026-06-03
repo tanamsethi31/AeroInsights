@@ -117,12 +117,15 @@ body {
   100% { background-position: 0% 50%; }
 }
 .pill-shimmer {
+  /* Blue-only shimmer — navy → cobalt royal → navy → bright cyan → navy.
+     Replaces the previous violet middle stop to keep the CTA banner pill
+     visually aligned with the rest of the page's blue palette. */
   background-image: linear-gradient(
     110deg,
     rgba(91,143,216,0.18) 0%,
-    rgba(167,139,250,0.28) 30%,
+    rgba(79,127,214,0.30)  30%,
     rgba(91,143,216,0.18) 60%,
-    rgba(125,211,252,0.30) 85%,
+    rgba(125,211,252,0.32) 85%,
     rgba(91,143,216,0.18) 100%
   );
   background-size: 220% 100%;
