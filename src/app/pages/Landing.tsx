@@ -192,53 +192,46 @@ function SectionHeader({
 function AmbientBackground() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      {/* Slight vertical gradient base for depth */}
+      {/* Lighter, cleaner base — same gradient as the About page for visual parity */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, #f4f8ff 0%, #ecf0fb 38%, #eef2fb 72%, #e6ecf8 100%)",
+            "linear-gradient(180deg, #fafcff 0%, #f4f7fd 38%, #f6f8fd 72%, #f0f4fb 100%)",
         }}
       />
 
-      {/*
-        Blue-only palette, all in the Oxford Blue family. Depth and variety
-        come from luminosity (light sky → deep cobalt → steel slate), not
-        from hue, so the bg reads as cohesive with the brand colour #002147
-        rather than wandering off into purple / pink territory.
-      */}
+      {/* Blue-only palette + softer opacities (0.55-0.70) — matched to the About
+          page so both surfaces feel like one continuous canvas. */}
       <div
-        className="animate-blob-a absolute -left-20 top-[4%] h-[760px] w-[760px] rounded-full opacity-90 mix-blend-multiply blur-[110px]"
-        style={{ background: "radial-gradient(circle, #6fa6ff 0%, rgba(111,166,255,0.30) 45%, transparent 72%)" }}
+        className="animate-blob-a absolute -left-20 top-[4%] h-[760px] w-[760px] rounded-full opacity-[0.65] mix-blend-multiply blur-[120px]"
+        style={{ background: "radial-gradient(circle, #6fa6ff 0%, transparent 70%)" }}
       />
-      {/* Deep cobalt royal — replaces the old violet */}
       <div
-        className="animate-blob-b absolute -right-32 top-[22%] h-[820px] w-[820px] rounded-full opacity-85 mix-blend-multiply blur-[120px]"
-        style={{ background: "radial-gradient(circle, #4f7fd6 0%, rgba(79,127,214,0.28) 45%, transparent 72%)" }}
+        className="animate-blob-b absolute -right-32 top-[22%] h-[820px] w-[820px] rounded-full opacity-[0.60] mix-blend-multiply blur-[130px]"
+        style={{ background: "radial-gradient(circle, #4f7fd6 0%, transparent 70%)" }}
       />
-      {/* Cyan-leaning blue — keeps the airy top-half feel */}
       <div
-        className="animate-blob-c absolute -left-24 top-[52%] h-[780px] w-[780px] rounded-full opacity-90 mix-blend-multiply blur-[115px]"
-        style={{ background: "radial-gradient(circle, #6fcdf2 0%, rgba(111,205,242,0.30) 45%, transparent 72%)" }}
+        className="animate-blob-c absolute -left-24 top-[52%] h-[780px] w-[780px] rounded-full opacity-[0.65] mix-blend-multiply blur-[125px]"
+        style={{ background: "radial-gradient(circle, #6fcdf2 0%, transparent 70%)" }}
       />
-      {/* Soft cornflower — fills the lower right with mid-tone blue */}
       <div
-        className="animate-blob-a absolute -right-16 bottom-[6%] h-[680px] w-[680px] rounded-full opacity-85 mix-blend-multiply blur-[110px]"
-        style={{ background: "radial-gradient(circle, #8ab4f0 0%, rgba(138,180,240,0.28) 45%, transparent 72%)" }}
+        className="animate-blob-a absolute -right-16 bottom-[6%] h-[680px] w-[680px] rounded-full opacity-[0.55] mix-blend-multiply blur-[120px]"
+        style={{ background: "radial-gradient(circle, #8ab4f0 0%, transparent 70%)" }}
       />
-      {/* Steel slate-blue centre accent — replaces the warm rose. Gives the
-          composition a darker anchor without leaving the blue family. */}
+      {/* Steel slate-blue centre — kept for compositional depth, softened to
+          sit at the same intensity level as the rest. */}
       <div
-        className="animate-blob-b absolute left-[40%] top-[38%] h-[540px] w-[540px] rounded-full opacity-75 mix-blend-multiply blur-[120px]"
-        style={{ background: "radial-gradient(circle, #5d83b8 0%, rgba(93,131,184,0.24) 50%, transparent 75%)" }}
+        className="animate-blob-b absolute left-[40%] top-[38%] h-[540px] w-[540px] rounded-full opacity-[0.45] mix-blend-multiply blur-[125px]"
+        style={{ background: "radial-gradient(circle, #5d83b8 0%, transparent 75%)" }}
       />
 
-      {/* Fine dot-grid — subtle SaaS texture, slightly stronger so it reads */}
+      {/* Fine dot-grid — matched to the About page (alpha + opacity) */}
       <div
-        className="absolute inset-0 opacity-[0.45]"
+        className="absolute inset-0 opacity-[0.35]"
         style={{
           backgroundImage:
-            "radial-gradient(circle, rgba(0,33,71,0.08) 1px, transparent 1px)",
+            "radial-gradient(circle, rgba(0,33,71,0.07) 1px, transparent 1px)",
           backgroundSize: "32px 32px",
         }}
       />
@@ -841,7 +834,7 @@ function LogoMarquee() {
     <section className="relative py-14">
       <div className="mx-auto mb-10 max-w-7xl px-4 sm:px-6">
         <FadeIn>
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
+          <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#002147]/75">
             Demoed with &amp; shaped by aviation finance leaders
           </p>
         </FadeIn>
@@ -882,7 +875,7 @@ function LogoMarquee() {
         </div>
       </div>
       <FadeIn delay={0.15}>
-        <p className="mx-auto mt-10 max-w-2xl px-4 text-center text-xs text-gray-400 sm:px-6">
+        <p className="mx-auto mt-10 max-w-2xl px-4 text-center text-sm font-medium text-gray-700 sm:px-6">
           Insights, assumptions &amp; frameworks shaped by review sessions with execs at each of
           these firms.
         </p>
@@ -2165,7 +2158,7 @@ function Footer() {
             </p>
             <div className="flex gap-2">
               {[
-                { icon: "bi-linkedin",       label: "LinkedIn",    href: "https://www.linkedin.com/in/tanam-sethi/" },
+                { icon: "bi-linkedin",       label: "LinkedIn",    href: "https://www.linkedin.com/in/tanamsethi/" },
                 { icon: "bi-github",         label: "GitHub",      href: "https://github.com/tanamsethi31/" },
                 { icon: "bi-envelope",       label: "Email",       href: CONTACT_MAILTO },
                 { icon: "bi-calendar-event", label: "Book a call", href: DEMO_LINK },

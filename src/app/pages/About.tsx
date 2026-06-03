@@ -44,7 +44,7 @@ function FadeIn({
 /* ─── contact constants (mirror of Landing) ────────────────────────────────── */
 const EMAIL = "sethit@tcd.ie";
 const EMAIL_HREF = `mailto:${EMAIL}?subject=Hello%20Tanam`;
-const LINKEDIN = "https://www.linkedin.com/in/tanam-sethi/";
+const LINKEDIN = "https://www.linkedin.com/in/tanamsethi/";
 const DEMO_LINK = "https://cal.com/tanam-sethi/30min";
 
 /* ─── AMBIENT BLOB BACKGROUND ───────────────────────────────────────────────
