@@ -223,17 +223,19 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  // Input length cap — sum content of every user/system message in the
-  // request. Protects against a paste-the-whole-spreadsheet attack.
+  // Input length cap — only count USER messages, not the system prompt
+  // or tool-result messages (those are server-injected, not the attack
+  // surface). Protects against paste-the-whole-spreadsheet payloads.
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  let totalChars = 0;
+  let userChars = 0;
   for (const m of messages) {
-    const c = (m as { content?: unknown })?.content;
-    if (typeof c === "string") totalChars += c.length;
+    const msg = m as { role?: unknown; content?: unknown };
+    if (msg.role !== "user") continue;
+    if (typeof msg.content === "string") userChars += msg.content.length;
   }
-  if (totalChars > MAX_INPUT_CHARS) {
+  if (userChars > MAX_INPUT_CHARS) {
     return json({
-      error: `Message too long. Limit is ${MAX_INPUT_CHARS} characters; you sent ${totalChars}.`,
+      error: `Your message is too long. Limit is ${MAX_INPUT_CHARS} characters; you sent ${userChars}.`,
     }, 413);
   }
 
