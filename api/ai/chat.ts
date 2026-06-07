@@ -187,17 +187,26 @@ export default async function handler(req: Request): Promise<Response> {
   // Auth guard — verify JWT signature before trusting any claims.
   const auth  = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  // ─── DIAG (temp, remove after Groq verification): log what arrived ─
+  console.log("[diag] authHeaderPresent=%s tokenLen=%d tokenPrefix=%s",
+    auth.length > 0, token.length, token.slice(0, 8));
   if (!token) {
+    console.log("[diag] 401 — no token");
     return json({ error: "Unauthorized" }, 401);
   }
 
   const userId = await verifyJwtSub(token);
+  console.log("[diag] userId=%s envAuth0Domain=%s",
+    userId ?? "null", !!process.env.AUTH0_DOMAIN);
   if (!userId) {
+    console.log("[diag] 401 — verifyJwtSub returned null");
     return json({ error: "Unauthorized" }, 401);
   }
 
   // Rate limit check.
   const limit = await checkAndIncrementLimits(userId);
+  console.log("[diag] rate userCount=%d globalCount=%d allowed=%s",
+    limit.userCount, limit.globalCount, limit.allowed);
   if (limit.allowed === false) {
     return json({ error: limit.reason, code: "RATE_LIMITED" }, 429);
   }
@@ -205,6 +214,8 @@ export default async function handler(req: Request): Promise<Response> {
   // T-6.4 — Prefer Vercel AI Gateway when AI_GATEWAY_API_KEY is set.
   // Falls back to Azure OpenAI if only the Azure vars are present.
   const upstreamCfg = resolveAiUpstream();
+  console.log("[diag] upstream=%s model=%s",
+    upstreamCfg?.url ?? "null", upstreamCfg?.defaultModel ?? "null");
   if (!upstreamCfg) {
     return json({ error: "AI not configured on server. Contact your administrator." }, 503);
   }
@@ -229,11 +240,16 @@ export default async function handler(req: Request): Promise<Response> {
       body:    JSON.stringify(body),
     });
   } catch (err) {
+    console.log("[diag] upstream fetch threw: %s", String(err));
     return json({ error: `Upstream fetch failed: ${String(err)}` }, 502);
   }
 
+  console.log("[diag] upstream responded status=%d contentType=%s",
+    upstream.status, upstream.headers.get("content-type") ?? "?");
+
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");
+    console.log("[diag] upstream non-ok body=%s", text.slice(0, 200));
     return json({ error: `Upstream error ${upstream.status}: ${text}` }, upstream.status);
   }
 
