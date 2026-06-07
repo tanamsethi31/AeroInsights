@@ -3,22 +3,32 @@
 // Upstream LLM provider resolver. Returns the first configured path in
 // priority order:
 //
-//   1. GEMINI_API_KEY        — Google AI Studio direct (OpenAI-compatible).
-//                              Generous free tier (1,500 req/day on
-//                              gemini-2.0-flash), no payment info needed.
-//                              This is the production path as of 2026-06.
+//   1. GROQ_API_KEY          — Groq direct (OpenAI-compatible). Free tier
+//                              30 req/min on llama-3.3-70b-versatile, no
+//                              card, no billing setup. The production
+//                              path as of 2026-06 (after Google AI Studio
+//                              billing dead-ends).
 //
-//   2. AI_GATEWAY_API_KEY    — Vercel AI Gateway. Multi-provider, single
+//   2. GEMINI_API_KEY        — Google AI Studio direct (OpenAI-compatible).
+//                              Free tier exists but is gated by project-
+//                              level billing config; keep as fallback for
+//                              accounts that don't have the paid-project
+//                              snag.
+//
+//   3. AI_GATEWAY_API_KEY    — Vercel AI Gateway. Multi-provider, single
 //                              dashboard for cost + fallback chains. Free
 //                              $5 credit but requires a card on file.
 //
-//   3. AZURE_OPENAI_*        — Legacy Azure OpenAI deployment. Kept as a
+//   4. AZURE_OPENAI_*        — Legacy Azure OpenAI deployment. Kept as a
 //                              fallback for older preview deployments
 //                              whose env hasn't been migrated.
 //
-// All three speak the OpenAI chat-completions JSON shape, so api/ai/chat.ts
+// All four speak the OpenAI chat-completions JSON shape, so api/ai/chat.ts
 // and api/ai/narrative.ts pass through unchanged — this module only swaps
 // URL + auth header + injected model name.
+
+const GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL    = "llama-3.3-70b-versatile";
 
 const GEMINI_URL    = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const GEMINI_MODEL  = "gemini-2.0-flash";
@@ -41,7 +51,21 @@ export interface AiUpstreamConfig {
 
 /** Resolve the upstream config based on env. */
 export function resolveAiUpstream(): AiUpstreamConfig | null {
-  // ─── Path 1: Google AI Studio (direct Gemini via OpenAI-compat) ───────
+  // ─── Path 1: Groq (direct, OpenAI-compat) ──────────────────────────────
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    return {
+      useGateway:   true, // semantics: "caller must inject model into body"
+      url:          GROQ_URL,
+      headers:      {
+        Authorization:  `Bearer ${groqKey}`,
+        "Content-Type": "application/json",
+      },
+      defaultModel: process.env.GROQ_MODEL ?? GROQ_MODEL,
+    };
+  }
+
+  // ─── Path 2: Google AI Studio (direct Gemini via OpenAI-compat) ───────
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey) {
     return {
