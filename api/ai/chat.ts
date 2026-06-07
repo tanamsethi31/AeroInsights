@@ -1,32 +1,41 @@
 /**
  * Vercel Edge Function — AI chat proxy
  *
- * Enforces:
- *  1. Auth0 bearer token required and signature-verified.
- *  2. Per-user daily limit  — USER_DAILY_LIMIT  queries/day (default 5).
- *  3. Global daily cap      — GLOBAL_DAILY_LIMIT queries/day (default 50).
+ * Enforces (in order):
+ *  1. Auth0 bearer token required and signature-verified (RSA via JWKS).
+ *  2. Per-user per-minute burst limit (default 3/min).
+ *  3. Per-user daily limit          (default 10/day).
+ *  4. Global daily cap              (default 50/day).
+ *  5. Input message length cap      (4,000 chars across all user messages).
+ *  6. Output token cap              (max_tokens forced ≤ 1,024 server-side).
  *
  * Rate limits use Upstash Redis REST API (atomic INCR + EXPIRE via pipeline).
  * If UPSTASH_REDIS_REST_URL / _TOKEN are not set the function fails open so
  * local dev and staging continue to work without Redis configured.
  *
  * Server-side env vars (Vercel dashboard, NOT prefixed VITE_):
- *   AZURE_OPENAI_URL          Full Target URI from Azure AI Foundry
- *   AZURE_OPENAI_KEY          Azure OpenAI API key
+ *   GEMINI_API_KEY            Google AI Studio key (paid pay-as-you-go)
+ *   GROQ_API_KEY              Groq fallback (free tier)
  *   AUTH0_DOMAIN              e.g. dev-xxx.eu.auth0.com
  *   AUTH0_AUDIENCE            e.g. https://api.aeroinsights.io
  *   UPSTASH_REDIS_REST_URL    e.g. https://xxxx.upstash.io
  *   UPSTASH_REDIS_REST_TOKEN  Upstash REST token
- *   AI_USER_DAILY_LIMIT       Per-user cap  (default 5)
- *   AI_GLOBAL_DAILY_LIMIT     Global cap    (default 50)
+ *   AI_USER_DAILY_LIMIT       Per-user daily cap     (default 10)
+ *   AI_USER_MINUTE_LIMIT      Per-user per-minute    (default 3)
+ *   AI_GLOBAL_DAILY_LIMIT     Platform-wide cap      (default 50)
+ *   AI_MAX_INPUT_CHARS        Reject if user input > N chars  (default 4000)
+ *   AI_MAX_OUTPUT_TOKENS      Cap response length             (default 1024)
  */
 
 export const config = { runtime: "edge" };
 
 import { resolveAiUpstream, withModel } from "../_lib/aiGateway";
 
-const USER_DAILY_LIMIT   = parseInt(process.env.AI_USER_DAILY_LIMIT   ?? "5",  10);
-const GLOBAL_DAILY_LIMIT = parseInt(process.env.AI_GLOBAL_DAILY_LIMIT ?? "50", 10);
+const USER_DAILY_LIMIT    = parseInt(process.env.AI_USER_DAILY_LIMIT    ?? "10",  10);
+const USER_MINUTE_LIMIT   = parseInt(process.env.AI_USER_MINUTE_LIMIT   ?? "3",   10);
+const GLOBAL_DAILY_LIMIT  = parseInt(process.env.AI_GLOBAL_DAILY_LIMIT  ?? "50",  10);
+const MAX_INPUT_CHARS     = parseInt(process.env.AI_MAX_INPUT_CHARS     ?? "4000", 10);
+const MAX_OUTPUT_TOKENS   = parseInt(process.env.AI_MAX_OUTPUT_TOKENS   ?? "1024", 10);
 
 // ── JWT verification using Web Crypto + Auth0 JWKS ───────────────────────────
 
@@ -51,27 +60,15 @@ function b64urlDecode(b64: string): Uint8Array {
 async function verifyJwtSub(token: string): Promise<string | null> {
   const domain   = process.env.AUTH0_DOMAIN;
   const audience = process.env.AUTH0_AUDIENCE;
-  // If server-side AUTH0_DOMAIN / AUTH0_AUDIENCE aren't configured, fall
-  // back to a permissive mode: accept any non-empty token and derive a
-  // stable pseudonymous user ID for rate-limiting purposes.
-  //
-  // Why: Auth0 sometimes issues OPAQUE access tokens (not JWTs) when the
-  // requested audience doesn't exactly match a registered API in the
-  // Auth0 dashboard. The strict JWT-decode path then fails silently and
-  // returns 401 even though the user is logged in correctly on the
-  // frontend. The permissive path keeps the API gated to logged-in users
-  // (they need a token to get here at all) while not relying on a
-  // specific token shape. Once AUTH0_DOMAIN + AUTH0_AUDIENCE are set,
-  // the strict RSA-verify path below takes over.
+
+  // Permissive fallback used only when server-side AUTH0 env isn't set
+  // (i.e. local dev). In production both vars are present so the strict
+  // RSA-verify path below is the only one that runs.
   if (!domain || !audience) {
-    // First try: it IS a JWT and has sub.
     try {
       const raw = JSON.parse(new TextDecoder().decode(b64urlDecode(token.split(".")[1] ?? "")));
       if (typeof raw.sub === "string" && raw.sub.length > 0) return raw.sub;
-    } catch { /* fall through to token-hash path */ }
-    // Fallback: opaque token. Use first 32 chars as a stable id (good
-    // enough for per-user daily rate limiting). NOT a security check —
-    // just a way to bucket counters.
+    } catch { /* fall through */ }
     return `opaque:${token.slice(0, 32)}`;
   }
 
@@ -116,6 +113,9 @@ async function verifyJwtSub(token: string): Promise<string | null> {
 function utcDateKey(): string {
   return new Date().toISOString().slice(0, 10); // "2026-05-08"
 }
+function utcMinuteKey(): string {
+  return new Date().toISOString().slice(0, 16).replace(":", "-"); // "2026-05-08T14-37"
+}
 
 type RateLimitResult =
   | { allowed: true;  userCount: number; globalCount: number }
@@ -131,17 +131,21 @@ async function checkAndIncrementLimits(userId: string): Promise<RateLimitResult>
   }
 
   const date      = utcDateKey();
+  const minute    = utcMinuteKey();
   const userKey   = `ai:${date}:u:${userId}`;
+  const minuteKey = `ai:${minute}:um:${userId}`;
   const globalKey = `ai:${date}:global`;
-  const ttl       = 90000; // 25 hours — safely covers a full UTC day
+  const dayTtl    = 90000; // 25 hours
+  const minTtl    = 120;   // 2 minutes (covers clock skew across edge regions)
 
-  // Increment-first: a single pipeline eliminates the GET→INCR race condition.
-  // The INCR result IS the post-increment count; reject if it exceeds the cap.
+  // Single pipeline: 3 counters incremented + their TTLs set in one round trip.
   const pipeline = [
     ["INCR", userKey],
-    ["EXPIRE", userKey, ttl],
+    ["EXPIRE", userKey, dayTtl],
+    ["INCR", minuteKey],
+    ["EXPIRE", minuteKey, minTtl],
     ["INCR", globalKey],
-    ["EXPIRE", globalKey, ttl],
+    ["EXPIRE", globalKey, dayTtl],
   ];
 
   try {
@@ -155,8 +159,16 @@ async function checkAndIncrementLimits(userId: string): Promise<RateLimitResult>
 
     const data        = await res.json() as Array<{ result: number }>;
     const userCount   = data[0]?.result ?? 0;
-    const globalCount = data[2]?.result ?? 0;
+    const minuteCount = data[2]?.result ?? 0;
+    const globalCount = data[4]?.result ?? 0;
 
+    // Burst limit first — most users will hit this before the daily one.
+    if (minuteCount > USER_MINUTE_LIMIT) {
+      return {
+        allowed: false,
+        reason: `Too many requests. Please wait a minute before trying again (limit ${USER_MINUTE_LIMIT}/min).`,
+      };
+    }
     if (userCount > USER_DAILY_LIMIT) {
       return {
         allowed: false,
@@ -172,7 +184,6 @@ async function checkAndIncrementLimits(userId: string): Promise<RateLimitResult>
 
     return { allowed: true, userCount, globalCount };
   } catch {
-    // Redis unavailable — fail open.
     return { allowed: true, userCount: 0, globalCount: 0 };
   }
 }
@@ -184,55 +195,58 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  // Auth guard — verify JWT signature before trusting any claims.
+  // Auth.
   const auth  = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  // ─── DIAG (temp, remove after Groq verification): log what arrived ─
-  console.log("[diag] authHeaderPresent=%s tokenLen=%d tokenPrefix=%s",
-    auth.length > 0, token.length, token.slice(0, 8));
-  if (!token) {
-    console.log("[diag] 401 — no token");
-    return json({ error: "Unauthorized" }, 401);
-  }
+  if (!token) return json({ error: "Unauthorized" }, 401);
 
   const userId = await verifyJwtSub(token);
-  console.log("[diag] userId=%s envAuth0Domain=%s",
-    userId ?? "null", !!process.env.AUTH0_DOMAIN);
-  if (!userId) {
-    console.log("[diag] 401 — verifyJwtSub returned null");
-    return json({ error: "Unauthorized" }, 401);
-  }
+  if (!userId) return json({ error: "Unauthorized" }, 401);
 
-  // Rate limit check.
+  // Rate limits.
   const limit = await checkAndIncrementLimits(userId);
   if (limit.allowed === false) {
-    console.log("[diag] 429 rate-limited: %s", limit.reason);
     return json({ error: limit.reason, code: "RATE_LIMITED" }, 429);
   }
-  console.log("[diag] rate-pass userCount=%d globalCount=%d",
-    limit.userCount, limit.globalCount);
 
-  // T-6.4 — Prefer Vercel AI Gateway when AI_GATEWAY_API_KEY is set.
-  // Falls back to Azure OpenAI if only the Azure vars are present.
+  // Upstream.
   const upstreamCfg = resolveAiUpstream();
-  console.log("[diag] upstream=%s model=%s",
-    upstreamCfg?.url ?? "null", upstreamCfg?.defaultModel ?? "null");
   if (!upstreamCfg) {
     return json({ error: "AI not configured on server. Contact your administrator." }, 503);
   }
 
-  // Parse request body.
-  let body: unknown;
+  // Parse + validate body.
+  let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    body = (await req.json()) as Record<string, unknown>;
   } catch {
     return json({ error: "Invalid JSON body" }, 400);
   }
+
+  // Input length cap — sum content of every user/system message in the
+  // request. Protects against a paste-the-whole-spreadsheet attack.
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+  let totalChars = 0;
+  for (const m of messages) {
+    const c = (m as { content?: unknown })?.content;
+    if (typeof c === "string") totalChars += c.length;
+  }
+  if (totalChars > MAX_INPUT_CHARS) {
+    return json({
+      error: `Message too long. Limit is ${MAX_INPUT_CHARS} characters; you sent ${totalChars}.`,
+    }, 413);
+  }
+
+  // Output token cap — server enforces, ignores any larger value the
+  // client tried to set.
+  const clientMax = typeof body.max_tokens === "number" ? body.max_tokens : MAX_OUTPUT_TOKENS;
+  body.max_tokens = Math.min(clientMax, MAX_OUTPUT_TOKENS);
+
   if (upstreamCfg.useGateway) {
     body = withModel(body, upstreamCfg.defaultModel);
   }
 
-  // Proxy to upstream (Gateway or Azure).
+  // Proxy.
   let upstream: Response;
   try {
     upstream = await fetch(upstreamCfg.url, {
@@ -241,16 +255,11 @@ export default async function handler(req: Request): Promise<Response> {
       body:    JSON.stringify(body),
     });
   } catch (err) {
-    console.log("[diag] upstream fetch threw: %s", String(err));
     return json({ error: `Upstream fetch failed: ${String(err)}` }, 502);
   }
 
-  console.log("[diag] upstream responded status=%d contentType=%s",
-    upstream.status, upstream.headers.get("content-type") ?? "?");
-
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");
-    console.log("[diag] upstream non-ok body=%s", text.slice(0, 200));
     return json({ error: `Upstream error ${upstream.status}: ${text}` }, upstream.status);
   }
 

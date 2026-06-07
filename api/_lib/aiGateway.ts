@@ -3,25 +3,22 @@
 // Upstream LLM provider resolver. Returns the first configured path in
 // priority order:
 //
-//   1. GROQ_API_KEY          — Groq direct (OpenAI-compatible). Free tier
-//                              30 req/min on llama-3.3-70b-versatile, no
-//                              card, no billing setup. The production
-//                              path as of 2026-06 (after Google AI Studio
-//                              billing dead-ends).
+//   1. GEMINI_API_KEY        — Google AI Studio direct (OpenAI-compatible).
+//                              Pay-as-you-go on gemini-2.0-flash with a
+//                              project-level budget cap. The production
+//                              path as of 2026-06. Billing must be enabled
+//                              on the GCP project the key belongs to.
 //
-//   2. GEMINI_API_KEY        — Google AI Studio direct (OpenAI-compatible).
-//                              Free tier exists but is gated by project-
-//                              level billing config; keep as fallback for
-//                              accounts that don't have the paid-project
-//                              snag.
+//   2. GROQ_API_KEY          — Groq direct (OpenAI-compatible). Free tier
+//                              30 req/min on llama-3.3-70b-versatile.
+//                              Kept as a safety-net fallback in case
+//                              Gemini ever returns an error.
 //
 //   3. AI_GATEWAY_API_KEY    — Vercel AI Gateway. Multi-provider, single
 //                              dashboard for cost + fallback chains. Free
 //                              $5 credit but requires a card on file.
 //
-//   4. AZURE_OPENAI_*        — Legacy Azure OpenAI deployment. Kept as a
-//                              fallback for older preview deployments
-//                              whose env hasn't been migrated.
+//   4. AZURE_OPENAI_*        — Legacy Azure OpenAI deployment.
 //
 // All four speak the OpenAI chat-completions JSON shape, so api/ai/chat.ts
 // and api/ai/narrative.ts pass through unchanged — this module only swaps
@@ -51,21 +48,7 @@ export interface AiUpstreamConfig {
 
 /** Resolve the upstream config based on env. */
 export function resolveAiUpstream(): AiUpstreamConfig | null {
-  // ─── Path 1: Groq (direct, OpenAI-compat) ──────────────────────────────
-  const groqKey = process.env.GROQ_API_KEY;
-  if (groqKey) {
-    return {
-      useGateway:   true, // semantics: "caller must inject model into body"
-      url:          GROQ_URL,
-      headers:      {
-        Authorization:  `Bearer ${groqKey}`,
-        "Content-Type": "application/json",
-      },
-      defaultModel: process.env.GROQ_MODEL ?? GROQ_MODEL,
-    };
-  }
-
-  // ─── Path 2: Google AI Studio (direct Gemini via OpenAI-compat) ───────
+  // ─── Path 1: Google AI Studio (direct Gemini via OpenAI-compat) ───────
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey) {
     return {
@@ -76,6 +59,20 @@ export function resolveAiUpstream(): AiUpstreamConfig | null {
         "Content-Type": "application/json",
       },
       defaultModel: process.env.GEMINI_MODEL ?? GEMINI_MODEL,
+    };
+  }
+
+  // ─── Path 2: Groq (direct, OpenAI-compat) — safety-net fallback ───────
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    return {
+      useGateway:   true,
+      url:          GROQ_URL,
+      headers:      {
+        Authorization:  `Bearer ${groqKey}`,
+        "Content-Type": "application/json",
+      },
+      defaultModel: process.env.GROQ_MODEL ?? GROQ_MODEL,
     };
   }
 

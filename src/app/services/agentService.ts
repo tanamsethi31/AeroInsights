@@ -144,11 +144,21 @@ export function isConfigured(): boolean {
 
 // ─── Core streaming fetch ───────────────────────────────────────────────────────
 
+const MAX_TOOL_RECURSION = 3;
+
 async function* fetchStream(
   messages: ApiMessage[],
   signal?: AbortSignal,
   token?: string,
+  depth = 0,
 ): AsyncGenerator<AgentEvent> {
+  // Tool-call recursion cap. Stops a misbehaving LLM from chaining tool
+  // calls indefinitely (each round costs another upstream request + tokens).
+  if (depth >= MAX_TOOL_RECURSION) {
+    yield { type: "error", msg: `Too many tool calls in one turn (cap: ${MAX_TOOL_RECURSION}). Ask a more specific question.` };
+    return;
+  }
+
   // Always use the server-side proxy — key never touches the browser.
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   // Forward the Auth0 bearer token so the proxy can validate the request.
@@ -312,8 +322,9 @@ async function* fetchStream(
       }
     }
 
-    // Recurse: second fetch with tool results appended
-    yield* fetchStream([...messages, assistantMsg, ...toolResultMsgs], signal);
+    // Recurse: second fetch with tool results appended. Forward the
+    // bearer token and bump depth so the recursion cap can fire.
+    yield* fetchStream([...messages, assistantMsg, ...toolResultMsgs], signal, token, depth + 1);
     return;
   }
 
