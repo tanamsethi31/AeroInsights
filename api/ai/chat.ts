@@ -205,11 +205,12 @@ export default async function handler(req: Request): Promise<Response> {
 
   // Rate limit check.
   const limit = await checkAndIncrementLimits(userId);
-  console.log("[diag] rate userCount=%d globalCount=%d allowed=%s",
-    limit.userCount, limit.globalCount, limit.allowed);
   if (limit.allowed === false) {
+    console.log("[diag] 429 rate-limited: %s", limit.reason);
     return json({ error: limit.reason, code: "RATE_LIMITED" }, 429);
   }
+  console.log("[diag] rate-pass userCount=%d globalCount=%d",
+    limit.userCount, limit.globalCount);
 
   // T-6.4 — Prefer Vercel AI Gateway when AI_GATEWAY_API_KEY is set.
   // Falls back to Azure OpenAI if only the Azure vars are present.
