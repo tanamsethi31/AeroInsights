@@ -39,13 +39,33 @@ export default defineConfig({
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
   build: {
-    // Raise from the default 500 kB — export utilities (jspdf/docx/xlsx) are
-    // inherently large; chunks are properly split for caching, so suppress the
-    // warning for the remaining large-but-expected chunks.
-    chunkSizeWarningLimit: 1500,
+    // Raise from the default 500 kB. routes.tsx switched away from
+    // React.lazy() to eliminate a Suspense ↔ lazy ordering bug that froze
+    // navigation — every page is statically imported now, so the main
+    // bundle is inherently large. The page-level manualChunks below split
+    // it into per-page cacheable units so a re-deploy that only changes
+    // one page invalidates one chunk, not the whole index. The floor
+    // still needs to be high enough to not warn on the expected size.
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // ── Per-page chunks. Pages are still STATICALLY imported by
+          //    routes.tsx (so all chunks load on initial visit — we are
+          //    not lazy-loading), but each lives in its own cacheable
+          //    file so changes to one page don't invalidate the rest.
+          if (id.includes('/src/app/pages/Dashboard'))      return 'page-dashboard'
+          if (id.includes('/src/app/pages/Portfolio'))      return 'page-portfolio'
+          if (id.includes('/src/app/pages/Scenarios'))      return 'page-scenarios'
+          if (id.includes('/src/app/pages/CustomBuilder'))  return 'page-custom-builder'
+          if (id.includes('/src/app/pages/RiskECL'))        return 'page-risk-ecl'
+          if (id.includes('/src/app/pages/Maintenance'))    return 'page-maintenance'
+          if (id.includes('/src/app/pages/Intelligence'))   return 'page-intelligence'
+          if (id.includes('/src/app/pages/Deals'))          return 'page-deals'
+          if (id.includes('/src/app/pages/Counterparties')) return 'page-counterparties'
+          if (id.includes('/src/app/pages/Reports'))        return 'page-reports'
+          if (id.includes('/src/app/pages/RateOutlook'))    return 'page-rate-outlook'
+
           // MUI + Emotion — large design system
           if (id.includes('@mui/') || id.includes('@emotion/')) {
             return 'vendor-mui'
