@@ -53,7 +53,7 @@ export function AgentButton() {
           }}
         >
           <Zap size={14} color="#FFFFFF" />
-          <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.02em" }}>AI</span>
+          <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.02em" }}>AI Assistant</span>
         </button>
       </div>
     );
@@ -86,7 +86,7 @@ export function AgentButton() {
         }}
       >
         <Zap size={14} color="#FFFFFF" />
-        <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.02em" }}>AI</span>
+        <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.02em" }}>AI Assistant</span>
       </button>
 
       {/* Notification dot — shown when hasNewSignal is true and panel is closed */}
