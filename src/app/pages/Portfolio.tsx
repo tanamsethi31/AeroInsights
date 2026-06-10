@@ -439,7 +439,7 @@ export default function Portfolio() {
               past the midpoint so the background image still shows. */}
           <div style={{
             position: "absolute", inset: 0,
-            background: "linear-gradient(to right, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 30%, rgba(0,0,0,0.18) 65%, transparent 100%)",
+            background: "linear-gradient(to right, rgba(0,0,0,0.48) 0%, rgba(0,0,0,0.32) 30%, rgba(0,0,0,0.12) 65%, transparent 100%)",
           }} />
           <div style={{
             position: "relative", zIndex: 1,
