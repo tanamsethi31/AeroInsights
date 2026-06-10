@@ -4,7 +4,7 @@
  * Enforces (in order):
  *  1. Auth0 bearer token required and signature-verified (RSA via JWKS).
  *  2. Per-user per-minute burst limit (default 3/min).
- *  3. Per-user daily limit          (default 10/day).
+ *  3. Per-user daily limit          (default 50/day).
  *  4. Global daily cap              (default 50/day).
  *  5. Input message length cap      (4,000 chars across all user messages).
  *  6. Output token cap              (max_tokens forced ≤ 512 server-side).
@@ -20,7 +20,7 @@
  *   AUTH0_AUDIENCE            e.g. https://api.aeroinsights.io
  *   UPSTASH_REDIS_REST_URL    e.g. https://xxxx.upstash.io
  *   UPSTASH_REDIS_REST_TOKEN  Upstash REST token
- *   AI_USER_DAILY_LIMIT       Per-user daily cap     (default 10)
+ *   AI_USER_DAILY_LIMIT       Per-user daily cap     (default 50)
  *   AI_USER_MINUTE_LIMIT      Per-user per-minute    (default 3)
  *   AI_GLOBAL_DAILY_LIMIT     Platform-wide cap      (default 50)
  *   AI_MAX_INPUT_CHARS        Reject if user input > N chars  (default 4000)
@@ -31,7 +31,7 @@ export const config = { runtime: "edge" };
 
 import { resolveAiUpstreams, withModel } from "../_lib/aiGateway";
 
-const USER_DAILY_LIMIT    = parseInt(process.env.AI_USER_DAILY_LIMIT    ?? "10",  10);
+const USER_DAILY_LIMIT    = parseInt(process.env.AI_USER_DAILY_LIMIT    ?? "50",  10);
 const USER_MINUTE_LIMIT   = parseInt(process.env.AI_USER_MINUTE_LIMIT   ?? "3",   10);
 const GLOBAL_DAILY_LIMIT  = parseInt(process.env.AI_GLOBAL_DAILY_LIMIT  ?? "50",  10);
 const MAX_INPUT_CHARS     = parseInt(process.env.AI_MAX_INPUT_CHARS     ?? "4000", 10);
