@@ -51,26 +51,41 @@ export interface AiUpstreamConfig {
   defaultModel: string;
 }
 
-/** Resolve the upstream config based on env. */
-export function resolveAiUpstream(): AiUpstreamConfig | null {
+/**
+ * Resolve ALL configured upstream providers in priority order, so the
+ * caller can try each in turn until one succeeds. Used for runtime
+ * fallback: if Cerebras is up the first call wins; if it's blocked by
+ * Cloudflare or rate-limited, the caller retries against Groq without
+ * telling the user anything went wrong.
+ */
+export function resolveAiUpstreams(): AiUpstreamConfig[] {
+  const configs: AiUpstreamConfig[] = [];
+
   // ─── Path 1: Cerebras (direct, OpenAI-compat) ─────────────────────────
+  // NB: Cerebras's free-tier endpoint sits behind a Cloudflare WAF that
+  //     can block cloud-IP traffic (Vercel Edge gets flagged as bots).
+  //     Sending an explicit User-Agent + Accept header makes the request
+  //     look more like a real client. If CF still 403s, the caller falls
+  //     back to Groq automatically.
   const cerebrasKey = process.env.CEREBRAS_API_KEY;
   if (cerebrasKey) {
-    return {
-      useGateway:   true, // semantics: "caller must inject model into body"
+    configs.push({
+      useGateway:   true,
       url:          CEREBRAS_URL,
       headers:      {
         Authorization:  `Bearer ${cerebrasKey}`,
         "Content-Type": "application/json",
+        "Accept":       "application/json, text/event-stream",
+        "User-Agent":   "aeroinsights/1.0 (+https://aeroinsights.vercel.app)",
       },
       defaultModel: process.env.CEREBRAS_MODEL ?? CEREBRAS_MODEL,
-    };
+    });
   }
 
   // ─── Path 2: Groq (direct, OpenAI-compat) — safety-net fallback ───────
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
-    return {
+    configs.push({
       useGateway:   true,
       url:          GROQ_URL,
       headers:      {
@@ -78,13 +93,13 @@ export function resolveAiUpstream(): AiUpstreamConfig | null {
         "Content-Type": "application/json",
       },
       defaultModel: process.env.GROQ_MODEL ?? GROQ_MODEL,
-    };
+    });
   }
 
   // ─── Path 3: Google AI Studio (direct Gemini via OpenAI-compat) ───────
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey) {
-    return {
+    configs.push({
       useGateway:   true,
       url:          GEMINI_URL,
       headers:      {
@@ -92,13 +107,13 @@ export function resolveAiUpstream(): AiUpstreamConfig | null {
         "Content-Type": "application/json",
       },
       defaultModel: process.env.GEMINI_MODEL ?? GEMINI_MODEL,
-    };
+    });
   }
 
-  // ─── Path 2: Vercel AI Gateway (multi-provider proxy) ─────────────────
+  // ─── Path 4: Vercel AI Gateway (multi-provider proxy) ─────────────────
   const gatewayKey = process.env.AI_GATEWAY_API_KEY ?? process.env.VERCEL_AI_GATEWAY_API_KEY;
   if (gatewayKey) {
-    return {
+    configs.push({
       useGateway:   true,
       url:          GATEWAY_URL,
       headers:      {
@@ -106,25 +121,30 @@ export function resolveAiUpstream(): AiUpstreamConfig | null {
         "Content-Type": "application/json",
       },
       defaultModel: process.env.AI_GATEWAY_MODEL ?? DEFAULT_MODEL,
-    };
+    });
   }
+
+  // ─── Path 5: Legacy Azure OpenAI ──────────────────────────────────────
   const azureUrl = process.env.AZURE_OPENAI_URL;
   const azureKey = process.env.AZURE_OPENAI_KEY;
   if (azureUrl && azureKey) {
-    return {
+    configs.push({
       useGateway:   false,
       url:          azureUrl,
       headers:      {
         "api-key":      azureKey,
         "Content-Type": "application/json",
       },
-      // Azure URL already encodes the deployment/model — defaultModel
-      // unused on this path; callers leave the body's `model` field
-      // alone.
       defaultModel: "",
-    };
+    });
   }
-  return null;
+
+  return configs;
+}
+
+/** Back-compat single-resolver — returns the highest-priority configured upstream. */
+export function resolveAiUpstream(): AiUpstreamConfig | null {
+  return resolveAiUpstreams()[0] ?? null;
 }
 
 /**

@@ -29,7 +29,7 @@
 
 export const config = { runtime: "edge" };
 
-import { resolveAiUpstream, withModel } from "../_lib/aiGateway";
+import { resolveAiUpstreams, withModel } from "../_lib/aiGateway";
 
 const USER_DAILY_LIMIT    = parseInt(process.env.AI_USER_DAILY_LIMIT    ?? "10",  10);
 const USER_MINUTE_LIMIT   = parseInt(process.env.AI_USER_MINUTE_LIMIT   ?? "3",   10);
@@ -209,9 +209,11 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: limit.reason, code: "RATE_LIMITED" }, 429);
   }
 
-  // Upstream.
-  const upstreamCfg = resolveAiUpstream();
-  if (!upstreamCfg) {
+  // Upstream chain — first config in priority order is tried first; any
+  // 4xx/5xx (other than 429 rate-limit reasons we should respect) falls
+  // through to the next configured provider.
+  const upstreamConfigs = resolveAiUpstreams();
+  if (upstreamConfigs.length === 0) {
     return json({ error: "AI not configured on server. Contact your administrator." }, 503);
   }
 
@@ -244,26 +246,51 @@ export default async function handler(req: Request): Promise<Response> {
   const clientMax = typeof body.max_tokens === "number" ? body.max_tokens : MAX_OUTPUT_TOKENS;
   body.max_tokens = Math.min(clientMax, MAX_OUTPUT_TOKENS);
 
-  if (upstreamCfg.useGateway) {
-    body = withModel(body, upstreamCfg.defaultModel);
+  // Try each upstream in priority order until one returns 2xx. We retain
+  // the body's `model` field as-is between attempts (withModel only injects
+  // if absent), but EACH provider needs its own model name, so we strip
+  // and re-inject per attempt.
+  const baseBody = { ...body };
+  delete (baseBody as Record<string, unknown>).model;
+
+  let lastUpstream: Response | null = null;
+  let lastUpstreamErrText = "";
+
+  for (const upstreamCfg of upstreamConfigs) {
+    const attemptBody = upstreamCfg.useGateway
+      ? withModel(baseBody, upstreamCfg.defaultModel)
+      : baseBody;
+
+    let upstream: Response;
+    try {
+      upstream = await fetch(upstreamCfg.url, {
+        method:  "POST",
+        headers: upstreamCfg.headers,
+        body:    JSON.stringify(attemptBody),
+      });
+    } catch {
+      // Network-level failure on this provider — try the next one.
+      continue;
+    }
+
+    if (upstream.ok) {
+      // Success — break out and stream this provider's response back.
+      lastUpstream = upstream;
+      break;
+    }
+
+    // Non-OK — capture the body for diagnostics and try the next provider.
+    lastUpstreamErrText = await upstream.text().catch(() => "");
+    lastUpstream       = upstream;
+    // Continue to next provider in the chain.
   }
 
-  // Proxy.
-  let upstream: Response;
-  try {
-    upstream = await fetch(upstreamCfg.url, {
-      method:  "POST",
-      headers: upstreamCfg.headers,
-      body:    JSON.stringify(body),
-    });
-  } catch (err) {
-    return json({ error: `Upstream fetch failed: ${String(err)}` }, 502);
+  if (!lastUpstream || !lastUpstream.ok) {
+    const status = lastUpstream?.status ?? 502;
+    return json({ error: `All upstream providers failed. Last error ${status}: ${lastUpstreamErrText}` }, status);
   }
 
-  if (!upstream.ok) {
-    const text = await upstream.text().catch(() => "");
-    return json({ error: `Upstream error ${upstream.status}: ${text}` }, upstream.status);
-  }
+  const upstream = lastUpstream;
 
   // Stream SSE back to browser, exposing remaining quota in headers.
   const headers: Record<string, string> = {
