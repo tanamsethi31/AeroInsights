@@ -3,26 +3,31 @@
 // Upstream LLM provider resolver. Returns the first configured path in
 // priority order:
 //
-//   1. GEMINI_API_KEY        — Google AI Studio direct (OpenAI-compatible).
-//                              Pay-as-you-go on gemini-2.0-flash with a
-//                              project-level budget cap. The production
-//                              path as of 2026-06. Billing must be enabled
-//                              on the GCP project the key belongs to.
+//   1. CEREBRAS_API_KEY      — Cerebras Cloud direct (OpenAI-compatible).
+//                              Llama 3.3 70B on dedicated silicon. Free
+//                              tier: 64K TPM / 60 RPM / 1M TPD — about
+//                              13× Groq's TPM headroom, large enough for
+//                              the agent's tool-heavy 4-5K-token-per-call
+//                              shape. Production path as of 2026-06.
 //
-//   2. GROQ_API_KEY          — Groq direct (OpenAI-compatible). Free tier
-//                              30 req/min on llama-3.3-70b-versatile.
-//                              Kept as a safety-net fallback in case
-//                              Gemini ever returns an error.
+//   2. GROQ_API_KEY          — Groq direct. Free tier 30 RPM but only
+//                              5K TPM — kept as safety-net fallback in
+//                              case Cerebras ever errors.
 //
-//   3. AI_GATEWAY_API_KEY    — Vercel AI Gateway. Multi-provider, single
-//                              dashboard for cost + fallback chains. Free
-//                              $5 credit but requires a card on file.
+//   3. GEMINI_API_KEY        — Google AI Studio direct. Gated by project-
+//                              level billing config; left wired but rarely
+//                              used (prepay snags). Fallback below Groq.
 //
-//   4. AZURE_OPENAI_*        — Legacy Azure OpenAI deployment.
+//   4. AI_GATEWAY_API_KEY    — Vercel AI Gateway. Multi-provider proxy.
 //
-// All four speak the OpenAI chat-completions JSON shape, so api/ai/chat.ts
+//   5. AZURE_OPENAI_*        — Legacy Azure OpenAI deployment.
+//
+// All five speak the OpenAI chat-completions JSON shape, so api/ai/chat.ts
 // and api/ai/narrative.ts pass through unchanged — this module only swaps
 // URL + auth header + injected model name.
+
+const CEREBRAS_URL   = "https://api.cerebras.ai/v1/chat/completions";
+const CEREBRAS_MODEL = "llama-3.3-70b";
 
 const GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL    = "llama-3.3-70b-versatile";
@@ -48,17 +53,17 @@ export interface AiUpstreamConfig {
 
 /** Resolve the upstream config based on env. */
 export function resolveAiUpstream(): AiUpstreamConfig | null {
-  // ─── Path 1: Google AI Studio (direct Gemini via OpenAI-compat) ───────
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey) {
+  // ─── Path 1: Cerebras (direct, OpenAI-compat) ─────────────────────────
+  const cerebrasKey = process.env.CEREBRAS_API_KEY;
+  if (cerebrasKey) {
     return {
       useGateway:   true, // semantics: "caller must inject model into body"
-      url:          GEMINI_URL,
+      url:          CEREBRAS_URL,
       headers:      {
-        Authorization:  `Bearer ${geminiKey}`,
+        Authorization:  `Bearer ${cerebrasKey}`,
         "Content-Type": "application/json",
       },
-      defaultModel: process.env.GEMINI_MODEL ?? GEMINI_MODEL,
+      defaultModel: process.env.CEREBRAS_MODEL ?? CEREBRAS_MODEL,
     };
   }
 
@@ -73,6 +78,20 @@ export function resolveAiUpstream(): AiUpstreamConfig | null {
         "Content-Type": "application/json",
       },
       defaultModel: process.env.GROQ_MODEL ?? GROQ_MODEL,
+    };
+  }
+
+  // ─── Path 3: Google AI Studio (direct Gemini via OpenAI-compat) ───────
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    return {
+      useGateway:   true,
+      url:          GEMINI_URL,
+      headers:      {
+        Authorization:  `Bearer ${geminiKey}`,
+        "Content-Type": "application/json",
+      },
+      defaultModel: process.env.GEMINI_MODEL ?? GEMINI_MODEL,
     };
   }
 
