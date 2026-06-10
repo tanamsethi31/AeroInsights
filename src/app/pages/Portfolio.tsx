@@ -434,24 +434,27 @@ export default function Portfolio() {
           onMouseDown={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "scale(0.97)"; }}
           onMouseUp={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
         >
-          {/* Semi-transparent dark overlay on left so text is legible */}
+          {/* Semi-transparent dark overlay on left so text is legible.
+              Starts at ~62% black where the text sits, fades to transparent
+              past the midpoint so the background image still shows. */}
           <div style={{
             position: "absolute", inset: 0,
-            background: "linear-gradient(to right, rgba(0,0,0,0.32) 0%, rgba(0,0,0,0.08) 60%, transparent 100%)",
+            background: "linear-gradient(to right, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 30%, rgba(0,0,0,0.18) 65%, transparent 100%)",
           }} />
           <div style={{
             position: "relative", zIndex: 1,
             padding: "1.25rem 1.5rem",
             display: "flex", flexDirection: "column", gap: "0.25rem",
             height: "100%", boxSizing: "border-box",
+            textShadow: "0 1px 3px rgba(0,0,0,0.45)",
           }}>
-            <div style={{ fontSize: "0.75rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", color: "rgba(255,255,255,0.75)" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "rgba(255,255,255,0.90)" }}>
               Excel Add-in
             </div>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#FFFFFF", lineHeight: 1.1 }}>
               Available
             </div>
-            <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.80)", marginTop: "0.125rem" }}>
+            <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.92)", marginTop: "0.125rem" }}>
               Live portfolio data in Excel →
             </div>
           </div>
