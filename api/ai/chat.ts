@@ -7,7 +7,7 @@
  *  3. Per-user daily limit          (default 10/day).
  *  4. Global daily cap              (default 50/day).
  *  5. Input message length cap      (4,000 chars across all user messages).
- *  6. Output token cap              (max_tokens forced ≤ 1,024 server-side).
+ *  6. Output token cap              (max_tokens forced ≤ 512 server-side).
  *
  * Rate limits use Upstash Redis REST API (atomic INCR + EXPIRE via pipeline).
  * If UPSTASH_REDIS_REST_URL / _TOKEN are not set the function fails open so
@@ -24,7 +24,7 @@
  *   AI_USER_MINUTE_LIMIT      Per-user per-minute    (default 3)
  *   AI_GLOBAL_DAILY_LIMIT     Platform-wide cap      (default 50)
  *   AI_MAX_INPUT_CHARS        Reject if user input > N chars  (default 4000)
- *   AI_MAX_OUTPUT_TOKENS      Cap response length             (default 1024)
+ *   AI_MAX_OUTPUT_TOKENS      Cap response length             (default 512)
  */
 
 export const config = { runtime: "edge" };
@@ -35,7 +35,7 @@ const USER_DAILY_LIMIT    = parseInt(process.env.AI_USER_DAILY_LIMIT    ?? "10",
 const USER_MINUTE_LIMIT   = parseInt(process.env.AI_USER_MINUTE_LIMIT   ?? "3",   10);
 const GLOBAL_DAILY_LIMIT  = parseInt(process.env.AI_GLOBAL_DAILY_LIMIT  ?? "50",  10);
 const MAX_INPUT_CHARS     = parseInt(process.env.AI_MAX_INPUT_CHARS     ?? "4000", 10);
-const MAX_OUTPUT_TOKENS   = parseInt(process.env.AI_MAX_OUTPUT_TOKENS   ?? "1024", 10);
+const MAX_OUTPUT_TOKENS   = parseInt(process.env.AI_MAX_OUTPUT_TOKENS   ?? "512",  10);
 
 // ── JWT verification using Web Crypto + Auth0 JWKS ───────────────────────────
 
