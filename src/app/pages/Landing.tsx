@@ -1457,21 +1457,25 @@ function ExtraFeatures() {
 /* ─── PRICING ───────────────────────────────────────────────────────────────── */
 type BillingCycle = "monthly" | "annually";
 
+/* All three tiers now quote-on-request — every `monthlyPrice` is null so the
+ * existing render path resolves to "Custom" for each card. The monthly/annual
+ * toggle is hidden below when no plan exposes a numeric price (it would be a
+ * no-op). */
 const PLANS = [
   {
     name: "Starter",
     desc: "For smaller portfolios and analyst teams getting started.",
-    monthlyPrice: 1200,
+    monthlyPrice: null,
     features: ["Up to 25 aircraft", "Portfolio analytics & lease register", "Basic scenario modelling", "PDF & XLSX reporting", "Email support"],
-    cta: "Get Started",
+    cta: "Talk to Sales",
     highlight: false,
   },
   {
     name: "Professional",
     desc: "For established lessors managing mid-size fleets.",
-    monthlyPrice: 3800,
+    monthlyPrice: null,
     features: ["Up to 150 aircraft", "Full scenario & ECL engine", "AI Intelligence module", "Deal Generator & rack-stack", "Excel Add-In access", "Priority support"],
-    cta: "Get Started",
+    cta: "Talk to Sales",
     highlight: true,
   },
   {
@@ -1486,6 +1490,10 @@ const PLANS = [
 
 function Pricing() {
   const [billing, setBilling] = useState<BillingCycle>("monthly");
+  // Toggle only matters if at least one plan exposes a numeric price.
+  // While every tier is "Custom" the monthly/annual control is a no-op,
+  // so we hide it (and the Save 20% chip) to avoid dead UI.
+  const showBillingToggle = PLANS.some((p) => p.monthlyPrice !== null);
 
   return (
     <section id="pricing" className="py-28">
@@ -1496,54 +1504,55 @@ function Pricing() {
           sub="Start with a free pilot, scale as you grow. All plans include our core portfolio analytics."
         />
 
-        <FadeIn delay={0.1} className="mt-10 flex justify-center">
-          {/*
-            Layout strategy:
-              outer:  flex justify-center                 — anchors pill to viewport centre
-              pill:   relative (so layoutId can absolute) — stays fixed-width, never shifts
-              chip:   absolute, sits to the right of pill — does NOT push the pill off-centre
-            Save 20% is ALWAYS rendered; only its colours change.
-          */}
-          <div className="relative">
-            <div className="flex rounded-full border border-gray-200 bg-gray-50 p-1">
-              {(["monthly", "annually"] as BillingCycle[]).map((c) => {
-                const active = billing === c;
-                return (
-                  <button
-                    key={c}
-                    onClick={() => setBilling(c)}
-                    className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors duration-200"
-                    style={{ color: active ? "#0a0a0a" : undefined }}
-                  >
-                    {active && (
-                      <motion.span
-                        layoutId="billing-pill-indicator"
-                        className="absolute inset-0 -z-10 rounded-full bg-white shadow-sm"
-                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                      />
-                    )}
-                    <span className={cn(!active && "text-gray-500 hover:text-gray-700 transition-colors")}>
-                      {c.charAt(0).toUpperCase() + c.slice(1)}
-                    </span>
-                  </button>
-                );
-              })}
+        {showBillingToggle && (
+          <FadeIn delay={0.1} className="mt-10 flex justify-center">
+            {/*
+              Layout strategy:
+                outer:  flex justify-center                 — anchors pill to viewport centre
+                pill:   relative (so layoutId can absolute) — stays fixed-width, never shifts
+                chip:   absolute, sits to the right of pill — does NOT push the pill off-centre
+              Save 20% is ALWAYS rendered; only its colours change.
+            */}
+            <div className="relative">
+              <div className="flex rounded-full border border-gray-200 bg-gray-50 p-1">
+                {(["monthly", "annually"] as BillingCycle[]).map((c) => {
+                  const active = billing === c;
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => setBilling(c)}
+                      className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors duration-200"
+                      style={{ color: active ? "#0a0a0a" : undefined }}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="billing-pill-indicator"
+                          className="absolute inset-0 -z-10 rounded-full bg-white shadow-sm"
+                          transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                        />
+                      )}
+                      <span className={cn(!active && "text-gray-500 hover:text-gray-700 transition-colors")}>
+                        {c.charAt(0).toUpperCase() + c.slice(1)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <span
+                className={cn(
+                  "absolute left-[calc(100%+12px)] top-1/2 flex -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold",
+                  "transition-all duration-300",
+                  billing === "annually"
+                    ? "scale-100 bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300/60 shadow-sm shadow-emerald-200/60"
+                    : "scale-95 bg-emerald-50/60 text-emerald-700/45 ring-1 ring-emerald-100/40"
+                )}
+              >
+                <i className="bi bi-piggy-bank text-[10px]" />
+                Save 20%
+              </span>
             </div>
-            {/* Save 20% always visible; dims when monthly, glows when annual */}
-            <span
-              className={cn(
-                "absolute left-[calc(100%+12px)] top-1/2 flex -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold",
-                "transition-all duration-300",
-                billing === "annually"
-                  ? "scale-100 bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300/60 shadow-sm shadow-emerald-200/60"
-                  : "scale-95 bg-emerald-50/60 text-emerald-700/45 ring-1 ring-emerald-100/40"
-              )}
-            >
-              <i className="bi bi-piggy-bank text-[10px]" />
-              Save 20%
-            </span>
-          </div>
-        </FadeIn>
+          </FadeIn>
+        )}
 
         <div className="mt-12 grid gap-5 sm:grid-cols-3">
           {PLANS.map((plan, i) => {
