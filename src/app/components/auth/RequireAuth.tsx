@@ -30,10 +30,13 @@ export function RequireAuth() {
   const location = useLocation();
   const synced = useRef(false);
 
-  // Redirect unauthenticated users to /home (landing) or /login.
+  // Redirect unauthenticated users to /login. The /home landing page is
+  // still reachable by typing the URL directly, but visitors hitting "/"
+  // go straight to sign-in — for logged-in users "/" already lands on
+  // the Dashboard via PortfolioIndexGuard further down the route tree.
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate(location.pathname === "/" ? "/home" : "/login", {
+      navigate("/login", {
         replace: true,
         state: { returnTo: location.pathname + location.search },
       });
