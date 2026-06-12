@@ -1,5 +1,6 @@
 // src/app/services/useMacroSignals.ts
 import { useState, useEffect, useCallback } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { MACRO_SIGNALS, type MacroSignal } from "../data/intelligenceData";
 
 interface LiveMacroData {
@@ -78,11 +79,16 @@ export function useMacroSignals(): UseMacroSignalsResult {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [partial, setPartial] = useState(false);
 
+  const { getAccessTokenSilently } = useAuth0();
   const fetchSignals = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/signals/macro");
+      let token: string | undefined;
+      try { token = await getAccessTokenSilently(); } catch { /* anon */ }
+      const res = await fetch("/api/signals/macro", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const live = await res.json() as LiveMacroData;
       setSignals(mergeLiveData(MACRO_SIGNALS, live));
@@ -103,7 +109,7 @@ export function useMacroSignals(): UseMacroSignalsResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAccessTokenSilently]);
 
   useEffect(() => {
     fetchSignals();

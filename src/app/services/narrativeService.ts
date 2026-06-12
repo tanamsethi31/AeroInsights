@@ -44,7 +44,11 @@ function buildFallbackNarrative(run: ScenarioRunResult): string {
 // For local development with AI narrative features, run `vercel dev` instead
 // of `npm run dev` so the Edge Function is served with server-side env vars.
 
-export async function generateNarrative(run: ScenarioRunResult): Promise<string | null> {
+export async function generateNarrative(
+  run: ScenarioRunResult,
+  /** Auth0 bearer token — forwarded to the proxy for verification. */
+  token?: string,
+): Promise<string | null> {
   const endpoint = "/api/ai/narrative";
 
   // Guard against malformed run data — fall back to deterministic summary
@@ -77,9 +81,11 @@ OUTPUT TEMPLATE (follow this structure exactly, substituting bracketed values):
 
   try {
     console.log("[narrative] fetching for run", run.id);
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         messages: [{ role: "user", content: prompt }],
         max_tokens: 220,

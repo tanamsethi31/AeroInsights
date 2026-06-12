@@ -136,7 +136,10 @@ async function _handler(req: Request): Promise<Response> {
   if (req.method !== "POST" && req.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
   }
-  if (CRON_SECRET) {
+  if (!CRON_SECRET) {
+    return new Response(JSON.stringify({ error: "cron_secret_not_configured" }), { status: 503, headers: { "Content-Type": "application/json" } });
+  }
+  {
     const auth = req.headers.get("authorization") ?? "";
     if (auth !== `Bearer ${CRON_SECRET}`) {
       return new Response(JSON.stringify({ error: "unauthorised" }), {

@@ -23,6 +23,7 @@
 // return MOCK data without firing network requests.
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useLocation, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { CustomBuilderTab } from "./scenarios/CustomBuilderTab";
@@ -282,14 +283,17 @@ export default function CustomBuilderPage(): React.JSX.Element {
 
   // ── Narratives ──
   const [narrativeCache, setNarrativeCache] = useState<Map<string, string | null | "loading">>(new Map());
+  const { getAccessTokenSilently } = useAuth0();
   const requestedRunIds = useRef<Set<string>>(new Set());
   const onRequestNarrative = useCallback(async (run: ScenarioRunResult) => {
     if (requestedRunIds.current.has(run.id)) return;
     requestedRunIds.current.add(run.id);
     setNarrativeCache((prev) => new Map(prev).set(run.id, "loading"));
-    const result = await generateNarrative(run);
+    let token: string | undefined;
+    try { token = await getAccessTokenSilently(); } catch { /* fall back to fallback narrative */ }
+    const result = await generateNarrative(run, token);
     setNarrativeCache((prev) => new Map(prev).set(run.id, result));
-  }, []);
+  }, [getAccessTokenSilently]);
   const getNarrative = useCallback(
     (runId: string): string | null | "loading" => {
       if (!narrativeCache.has(runId)) return "loading";

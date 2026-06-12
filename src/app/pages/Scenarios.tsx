@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth0 } from "@auth0/auth0-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useTabSync } from "../hooks/useTabSync";
 import { useViewMode } from "../contexts/ViewModeContext";
@@ -99,6 +100,7 @@ export default function Scenarios() {
   const navigate = useNavigate();
   const { isExecutiveMode } = useViewMode();
   const { pendingInputs, setPendingInputs } = useAgent();
+  const { getAccessTokenSilently } = useAuth0();
   const [activeTab, setActiveTab] = useState(() => PATH_TAB[pathname] ?? "Library");
   useEffect(() => {
     // Gate: when the user navigates AWAY from /scenarios/* (Layout keeps us
@@ -636,10 +638,12 @@ export default function Scenarios() {
       if (requestedRunIds.current.has(run.id)) return;
       requestedRunIds.current.add(run.id);
       setNarrativeCache((prev) => new Map(prev).set(run.id, "loading"));
-      const result = await generateNarrative(run);
+      let token: string | undefined;
+      try { token = await getAccessTokenSilently(); } catch { /* fall back to fallback narrative */ }
+      const result = await generateNarrative(run, token);
       setNarrativeCache((prev) => new Map(prev).set(run.id, result));
     },
-    [] // run object passed directly — no runs array lookup needed
+    [getAccessTokenSilently]
   );
 
   // "Custom Builder" intentionally absent — it's its own top-level page at

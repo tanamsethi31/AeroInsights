@@ -2,6 +2,7 @@
 import { fetchEcbSeries } from "./_lib/ecb";
 import { fetchBrentCrude } from "./_lib/eia";
 import { fetchGdpGrowth } from "./_lib/imf";
+import { verifyAuth0Sub } from "../_lib/auth0";
 
 export interface LiveMacroData {
   ecbDepositRate: { value: number; date: string } | null;
@@ -16,6 +17,17 @@ export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "GET") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Auth gate — endpoint burns paid EIA quota, must be reachable only
+  // by authenticated users.
+  const auth  = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token || !(await verifyAuth0Sub(token))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
       headers: { "Content-Type": "application/json" },
     });
   }

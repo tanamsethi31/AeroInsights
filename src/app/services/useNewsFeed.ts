@@ -1,5 +1,6 @@
 // src/app/services/useNewsFeed.ts
 import { useState, useEffect, useCallback } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   DEAL_FEED,
   JURISDICTION_EVENTS,
@@ -165,12 +166,17 @@ export function useNewsFeed(): UseNewsFeedResult {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [partial, setPartial] = useState(false);
 
+  const { getAccessTokenSilently } = useAuth0();
   const fetchNews = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/signals/news");
-      if (res.status === 503) {
+      let token: string | undefined;
+      try { token = await getAccessTokenSilently(); } catch { /* anon — endpoint will 401 and we keep defaults */ }
+      const res = await fetch("/api/signals/news", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.status === 401 || res.status === 503) {
         // NewsAPI not configured — keep static defaults silently
         setLoading(false);
         return;
@@ -198,7 +204,7 @@ export function useNewsFeed(): UseNewsFeedResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAccessTokenSilently]);
 
   useEffect(() => {
     fetchNews();

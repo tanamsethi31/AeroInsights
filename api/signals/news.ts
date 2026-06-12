@@ -16,6 +16,7 @@
 export const config = { runtime: "edge" };
 
 import { fetchAviationNews, fetchJurisdictionNews, type NewsArticleRaw } from "./_lib/newsapi";
+import { verifyAuth0Sub } from "../_lib/auth0";
 
 const JX_COUNTRIES = ["India", "Brazil", "UAE", "Sri Lanka", "Ireland", "Singapore"];
 
@@ -30,6 +31,17 @@ export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "GET") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Auth gate — endpoint burns paid NewsAPI quota, must be reachable
+  // only by authenticated users.
+  const auth  = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token || !(await verifyAuth0Sub(token))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
       headers: { "Content-Type": "application/json" },
     });
   }

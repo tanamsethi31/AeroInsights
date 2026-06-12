@@ -219,7 +219,10 @@ async function alertsHandler(req: Request): Promise<Response> {
 
   // CRON_SECRET gates the endpoint. Vercel injects the secret as a Bearer
   // header on every cron invocation.
-  if (CRON_SECRET) {
+  if (!CRON_SECRET) {
+    return new Response(JSON.stringify({ error: "cron_secret_not_configured" }), { status: 503, headers: { "Content-Type": "application/json" } });
+  }
+  {
     const auth = req.headers.get("authorization") ?? "";
     if (auth !== `Bearer ${CRON_SECRET}`) {
       return new Response(JSON.stringify({ error: "unauthorised" }), {
