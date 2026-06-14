@@ -3,7 +3,9 @@
  */
 
 .aero-tour-popover.driver-popover {
-  background:    #FFFFFF;
+  /* Same subtle blue-white gradient as the Landing-page hero ambient
+     wash. Reads as a soft branded surface instead of plain white. */
+  background:    linear-gradient(180deg, #fafcff 0%, #f4f7fd 38%, #f6f8fd 72%, #f0f4fb 100%);
   color:         #0F172A;
   border-radius: 12px;
   border:        1px solid rgba(0, 33, 71, 0.14);
