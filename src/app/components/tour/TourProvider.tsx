@@ -91,28 +91,38 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     stepIndexRef.current = 0;
   }, []);
 
-  // Move to the next step. If the next step lives on a different route,
-  // navigate there first and wait for the anchor element to mount.
+  // Move to the next step. If the next step lives on a different route
+  // we navigate there first. If the anchor element doesn't exist within
+  // the timeout (e.g. collapsed section, inactive tab) we SKIP that step
+  // rather than killing the tour — silent death was the reported bug.
   const advance = React.useCallback(async () => {
-    const i = stepIndexRef.current;
-    const nextIndex = i + 1;
-    if (nextIndex >= TOUR_STEPS.length) {
-      finish(true);
-      return;
+    let i = stepIndexRef.current;
+    while (true) {
+      const nextIndex = i + 1;
+      if (nextIndex >= TOUR_STEPS.length) {
+        finish(true);
+        return;
+      }
+      const next = TOUR_STEPS[nextIndex];
+      const onTargetRoute = locationRef.current.pathname === next.path
+        || locationRef.current.pathname.startsWith(next.path + "/");
+      if (!onTargetRoute) {
+        navigateRef.current(next.path);
+      }
+      const el = await waitForSelector(next.selector, 2500);
+      if (el) {
+        stepIndexRef.current = nextIndex;
+        driverRef.current?.moveNext();
+        return;
+      }
+      // Anchor never appeared — log + skip forward instead of closing.
+      // eslint-disable-next-line no-console
+      console.warn(`[tour] step ${nextIndex} anchor missing (${next.selector}), skipping`);
+      // Advance driver's internal cursor too so a future moveNext() lands
+      // on the right step.
+      driverRef.current?.moveNext();
+      i = nextIndex;
     }
-    const next = TOUR_STEPS[nextIndex];
-    const onTargetRoute = locationRef.current.pathname === next.path
-      || locationRef.current.pathname.startsWith(next.path + "/");
-    if (!onTargetRoute) {
-      navigateRef.current(next.path);
-      const el = await waitForSelector(next.selector);
-      if (!el) { finish(false); return; }
-    } else {
-      const el = await waitForSelector(next.selector);
-      if (!el) { finish(false); return; }
-    }
-    stepIndexRef.current = nextIndex;
-    driverRef.current?.moveNext();
   }, [finish]);
 
   const startTour = React.useCallback(() => {

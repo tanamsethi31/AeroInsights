@@ -811,8 +811,9 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Charts row — collapsible; collapsed by default in Executive Mode */}
+      <div data-tour="dashboard-ecl-trend">
       <DashboardSection label="Charts & Analysis" defaultOpen={!isExecutiveMode}>
-      <div data-tour="dashboard-ecl-trend" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
         <Card title="ECL Trend — Last 6 Months" subtitle="Stage 1 / 2 / 3 breakdown · hover for detail" blueHeader>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={eclTrendData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
@@ -874,6 +875,7 @@ export default function Dashboard() {
         </Card>
       </div>
       </DashboardSection>
+      </div>
 
       {/* Lessee Intelligence Map — Globe + Headlines split */}
       <div data-tour="dashboard-globe">
