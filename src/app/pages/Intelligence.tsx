@@ -1886,14 +1886,14 @@ export default function Intelligence() {
             />
           )}
           {activeTab === "jx-watch" && (
-            <JurisdictionWatchView
+            <div data-tour="intelligence-jx"><JurisdictionWatchView
               events={liveJxEvents}
               loading={newsLoading}
               lastUpdated={newsUpdated}
               onRefresh={refreshNews}
               lesseeIdByName={lesseeIdByName}
               liveTotalExposure={liveTotalExposure}
-            />
+            /></div>
           )}
         </motion.div>
       </AnimatePresence>

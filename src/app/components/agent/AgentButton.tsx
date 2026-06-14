@@ -60,7 +60,7 @@ export function AgentButton() {
   }
 
   return (
-    <div style={{ position: "relative", display: "inline-flex" }}>
+    <div data-tour="ai-assistant-button" style={{ position: "relative", display: "inline-flex" }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         onMouseEnter={() => setHovered(true)}

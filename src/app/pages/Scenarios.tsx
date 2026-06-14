@@ -731,7 +731,7 @@ export default function Scenarios() {
         Scenarios is open — switches become a CSS visibility flip. Memory
         cost is bounded (three mounts total per Scenarios visit).
       */}
-      <div style={{ display: activeTab === "Library" ? "block" : "none" }}>
+      <div data-tour="scenarios-library" style={{ display: activeTab === "Library" ? "block" : "none" }}>
         {visitedSubTabs.has("Library") && <LibraryTab
           weightedECL={weightedECL}
           effectiveTemplates={effectiveTemplates}

@@ -1,0 +1,133 @@
+/* src/app/components/tour/tour.css
+ * Style overrides for driver.js to match the Aeroinsights blue palette.
+ */
+
+.aero-tour-popover.driver-popover {
+  background:    #FFFFFF;
+  color:         #0F172A;
+  border-radius: 12px;
+  border:        1px solid rgba(0, 33, 71, 0.10);
+  box-shadow:    0 12px 32px rgba(0, 33, 71, 0.18);
+  max-width:     360px;
+  font-family:   system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+.aero-tour-popover .driver-popover-title {
+  font-size:     1rem;
+  font-weight:   700;
+  color:         #002147;
+  margin-bottom: 0.5rem;
+  padding:       0;
+}
+
+.aero-tour-popover .driver-popover-description {
+  font-size:   0.875rem;
+  line-height: 1.55;
+  color:       #334155;
+  padding:     0;
+}
+
+.aero-tour-popover .driver-popover-footer {
+  margin-top:   1rem;
+  padding-top:  0.75rem;
+  border-top:   1px solid #E2E8F0;
+  display:      flex;
+  align-items:  center;
+  gap:          0.5rem;
+}
+
+.aero-tour-popover .driver-popover-progress-text {
+  font-size:   0.6875rem;
+  color:       #94A3B8;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aero-tour-popover .driver-popover-prev-btn,
+.aero-tour-popover .driver-popover-next-btn,
+.aero-tour-popover .driver-popover-close-btn {
+  font-family:    inherit;
+  font-size:      0.8125rem;
+  font-weight:    600;
+  border-radius:  8px;
+  padding:        0.5rem 0.9rem;
+  border:         1px solid transparent;
+  cursor:         pointer;
+  transition:     background 120ms ease-out, transform 120ms ease-out;
+}
+
+.aero-tour-popover .driver-popover-next-btn {
+  background:   #002147;
+  color:        #FFFFFF;
+  border-color: #002147;
+}
+.aero-tour-popover .driver-popover-next-btn:hover {
+  background: #003175;
+}
+.aero-tour-popover .driver-popover-next-btn:active {
+  transform: scale(0.97);
+}
+
+.aero-tour-popover .driver-popover-prev-btn {
+  background:   transparent;
+  color:        #475569;
+  border-color: #CBD5E1;
+}
+.aero-tour-popover .driver-popover-prev-btn:hover {
+  background: #F1F5F9;
+}
+
+.aero-tour-popover .driver-popover-close-btn {
+  background:   transparent;
+  color:        #94A3B8;
+  border:       none;
+  padding:      0 0.25rem;
+  position:     absolute;
+  top:          0.5rem;
+  right:        0.5rem;
+  font-size:    1.25rem;
+  line-height:  1;
+}
+.aero-tour-popover .driver-popover-close-btn:hover {
+  color: #475569;
+}
+
+/* Highlighted element halo. */
+.driver-active-element {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 4px;
+}
+
+/* Replay-tour pill. */
+.aero-replay-pill {
+  position:        fixed;
+  bottom:          1.25rem;
+  right:           1.25rem;
+  z-index:         70;
+  display:         inline-flex;
+  align-items:     center;
+  gap:             0.4rem;
+  background:      #FFFFFF;
+  color:           #002147;
+  border:          1px solid rgba(0, 33, 71, 0.18);
+  border-radius:   9999px;
+  font-size:       0.8125rem;
+  font-weight:     600;
+  padding:         0.55rem 1rem;
+  box-shadow:      0 4px 14px rgba(0, 33, 71, 0.16);
+  cursor:          pointer;
+  transition:      transform 120ms ease-out, box-shadow 160ms ease-out;
+  font-family:     inherit;
+}
+.aero-replay-pill:hover {
+  box-shadow: 0 6px 20px rgba(0, 33, 71, 0.22);
+  transform:  translateY(-1px);
+}
+.aero-replay-pill:active {
+  transform: scale(0.97);
+}
+.aero-replay-pill__icon {
+  font-size: 1rem;
+  line-height: 1;
+}

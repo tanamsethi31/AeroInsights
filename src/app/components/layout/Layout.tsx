@@ -13,6 +13,8 @@ import { usePortfolio } from "../../contexts/PortfolioContext";
 import Dashboard from "../../pages/Dashboard";
 import Portfolio from "../../pages/Portfolio";
 import Deals from "../../pages/Deals";
+import { TourProvider } from "../tour/TourProvider";
+import { ReplayTourPill } from "../tour/ReplayTourPill";
 
 /**
  * Persistent-mount shell for heavy pages.
@@ -162,22 +164,25 @@ export function Layout() {
   return (
     <CurrencyProvider>
       <AgentProvider>
-        <SidebarProvider
-          style={
-            {
-              "--sidebar-width": "16rem",
-              "--sidebar-width-icon": "3rem",
-              "--header-height": "3.5rem",
-              // Pin to viewport height so every flex descendant gets a resolved height.
-              // Without this, shadcn's min-h-svh leaves heights unconstrained and
-              // height:100% on AgentPanel resolves to 'auto' (content-tall).
-              height: "100vh",
-              overflow: "hidden",
-            } as React.CSSProperties
-          }
-        >
-          <LayoutContent />
-        </SidebarProvider>
+        <TourProvider>
+          <SidebarProvider
+            style={
+              {
+                "--sidebar-width": "16rem",
+                "--sidebar-width-icon": "3rem",
+                "--header-height": "3.5rem",
+                // Pin to viewport height so every flex descendant gets a resolved height.
+                // Without this, shadcn's min-h-svh leaves heights unconstrained and
+                // height:100% on AgentPanel resolves to 'auto' (content-tall).
+                height: "100vh",
+                overflow: "hidden",
+              } as React.CSSProperties
+            }
+          >
+            <LayoutContent />
+            <ReplayTourPill />
+          </SidebarProvider>
+        </TourProvider>
       </AgentProvider>
     </CurrencyProvider>
   );

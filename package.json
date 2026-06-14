@@ -62,6 +62,7 @@
     "d3-geo": "^3.1.1",
     "date-fns": "3.6.0",
     "docx": "^9.6.1",
+    "driver.js": "^1.4.0",
     "embla-carousel-react": "8.6.0",
     "framer-motion": "^12.38.0",
     "html2canvas": "^1.4.1",
@@ -92,7 +93,6 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "4.1.12",
-    "shadcn": "^4.6.0",
     "@types/d3-geo": "^3.1.0",
     "@types/node": "^25.9.1",
     "@types/topojson-client": "^3.1.5",
@@ -104,6 +104,7 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "globals": "^17.6.0",
     "happy-dom": "^20.9.0",
+    "shadcn": "^4.6.0",
     "tailwindcss": "4.1.12",
     "typescript": "^5.6.3",
     "vite": "6.3.5",

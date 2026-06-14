@@ -619,7 +619,7 @@ export default function Portfolio() {
 
       {/* Aircraft Tab */}
       {activeTab === "Aircraft" && (
-        <Card title="Aircraft Register" noPadding>
+        <div data-tour="portfolio-leases"><Card title="Aircraft Register" noPadding>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem", fontVariantNumeric: "tabular-nums" }}>
               <thead>
@@ -748,7 +748,7 @@ export default function Portfolio() {
               </tbody>
             </table>
           </div>
-        </Card>
+        </Card></div>
       )}
 
       {/* Lessees Tab */}

@@ -492,6 +492,7 @@ export default function Dashboard() {
 
       {/* KPI Strip */}
       <div
+        data-tour="dashboard-kpis"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
@@ -811,7 +812,7 @@ export default function Dashboard() {
 
       {/* Charts row — collapsible; collapsed by default in Executive Mode */}
       <DashboardSection label="Charts & Analysis" defaultOpen={!isExecutiveMode}>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
+      <div data-tour="dashboard-ecl-trend" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem" }}>
         <Card title="ECL Trend — Last 6 Months" subtitle="Stage 1 / 2 / 3 breakdown · hover for detail" blueHeader>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={eclTrendData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
@@ -875,6 +876,7 @@ export default function Dashboard() {
       </DashboardSection>
 
       {/* Lessee Intelligence Map — Globe + Headlines split */}
+      <div data-tour="dashboard-globe">
       <Card
         title="Lessee Intelligence Map"
         subtitle="Global risk positions — hover a country to inspect"
@@ -1017,6 +1019,7 @@ export default function Dashboard() {
           </div>
         </div>
       </Card>
+      </div>
 
       {/* Last 5 Scenario Runs — collapsible; collapsed by default in Executive Mode */}
       <Card

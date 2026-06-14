@@ -2272,7 +2272,7 @@ export default function RiskECL() {
           transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
         >
           {activeTab === "ECL Overview" && <OverviewTab />}
-          {activeTab === "Stage Migration" && <StageMigrationTab />}
+          {activeTab === "Stage Migration" && <div data-tour="risk-ecl-migration"><StageMigrationTab /></div>}
           {activeTab === "ECL by Lease" && <LeaseTab />}
           {activeTab === "Sensitivity" && <SensitivityTab />}
           {activeTab === "Rating / PD" && (
