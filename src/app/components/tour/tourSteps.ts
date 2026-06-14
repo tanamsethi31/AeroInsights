@@ -13,6 +13,15 @@ export interface TourStep {
   description: string;
   side?: "top" | "bottom" | "left" | "right";
   align?: "start" | "center" | "end";
+  /**
+   * "anchor" (default) — popover positions next to its selector.
+   * "corner"           — popover floats above the replay-tour pill in
+   *                      the bottom-right corner. Used for full-page
+   *                      steps where there's no single small element
+   *                      to point at; keeps the popover out of the
+   *                      content the description is referring to.
+   */
+  placement?: "anchor" | "corner";
 }
 
 export const TOUR_STEPS: TourStep[] = [
@@ -45,12 +54,11 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     selector: '[data-tour="portfolio-leases"]',
-    path: "/portfolio",
+    path: "/portfolio/aircraft-mix",
     title: "Lease-level book",
     description:
       "Every aircraft, every lessee, every stage assignment — sortable, filterable, with one-click Excel export and Excel Add-in live link.",
-    side: "top",
-    align: "center",
+    placement: "corner",
   },
   {
     selector: '[data-tour="scenarios-library"]',
@@ -58,8 +66,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: "12 pre-calibrated stress scenarios",
     description:
       "Macro shocks, distress scenarios, sovereign events — each runs in seconds with Shapley-decomposed driver attribution.",
-    side: "bottom",
-    align: "center",
+    placement: "corner",
   },
   {
     selector: '[data-tour="build-coefficients"]',
@@ -76,8 +83,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: "IFRS 9 staging engine",
     description:
       "Automated SICR triggers — payment delays, FX shocks, rating downgrades — with every stage transition logged to an immutable audit trail.",
-    side: "bottom",
-    align: "center",
+    placement: "corner",
   },
   {
     selector: '[data-tour="intelligence-jx"]',
@@ -85,8 +91,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Cape Town Convention & jurisdiction risk",
     description:
       "Repossession timelines, ratification quality, sanctions screening per country. The legal layer your ECL depends on.",
-    side: "bottom",
-    align: "center",
+    placement: "corner",
   },
   {
     selector: '[data-tour="ai-assistant-button"]',

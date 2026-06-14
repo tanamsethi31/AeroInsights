@@ -60,6 +60,10 @@
   border:         1px solid transparent;
   cursor:         pointer;
   transition:     background 120ms ease-out, transform 120ms ease-out;
+  /* driver.css ships a 1px white text-shadow on every footer button.
+     On our navy Next button that renders as a ghost copy 1px under
+     the white text — looks like the word is doubled. Nuke it. */
+  text-shadow:    none;
 }
 
 .aero-tour-popover .driver-popover-next-btn {

@@ -111,7 +111,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       if (!onTargetRoute) {
         navigateRef.current(next.path);
       }
-      const el = await waitForSelector(next.selector, 2500);
+      // "corner" steps anchor to the replay pill which is always present,
+      // so we only need to wait for the route change to settle. Anchored
+      // steps wait for the actual data-tour element to mount — longer
+      // timeout since PersistentPage shells (Portfolio, Deals) take a
+      // moment on first visit.
+      const targetSelector = next.placement === "corner" ? ".aero-replay-pill" : next.selector;
+      const el = await waitForSelector(targetSelector, 6000);
       if (el) {
         stepIndexRef.current = nextIndex;
         driverRef.current?.moveNext();
@@ -119,9 +125,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       }
       // Anchor never appeared — log + skip forward instead of closing.
       // eslint-disable-next-line no-console
-      console.warn(`[tour] step ${nextIndex} anchor missing (${next.selector}), skipping`);
-      // Advance driver's internal cursor too so a future moveNext() lands
-      // on the right step.
+      console.warn(`[tour] step ${nextIndex} anchor missing (${targetSelector}), skipping`);
       driverRef.current?.moveNext();
       i = nextIndex;
     }
@@ -136,15 +140,23 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     // back on from the toggle once the tour finishes.
     setIsExecutiveMode(false);
 
-    const driverSteps = TOUR_STEPS.map((s: TourStep) => ({
-      element: s.selector,
-      popover: {
-        title: s.title,
-        description: s.description,
-        side: s.side ?? "bottom",
-        align: s.align ?? "center",
-      },
-    }));
+    const driverSteps = TOUR_STEPS.map((s: TourStep) => {
+      // "corner" steps anchor visually to the replay-tour pill in the
+      // bottom-right so the popover sits out of the way of the content
+      // the description refers to. The pill is always rendered and
+      // position:fixed, so the popover lands consistently regardless
+      // of scroll or page layout.
+      const isCorner = s.placement === "corner";
+      return {
+        element: isCorner ? ".aero-replay-pill" : s.selector,
+        popover: {
+          title: s.title,
+          description: s.description,
+          side: isCorner ? "top" : (s.side ?? "bottom"),
+          align: isCorner ? "end" : (s.align ?? "center"),
+        },
+      };
+    });
 
     const inst = driver({
       showProgress: true,
