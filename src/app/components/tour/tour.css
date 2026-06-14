@@ -6,8 +6,13 @@
   background:    #FFFFFF;
   color:         #0F172A;
   border-radius: 12px;
-  border:        1px solid rgba(0, 33, 71, 0.10);
-  box-shadow:    0 12px 32px rgba(0, 33, 71, 0.18);
+  border:        1px solid rgba(0, 33, 71, 0.14);
+  /* Heavy floating-card shadow — there's no scrim behind the popover
+     in our setup, so the shadow is what carries depth and pulls focus. */
+  box-shadow:
+    0 24px 56px rgba(0, 33, 71, 0.28),
+    0 8px 18px  rgba(0, 33, 71, 0.18),
+    0 1px 0     rgba(255, 255, 255, 0.6) inset;
   max-width:     360px;
   font-family:   system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
@@ -93,11 +98,9 @@
   color: #475569;
 }
 
-/* Highlighted element halo. */
-.driver-active-element {
-  outline: 2px solid rgba(255, 255, 255, 0.55);
-  outline-offset: 4px;
-}
+/* No spotlight scrim in this build — the popover's shadow carries the
+   visual weight. We leave the active element untouched so it reads
+   naturally in context (no halo, no outline). */
 
 /* Replay-tour pill. */
 .aero-replay-pill {

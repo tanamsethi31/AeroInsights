@@ -153,12 +153,15 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       prevBtnText:  "← Back",
       doneBtnText:  "Done",
       allowClose:        true,
-      disableActiveInteraction: true,
+      // No spotlight / scrim — the popover floats next to its anchor
+      // with a strong shadow instead. Users can interact with the page
+      // freely; tour is non-blocking.
+      disableActiveInteraction: false,
+      overlayOpacity:    0,
       animate:           true,
       smoothScroll:      true,
-      overlayColor:      "rgba(2, 17, 36, 0.72)",
-      stagePadding:      6,
-      stageRadius:       8,
+      stagePadding:      0,
+      stageRadius:       0,
       popoverClass:      "aero-tour-popover",
       onNextClick:       () => { void advance(); },
       onPrevClick:       () => {
