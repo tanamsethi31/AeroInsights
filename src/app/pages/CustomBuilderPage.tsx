@@ -329,7 +329,6 @@ export default function CustomBuilderPage(): React.JSX.Element {
         </button>
       </PageHeader>
 
-      <div data-tour="build-coefficients">
       <CustomBuilderTab
         prefillSource={prefillSource}
         setPrefillSource={setPrefillSource}
@@ -379,7 +378,6 @@ export default function CustomBuilderPage(): React.JSX.Element {
         getNarrative={getNarrative}
         onRequestNarrative={onRequestNarrative}
       />
-      </div>
     </div>
   );
 }

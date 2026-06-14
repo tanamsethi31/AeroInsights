@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from "react-router";
 import { driver, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { usePortfolio } from "../../contexts/PortfolioContext";
+import { useViewMode } from "../../contexts/ViewModeContext";
 import { TOUR_STEPS, TOUR_VERSION_KEY, type TourStep } from "./tourSteps";
 import "./tour.css";
 
@@ -70,6 +71,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { activePortfolioId } = usePortfolio();
+  const { setIsExecutiveMode } = useViewMode();
   const driverRef = React.useRef<Driver | null>(null);
   const stepIndexRef = React.useRef(0);
   const [isCompleted, setIsCompleted] = React.useState(getStored);
@@ -128,6 +130,11 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const startTour = React.useCallback(() => {
     if (driverRef.current) driverRef.current.destroy();
     stepIndexRef.current = 0;
+    // Force Executive Mode off for the duration of the tour — that mode
+    // collapses the Charts & Analysis section, which would hide the step
+    // 2 anchor. Users who genuinely prefer Executive Mode can flip it
+    // back on from the toggle once the tour finishes.
+    setIsExecutiveMode(false);
 
     const driverSteps = TOUR_STEPS.map((s: TourStep) => ({
       element: s.selector,

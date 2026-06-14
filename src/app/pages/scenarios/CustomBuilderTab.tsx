@@ -362,7 +362,7 @@ function CustomBuilderTabImpl({
 
               {editorMode === "form" ? (
                 /* ── Visual Form ── */
-                <div>
+                <div data-tour="build-coefficients">
                   <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
                     Macro Shocks
                   </div>
