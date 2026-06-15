@@ -110,7 +110,7 @@ export function BoardPackModal({ reportId, reportName, onClose }: BoardPackModal
     setDownloading(true);
     try {
       if (format === "pdf")  generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"));
-      if (format === "xlsx") generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
+      if (format === "xlsx") await generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
       setDone(true);
       setTimeout(onClose, 1200);
     } finally {

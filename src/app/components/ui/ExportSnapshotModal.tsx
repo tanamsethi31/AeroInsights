@@ -170,7 +170,7 @@ export function ExportSnapshotModal({ onClose }: Props) {
       if (format === "pdf") {
         generatePDF(modules, getPresetLabel(), exportData);
       } else {
-        generateXLSX(modules, getPresetLabel(), exportData);
+        await generateXLSX(modules, getPresetLabel(), exportData);
       }
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 3000);
