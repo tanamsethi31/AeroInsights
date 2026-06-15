@@ -79,10 +79,9 @@
   padding:        0.5rem 0.9rem;
   border:         1px solid transparent;
   cursor:         pointer;
-  transition:     background 120ms ease-out, transform 120ms ease-out;
-  /* driver.css ships a 1px white text-shadow on every footer button.
-     On our navy Next button that renders as a ghost copy 1px under
-     the white text — looks like the word is doubled. Nuke it. */
+  /* Subtle hover — bg fades, no scale/press transform. 90ms keeps it
+     snappy without feeling animated. */
+  transition:     background 90ms ease-out, border-color 90ms ease-out;
   text-shadow:    none;
 }
 
@@ -92,10 +91,8 @@
   border-color: #002147;
 }
 .aero-tour-popover .driver-popover-next-btn:hover {
-  background: #003175;
-}
-.aero-tour-popover .driver-popover-next-btn:active {
-  transform: scale(0.97);
+  background:   #00305f;
+  border-color: #00305f;
 }
 
 .aero-tour-popover .driver-popover-prev-btn {
@@ -104,7 +101,8 @@
   border-color: #CBD5E1;
 }
 .aero-tour-popover .driver-popover-prev-btn:hover {
-  background: #F1F5F9;
+  background:   #F8FAFC;
+  border-color: #B6C2D2;
 }
 
 .aero-tour-popover .driver-popover-close-btn {
@@ -124,7 +122,20 @@
 
 /* No spotlight scrim in this build — the popover's shadow carries the
    visual weight. We leave the active element untouched so it reads
-   naturally in context (no halo, no outline). */
+   naturally in context (no halo, no outline).
+   EXCEPTION: step 9's anchor is the AI Assistant button. Drive a soft
+   navy pulse around it so the eye lands there while the popover
+   describes it. driver.js adds .driver-active-element to whichever
+   step is current, so the rule auto-fires only on step 9. */
+@keyframes aero-tour-ai-pulse {
+  0%   { box-shadow: 0 0 0 0     rgba(0, 33, 71, 0.50); }
+  70%  { box-shadow: 0 0 0 12px  rgba(0, 33, 71, 0);    }
+  100% { box-shadow: 0 0 0 0     rgba(0, 33, 71, 0);    }
+}
+.driver-active-element[data-tour="ai-assistant-button"] {
+  border-radius: 9999px;
+  animation:     aero-tour-ai-pulse 1.6s ease-out infinite;
+}
 
 /* Replay-tour pill. */
 .aero-replay-pill {
