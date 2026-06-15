@@ -15,8 +15,7 @@ import { Upload, FileSpreadsheet, Download, X, CheckCircle2, ChevronDown } from 
 import ExcelJS from "exceljs";
 import { loadXlsx, xlsxDownload } from "../../utils/excelHelpers";
 import { parseCsv } from "../../utils/csvParser";
-import { OUR_FIELDS, SAMPLE_ROWS } from "../../lib/columnMapper";
-import { suggestMapping } from "../../lib/columnMapper";
+import { OUR_FIELDS, SAMPLE_ROWS, suggestMapping } from "../../lib/columnMapper";
 import { detectCanonical } from "../../utils/excelParser";
 import { ReviewImportStep } from "./ReviewImportStep";
 import { MultiSheetReviewStep } from "./MultiSheetReviewStep";
@@ -146,12 +145,12 @@ export function TemplateUploadWizard({ orgId, portfolioId, onClose, onComplete }
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    if (file) void handleFile(file);
   }
 
   function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) void handleFile(file);
   }
 
   return (
