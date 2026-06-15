@@ -7,7 +7,8 @@
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { xlsxDownload, xlsxToBlob } from "../utils/excelHelpers";
 import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
 import type { PortfolioExportData } from "../lib/portfolioAdapters";
 
@@ -410,62 +411,68 @@ export function generateReportPDF(
 
 // ─── Named report generators — XLSX ──────────────────────────────────────────
 
-export function generateReportXLSX(
+export async function generateReportXLSX(
   reportId: string,
   currency: CurrencyCode,
   data?: PortfolioExportData,
   /** T-3.3 side-channel — fired before the local download with the file blob + filename. */
   onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
-): void {
+): Promise<void> {
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
   const leaseRows  = data?.leaseRows    ?? LEASES;
   const acRows     = data?.aircraftRows ?? AIRCRAFT;
 
-  const wb = XLSX.utils.book_new();
+  const wb   = new ExcelJS.Workbook();
   const meta = `Generated: ${new Date().toLocaleDateString("en-IE")} | Currency: ${currency}`;
 
-  function addSheet(name: string, headers: string[], rows: (string | number)[][]) {
-    const ws = XLSX.utils.aoa_to_sheet([[meta], [], headers, ...rows]);
-    ws["!cols"] = headers.map((h, i) => ({
-      wch: Math.min(Math.max(h.length, ...rows.map(r => String(r[i] ?? "").length)) + 3, 30),
+  async function addSheet(name: string, headers: string[], rows: (string | number)[][]) {
+    const ws = wb.addWorksheet(name.slice(0, 31));
+    ws.addRow([meta]);
+    ws.addRow([]);
+    ws.addRow(headers);
+    rows.forEach((r) => ws.addRow(r));
+    ws.columns = headers.map((h, i) => ({
+      width: Math.min(
+        Math.max(h.length, ...rows.map((r) => String(r[i] ?? "").length)) + 3,
+        30,
+      ),
     }));
-    XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31));
   }
 
   switch (reportId) {
     case "RPT-001":
-      addSheet("ECL Audit",
+      await addSheet("ECL Audit",
         ["Lease ID", "Lessee", "Aircraft", "EAD", "PD 12m %", "LGD %", "ECL 12m", "ECL LT", "Stage"],
         eclRows.map(r => [r.id, r.lessee, r.aircraft, fe(r.ead, currency), r.pd12m, r.lgd, fe(r.ecl12m, currency), fe(r.eclLT, currency), `S${r.stage}`])
       );
       break;
     case "RPT-002":
-      addSheet("Board Pack",
+      await addSheet("Board Pack",
         ["Scenario", "ECL 12m", "ECL Lifetime", "Coverage"],
         SCENARIOS.map(s => [s.scenario, s.ecl12m, s.eclLT, s.coverage])
       );
       break;
     case "RPT-003":
-      addSheet("Lease Register",
+      await addSheet("Lease Register",
         ["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Monthly Rent", "Stage"],
         leaseRows.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `S${l.stage}`])
       );
       break;
     case "RPT-004":
-      addSheet("ECL Trend",
+      await addSheet("ECL Trend",
         ["Quarter", "Stage 1", "Stage 2", "Stage 3", "Total"],
         ECL_TREND.map(t => [t.quarter, fe(t.s1, currency), fe(t.s2, currency), fe(t.s3, currency), fe(t.total, currency)])
       );
       break;
     case "RPT-005":
-      addSheet("Watchlist",
+      await addSheet("Watchlist",
         ["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"],
         lesseeRows.map(l => [l.name, l.country, l.rating, `S${l.stage}`, l.behavior ?? "—", l.leases, l.exposure, l.daysLate ?? "—"])
       );
       break;
     case "RPT-006":
-      addSheet("Jurisdiction Risk",
+      await addSheet("Jurisdiction Risk",
         ["Country", "CTC", "Score", "Repo P50 (mo)", "Success Prob", "Sanctions"],
         JURISDICTIONS.map(j => [j.country, j.ctc, j.score, j.repoP50, j.successProb, j.sanctions])
       );
@@ -476,10 +483,10 @@ export function generateReportXLSX(
   }
 
   const filename = `aeroinsights-${reportId.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+
   if (onBlob) {
     try {
-      const arrBuf = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
-      const blob   = new Blob([arrBuf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const blob = await xlsxToBlob(wb);
       Promise.resolve(onBlob(blob, filename)).catch(err =>
         console.warn("[generateReportXLSX] onBlob failed:", err)
       );
@@ -487,7 +494,8 @@ export function generateReportXLSX(
       console.warn("[generateReportXLSX] blob extraction failed:", err);
     }
   }
-  XLSX.writeFile(wb, filename);
+
+  await xlsxDownload(wb, filename);
 }
 
 // ─── PDF Export ────────────────────────────────────────────────────────────────
@@ -607,72 +615,70 @@ export function generatePDF(moduleIds: string[], presetLabel: string, data?: Por
 
 // ─── XLSX Export ───────────────────────────────────────────────────────────────
 
-export function generateXLSX(moduleIds: string[], presetLabel: string, data?: PortfolioExportData): void {
+export async function generateXLSX(
+  moduleIds: string[],
+  presetLabel: string,
+  data?: PortfolioExportData,
+): Promise<void> {
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
   const leaseRows  = data?.leaseRows    ?? LEASES;
   const acRows     = data?.aircraftRows ?? AIRCRAFT;
   const liveRows: LiveRows = { eclRows, lesseeRows, acRows, leaseRows };
 
-  const wb = XLSX.utils.book_new();
+  const wb = new ExcelJS.Workbook();
 
-  // Meta sheet first
-  const metaWs = XLSX.utils.aoa_to_sheet([
-    ["Aeroinsights Decision Platform — Export Snapshot"],
-    ["Preset",  presetLabel],
-    ["Generated", new Date().toLocaleString("en-GB")],
-    ["Classification", "Confidential"],
-    [],
-    ["Modules included", moduleIds.join(", ")],
-  ]);
-  metaWs["!cols"] = [{ wch: 22 }, { wch: 40 }];
-  XLSX.utils.book_append_sheet(wb, metaWs, "Info");
+  // Meta sheet
+  const metaWs = wb.addWorksheet("Info");
+  metaWs.addRow(["Aeroinsights Decision Platform — Export Snapshot"]);
+  metaWs.addRow(["Preset",         presetLabel]);
+  metaWs.addRow(["Generated",      new Date().toLocaleString("en-GB")]);
+  metaWs.addRow(["Classification", "Confidential"]);
+  metaWs.addRow([]);
+  metaWs.addRow(["Modules included", moduleIds.join(", ")]);
+  metaWs.columns = [{ width: 22 }, { width: 40 }];
 
-  // One sheet per module
   for (const moduleId of moduleIds) {
     const moduleData = getModuleData(moduleId, liveRows);
     if (!moduleData) continue;
 
-    const ws = XLSX.utils.aoa_to_sheet([
-      // Subtitle row (row 1)
-      [moduleData.subtitle],
-      // Blank row
-      [],
-      // Header row
-      moduleData.headers,
-      // Data rows
-      ...moduleData.rows,
-    ]);
-
-    // Set column widths from content
-    ws["!cols"] = moduleData.headers.map((h, i) => {
-      const maxLen = Math.max(
-        h.length,
-        ...moduleData.rows.map(r => String(r[i] ?? "").length)
-      );
-      return { wch: Math.min(maxLen + 4, 32) };
-    });
-
-    // Sheet name: max 31 chars, no invalid characters
     const sheetName = moduleData.title.replace(/[/\\?*[\]:]/g, "").slice(0, 31);
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const ws = wb.addWorksheet(sheetName);
+
+    ws.addRow([moduleData.subtitle]);
+    ws.addRow([]);
+    ws.addRow(moduleData.headers);
+    moduleData.rows.forEach((r) => ws.addRow(r as (string | number)[]));
+
+    ws.columns = moduleData.headers.map((h, i) => ({
+      width: Math.min(
+        Math.max(h.length, ...moduleData.rows.map((r) => String(r[i] ?? "").length)) + 4,
+        32,
+      ),
+    }));
   }
 
-  const slug = presetLabel.toLowerCase().replace(/\s+/g, "-");
-  const date = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `aeroinsights-${slug}-${date}.xlsx`);
+  const slug     = presetLabel.toLowerCase().replace(/\s+/g, "-");
+  const date     = new Date().toISOString().slice(0, 10);
+  await xlsxDownload(wb, `aeroinsights-${slug}-${date}.xlsx`);
 }
 
 // ─── Convenience: generate the lease register as standalone XLSX ───────────────
 // (used by the Portfolio page "Download" button if wired up later)
-export function generateLeaseRegisterXLSX(): void {
-  const wb   = XLSX.utils.book_new();
+export async function generateLeaseRegisterXLSX(): Promise<void> {
+  const wb      = new ExcelJS.Workbook();
+  const ws      = wb.addWorksheet("Lease Register");
   const headers = ["Lease ID", "Lessee", "Aircraft", "MSN", "Start", "End", "Monthly Rent", "Stage"];
-  const rows    = LEASES.map(l => [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `Stage ${l.stage}`]);
-  const ws      = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws["!cols"]   = headers.map((h, i) => ({
-    wch: Math.min(Math.max(h.length, ...rows.map(r => String(r[i]).length)) + 3, 30),
+  ws.addRow(headers);
+  LEASES.forEach((l) => ws.addRow([l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `Stage ${l.stage}`]));
+  ws.columns = headers.map((h, i) => ({
+    width: Math.min(
+      Math.max(h.length, ...LEASES.map((l) => {
+        const row = [l.id, l.lessee, l.aircraft, l.msn, l.start, l.end, l.rent, `Stage ${l.stage}`];
+        return String(row[i] ?? "").length;
+      })) + 3,
+      30,
+    ),
   }));
-  XLSX.utils.book_append_sheet(wb, ws, "Lease Register");
-  XLSX.writeFile(wb, `aerinsights-lease-register-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  await xlsxDownload(wb, `aeroinsights-lease-register-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
