@@ -1,6 +1,5 @@
 import React from 'react';
-import {Composition} from 'remotion';
-import {AbsoluteFill} from 'remotion';
+import {Composition, AbsoluteFill} from 'remotion';
 
 const Placeholder: React.FC = () => (
   <AbsoluteFill className="bg-[#002147] items-center justify-center">

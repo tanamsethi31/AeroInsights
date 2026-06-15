@@ -7,8 +7,8 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["vitest/globals"]
+    "resolveJsonModule": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"]
   },
   "include": ["src", "scripts", "remotion.config.ts"]
 }
