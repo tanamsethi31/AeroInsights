@@ -1,4 +1,5 @@
-import * as XLSX from "xlsx";
+import { loadXlsx, worksheetToMatrix } from "./excelHelpers";
+import { parseCsv } from "./csvParser";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -188,30 +189,31 @@ export function applyMappings(
 const MAX_ROWS = 10_000;
 
 export async function parseFile(file: File): Promise<ParseResult> {
-  let workbook: XLSX.WorkBook;
+  let allRaw: unknown[][];
 
   const lowerName = file.name.toLowerCase();
   if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
     const buffer = await file.arrayBuffer();
-    workbook = XLSX.read(new Uint8Array(buffer), { type: "array" });
+    const wb = await loadXlsx(buffer);
+    const sheet = wb.worksheets[0];
+    if (!sheet) {
+      return { headers: [], rawRows: [], allDataRows: [], mappings: [], transactions: [], errors: ["File has no sheets"] };
+    }
+    allRaw = worksheetToMatrix(sheet, false);
   } else {
     const text = await file.text();
-    workbook = XLSX.read(text, { type: "string" });
+    allRaw = parseCsv(text);
   }
 
-  const sheetName = workbook.SheetNames[0];
-  const sheet     = workbook.Sheets[sheetName];
-  const all: string[][] = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    raw:    false,
-    defval: "",
-  }) as string[][];
+  const all: string[][] = allRaw.map((row) =>
+    row.map((cell) => (cell == null ? "" : String(cell))),
+  );
 
   if (all.length === 0) {
     return { headers: [], rawRows: [], allDataRows: [], mappings: [], transactions: [], errors: ["File is empty"] };
   }
 
-  const headers     = all[0].map(h => String(h));
+  const headers     = all[0].map((h) => String(h));
   const allDataRows = all.slice(1);
 
   if (allDataRows.length > MAX_ROWS) {
