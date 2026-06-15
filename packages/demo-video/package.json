@@ -11,6 +11,7 @@
     "gen-data": "node scripts/gen-data.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.2.9",
     "@remotion/google-fonts": "4.0.378",
     "d3-geo": "^3.1.1",
     "lucide-react": "^0.487.0",
