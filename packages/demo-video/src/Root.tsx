@@ -1,21 +1,12 @@
 import React from 'react';
-import {Composition, AbsoluteFill} from 'remotion';
-import {FONT_FAMILY} from './theme/fonts';
-import {COLORS} from './theme/tokens';
-
-const Placeholder: React.FC = () => (
-  <AbsoluteFill
-    style={{fontFamily: FONT_FAMILY, background: COLORS.brand}}
-    className="items-center justify-center"
-  >
-    <span className="text-white text-6xl font-black">AeroInsights</span>
-  </AbsoluteFill>
-);
+import {Composition} from 'remotion';
+import {DemoVideo} from './DemoVideo';
+import './theme/fonts';
 
 export const Root: React.FC = () => (
   <Composition
     id="AeroInsightsDemo"
-    component={Placeholder}
+    component={DemoVideo}
     durationInFrames={4800}
     fps={30}
     width={1920}
