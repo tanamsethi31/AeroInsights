@@ -93,6 +93,7 @@ export default defineConfig({
             id.includes('jspdf') ||
             id.includes('docx') ||
             id.includes('exceljs') ||
+            id.includes('xlsx') ||
             id.includes('html2canvas')
           ) {
             return 'vendor-export'

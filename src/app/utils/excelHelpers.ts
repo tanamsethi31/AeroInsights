@@ -4,7 +4,7 @@ export function cellValue(cell: ExcelJS.Cell, raw = true): unknown {
   const v = cell.value;
   if (v === null || v === undefined) return raw ? null : "";
 
-  if (typeof v === "object" && "formula" in v) {
+  if (typeof v === "object" && ("formula" in v || "sharedFormula" in v)) {
     const result = (v as ExcelJS.CellFormulaValue).result;
     if (result === null || result === undefined) return raw ? null : "";
     if (result instanceof Error) return raw ? null : "";
@@ -15,12 +15,12 @@ export function cellValue(cell: ExcelJS.Cell, raw = true): unknown {
     const text = (v as ExcelJS.CellRichTextValue).richText
       .map((rt) => rt.text)
       .join("");
-    return raw ? text : text;
+    return text;
   }
 
   if (typeof v === "object" && "hyperlink" in v) {
     const text = (v as ExcelJS.CellHyperlinkValue).text ?? "";
-    return raw ? text : text;
+    return text;
   }
 
   if (typeof v === "object" && "error" in v) return raw ? null : "";
