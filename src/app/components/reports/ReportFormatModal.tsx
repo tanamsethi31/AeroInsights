@@ -57,7 +57,7 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
     setDownloading(true);
     try {
       if (selected === "pdf")  generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"));
-      if (selected === "xlsx") generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
+      if (selected === "xlsx") await generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
       if (selected === "docx") await generateReportDOCX(reportId, currency, exportData, undefined, makeOnBlob("docx"));
       setDone(true);
       setTimeout(onClose, 1200);
