@@ -24,7 +24,7 @@ export default defineConfig({
     // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
-    nodePolyfills({ include: ['buffer', 'stream', 'util', 'events'] }),
+    nodePolyfills({ include: ['buffer', 'crypto', 'stream', 'string_decoder', 'util', 'events'] }),
   ],
   resolve: {
     alias: [
