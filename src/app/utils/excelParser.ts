@@ -6,7 +6,7 @@
 //
 // Architecture
 // ────────────
-// 1. parseWorkbook(file) reads the file with SheetJS, walks the named sheets
+// 1. parseWorkbook(file) reads the file with ExcelJS, walks the named sheets
 //    we care about, and dispatches each to a sheet-specific handler defined
 //    below. Handlers return typed row arrays + a sheet-level errors list.
 //
@@ -359,10 +359,7 @@ function sheetToObjects(
 
 function asString(v: unknown): string | null {
   if (v == null) return null;
-  if (v instanceof Date) {
-    const iso = v.toISOString().slice(0, 10);
-    return iso === "" ? null : iso;
-  }
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
   const s = String(v).trim();
   return s === "" ? null : s;
 }
