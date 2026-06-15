@@ -88,8 +88,7 @@
     "tailwind-merge": "^3.2.0",
     "topojson-client": "^3.1.0",
     "tw-animate-css": "^1.3.8",
-    "vaul": "1.1.2",
-    "xlsx": "^0.18.5"
+    "vaul": "1.1.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
