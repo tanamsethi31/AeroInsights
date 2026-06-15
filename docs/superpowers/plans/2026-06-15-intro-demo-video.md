@@ -18,6 +18,7 @@
 - Run all `npm`/`npx` commands from inside `packages/demo-video/` unless the step says otherwise.
 - 30 fps. Frame for time `m:ss` = `(m*60 + ss) * 30`. Scene boundaries (frames): S1 0–420, S2 420–1020, S3 1020–1710, S4 1710–2580, S5 2580–3390, S6 3390–3840, S7 3840–4200, S8 4200–4800. Total **4800 frames**.
 - Commit after every task with the message shown in its final step.
+- **STYLING — inline styles only (no Tailwind).** A diagnostic render in this Remotion 4.x setup proved Tailwind v4 utility classes (`flex`, `grid`, `bg-*`, `text-*`, etc., including arbitrary values) produce **no** styling — the stylesheet is not applied at render time, and `@source` did not fix it. Therefore every component uses **inline `style={{…}}` objects only**, following the pattern established in `src/components/AppShell.tsx` and `src/components/Sidebar.tsx`. The code blocks in Tasks 6–13 below were originally written with Tailwind `className`s; when implementing, translate each `className` to the equivalent inline `style` (using `COLORS`/tokens for brand values). Keep all animation/data/frame logic (interpolate/spring calls, data values, layout intent) exactly as specified — only the styling mechanism changes. The Tailwind plumbing (`@import "tailwindcss"`, `enableTailwind`) is left in place but inert; do not rely on it. Verify each screen with a still render.
 
 ---
 
@@ -879,11 +880,12 @@ import {describe, it, expect} from 'vitest';
 import {countValue} from './CountUp';
 
 describe('countValue', () => {
+  // Signature: countValue(target, frame, start, dur)
   it('is 0 at the start frame', () => {
-    expect(countValue(100, 0, 30, 30)).toBe(0);
+    expect(countValue(100, 30, 30, 30)).toBe(0); // frame === start
   });
   it('reaches the target at the end frame', () => {
-    expect(countValue(100, 30, 30, 30)).toBe(100);
+    expect(countValue(100, 60, 30, 30)).toBe(100); // frame === start + dur
   });
   it('clamps before start and after end', () => {
     expect(countValue(100, 5, 10, 30)).toBe(0);
