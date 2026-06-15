@@ -1,6 +1,6 @@
 /**
  * exportService.ts
- * Generates PDF (jsPDF + autotable) and XLSX (SheetJS) exports for the
+ * Generates PDF (jsPDF + autotable) and XLSX (ExcelJS) exports for the
  * ExportSnapshotModal.  All data is self-contained static mock data that
  * mirrors the values shown in the live pages.
  */
