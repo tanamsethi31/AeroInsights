@@ -1,66 +1,50 @@
 import React from 'react';
-import {AbsoluteFill, Series, Sequence, Audio, staticFile} from 'remotion';
-import {AppShell} from './components/AppShell';
-import {Cursor} from './components/Cursor';
-import {Caption} from './components/Caption';
-import {Camera, CameraMove} from './components/Camera';
-import {Dashboard} from './screens/Dashboard';
-import {Portfolio} from './screens/Portfolio';
-import {RiskECL} from './screens/RiskECL';
-import {ScenarioLibrary} from './screens/ScenarioLibrary';
-import {ScenarioBuilder} from './screens/ScenarioBuilder';
-import {Intelligence} from './screens/Intelligence';
-import {AIPanel} from './screens/AIPanel';
-import {RateOutlook} from './screens/RateOutlook';
-import {ExcelView} from './screens/ExcelView';
+import {AbsoluteFill, Series, Audio, staticFile} from 'remotion';
+import {ScreenShot} from './components/ScreenShot';
+import {TitleCard} from './components/TitleCard';
 import {CTA} from './screens/CTA';
+import {Caption} from './components/Caption';
 import {FONT_FAMILY} from './theme/fonts';
 
-// Scene durations (frames). Sum MUST equal 4800.
-const S = {dash: 420, port: 600, risk: 690, scen: 870, intel: 810, rate: 450, excel: 360, cta: 600};
+const INTRO = 90;
+const SCENE = 270;
+const OUTRO = 210;
 
-const cameraMoves: CameraMove[] = [
-  {from: 30, to: 120, scale: 1.06, x: 0, y: -10}, // gentle KPI emphasis on Scene 1
+// Real-platform screen tour. Each scene is a captured screenshot of the live
+// AeroInsights app (public/captures) presented with a Ken-Burns move; captions
+// and the music bed are global overlays timed in absolute frames.
+const SCREENS = [
+  'captures/01-dashboard.png',
+  'captures/02-portfolio.png',
+  'captures/03-risk.png',
+  'captures/04-scenarios.png',
+  'captures/05-builder.png',
+  'captures/06-intelligence.png',
+  'captures/09-ai.png',
+  'captures/07-rate.png',
+  'captures/08-reports.png',
 ];
 
+export const TOTAL = INTRO + SCREENS.length * SCENE + OUTRO; // 2730
+
 export const DemoVideo: React.FC = () => (
-  <AbsoluteFill style={{fontFamily: FONT_FAMILY, background: '#ffffff'}}>
+  <AbsoluteFill style={{fontFamily: FONT_FAMILY, background: '#000'}}>
     <Series>
-      <Series.Sequence durationInFrames={S.dash}>
-        <Camera moves={cameraMoves}>
-          <AppShell active="dashboard" title="Dashboard"><Dashboard localStart={0} /></AppShell>
-        </Camera>
+      <Series.Sequence durationInFrames={INTRO}>
+        <TitleCard durationInFrames={INTRO} />
       </Series.Sequence>
-      <Series.Sequence durationInFrames={S.port}>
-        <AppShell active="portfolio" title="Portfolio"><Portfolio localStart={0} /></AppShell>
+      {SCREENS.map((src, i) => (
+        <Series.Sequence key={src} durationInFrames={SCENE}>
+          <ScreenShot src={src} durationInFrames={SCENE} index={i} />
+        </Series.Sequence>
+      ))}
+      <Series.Sequence durationInFrames={OUTRO}>
+        <CTA localStart={0} />
       </Series.Sequence>
-      <Series.Sequence durationInFrames={S.risk}>
-        <AppShell active="risk" title="Risk & ECL"><RiskECL localStart={0} /></AppShell>
-      </Series.Sequence>
-      <Series.Sequence durationInFrames={S.scen}>
-        <AppShell active="scenarios" title="Scenarios">
-          {/* layout="none" so the Sequence does NOT inject an AbsoluteFill that
-              would escape the AppShell content area; it still rebases the frame. */}
-          <Sequence durationInFrames={180} layout="none"><ScenarioLibrary localStart={0} /></Sequence>
-          <Sequence from={180} layout="none"><ScenarioBuilder localStart={0} /></Sequence>
-        </AppShell>
-      </Series.Sequence>
-      <Series.Sequence durationInFrames={S.intel}>
-        <AppShell active="intelligence" title="Intelligence">
-          <Intelligence localStart={0} />
-          <AIPanel panelStart={320} />
-        </AppShell>
-      </Series.Sequence>
-      <Series.Sequence durationInFrames={S.rate}>
-        <AppShell active="rate" title="Rate Outlook"><RateOutlook localStart={0} /></AppShell>
-      </Series.Sequence>
-      <Series.Sequence durationInFrames={S.excel}><ExcelView localStart={0} /></Series.Sequence>
-      <Series.Sequence durationInFrames={S.cta}><CTA localStart={0} /></Series.Sequence>
     </Series>
 
-    {/* Global overlays — absolute-frame timed (NOT reset per Sequence). */}
-    <Cursor />
+    {/* Global overlays — absolute-frame timed. */}
     <Caption />
-    <Audio src={staticFile('music.mp3')} volume={0.25} />
+    <Audio src={staticFile('music.mp3')} volume={0.22} />
   </AbsoluteFill>
 );

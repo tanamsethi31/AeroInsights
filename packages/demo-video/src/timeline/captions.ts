@@ -1,17 +1,17 @@
 export interface CaptionCue { from: number; to: number; text: string; }
 
-// Frames at 30fps. Text per the video spec (captions column).
+// Frames at 30fps. Captions for the real-platform screen tour. Scene layout
+// (see DemoVideo): intro 0-90, then nine 270-frame screen scenes, outro from 2520.
 export const CAPTIONS: CaptionCue[] = [
-  {from: 30, to: 410, text: 'AeroInsights: The Dashboard, portfolio summary'},
-  {from: 440, to: 1000, text: 'Lease register · Fleet & valuations · Concentration · Maturity'},
-  {from: 1040, to: 1690, text: 'IFRS 9 ECL · automatic staging · SICR triggers · audit trail'},
-  {from: 1730, to: 1990, text: 'Scenario Library · ready-made stress templates'},
-  {from: 2000, to: 2320, text: 'Custom Scenario Builder · sliders or JSON (DSL)'},
-  {from: 2330, to: 2560, text: 'One-click run · immutable, branchable history'},
-  {from: 2600, to: 3370, text: 'Lessee Radar · live risk scoring · AI: ask · summarise · draft'},
-  {from: 3410, to: 3820, text: 'Lease Rate Outlook · forward-curve analytics'},
-  {from: 3860, to: 4180, text: 'Excel Add-In · live data, =AI.Portfolio(…)'},
-  {from: 4230, to: 4780, text: 'Sign up in seconds · aeroinsights.vercel.app · Book a demo'},
+  {from: 110, to: 350, text: 'The dashboard — your whole book at a glance'},
+  {from: 380, to: 620, text: '173 leases, 48 lessees — live, not a spreadsheet'},
+  {from: 650, to: 890, text: 'IFRS 9 ECL — automatic staging, audit-ready'},
+  {from: 920, to: 1160, text: 'Stress-test the entire book in one click'},
+  {from: 1190, to: 1430, text: 'Build any scenario — sliders or JSON, Monte Carlo'},
+  {from: 1460, to: 1700, text: 'Lessee Radar — operational & credit signals'},
+  {from: 1730, to: 1970, text: 'Ask in plain English — the AI reads your book'},
+  {from: 2000, to: 2240, text: 'Lease-rate outlook — forward curves'},
+  {from: 2270, to: 2500, text: 'Audit-ready reports — board, audit, disclosure'},
 ];
 
 export function captionAt(frame: number): string | null {
