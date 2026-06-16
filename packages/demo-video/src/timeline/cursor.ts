@@ -12,7 +12,7 @@ export const CURSOR_KEYS: CursorKey[] = [
   {frame: 420, x: 120, y: 220, click: true},    // click Portfolio
   {frame: 1020, x: 120, y: 270, click: true},   // click Risk & ECL (S3)
   {frame: 1710, x: 120, y: 320, click: true},   // click Scenarios (S4)
-  {frame: 1900, x: 560, y: 480, click: true},   // pick a library template
+  {frame: 1860, x: 560, y: 480, click: true},   // pick a library template (during Library window 1710-1889)
   {frame: 2100, x: 980, y: 520},                // drag fuel slider
   {frame: 2360, x: 1360, y: 760, click: true},  // Run
   {frame: 2580, x: 120, y: 370, click: true},   // click Intelligence (S5)

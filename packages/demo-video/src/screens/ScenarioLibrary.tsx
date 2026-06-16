@@ -19,7 +19,7 @@ export const ScenarioLibrary: React.FC<{localStart: number}> = ({localStart}) =>
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16}}>
         {TEMPLATES.map((t, i) => {
           const reveal = interpolate(frame, [localStart + 10 + i * 5, localStart + 10 + i * 5 + 12], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-          const picked = i === 0 && frame > localStart + 180;
+          const picked = i === 0 && frame > localStart + 150;
           return (
             <div key={t.name} style={{opacity: reveal, background: COLORS.surface, border: `${picked ? 2 : 1}px solid ${picked ? COLORS.brand : COLORS.line}`, borderRadius: 12, padding: 20}}>
               <span style={{background: COLORS.softBg, color: COLORS.brand, borderRadius: 9999, padding: '4px 10px', fontSize: 12, fontWeight: 600}}>{t.tag}</span>

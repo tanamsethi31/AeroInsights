@@ -39,8 +39,10 @@ export const DemoVideo: React.FC = () => (
       </Series.Sequence>
       <Series.Sequence durationInFrames={S.scen}>
         <AppShell active="scenarios" title="Scenarios">
-          <Sequence durationInFrames={180}><ScenarioLibrary localStart={0} /></Sequence>
-          <Sequence from={180}><ScenarioBuilder localStart={0} /></Sequence>
+          {/* layout="none" so the Sequence does NOT inject an AbsoluteFill that
+              would escape the AppShell content area; it still rebases the frame. */}
+          <Sequence durationInFrames={180} layout="none"><ScenarioLibrary localStart={0} /></Sequence>
+          <Sequence from={180} layout="none"><ScenarioBuilder localStart={0} /></Sequence>
         </AppShell>
       </Series.Sequence>
       <Series.Sequence durationInFrames={S.intel}>

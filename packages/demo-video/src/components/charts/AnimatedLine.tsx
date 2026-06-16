@@ -8,7 +8,7 @@ export const AnimatedLine: React.FC<{
 }> = ({points, start, dur = 40, width = 700, height = 240, color = COLORS.brand}) => {
   const frame = useCurrentFrame();
   const max = Math.max(...points), min = Math.min(...points);
-  const sx = width / (points.length - 1);
+  const sx = width / Math.max(points.length - 1, 1);
   const norm = (v: number) => height - ((v - min) / (max - min || 1)) * (height - 20) - 10;
   const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${i * sx} ${norm(p)}`).join(' ');
   const draw = interpolate(frame, [start, start + dur], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});

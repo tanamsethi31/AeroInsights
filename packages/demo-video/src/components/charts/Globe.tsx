@@ -13,6 +13,7 @@ const CENTROID: Record<string, [number, number]> = {
   India: [79, 21], Mexico: [-102, 24], Brazil: [-52, -14], 'Sri Lanka': [81, 8],
   Ireland: [-8, 53], 'United Kingdom': [-3, 55], Singapore: [104, 1], 'United States': [-98, 39],
   Germany: [10, 51], France: [2, 47], Japan: [138, 37], Australia: [134, -26],
+  UAE: [54, 24], Canada: [-96, 60], China: [104, 35],
 };
 
 export const Globe: React.FC<{
