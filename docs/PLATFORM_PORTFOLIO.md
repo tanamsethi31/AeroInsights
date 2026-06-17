@@ -596,48 +596,8 @@ A separate first-class surface.
 
 The platform is built on the principle that everything reads from the same source of truth. The lease register is the spine, and the data flows are deterministic.
 
-```
-                            ┌─────────────────────────────┐
-                            │   PORTFOLIO (lease register)│
-                            │  aircraft × lessee × lease  │
-                            └──────────────┬──────────────┘
-                                           │
-       ┌───────────────────────┬───────────┼───────────┬────────────────────────┐
-       │                       │           │           │                        │
-       ▼                       ▼           ▼           ▼                        ▼
-┌──────────────┐    ┌────────────────┐ ┌────────┐  ┌────────────┐    ┌──────────────────┐
-│  ANALYTICS   │    │   RISK & ECL   │ │ DEALS  │  │ MAINTENANCE│    │   INTELLIGENCE   │
-│ concentration│    │ S1/S2/S3, PD,  │ │ pricing│  │ MR, events │    │ news, signals,   │
-│ maturity,    │    │ LGD overlays,  │ │ NPV,   │  │ forecasts  │    │ jurisdictions    │
-│ aircraft mix │    │ waterfall,     │ │ comps  │  │            │    │                  │
-│              │    │ snapshots      │ │        │  │            │    │                  │
-└──────────────┘    └───────┬────────┘ └────┬───┘  └──────┬─────┘    └─────────┬────────┘
-                            │               │              │                    │
-                            ▼               ▼              ▼                    ▼
-                       ┌─────────────────────────────────────────────────────────────┐
-                       │                          SCENARIOS                          │
-                       │  parameter sets, custom builder, runs (reproducible)        │
-                       └─────────────────────────┬───────────────────────────────────┘
-                                                 │
-                                                 ▼
-                                       ┌──────────────────┐
-                                       │    REPORTS       │
-                                       │ IFRS 9 packs,    │
-                                       │ board materials, │
-                                       │ regulator output │
-                                       └──────────────────┘
-                                                 ▲
-                                                 │
-                              ┌──────────────────┴──────────────────┐
-                              │      CASH FLOW & RECONCILIATION     │
-                              │ bank ingest, auto-match, cash events│
-                              └──────────────────┬──────────────────┘
-                                                 │
-                            (reality feedback into stage migration & PD calibration)
-                                                 │
-                                                 ▼
-                                          [Risk & ECL]
-```
+![AeroInsights platform module integration diagram. The Portfolio lease register sits at the top as the source of truth, feeding five modules (Analytics, Risk and ECL, Deals, Maintenance, Intelligence), which flow into Scenarios, which flows into Reports. Cash Flow and Reconciliation feeds a reality loop back into Risk and ECL.](integration-diagram.svg)
+
 
 **The integration story in plain prose:**
 
