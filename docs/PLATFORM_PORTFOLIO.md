@@ -1,4 +1,4 @@
-# AeroInsights — Platform Portfolio
+# AeroInsights: Platform Portfolio
 
 *A purpose-built decision-intelligence platform for aviation finance.*
 
@@ -16,7 +16,7 @@ This document exists for one reason: when somebody who actually works in lessor 
 A few things up front:
 
 - **AeroInsights is not built to displace any incumbent on day one.** Aerlytix has a decade of distribution and around 50 people; I'm one recent quantitative-finance graduate with a code editor and a deeply uncomfortable amount of conviction. Telling a lessor with $5B in assets that they should rip out an audited system is not a credible pitch.
-- **What this document is** is a detailed walkthrough of the methodology, architecture and product surface I have built and continue to refine — module by module, sub-tab by sub-tab — so that an aviation finance practitioner can quickly map what's here against what they use today, and form a real view on whether the angle is interesting.
+- **What this document is** is a detailed walkthrough of the methodology, architecture and product surface I have built and continue to refine, module by module, sub-tab by sub-tab, so that an aviation finance practitioner can quickly map what's here against what they use today, and form a real view on whether the angle is interesting.
 - **Where it sits.** AeroInsights is built around four convictions: methodology has to be transparent (no black boxes), configurability matters more than feature count, AI belongs in the signal layer not the chat box, and Excel is part of the workflow whether vendors like it or not. Each of these is treated as a first-class architectural commitment, not a slide.
 
 I'd rather show you the engine than the brochure. The rest of this document is the engine.
@@ -25,17 +25,17 @@ I'd rather show you the engine than the brochure. The rest of this document is t
 
 ## Table of Contents
 
-### Part I — Positioning
+### Part I: Positioning
 1. The state of the lessor decisioning stack today
 2. Where the existing stack falls short
 3. The thesis behind AeroInsights
 
-### Part II — Architecture
+### Part II: Architecture
 4. Platform architecture (frontend, backend, database, AI)
-5. The data model — what the platform actually understands
+5. The data model: what the platform actually understands
 6. Audit trail and immutability
 
-### Part III — Module walkthrough (tab by tab, sub-tab by sub-tab)
+### Part III: Module walkthrough (tab by tab, sub-tab by sub-tab)
 7. Portfolios (org and onboarding)
 8. Portfolio (the asset book)
 9. Scenarios
@@ -48,25 +48,25 @@ I'd rather show you the engine than the brochure. The rest of this document is t
 16. Settings
 17. Excel Add-In
 
-### Part IV — Integration
+### Part IV: Integration
 18. How every module connects to every other
 19. The audit and assumption pipeline
 
-### Part V — Differentiation
+### Part V: Differentiation
 20. The honest comparison vs. Aerlytix
 21. The honest comparison vs. in-house Excel stacks
 22. The honest comparison vs. point tools
 
-### Part VI — Roadmap
+### Part VI: Roadmap
 23. Where this goes next
 
-### Part VII — About the builder
+### Part VII: About the builder
 
-### Appendix — Methodology notes
+### Appendix: Methodology notes
 
 ---
 
-# Part I — Positioning
+# Part I: Positioning
 
 ## 1. The state of the lessor decisioning stack today
 
@@ -76,18 +76,18 @@ Across roughly 50 active aircraft lessors managing around $450B in leased aircra
 |---|---|---|
 | **Portfolio book of record** | Lease register, rent ledger, lessee/aircraft master data | Excel + back-office accounting system (mostly bespoke), plus a CRM-style overlay |
 | **IFRS 9 ECL engine** | PD/LGD/EAD calculation, staging, waterfall, disclosures | Aerlytix LIQ (the only platform with real market traction), in-house Excel/Python at top-5 lessors, sometimes outsourced to a Big-4 advisory |
-| **Asset and market data** | Aircraft values, market lease rates, transaction comparables | Cirium / IBA / Ascend, Avitas, AeroAnalysis — paid data, not platforms |
+| **Asset and market data** | Aircraft values, market lease rates, transaction comparables | Cirium / IBA / Ascend, Avitas, AeroAnalysis (paid data, not platforms) |
 | **Counterparty and jurisdiction signals** | News, sovereign risk, sanctions, operational signals | Manual reading, Bloomberg/Reuters, occasional ad-hoc OFAC checks |
 
 The honest picture: **the only piece that has a real software platform behind it is IFRS 9 ECL**, and even there the platform leader has been at it for years with a substantial team and is still iterating. Everything else is either Excel, paid data feeds, or human attention.
 
-This is not a market with no software in it. It's a market where every category except ECL is still under-built — and ECL itself is treated as a settled problem when, in practice, lessors I have demoed to consistently describe it as the single most painful workflow they touch.
+This is not a market with no software in it. It's a market where every category except ECL is still under-built, and ECL itself is treated as a settled problem when, in practice, lessors I have demoed to consistently describe it as the single most painful workflow they touch.
 
 ## 2. Where the existing stack falls short
 
 The pattern I have observed across all nine review sessions I have run with leadership at Aerfin, Grant Thornton, ELFC, KPMG, TGIS Aviation, Ishka Airglobal Finance, Skyworks, EY and Cloudcards is consistent. Five gaps come up almost every time.
 
-**2.1 Methodology opacity.** Most current ECL engines treat the PD curve, the LGD curve, the SICR threshold and the jurisdiction overlay as inputs the vendor configures. The user sees the output, not the engine. Auditors increasingly expect the inverse — every assumption visible, every change tracked. The audit committee question is no longer *"what did the model produce"*, it is *"who changed which assumption, when, why, and how did that move the number"*. Most platforms answer the first question well and the second question with a screenshot.
+**2.1 Methodology opacity.** Most current ECL engines treat the PD curve, the LGD curve, the SICR threshold and the jurisdiction overlay as inputs the vendor configures. The user sees the output, not the engine. Auditors increasingly expect the inverse: every assumption visible, every change tracked. The audit committee question is no longer *"what did the model produce"*, it is *"who changed which assumption, when, why, and how did that move the number"*. Most platforms answer the first question well and the second question with a screenshot.
 
 **2.2 Configurability lock-in.** A lessor's workflow is a function of its size, jurisdiction, capital structure, and origination model. A boutique Irish lessor with 18 aircraft does not run risk like Avolon. Existing platforms, because they were built to serve a specific segment first, tend to expect their segment's workflow. Adapting them to a tradeable-asset desk or a financing-side workflow requires a vendor services engagement.
 
@@ -103,17 +103,17 @@ AeroInsights does not try to be Aerlytix-plus-one-feature. It is built around fo
 
 **3.1 Methodology transparency.** Every PD curve, every LGD curve, every jurisdiction overlay, every SICR threshold is a first-class object in the database, not a hidden engine parameter. Every change to those objects is logged with the user, timestamp, and reason. The audit trail is the product, not a feature of it.
 
-**3.2 Configurability over feature-completeness.** The platform is architected so the same engine can serve a lessor, a financier, an advisor, a technical team, a trader, or a manufacturer with parameter changes, not code changes. This is why a single solo build can credibly cover the surface area it does — most of the variation between use cases lives in configuration, not in distinct features.
+**3.2 Configurability over feature-completeness.** The platform is architected so the same engine can serve a lessor, a financier, an advisor, a technical team, a trader, or a manufacturer with parameter changes, not code changes. This is why a single solo build can credibly cover the surface area it does: most of the variation between use cases lives in configuration, not in distinct features.
 
-**3.3 AI as a portfolio-aware signal layer.** The intelligence module is built around the question *"what moved today that moves my ECL"* — not *"answer my question"*. News, macro and jurisdictional signals are scored by direct portfolio relevance and routed into the watchlist. The AI is a background process, not a foreground chat.
+**3.3 AI as a portfolio-aware signal layer.** The intelligence module is built around the question *"what moved today that moves my ECL"*, not *"answer my question"*. News, macro and jurisdictional signals are scored by direct portfolio relevance and routed into the watchlist. The AI is a background process, not a foreground chat.
 
-**3.4 Excel-native at every layer.** A first-party Office.js add-in exposes the live portfolio, ECL outputs and scenario results as Excel custom functions (`=AI.Portfolio(...)`, `=AI.ECL(...)`). Analysts get live data inside their existing models. The platform does not try to replace the model — it feeds it.
+**3.4 Excel-native at every layer.** A first-party Office.js add-in exposes the live portfolio, ECL outputs and scenario results as Excel custom functions (`=AI.Portfolio(...)`, `=AI.ECL(...)`). Analysts get live data inside their existing models. The platform does not try to replace the model: it feeds it.
 
 The rest of this document is the platform built against those four commitments.
 
 ---
 
-# Part II — Architecture
+# Part II: Architecture
 
 ## 4. Platform architecture
 
@@ -127,45 +127,45 @@ The rest of this document is the platform built against those four commitments.
 | **Observability** | Sentry React + Sentry Vercel Edge, Vercel Analytics, Speed Insights | Errors traced from client through the function tier. |
 | **Deployment** | Vercel (frontend + functions + cron + edge sentry) | Production: `aeroinsights.vercel.app`. Deploys on push to `main`, with explicit prod promotion via CLI. |
 
-The deliberate choice here is to push as much logic as possible into Postgres (RLS, RPCs, immutable snapshot tables, audit log) and use the function tier only for things Postgres genuinely cannot do well — external API calls, AI orchestration, scheduled jobs, Excel custom-function endpoints. The result is a stack a single engineer can maintain without the operational drag of running a backend server.
+The deliberate choice here is to push as much logic as possible into Postgres (RLS, RPCs, immutable snapshot tables, audit log) and use the function tier only for things Postgres genuinely cannot do well: external API calls, AI orchestration, scheduled jobs, Excel custom-function endpoints. The result is a stack a single engineer can maintain without the operational drag of running a backend server.
 
-## 5. The data model — what the platform actually understands
+## 5. The data model: what the platform actually understands
 
 Below is the durable shape of the data model, organised by the entities the platform reasons about. Each block maps to one or more database migrations.
 
-**5.1 Organisations and portfolios** — `portfolios_table`, `create_organisation_with_member_rpc`, `get_my_latest_org_id_rpc`. Multi-tenant from day one. An organisation can own multiple portfolios (e.g. owned book vs. managed book vs. ABS-segregated trust). Every query is scoped via RLS on `organisation_id`.
+**5.1 Organisations and portfolios:** `portfolios_table`, `create_organisation_with_member_rpc`, `get_my_latest_org_id_rpc`. Multi-tenant from day one. An organisation can own multiple portfolios (e.g. owned book vs. managed book vs. ABS-segregated trust). Every query is scoped via RLS on `organisation_id`.
 
-**5.2 The lease register and asset register** — `aircraft_register_ingest`, `lessee_profiles_ingest`. Aircraft are first-class objects (registration, MSN, type, age, maintenance status). Lessees are first-class objects (jurisdiction, credit rating, parent group). Leases connect them with rent, term, escalation, security deposits, maintenance reserves.
+**5.2 The lease register and asset register:** `aircraft_register_ingest`, `lessee_profiles_ingest`. Aircraft are first-class objects (registration, MSN, type, age, maintenance status). Lessees are first-class objects (jurisdiction, credit rating, parent group). Leases connect them with rent, term, escalation, security deposits, maintenance reserves.
 
-**5.3 Security deposits and maintenance reserves** — `sd_mr_ingest`. SD/MR balances tracked at the lease level, with adequacy assessment feeding directly into LGD.
+**5.3 Security deposits and maintenance reserves:** `sd_mr_ingest`. SD/MR balances tracked at the lease level, with adequacy assessment feeding directly into LGD.
 
-**5.4 ABS and securitised structures** — `abs_deals`, `servicer_reports`. ABS structures modelled with their own scope, with servicer report ingest for portfolios managed inside a structured deal.
+**5.4 ABS and securitised structures:** `abs_deals`, `servicer_reports`. ABS structures modelled with their own scope, with servicer report ingest for portfolios managed inside a structured deal.
 
-**5.5 Cash and reconciliation** — `bank_statements`, `reconciliation_matches`, `cash_events`, `cash_events_unique_txn`. Bank statements ingested, auto-matched to expected lease payments, with manual override; reconciled events written to a unique-transaction-keyed cash event ledger.
+**5.5 Cash and reconciliation:** `bank_statements`, `reconciliation_matches`, `cash_events`, `cash_events_unique_txn`. Bank statements ingested, auto-matched to expected lease payments, with manual override; reconciled events written to a unique-transaction-keyed cash event ledger.
 
-**5.6 Maintenance events** — `maintenance_events`. Major maintenance events (C-check, engine shop visit) recorded against airframe/engine identifiers, with forecast next-event dates.
+**5.6 Maintenance events:** `maintenance_events`. Major maintenance events (C-check, engine shop visit) recorded against airframe/engine identifiers, with forecast next-event dates.
 
-**5.7 IFRS 9 parameters** — `ifrs9_parameters`, `sicr_config`. Reporting-cycle parameters (period start, period end, base rate set), and the Significant Increase in Credit Risk configuration (per-segment SICR thresholds).
+**5.7 IFRS 9 parameters:** `ifrs9_parameters`, `sicr_config`. Reporting-cycle parameters (period start, period end, base rate set), and the Significant Increase in Credit Risk configuration (per-segment SICR thresholds).
 
-**5.8 PD, LGD, and jurisdiction LGD overlays** — `aviation_pd_curves`, `lgd_curves`, `jurisdiction_lgd_overlays`. Aviation-specific PD curves (cohort, vintage, by rating bucket) and LGD curves (by asset class, by aircraft generation), with jurisdiction-level overlays that adjust LGD for repossession complexity, CTC adoption, and insolvency regime.
+**5.8 PD, LGD, and jurisdiction LGD overlays:** `aviation_pd_curves`, `lgd_curves`, `jurisdiction_lgd_overlays`. Aviation-specific PD curves (cohort, vintage, by rating bucket) and LGD curves (by asset class, by aircraft generation), with jurisdiction-level overlays that adjust LGD for repossession complexity, CTC adoption, and insolvency regime.
 
-**5.9 Scenarios** — `stress_scenarios`, `scenario_runs`. Pre-built scenarios stored as parameter sets (macro overlays, counterparty downgrade matrices, lessee-level overrides). Every scenario run logged with full inputs and snapshot output, so any run is reproducible months later.
+**5.9 Scenarios:** `stress_scenarios`, `scenario_runs`. Pre-built scenarios stored as parameter sets (macro overlays, counterparty downgrade matrices, lessee-level overrides). Every scenario run logged with full inputs and snapshot output, so any run is reproducible months later.
 
-**5.10 ECL snapshots** — `ecl_period_snapshots`, `ecl_period_snapshots_immutable`, `ecl_snapshots_portfolio_scope`. ECL outputs are written to period snapshots; once a period is closed, the snapshot is locked (immutable trigger) and any restated number requires an explicit restatement entry. This is the audit-trail backbone.
+**5.10 ECL snapshots:** `ecl_period_snapshots`, `ecl_period_snapshots_immutable`, `ecl_snapshots_portfolio_scope`. ECL outputs are written to period snapshots; once a period is closed, the snapshot is locked (immutable trigger) and any restated number requires an explicit restatement entry. This is the audit-trail backbone.
 
-**5.11 Stage migrations** — `stage_migrations`. Per-lessee stage transition logged at each period close, with the rationale (rule triggered, manual override, restoration).
+**5.11 Stage migrations:** `stage_migrations`. Per-lessee stage transition logged at each period close, with the rationale (rule triggered, manual override, restoration).
 
-**5.12 Assumption change log** — `assumption_change_log`. Every change to PD/LGD/SICR/jurisdiction overlay parameters logged with user, timestamp, before/after, and reason. This is the database object that turns "auditable" from an adjective into a SQL query.
+**5.12 Assumption change log:** `assumption_change_log`. Every change to PD/LGD/SICR/jurisdiction overlay parameters logged with user, timestamp, before/after, and reason. This is the database object that turns "auditable" from an adjective into a SQL query.
 
-**5.13 Alerts and watchlist** — `alert_rules`, `alert_rules_extend_kinds`, `watchlist`. User-configurable alert rules across portfolio events, market signals, jurisdiction changes, and counterparty signals. Watchlist tracks specific lessees, jurisdictions, or aircraft tail numbers under active monitoring.
+**5.13 Alerts and watchlist:** `alert_rules`, `alert_rules_extend_kinds`, `watchlist`. User-configurable alert rules across portfolio events, market signals, jurisdiction changes, and counterparty signals. Watchlist tracks specific lessees, jurisdictions, or aircraft tail numbers under active monitoring.
 
-**5.14 News and macro signals** — `news_signals`, `fx_rates`. Daily news ingest, deduplicated and scored against the active watchlist. FX rates updated daily from central-bank sources, feeding currency translation across the portfolio.
+**5.14 News and macro signals:** `news_signals`, `fx_rates`. Daily news ingest, deduplicated and scored against the active watchlist. FX rates updated daily from central-bank sources, feeding currency translation across the portfolio.
 
-**5.15 Reports** — `report_schedules`, `report_exports`. Scheduled reports configured per organisation; every export written to an immutable export log with re-download capability.
+**5.15 Reports:** `report_schedules`, `report_exports`. Scheduled reports configured per organisation; every export written to an immutable export log with re-download capability.
 
-**5.16 Audit log** — `audit_log`. Every user action that mutates state is logged with actor, organisation, resource, action, and a JSON payload of the change.
+**5.16 Audit log:** `audit_log`. Every user action that mutates state is logged with actor, organisation, resource, action, and a JSON payload of the change.
 
-**5.17 Security lockdown** — `phase4_rls_lockdown`, `phase4_storage_lockdown`, `security_audit_rls_lockdown`. Three iterations of RLS hardening; the current state is that no table is accessible without an organisation-scoped policy, and no storage object is accessible without a per-object signed URL.
+**5.17 Security lockdown:** `phase4_rls_lockdown`, `phase4_storage_lockdown`, `security_audit_rls_lockdown`. Three iterations of RLS hardening; the current state is that no table is accessible without an organisation-scoped policy, and no storage object is accessible without a per-object signed URL.
 
 ## 6. Audit trail and immutability
 
@@ -179,13 +179,13 @@ These three properties are why the platform can plausibly survive an external IF
 
 ---
 
-# Part III — Module walkthrough
+# Part III: Module walkthrough
 
 The application is organised as ten primary modules. The walkthrough below follows the navigation order, with each sub-tab covered separately. For every sub-tab, the format is:
-- **Purpose** — what the user does here
-- **What it shows** — surface
-- **Methodology underneath** — the data model and computation
-- **Where it differs** — the specific way this surface diverges from how the same job is done today
+- **Purpose:** what the user does here
+- **What it shows:** surface
+- **Methodology underneath:** the data model and computation
+- **Where it differs:** the specific way this surface diverges from how the same job is done today
 
 ## 7. Portfolios (entry point)
 
@@ -209,7 +209,7 @@ This is the spine of the platform. Every other module reads from here.
 
 **Methodology underneath.** Lease records are joined to aircraft and lessee tables on every load; the register is a view, not a copy. Edits to lease records emit a row into `audit_log`. Filters are URL-encoded so a particular view can be shared via link.
 
-**Where it differs.** The register is the spine, not the report. Every other module — Risk & ECL, Scenarios, Deals, Reports — reads from the same table the user is looking at on this screen. There is no separate "ECL portfolio" that lives in a different store. This sounds obvious; in practice it is not how legacy platforms are typically structured.
+**Where it differs.** The register is the spine, not the report. Every other module (Risk & ECL, Scenarios, Deals, Reports) reads from the same table the user is looking at on this screen. There is no separate "ECL portfolio" that lives in a different store. This sounds obvious; in practice it is not how legacy platforms are typically structured.
 
 ### 8.2 Analytics
 
@@ -219,7 +219,7 @@ This is the spine of the platform. Every other module reads from here.
 
 **Methodology underneath.** Aggregations computed on read; for portfolios above a configurable size, materialised views refresh nightly. Currency translation handled via the daily FX rate snapshot.
 
-**Where it differs.** The concentration views are wired to the live filter state on the Lease Register — change the filter, and the analytics views recompute for the filtered slice. Most platforms keep "the portfolio dashboard" and "the lease register" as separate screens. AeroInsights treats them as the same screen at two zoom levels.
+**Where it differs.** The concentration views are wired to the live filter state on the Lease Register: change the filter, and the analytics views recompute for the filtered slice. Most platforms keep "the portfolio dashboard" and "the lease register" as separate screens. AeroInsights treats them as the same screen at two zoom levels.
 
 ### 8.3 Aircraft Mix
 
@@ -269,7 +269,7 @@ Stress testing is treated as a first-class workflow, not a sub-feature of ECL.
 
 **Purpose.** Build a scenario from scratch.
 
-**What it shows.** Six configuration panels: (1) macro overlays — GDP growth path, fuel price path, FX paths; (2) traffic recovery curve — by region; (3) counterparty overlays — downgrade matrix, default cluster triggers; (4) jurisdiction overlays — bump LGD by jurisdiction; (5) per-aircraft / per-lessee overrides; (6) portfolio scope — full portfolio or filtered subset. Live preview of the impact on ECL as parameters change.
+**What it shows.** Six configuration panels: (1) macro overlays: GDP growth path, fuel price path, FX paths; (2) traffic recovery curve: by region; (3) counterparty overlays: downgrade matrix, default cluster triggers; (4) jurisdiction overlays: bump LGD by jurisdiction; (5) per-aircraft / per-lessee overrides; (6) portfolio scope: full portfolio or filtered subset. Live preview of the impact on ECL as parameters change.
 
 **Methodology underneath.** Form state persisted in local storage (so analysts can refine over multiple sittings without losing work). Submitting a scenario writes the parameter set to `stress_scenarios` and triggers a run, which writes to `scenario_runs`. The clone affordance bridges via session storage so an analyst can fork an existing scenario without re-entering every parameter.
 
@@ -295,7 +295,7 @@ The IFRS 9 module. The deepest module in the platform and the one most aligned w
 
 **What it shows.** Rolling 12-month transition matrix: stage-to-stage migration probabilities observed in-portfolio, segmented by lessee credit tier, by jurisdiction, by aircraft type. Per-lessee migration trace: every stage change for a counterparty with the trigger that caused it.
 
-**Methodology underneath.** Transition matrix computed from `stage_migrations` table. Each migration row carries the trigger — SICR breach (PD multiple exceeded), 30+ days past due, restructure, manual override (with required reason), restoration after cure period. SICR threshold configurable per segment via `sicr_config`.
+**Methodology underneath.** Transition matrix computed from `stage_migrations` table. Each migration row carries the trigger: SICR breach (PD multiple exceeded), 30+ days past due, restructure, manual override (with required reason), restoration after cure period. SICR threshold configurable per segment via `sicr_config`.
 
 **Where it differs.** Per-lessee migration trace with trigger reasons is the answer to the most common audit question: *"why did this counterparty move from S1 to S2 in March?"*. Most platforms can tell you the position migrated; AeroInsights can tell you what the system thought at the time, what the user did about it, and why.
 
@@ -305,7 +305,7 @@ The IFRS 9 module. The deepest module in the platform and the one most aligned w
 
 **What it shows.** Period-over-period ECL movement broken down by: new origination, runoff, stage migration impact, PD change impact, LGD change impact, EAD change impact, model parameter change, FX impact. Total reconciles to opening ECL → closing ECL exactly. Drillable to lessee level.
 
-**Methodology underneath.** Two-period decomposition: hold portfolio composition constant, vary one driver at a time, sum the deltas. Order matters — the platform uses the standard sequential allocation (composition → PD → LGD → EAD → model) and surfaces the FX impact separately. Computed once per period close and snapshotted; subsequent reads serve the snapshot.
+**Methodology underneath.** Two-period decomposition: hold portfolio composition constant, vary one driver at a time, sum the deltas. Order matters: the platform uses the standard sequential allocation (composition → PD → LGD → EAD → model) and surfaces the FX impact separately. Computed once per period close and snapshotted; subsequent reads serve the snapshot.
 
 **Where it differs.** Audit teams expect this format and most platforms produce something that resembles it. The differentiator here is the drill-down: every bar in the waterfall can be expanded to the per-position contribution. The model-change line in particular is high-trust because every parameter change has an audit-logged reason in `assumption_change_log`.
 
@@ -313,11 +313,11 @@ The IFRS 9 module. The deepest module in the platform and the one most aligned w
 
 **Purpose.** Manage the credit rating model and PD/LGD/EAD parameter tables.
 
-**What it shows.** Four views: (1) Rating distribution across the portfolio; (2) PD curve catalogue — aviation-specific PD curves by rating bucket, asset class, vintage; (3) LGD curve catalogue — base LGD by asset class and aircraft generation; (4) Jurisdiction LGD overlay matrix — per-country adjustment to base LGD reflecting repossession complexity, CTC adoption status, insolvency law regime.
+**What it shows.** Four views: (1) Rating distribution across the portfolio; (2) PD curve catalogue: aviation-specific PD curves by rating bucket, asset class, vintage; (3) LGD curve catalogue: base LGD by asset class and aircraft generation; (4) Jurisdiction LGD overlay matrix: per-country adjustment to base LGD reflecting repossession complexity, CTC adoption status, insolvency law regime.
 
 **Methodology underneath.** PD curves stored in `aviation_pd_curves`, with cohort/vintage structure so curves can be refreshed with new history without invalidating historical snapshots. LGD curves in `lgd_curves`. Jurisdiction overlays in `jurisdiction_lgd_overlays`, with the overlay applied as a multiplier on base LGD. Every change to a curve or overlay logged in `assumption_change_log` with required reason, before-state, after-state, and effective date.
 
-**Where it differs.** This is the deepest single point of methodological transparency in the platform. In a typical incumbent setup, the PD and LGD curves are vendor-managed; the user sees the output. AeroInsights treats them as user-managed first-class objects with full audit. The jurisdiction LGD overlay in particular — adjusting LGD for whether the lessee's country has ratified Cape Town, whether the local insolvency regime is creditor-friendly, whether sanctions risk affects asset retrieval — is the kind of methodology adjustment that lessors absolutely make in practice but typically have to make outside their ECL system. Here it is inside the system and audit-logged.
+**Where it differs.** This is the deepest single point of methodological transparency in the platform. In a typical incumbent setup, the PD and LGD curves are vendor-managed; the user sees the output. AeroInsights treats them as user-managed first-class objects with full audit. The jurisdiction LGD overlay in particular, adjusting LGD for whether the lessee's country has ratified Cape Town, whether the local insolvency regime is creditor-friendly, whether sanctions risk affects asset retrieval, is the kind of methodology adjustment that lessors absolutely make in practice but typically have to make outside their ECL system. Here it is inside the system and audit-logged.
 
 ## 11. Deals
 
@@ -329,7 +329,7 @@ The deal origination side. Where a new lease or a structure gets modelled before
 
 **What it shows.** Lease structure form: aircraft type and condition, lessee credit profile, lease term, monthly rent, security deposit, maintenance reserve profile, end-of-lease return conditions, residual value assumption. Outputs: implied yield, IRR, NPV, capital at risk, expected ECL under base and stress.
 
-**Methodology underneath.** Cash flow projection at lease level; discount rate set by the firm's cost-of-capital configuration. ECL computed using the same engine and parameter tables as Risk & ECL — so the implied ECL on a new deal is methodologically consistent with the portfolio ECL.
+**Methodology underneath.** Cash flow projection at lease level; discount rate set by the firm's cost-of-capital configuration. ECL computed using the same engine and parameter tables as Risk & ECL, so the implied ECL on a new deal is methodologically consistent with the portfolio ECL.
 
 **Where it differs.** Deal modelling uses the same engine as portfolio risk. Most workflows today have a deal-pricing spreadsheet and a portfolio-risk system that do not agree on PD/LGD. New deals get priced with one set of assumptions and provisioned with another. AeroInsights collapses these into one model.
 
@@ -365,7 +365,7 @@ Maintenance reserve adequacy is one of the most important LGD inputs for aircraf
 
 **Methodology underneath.** Maintenance events stored in `maintenance_events`. Next-event date forecast by extrapolating flight hour / flight cycle utilisation from servicer reports against the OEM maintenance programme. MR adequacy = projected accrued balance at event date / projected event cost. Below-1.0 ratios flagged for analyst review.
 
-**Where it differs.** MR adequacy feeds directly into LGD assumption. If a lessee defaults with an under-reserved aircraft, recovery is meaningfully lower. AeroInsights ties this back to the credit module — under-reserved aircraft for stressed lessees show up as a flagged item in Risk & ECL.
+**Where it differs.** MR adequacy feeds directly into LGD assumption. If a lessee defaults with an under-reserved aircraft, recovery is meaningfully lower. AeroInsights ties this back to the credit module: under-reserved aircraft for stressed lessees show up as a flagged item in Risk & ECL.
 
 ### 12.2 Scenarios (maintenance cost forecasting)
 
@@ -411,7 +411,7 @@ The reality check. Where modelled cash flow gets compared to actual bank activit
 
 **Where it differs.** ABS-segregated portfolios get the right cash flow view. Most platforms either model an owned book or model an ABS book; AeroInsights does both inside one tenant, with separate portfolio scoping.
 
-## 14. Intelligence — the AI signal layer
+## 14. Intelligence: the AI signal layer
 
 The AI layer. Treated as a background process that produces watchable signal, not a chatbot.
 
@@ -576,13 +576,13 @@ A separate first-class surface.
 **What it shows.** Excel sidebar with: portfolio selector, function reference, recent calls log. In-cell: custom functions exposing live data.
 
 **Available functions (partial list):**
-- `=AI.Portfolio(metric)` — live portfolio metrics (fleet size, AuM, ECL ratio, average yield)
-- `=AI.Lessee(lessee_id, field)` — lessee-level fields (rating, stage, exposure, jurisdiction)
-- `=AI.Lease(lease_id, field)` — lease-level fields (rent, term remaining, MR balance, SD balance)
-- `=AI.Aircraft(msn, field)` — aircraft-level fields (current value, MR adequacy, next major event)
-- `=AI.ECL(scope, parameter)` — ECL outputs by scope (portfolio, segment, lessee) and breakdown (stage 1/2/3, total, coverage ratio)
-- `=AI.Scenario(scenario_id, scope, metric)` — scenario run outputs
-- `=AI.FX(currency_pair, date)` — FX rates (matches platform's daily snapshot)
+- `=AI.Portfolio(metric)`: live portfolio metrics (fleet size, AuM, ECL ratio, average yield)
+- `=AI.Lessee(lessee_id, field)`: lessee-level fields (rating, stage, exposure, jurisdiction)
+- `=AI.Lease(lease_id, field)`: lease-level fields (rent, term remaining, MR balance, SD balance)
+- `=AI.Aircraft(msn, field)`: aircraft-level fields (current value, MR adequacy, next major event)
+- `=AI.ECL(scope, parameter)`: ECL outputs by scope (portfolio, segment, lessee) and breakdown (stage 1/2/3, total, coverage ratio)
+- `=AI.Scenario(scenario_id, scope, metric)`: scenario run outputs
+- `=AI.FX(currency_pair, date)`: FX rates (matches platform's daily snapshot)
 
 **Methodology underneath.** Office.js add-in published as an XML manifest (`public/manifest.xml`). Custom functions backed by `api/excel/[fn].ts` serverless endpoints. Authentication via Auth0 token persisted in the add-in.
 
@@ -590,7 +590,7 @@ A separate first-class surface.
 
 ---
 
-# Part IV — Integration
+# Part IV: Integration
 
 ## 18. How every module connects to every other
 
@@ -644,7 +644,7 @@ The platform is built on the principle that everything reads from the same sourc
 1. **The lease register is the source of truth.** Every other module reads from it.
 2. **Analytics is a live view of the register.** Change the filter on the register, the analytics adapt.
 3. **Risk & ECL reads the register, applies the methodology layer (PD / LGD / SICR / jurisdiction overlays), writes the period snapshot.** The snapshot is the audit-grade record.
-4. **Scenarios reads the register, applies a parameter overlay, recomputes ECL, writes a scenario run.** Same engine as Risk & ECL — methodologically consistent.
+4. **Scenarios reads the register, applies a parameter overlay, recomputes ECL, writes a scenario run.** Same engine as Risk & ECL, so methodologically consistent.
 5. **Deals reads the register for portfolio context, models a hypothetical addition, runs the same ECL engine, surfaces concentration impact.** Deal pricing and portfolio provisioning agree by construction.
 6. **Maintenance reads the asset register, projects MR adequacy, feeds LGD assumption into Risk & ECL.** A stressed lessee with an under-reserved aircraft shows up as a flagged item.
 7. **Cash Flow & Reconciliation ties reality back.** Reconciled payments populate the late-payment signal that drives stage migration. Real data, not date rules.
@@ -668,11 +668,11 @@ The second integration story is the audit trail. Every mutation to the system fl
 | Any user action affecting state | `audit_log` | Yes | No (action type stored) |
 | RLS policy state | `security_audit_rls_lockdown` | Versioned via migration | N/A |
 
-This is the layer that makes the platform plausibly audit-grade. An auditor can ask "show me every change to the South-East Asia LGD overlay in 2025 with the rationale", and the answer is a single SQL query. That is the bar this product is built against — not "produces a number" but "shows its work".
+This is the layer that makes the platform plausibly audit-grade. An auditor can ask "show me every change to the South-East Asia LGD overlay in 2025 with the rationale", and the answer is a single SQL query. That is the bar this product is built against: not "produces a number" but "shows its work".
 
 ---
 
-# Part V — Differentiation
+# Part V: Differentiation
 
 ## 20. The honest comparison vs. Aerlytix
 
@@ -680,7 +680,7 @@ Aerlytix is the only platform with real distribution in this space. The honest f
 
 **What Aerlytix does well.**
 - Mature ECL methodology, refined across many customer deployments.
-- Customer-base credibility — 30+ lessors using LIQ means the methodology has been audited many times.
+- Customer-base credibility: 30+ lessors using LIQ means the methodology has been audited many times.
 - Established consulting/services arm for implementation.
 - Team scale (around 50 people, per industry observers) means feature breadth and depth Aerlytix has built up over years.
 
@@ -697,14 +697,14 @@ Aerlytix is the only platform with real distribution in this space. The honest f
 - Implementation services: there is no AeroInsights professional services arm.
 - Documentation depth: Aerlytix has a decade of internal documentation; AeroInsights has this document.
 
-**The honest framing for a prospect.** AeroInsights is not the safe choice for the lessor that needs to close FY26 audit on Aerlytix tomorrow. It is the interesting choice for the lessor — or the advisor, or the financier, or the trading desk — that finds the methodology black-boxing of incumbents frustrating, wants to own the parameter layer, wants the AI signal layer, and wants to keep working in Excel.
+**The honest framing for a prospect.** AeroInsights is not the safe choice for the lessor that needs to close FY26 audit on Aerlytix tomorrow. It is the interesting choice for the lessor, or the advisor, or the financier, or the trading desk, that finds the methodology black-boxing of incumbents frustrating, wants to own the parameter layer, wants the AI signal layer, and wants to keep working in Excel.
 
 ## 21. The honest comparison vs. in-house Excel stacks
 
 Excel still does most of the work at most lessors below the top 5. The comparison is worth doing honestly:
 
 **What Excel still does well.**
-- Total flexibility — any methodology, any layout, any custom view.
+- Total flexibility: any methodology, any layout, any custom view.
 - Zero learning curve for analysts.
 - No vendor dependency.
 - Auditable if someone disciplines the workbook (named ranges, version control, locked sheets).
@@ -717,11 +717,11 @@ Excel still does most of the work at most lessors below the top 5. The compariso
 - Audit trail: in practice, none.
 - Scenarios: branching, saving, and comparing scenarios is brittle; reproducing a scenario six months later is rarely possible.
 
-**Where AeroInsights extends Excel rather than replacing it.** The Excel add-in is the bridge. Analysts keep their models, custom views, and analytical flexibility; AeroInsights provides the live data, the methodology layer, the audit trail, and the cross-portfolio aggregation. The implicit thesis is that the best version of this workflow is not "kill Excel" — it is "keep Excel but back it with a platform".
+**Where AeroInsights extends Excel rather than replacing it.** The Excel add-in is the bridge. Analysts keep their models, custom views, and analytical flexibility; AeroInsights provides the live data, the methodology layer, the audit trail, and the cross-portfolio aggregation. The implicit thesis is that the best version of this workflow is not "kill Excel", it is "keep Excel but back it with a platform".
 
 ## 22. The honest comparison vs. point tools
 
-Cirium / IBA / Ascend (aircraft valuations and market data), Bloomberg (macro), specialist news scrapers, OFAC screening tools, generic credit systems — none of these are competitors. They are complements:
+Cirium / IBA / Ascend (aircraft valuations and market data), Bloomberg (macro), specialist news scrapers, OFAC screening tools, generic credit systems: none of these are competitors. They are complements:
 
 | Point tool | What it does | AeroInsights position |
 |---|---|---|
@@ -735,7 +735,7 @@ The honest framing: AeroInsights is the aggregation, methodology, and decision l
 
 ---
 
-# Part VI — Roadmap
+# Part VI: Roadmap
 
 ## 23. Where this goes next
 
@@ -760,29 +760,29 @@ The 12–24 month roadmap is structured around five priorities. Each is grounded
 
 ---
 
-# Part VII — About the builder
+# Part VII: About the builder
 
 **Hi, I'm Tanam Sethi.**
 
-I built AeroInsights single-handedly from scratch — a complete aviation finance intelligence platform purpose-built for the workflow lessors, financiers, and advisors actually use every day.
+I built AeroInsights single-handedly from scratch: a complete aviation finance intelligence platform purpose-built for the workflow lessors, financiers, and advisors actually use every day.
 
 ## Why I built this
 
 ### Aviation finance deserved better than a stack of spreadsheets.
 
-I started AeroInsights after spending time inside aviation finance teams and noticing the same pattern everywhere: brilliant analysts spending the bulk of their week fighting fragmented spreadsheets, version-control nightmares, and disconnected models — instead of doing real analytical work.
+I started AeroInsights after spending time inside aviation finance teams and noticing the same pattern everywhere: brilliant analysts spending the bulk of their week fighting fragmented spreadsheets, version-control nightmares, and disconnected models, instead of doing real analytical work.
 
-The industry runs on aircraft worth tens of millions, leases that span decades, and credit decisions that move billions — yet the tooling underneath was, in most firms, brittle and bespoke. It didn't take long to convince myself a purpose-built decision-intelligence platform would change how the work feels day to day.
+The industry runs on aircraft worth tens of millions, leases that span decades, and credit decisions that move billions, yet the tooling underneath was, in most firms, brittle and bespoke. It didn't take long to convince myself a purpose-built decision-intelligence platform would change how the work feels day to day.
 
-So I built it. From the IFRS 9 ECL engine to the scenario builder, the deal generator, the AI lessee radar, and the live Excel add-in — every module is written from scratch around how aviation finance teams actually operate, not grafted onto a generic SaaS shell.
+So I built it. From the IFRS 9 ECL engine to the scenario builder, the deal generator, the AI lessee radar, and the live Excel add-in: every module is written from scratch around how aviation finance teams actually operate, not grafted onto a generic SaaS shell.
 
-Along the way, I've been lucky to sit with executives at **Aerfin**, **ELFC**, and **Grant Thornton's aviation team**, whose feedback shaped the risk frameworks and assumptions baked into the platform today. The demo conversations were long — often 30–60 minutes of whiteboarding edge cases — and every one of them sharpened the product.
+Along the way, I've been lucky to sit with executives at **Aerfin**, **ELFC**, and **Grant Thornton's aviation team**, whose feedback shaped the risk frameworks and assumptions baked into the platform today. The demo conversations were long, often 30–60 minutes of whiteboarding edge cases, and every one of them sharpened the product.
 
 If any part of this is useful to talk through, contact details are at the top of this document.
 
 ---
 
-# Appendix — Methodology notes
+# Appendix: Methodology notes
 
 The platform's methodology is documented in code (`api/risk-engine/`, `supabase/migrations/`) and in the in-app methodology surfaces. The notes below are a compact reference for evaluators.
 
@@ -790,24 +790,24 @@ The platform's methodology is documented in code (`api/risk-engine/`, `supabase/
 
 The three-stage classification model:
 
-- **Stage 1 (S1)** — Performing, no significant increase in credit risk since origination. 12-month ECL.
-- **Stage 2 (S2)** — Significant increase in credit risk since origination, not yet credit-impaired. Lifetime ECL.
-- **Stage 3 (S3)** — Credit-impaired. Lifetime ECL, with interest revenue on net carrying amount.
+- **Stage 1 (S1):** Performing, no significant increase in credit risk since origination. 12-month ECL.
+- **Stage 2 (S2):** Significant increase in credit risk since origination, not yet credit-impaired. Lifetime ECL.
+- **Stage 3 (S3):** Credit-impaired. Lifetime ECL, with interest revenue on net carrying amount.
 
 **SICR triggers** (configurable per segment via `sicr_config`):
-- PD multiple breach — current 12-month PD exceeds origination 12-month PD by configured multiple (default 2x).
+- PD multiple breach: current 12-month PD exceeds origination 12-month PD by configured multiple (default 2x).
 - 30+ days past due (rebuttable presumption per IFRS 9 5.5.11).
-- Restructure indicator — any forbearance or restructuring activity in trailing 12 months.
-- Manual override — analyst-initiated migration with required reason captured in `stage_migrations.reason`.
+- Restructure indicator: any forbearance or restructuring activity in trailing 12 months.
+- Manual override: analyst-initiated migration with required reason captured in `stage_migrations.reason`.
 
 **Cure / restoration logic.** Restoration from S2 to S1 requires the original SICR trigger to no longer be active for a configurable cure period (default 6 months). S3 to S2 requires explicit analyst review.
 
 ## B. PD curve construction
 
 Aviation PD curves (`aviation_pd_curves`) are organised by:
-- **Rating bucket** — internal rating mapped to the standard scale.
-- **Cohort year** — origination cohort, so vintage effects are observable.
-- **Asset class** — narrowbody / widebody / regional / freighter.
+- **Rating bucket:** internal rating mapped to the standard scale.
+- **Cohort year:** origination cohort, so vintage effects are observable.
+- **Asset class:** narrowbody / widebody / regional / freighter.
 
 **Calibration method.** Curves calibrated against published aviation default and recovery data (rating agency studies, IATA financial disclosures, public lessor disclosures), with adjustment for the calibrating cohort's macro context. Re-calibration is a deliberate event with a logged rationale.
 
@@ -832,10 +832,10 @@ Overlays managed as user-editable reference data with full audit. Default overla
 ## D. Scenario engine
 
 A scenario is a parameter set. The parameter dimensions:
-- Macro overlays — GDP path, fuel price path, FX paths, interest rate paths.
-- Counterparty overlays — downgrade matrix by current rating, cluster default triggers.
-- Per-lessee overrides — manual stage, manual PD multiplier.
-- Per-aircraft overrides — value haircut, MR write-down.
+- Macro overlays: GDP path, fuel price path, FX paths, interest rate paths.
+- Counterparty overlays: downgrade matrix by current rating, cluster default triggers.
+- Per-lessee overrides: manual stage, manual PD multiplier.
+- Per-aircraft overrides: value haircut, MR write-down.
 - Jurisdiction LGD overlay deltas.
 
 **Run.** A scenario run snapshots the live portfolio, applies the parameter set, runs the ECL engine, and writes the full input + output to `scenario_runs`. Runs are immutable; re-running with the same scenario produces a new run row (with the same scenario reference but a new snapshot).
@@ -843,13 +843,13 @@ A scenario is a parameter set. The parameter dimensions:
 ## E. ECL waterfall computation
 
 Period-over-period ECL movement decomposed by sequential allocation. Order of attribution (this matters):
-1. **Composition** — change driven purely by new origination and runoff, holding methodology constant.
-2. **Stage migration** — change driven by S1↔S2↔S3 movement.
-3. **PD change** — change driven by PD curve recalibration or per-position PD update.
-4. **LGD change** — change driven by base LGD update or jurisdiction overlay update.
-5. **EAD change** — change driven by exposure change (drawdowns, prepayments, rent escalation).
-6. **Model parameter change** — discount rate, period definition, scope changes.
-7. **FX impact** — currency translation effect.
+1. **Composition:** change driven purely by new origination and runoff, holding methodology constant.
+2. **Stage migration:** change driven by S1↔S2↔S3 movement.
+3. **PD change:** change driven by PD curve recalibration or per-position PD update.
+4. **LGD change:** change driven by base LGD update or jurisdiction overlay update.
+5. **EAD change:** change driven by exposure change (drawdowns, prepayments, rent escalation).
+6. **Model parameter change:** discount rate, period definition, scope changes.
+7. **FX impact:** currency translation effect.
 
 The sum of these reconciles exactly to opening ECL → closing ECL. Each component is drill-down-able to the per-position contribution. Computed once at period close and snapshotted; subsequent reads serve the snapshot.
 
@@ -857,4 +857,4 @@ The sum of these reconciles exactly to opening ECL → closing ECL. Each compone
 
 *End of document.*
 
-*This portfolio is a living artefact. Errors, inaccuracies, methodology critiques, and feature gap callouts are explicitly welcome — please send them to sethit@tcd.ie. The platform improves on the strength of those messages.*
+*This portfolio is a living artefact. Errors, inaccuracies, methodology critiques, and feature gap callouts are explicitly welcome: please send them to sethit@tcd.ie. The platform improves on the strength of those messages.*
