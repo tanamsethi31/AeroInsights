@@ -762,11 +762,23 @@ The 12–24 month roadmap is structured around five priorities. Each is grounded
 
 # Part VII — About the builder
 
-I am Tanam Sethi, an MSc Quantitative Finance graduate. I built AeroInsights single-handedly because, after enough time around lessor workflows, I was convinced the spreadsheet-stack pain was real, the methodology black-boxing of incumbents was a different real pain, and that the combination created an opening for a methodology-first, configurable, Excel-native, AI-augmented platform that one well-resourced engineer could plausibly build to demo-grade. That hypothesis is what this document tests.
+**Hi, I'm Tanam Sethi.**
 
-The platform is one human's product so far. The methodology, the architecture, the database schema, the IFRS 9 engine, the scenario engine, the AI signal layer, the Excel add-in, every line of the landing page, and every word of this document are mine. That is a real constraint — there is no marketing team behind this and there is no implementation services arm. It is also a real signal: the system is internally consistent, the methodology is documented, and the velocity is unusual.
+I built AeroInsights single-handedly from scratch — a complete aviation finance intelligence platform purpose-built for the workflow lessors, financiers, and advisors actually use every day.
 
-If any part of this is useful to talk through, I would value the conversation. Contact details are at the top of this document.
+## Why I built this
+
+### Aviation finance deserved better than a stack of spreadsheets.
+
+I started AeroInsights after spending time inside aviation finance teams and noticing the same pattern everywhere: brilliant analysts spending the bulk of their week fighting fragmented spreadsheets, version-control nightmares, and disconnected models — instead of doing real analytical work.
+
+The industry runs on aircraft worth tens of millions, leases that span decades, and credit decisions that move billions — yet the tooling underneath was, in most firms, brittle and bespoke. It didn't take long to convince myself a purpose-built decision-intelligence platform would change how the work feels day to day.
+
+So I built it. From the IFRS 9 ECL engine to the scenario builder, the deal generator, the AI lessee radar, and the live Excel add-in — every module is written from scratch around how aviation finance teams actually operate, not grafted onto a generic SaaS shell.
+
+Along the way, I've been lucky to sit with executives at **Aerfin**, **ELFC**, and **Grant Thornton's aviation team**, whose feedback shaped the risk frameworks and assumptions baked into the platform today. The demo conversations were long — often 30–60 minutes of whiteboarding edge cases — and every one of them sharpened the product.
+
+If any part of this is useful to talk through, contact details are at the top of this document.
 
 ---
 
