@@ -15,16 +15,18 @@ const OUTRO = 210;
 // and the music bed are global overlays timed in absolute frames.
 // Each screen opens full-page, then spotlights + zooms into `focus` (normalised
 // region of the screenshot). Tuned against the captured frames.
+// Focus rectangles measured against #root in the live app (the captures are
+// #root at 2x, so these normalised coords map 1:1 onto the screenshots).
 const SCREENS: {src: string; focus: Focus}[] = [
-  {src: 'captures/01-dashboard.png',    focus: {x: 0.17, y: 0.21, w: 0.82, h: 0.18, scale: 1.5}}, // KPI strip
-  {src: 'captures/02-portfolio.png',    focus: {x: 0.17, y: 0.26, w: 0.64, h: 0.15, scale: 1.6}}, // KPI cards
-  {src: 'captures/03-risk.png',         focus: {x: 0.17, y: 0.32, w: 0.82, h: 0.17, scale: 1.5}}, // ECL cards
-  {src: 'captures/04-scenarios.png',    focus: {x: 0.28, y: 0.28, w: 0.60, h: 0.32, scale: 1.4}}, // engine
-  {src: 'captures/05-builder.png',      focus: {x: 0.64, y: 0.22, w: 0.32, h: 0.32, scale: 1.7}}, // run config / Monte Carlo
-  {src: 'captures/06-intelligence.png', focus: {x: 0.18, y: 0.28, w: 0.78, h: 0.24, scale: 1.5}}, // signals
-  {src: 'captures/09-ai.png',           focus: {x: 0.71, y: 0.15, w: 0.27, h: 0.20, scale: 1.85}}, // AI answer
-  {src: 'captures/07-rate.png',         focus: {x: 0.22, y: 0.28, w: 0.62, h: 0.42, scale: 1.4}}, // curve
-  {src: 'captures/08-reports.png',      focus: {x: 0.17, y: 0.30, w: 0.56, h: 0.30, scale: 1.5}}, // template cards
+  {src: 'captures/01-dashboard.png',    focus: {x: 0.2008, y: 0.2735, w: 0.7631, h: 0.2104, scale: 1.20}}, // KPI strip
+  {src: 'captures/02-portfolio.png',    focus: {x: 0.2008, y: 0.2826, w: 0.7631, h: 0.1642, scale: 1.24}}, // KPI cards
+  {src: 'captures/03-risk.png',         focus: {x: 0.2008, y: 0.4623, w: 0.7631, h: 0.1915, scale: 1.22}}, // ECL stat cards
+  {src: 'captures/04-scenarios.png',    focus: {x: 0.2016, y: 0.4958, w: 0.3745, h: 0.2153, scale: 1.80}}, // Baseline scenario card
+  {src: 'captures/05-builder.png',      focus: {x: 0.7518, y: 0.2735, w: 0.2122, h: 0.3059, scale: 1.95}}, // Run Configuration panel
+  {src: 'captures/06-intelligence.png', focus: {x: 0.2008, y: 0.3833, w: 0.7631, h: 0.0899, scale: 1.30}}, // signal counts row
+  {src: 'captures/09-ai.png',           focus: {x: 0.7100, y: 0.3200, w: 0.2800, h: 0.1900, scale: 2.05}}, // AI answer bubble
+  {src: 'captures/07-rate.png',         focus: {x: 0.2050, y: 0.2750, w: 0.5900, h: 0.1350, scale: 1.50}}, // rate KPI cards
+  {src: 'captures/08-reports.png',      focus: {x: 0.2008, y: 0.4025, w: 0.5050, h: 0.3737, scale: 1.50}}, // template cards
 ];
 
 export const TOTAL = INTRO + SCREENS.length * SCENE + OUTRO; // 2730
