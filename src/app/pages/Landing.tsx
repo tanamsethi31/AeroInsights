@@ -418,9 +418,14 @@ function Navbar() {
 
   return (
     <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:top-4 sm:px-4">
-      {/* Floating dark pill — centered, content-width, contrasts against the
-          light ambient bg. Subtle backdrop-blur so the ambient drift behind
-          it stays visible. Shadow lifts it off the page. */}
+      {/*
+        Two pills side-by-side, centered as a unit:
+          - Primary pill: logo + nav links + Book a Demo CTA
+          - Secondary pill: auth-state button (Sign In OR Dashboard ↗)
+        The secondary pill is its own dark surface, separated from the primary
+        by a 2-unit gap, so it reads as a distinct affordance.
+      */}
+      <div className="flex items-center gap-2">
       <div
         className={cn(
           "flex items-center gap-1 rounded-2xl border border-white/10 px-3 py-2 shadow-2xl shadow-[#001228]/35 backdrop-blur-xl",
@@ -464,49 +469,18 @@ function Navbar() {
           )}
         </nav>
 
-        {/* Right CTAs */}
-        <div className="hidden items-center gap-1.5 pl-2 md:flex">
-          {isAuthenticated ? (
-            <>
-              <a
-                href={DEMO_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <i className="bi bi-calendar-event text-xs" />
-                Book a Demo
-              </a>
-              <a
-                href="/portfolios"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
-              >
-                <i className="bi bi-grid-1x2 text-xs" />
-                Dashboard
-                <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
-              </a>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="rounded-xl px-3 py-1.5 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                Sign In
-              </Link>
-              <a
-                href={DEMO_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
-              >
-                <i className="bi bi-calendar-event text-xs" />
-                Book a Demo
-              </a>
-            </>
-          )}
+        {/* Primary right CTA: Book a Demo only — Sign In / Dashboard moved to
+            the secondary pill that follows. */}
+        <div className="hidden items-center pl-2 md:flex">
+          <a
+            href={DEMO_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
+          >
+            <i className="bi bi-calendar-event text-xs" />
+            Book a Demo
+          </a>
         </div>
 
         {/* Mobile hamburger */}
@@ -517,6 +491,33 @@ function Navbar() {
         >
           <i className={cn("bi text-lg", mobileOpen ? "bi-x" : "bi-list")} />
         </button>
+      </div>
+
+      {/* Secondary pill: auth-state button only (Sign In or Dashboard).
+          Hidden on mobile — the hamburger menu in the primary pill carries
+          both actions on small viewports. */}
+      <div className="hidden items-center rounded-2xl border border-white/10 bg-[#0a1a33]/95 px-1.5 py-2 shadow-2xl shadow-[#001228]/35 backdrop-blur-xl md:flex">
+        {isAuthenticated ? (
+          <a
+            href="/portfolios"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+          >
+            <i className="bi bi-grid-1x2 text-xs" />
+            Dashboard
+            <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
+          </a>
+        ) : (
+          <Link
+            to="/login"
+            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <i className="bi bi-box-arrow-in-right text-xs" />
+            Sign In
+          </Link>
+        )}
+      </div>
       </div>
 
       {/* Mobile menu — drops below the pill, matches the pill's dark
