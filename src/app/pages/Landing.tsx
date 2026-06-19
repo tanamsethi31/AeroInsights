@@ -411,38 +411,40 @@ const NAV_LINKS = [
 ];
 
 function Navbar() {
-  const scrolled = useScrolled();
+  // useScrolled is kept for the mobile menu dimming logic; the floating pill
+  // itself doesn't change appearance on scroll — it's intentionally constant.
   const { isAuthenticated } = useAuth0();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        scrolled
-          ? "border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm"
-          : "bg-transparent"
-      )}
-    >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+    <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:top-4 sm:px-4">
+      {/* Floating dark pill — centered, content-width, contrasts against the
+          light ambient bg. Subtle backdrop-blur so the ambient drift behind
+          it stays visible. Shadow lifts it off the page. */}
+      <div
+        className={cn(
+          "flex items-center gap-1 rounded-2xl border border-white/10 px-3 py-2 shadow-2xl shadow-[#001228]/35 backdrop-blur-xl",
+          "bg-[#0a1a33]/95"
+        )}
+      >
         {/* Logo */}
-        <Link to="/home" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[#002147] p-1.5">
+        <Link to="/home" className="flex items-center gap-2 pl-1 pr-3">
+          <div className="flex size-7 items-center justify-center rounded-md bg-white/12 p-1">
             <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
           </div>
-          <span className="text-[1.05rem] font-extrabold tracking-tight text-gray-950">
+          <span className="text-[0.95rem] font-extrabold tracking-tight text-white">
             AeroInsights
           </span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-0.5 md:flex">
           {NAV_LINKS.map((l) =>
             l.route ? (
               <Link
                 key={l.label}
                 to={l.href}
-                className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {l.label}
               </Link>
@@ -454,7 +456,7 @@ function Navbar() {
                   e.preventDefault();
                   document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {l.label}
               </a>
@@ -463,14 +465,14 @@ function Navbar() {
         </nav>
 
         {/* Right CTAs */}
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-1.5 pl-2 md:flex">
           {isAuthenticated ? (
             <>
               <a
                 href={DEMO_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg border border-[#002147]/20 px-4 py-2 text-sm font-medium text-[#002147] transition-colors hover:bg-[#002147]/5"
+                className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <i className="bi bi-calendar-event text-xs" />
                 Book a Demo
@@ -479,9 +481,9 @@ function Navbar() {
                 href="/portfolios"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
               >
-                <i className="bi bi-grid-1x2" />
+                <i className="bi bi-grid-1x2 text-xs" />
                 Dashboard
                 <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
               </a>
@@ -490,7 +492,7 @@ function Navbar() {
             <>
               <Link
                 to="/login"
-                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                className="rounded-xl px-3 py-1.5 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
               >
                 Sign In
               </Link>
@@ -498,11 +500,10 @@ function Navbar() {
                 href={DEMO_LINK}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
+                className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
               >
                 <i className="bi bi-calendar-event text-xs" />
                 Book a Demo
-                <i className="bi bi-arrow-right text-xs" />
               </a>
             </>
           )}
@@ -510,21 +511,24 @@ function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 md:hidden"
+          className="ml-1 flex size-8 items-center justify-center rounded-lg border border-white/12 text-white/80 transition-colors hover:bg-white/10 hover:text-white md:hidden"
           onClick={() => setMobileOpen((v) => !v)}
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
           <i className={cn("bi text-lg", mobileOpen ? "bi-x" : "bi-list")} />
         </button>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu — drops below the pill, matches the pill's dark
+          aesthetic so it reads as the same surface expanded downward. */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden border-b border-gray-200 bg-white px-4 pb-4 md:hidden"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute left-3 right-3 top-[calc(100%+10px)] rounded-2xl border border-white/10 bg-[#0a1a33]/97 px-4 py-3 shadow-2xl shadow-[#001228]/40 backdrop-blur-xl md:hidden"
           >
             {NAV_LINKS.map((l) =>
               l.route ? (
@@ -532,7 +536,7 @@ function Navbar() {
                   key={l.label}
                   to={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-sm text-gray-600"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                 >
                   {l.label}
                 </Link>
@@ -541,22 +545,24 @@ function Navbar() {
                   key={l.label}
                   href={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-sm text-gray-600"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                 >
                   {l.label}
                 </a>
               )
             )}
-            <div className="mt-3 flex flex-col gap-2">
+            <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3">
               <Link
                 to="/login"
-                className="rounded-lg border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700"
+                className="rounded-lg border border-white/15 px-4 py-2 text-center text-sm font-medium text-white/85"
               >
                 Sign In
               </Link>
               <a
-                href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-center text-sm font-semibold text-white"
+                href={DEMO_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 rounded-lg bg-white px-4 py-2 text-center text-sm font-semibold text-[#0a1a33]"
               >
                 <i className="bi bi-calendar-event text-xs" />
                 Book a Demo
