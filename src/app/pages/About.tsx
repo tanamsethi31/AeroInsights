@@ -282,10 +282,12 @@ function Story() {
    similar visual weight to chunkier wordmarks (ey, kpmg, grant thornton). */
 const DEMOED_WITH: { name: string; src: string; h: number }[] = [
   { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 60 },
+  { name: "Genesis",                  src: "/logos/genesis.webp",        h: 40 },
   { name: "Grant Thornton",           src: "/logos/grant-thornton.webp", h: 38 },
   { name: "ELFC",                     src: "/logos/elfc.png",            h: 32 },
   { name: "KPMG",                     src: "/logos/kpmg.webp",           h: 30 },
   { name: "TGIS Aviation",            src: "/logos/tgis.webp",           h: 62 },
+  { name: "TrueNoord",                src: "/logos/truenoord.webp",      h: 52 },
   { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",          h: 30 },
   { name: "Skyworks",                 src: "/logos/skyworks.webp",       h: 58 },
   { name: "EY",                       src: "/logos/ey.webp",             h: 38 },

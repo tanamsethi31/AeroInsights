@@ -817,10 +817,12 @@ const PARTNER_LOGOS: { name: string; src: string; h?: number }[] = [
   // Per-brand heights tuned so visual weights match across the rail. The
   // logos with very thin lockups (tgis, aerfin, skyworks) get extra height.
   { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 84 },
+  { name: "Genesis",                  src: "/logos/genesis.webp",        h: 56 },
   { name: "Grant Thornton",           src: "/logos/grant-thornton.webp", h: 50 },
   { name: "ELFC",                     src: "/logos/elfc.png",            h: 42 },
   { name: "KPMG",                     src: "/logos/kpmg.webp",           h: 40 },
   { name: "TGIS Aviation",            src: "/logos/tgis.webp",           h: 88 },
+  { name: "TrueNoord",                src: "/logos/truenoord.webp",      h: 70 },
   { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",          h: 40 },
   { name: "Skyworks",                 src: "/logos/skyworks.webp",       h: 82 },
   { name: "EY",                       src: "/logos/ey.webp",             h: 50 },

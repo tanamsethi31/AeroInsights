@@ -420,7 +420,6 @@ export function generateReportXLSX(
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
   const leaseRows  = data?.leaseRows    ?? LEASES;
-  const acRows     = data?.aircraftRows ?? AIRCRAFT;
 
   const wb = XLSX.utils.book_new();
   const meta = `Generated: ${new Date().toLocaleDateString("en-IE")} | Currency: ${currency}`;

@@ -230,7 +230,7 @@ async function processSchedule(s: ScheduleRow): Promise<{ status: "sent" | "fail
     const subject = `[Aeroinsights] ${s.name} — ${ymd}`;
     const body = url
       ? `<p>Your scheduled report <strong>${s.name}</strong> is ready.</p>
-         <p><a href="${url}">Download CSV</a> (link expires in 7 days)</p>`
+         <p><a href="${url}">Download ${rendered.ext.toUpperCase()}</a> (link expires in 7 days)</p>`
       : `<p>Your scheduled report <strong>${s.name}</strong> failed to upload. Contact support.</p>`;
     const send = await sendResendEmail(recipient, subject, body);
     if (send.ok) sentAny = true;
