@@ -1,5 +1,5 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 
 export default function Login() {
   const { loginWithRedirect, isLoading } = useAuth0();
@@ -16,6 +16,7 @@ export default function Login() {
   return (
     <div
       style={{
+        position: "relative",
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
@@ -23,6 +24,41 @@ export default function Login() {
         background: "linear-gradient(135deg, #001830 0%, #002147 60%, #003175 100%)",
       }}
     >
+      {/* Back to home — top-left, sits over the navy gradient */}
+      <Link
+        to="/home"
+        style={{
+          position: "absolute",
+          top: "1.25rem",
+          left: "1.5rem",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          padding: "0.5rem 0.85rem",
+          background: "rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.18)",
+          borderRadius: "0.5rem",
+          color: "#E2E8F0",
+          fontSize: "0.8125rem",
+          fontWeight: 500,
+          textDecoration: "none",
+          letterSpacing: "0.01em",
+          transition: "background 0.15s, border-color 0.15s",
+          backdropFilter: "blur(6px)",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.16)";
+          (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.32)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
+          (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.18)";
+        }}
+      >
+        <i className="bi bi-arrow-left" style={{ fontSize: "0.75rem" }} />
+        Back to home
+      </Link>
+
       <div
         style={{
           background: "#FFFFFF",
