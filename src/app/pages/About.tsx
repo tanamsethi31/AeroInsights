@@ -1,30 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 function cn(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(" ");
 }
 
-function useScrolled(threshold = 10) {
-  const [s, set] = useState(false);
-  useEffect(() => {
-    const h = () => set(window.scrollY > threshold);
-    window.addEventListener("scroll", h, { passive: true });
-    return () => window.removeEventListener("scroll", h);
-  }, [threshold]);
-  return s;
-}
-
 function FadeIn({
   children,
   delay = 0,
   className,
+  y = 22,
 }: {
   children: React.ReactNode;
   delay?: number;
   className?: string;
+  y?: number;
 }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
@@ -32,7 +24,7 @@ function FadeIn({
     <motion.div
       ref={ref}
       className={className}
-      initial={{ opacity: 0, y: 22 }}
+      initial={{ opacity: 0, y }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] }}
     >
@@ -41,15 +33,13 @@ function FadeIn({
   );
 }
 
-/* ─── contact constants (mirror of Landing) ────────────────────────────────── */
+/* ─── contact constants ────────────────────────────────────────────────────── */
 const EMAIL = "sethit@tcd.ie";
 const EMAIL_HREF = `mailto:${EMAIL}?subject=Hello%20Tanam`;
 const LINKEDIN = "https://www.linkedin.com/in/tanamsethi/";
 const DEMO_LINK = "https://cal.com/tanam-sethi/30min";
 
-/* ─── AMBIENT BLOB BACKGROUND ───────────────────────────────────────────────
- * Same atmospheric layer as the home page so /about feels part of the family.
- * ─────────────────────────────────────────────────────────────────────────── */
+/* ─── AMBIENT BLOB BACKGROUND (mirror of Landing) ──────────────────────────── */
 function AmbientBackground() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
@@ -60,10 +50,6 @@ function AmbientBackground() {
             "linear-gradient(180deg, #fafcff 0%, #f4f7fd 38%, #f6f8fd 72%, #f0f4fb 100%)",
         }}
       />
-      {/* Blue-only palette matching the Landing page — depth from luminosity
-          (sky → cobalt → cyan → soft cornflower), nothing wandering into
-          violet / pink. Opacity slightly softer than Landing for a quieter
-          feel on the founder page. */}
       <div
         className="animate-blob-a absolute -left-32 top-[6%] h-[640px] w-[640px] rounded-full opacity-[0.65] mix-blend-multiply blur-[140px]"
         style={{ background: "radial-gradient(circle, #6fa6ff 0%, transparent 70%)" }}
@@ -92,136 +78,240 @@ function AmbientBackground() {
   );
 }
 
-/* ─── NAVBAR ───────────────────────────────────────────────────────────────── */
+/* ─── NAVBAR (floating dark pill, mirror of Landing) ───────────────────────── */
+const NAV_LINKS: { label: string; href: string; route?: true }[] = [
+  { label: "Home", href: "/home", route: true },
+  { label: "About", href: "/about", route: true },
+  { label: "Contact", href: "#contact" },
+];
+
 function Navbar() {
-  const scrolled = useScrolled();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        scrolled
-          ? "border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-md"
-          : "bg-transparent"
-      )}
-    >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link to="/home" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[#002147] p-1.5">
-            <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
+    <>
+      {/* Full-width blur band fading into page (same as Landing) */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[160px] backdrop-blur-[26px] backdrop-saturate-150"
+        style={{
+          WebkitMaskImage:
+            "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 38%, rgba(0,0,0,0.85) 58%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0) 100%)",
+          maskImage:
+            "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 38%, rgba(0,0,0,0.85) 58%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0) 100%)",
+        }}
+      />
+      <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:top-4 sm:px-4">
+        <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              "flex items-center gap-7 rounded-full border border-white/15 px-5 py-2.5 shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150",
+              "bg-[#0a1a33]/92"
+            )}
+          >
+            <Link to="/home" className="flex items-center gap-2.5 pl-1">
+              <div className="flex size-7 items-center justify-center rounded-md bg-white/12 p-1">
+                <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
+              </div>
+              <span className="text-[0.95rem] font-extrabold tracking-tight text-white">
+                AeroInsights
+              </span>
+            </Link>
+
+            <nav className="hidden items-center gap-3 md:flex">
+              {NAV_LINKS.map((l) =>
+                l.route ? (
+                  <Link
+                    key={l.label}
+                    to={l.href}
+                    className={cn(
+                      "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors hover:bg-white/10 hover:text-white",
+                      l.href === "/about" ? "bg-white/10 text-white" : "text-white/75"
+                    )}
+                  >
+                    {l.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={l.label}
+                    href={l.href}
+                    onClick={(e) => {
+                      if (l.href.startsWith("#")) {
+                        e.preventDefault();
+                        document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                    className="rounded-full px-3.5 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    {l.label}
+                  </a>
+                )
+              )}
+            </nav>
+
+            <div className="hidden items-center md:flex" style={{ marginLeft: 5 }}>
+              <a
+                href={DEMO_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
+              >
+                <i className="bi bi-calendar-event text-xs" />
+                Book a Demo
+              </a>
+            </div>
+
+            <button
+              className="ml-1 flex size-8 items-center justify-center rounded-lg border border-white/12 text-white/80 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            >
+              <i className={cn("bi text-base", mobileOpen ? "bi-x-lg" : "bi-list")} />
+            </button>
           </div>
-          <span className="text-[1.05rem] font-extrabold tracking-tight text-gray-950">
-            AeroInsights
-          </span>
-        </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          <Link
-            to="/home"
-            className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
-          >
-            Home
-          </Link>
-          <Link
-            to="/about"
-            className="rounded-md px-3 py-1.5 text-sm font-semibold text-gray-950"
-          >
-            About
-          </Link>
-          <a
-            href={EMAIL_HREF}
-            className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
-          >
-            Contact
-          </a>
-        </nav>
-
-        <div className="hidden items-center gap-2 md:flex">
+          {/* Secondary pill: LinkedIn shortcut so users can reach Tanam directly */}
           <a
             href={LINKEDIN}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:border-[#002147]/30 hover:text-[#002147]"
-            aria-label="LinkedIn"
+            className="auth-pill-btn hidden h-[54px] items-center gap-2 rounded-full border border-white/15 bg-[#0a1a33]/92 px-5 text-sm font-semibold text-white shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150 md:flex"
           >
             <i className="bi bi-linkedin text-sm" />
-          </a>
-          <a
-            href={DEMO_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
-          >
-            <i className="bi bi-calendar-event text-xs" />
-            Book a Demo
-            <i className="bi bi-arrow-right text-xs" />
+            LinkedIn
           </a>
         </div>
-      </div>
-    </header>
+
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.18 }}
+              className="absolute left-3 right-3 top-[58px] md:hidden"
+            >
+              <div className="rounded-2xl border border-white/15 bg-[#0a1a33]/96 p-3 shadow-2xl backdrop-blur-[36px]">
+                <div className="flex flex-col gap-1">
+                  {NAV_LINKS.map((l) =>
+                    l.route ? (
+                      <Link
+                        key={l.label}
+                        to={l.href}
+                        onClick={() => setMobileOpen(false)}
+                        className="rounded-lg px-3 py-2 text-sm font-medium text-white/85 hover:bg-white/10 hover:text-white"
+                      >
+                        {l.label}
+                      </Link>
+                    ) : (
+                      <a
+                        key={l.label}
+                        href={l.href}
+                        onClick={(e) => {
+                          if (l.href.startsWith("#")) {
+                            e.preventDefault();
+                            document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
+                          }
+                          setMobileOpen(false);
+                        }}
+                        className="rounded-lg px-3 py-2 text-sm font-medium text-white/85 hover:bg-white/10 hover:text-white"
+                      >
+                        {l.label}
+                      </a>
+                    )
+                  )}
+                  <a
+                    href={DEMO_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-[#0a1a33]"
+                  >
+                    <i className="bi bi-calendar-event text-xs" />
+                    Book a Demo
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+    </>
+  );
+}
+
+/* ─── eyebrow + section-heading helpers (same chrome as Landing) ───────────── */
+function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-[#002147]/20 bg-[#002147]/5 px-3.5 py-1 text-xs font-semibold tracking-wide text-[#002147]">
+      {children}
+    </span>
   );
 }
 
 /* ─── HERO ─────────────────────────────────────────────────────────────────── */
 function Hero() {
   return (
-    <section className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden pt-16">
-      <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-7 px-4 py-20 text-center sm:px-6 sm:py-28">
-        <motion.span
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-          className="inline-flex items-center gap-2 rounded-full border border-[#002147]/15 bg-[#002147]/5 px-3.5 py-1.5 text-sm font-medium text-[#002147]"
-        >
-          <i className="bi bi-person-circle text-xs" />
-          The Builder
-        </motion.span>
+    <section className="relative pt-32 sm:pt-40">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <FadeIn>
+          <Eyebrow>
+            <i className="bi bi-person-circle text-xs" />
+            The Builder
+          </Eyebrow>
+        </FadeIn>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.08 }}
-          className="text-5xl font-black leading-[1.04] tracking-tight text-gray-950 sm:text-6xl lg:text-7xl"
-          style={{ letterSpacing: "-0.035em" }}
-        >
-          Hi, I&apos;m <span className="text-[#002147]">Tanam Sethi.</span>
-        </motion.h1>
+        <div className="mt-10 grid grid-cols-1 items-center gap-10 md:mt-14 md:grid-cols-[auto_1fr] md:gap-16">
+          <FadeIn delay={0.08}>
+            <div className="relative">
+              <div
+                aria-hidden
+                className="absolute -inset-3 rounded-full bg-[radial-gradient(closest-side,rgba(0,33,71,0.18),transparent_70%)] blur-md"
+              />
+              <div className="relative size-40 overflow-hidden rounded-full ring-4 ring-white/80 shadow-xl shadow-[#002147]/15 sm:size-52">
+                <img
+                  src="/tanam.png"
+                  alt="Tanam Sethi"
+                  className="h-full w-full object-cover"
+                  loading="eager"
+                />
+              </div>
+            </div>
+          </FadeIn>
 
-        <motion.p
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.16 }}
-          className="max-w-2xl text-lg leading-relaxed text-gray-600"
-        >
-          I built AeroInsights single-handedly from scratch — a complete aviation finance
-          intelligence platform purpose-built for the workflow lessors, financiers, and
-          advisors actually use every day.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.48, delay: 0.24 }}
-          className="flex flex-wrap items-center justify-center gap-3"
-        >
-          <a
-            href={DEMO_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
-          >
-            <i className="bi bi-calendar-event" />
-            Book a 30-min call
-          </a>
-          <a
-            href={LINKEDIN}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl border border-[#002147]/18 bg-white/80 px-6 py-3 text-sm font-semibold text-[#002147] backdrop-blur-md transition hover:bg-[#002147]/5"
-          >
-            <i className="bi bi-linkedin" />
-            Connect on LinkedIn
-          </a>
-        </motion.div>
+          <FadeIn delay={0.14}>
+            <h1
+              className="text-5xl font-black leading-[1.04] tracking-tight text-gray-950 sm:text-6xl lg:text-7xl"
+              style={{ letterSpacing: "-0.035em" }}
+            >
+              Hi, I&apos;m <span className="text-[#002147]">Tanam Sethi.</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-gray-600">
+              I built AeroInsights single-handedly from scratch: a complete
+              aviation finance intelligence platform purpose-built for the
+              workflow lessors, financiers, and advisors actually use every day.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <a
+                href={DEMO_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
+              >
+                <i className="bi bi-calendar-event" />
+                Book a 30 minute call
+              </a>
+              <a
+                href={LINKEDIN}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl border border-[#002147]/18 bg-white/80 px-6 py-3 text-sm font-semibold text-[#002147] backdrop-blur-md transition hover:bg-[#002147]/5"
+              >
+                <i className="bi bi-linkedin" />
+                Connect on LinkedIn
+              </a>
+            </div>
+          </FadeIn>
+        </div>
       </div>
     </section>
   );
@@ -230,44 +320,51 @@ function Hero() {
 /* ─── STORY ────────────────────────────────────────────────────────────────── */
 function Story() {
   return (
-    <section className="relative py-20">
+    <section className="relative py-24 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <FadeIn>
           <div className="rounded-2xl border border-white/60 bg-white/75 p-8 shadow-sm backdrop-blur-md sm:p-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#002147]/60">
+            <Eyebrow>
+              <i className="bi bi-book text-xs" />
               Why I built this
-            </p>
-            <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight text-gray-950 sm:text-4xl">
+            </Eyebrow>
+            <h2 className="mt-4 text-3xl font-black leading-tight tracking-tight text-gray-950 sm:text-4xl">
               Aviation finance deserved better than a stack of spreadsheets.
             </h2>
             <div className="mt-7 flex flex-col gap-5 text-[15px] leading-relaxed text-gray-600">
               <p>
-                I started AeroInsights after spending time inside aviation finance teams and
-                noticing the same pattern everywhere: brilliant analysts spending the bulk of
-                their week fighting fragmented spreadsheets, version-control nightmares, and
-                disconnected models — instead of doing real analytical work.
+                I started AeroInsights after spending time inside aviation
+                finance teams and noticing the same pattern everywhere:
+                brilliant analysts spending the bulk of their week fighting
+                fragmented spreadsheets, version control nightmares, and
+                disconnected models, instead of doing real analytical work.
               </p>
               <p>
-                The industry runs on aircraft worth tens of millions, leases that span decades,
-                and credit decisions that move billions — yet the tooling underneath was, in
-                most firms, brittle and bespoke. It didn&apos;t take long to convince myself a
-                purpose-built decision-intelligence platform would change how the work feels day
-                to day.
+                The industry runs on aircraft worth tens of millions, leases
+                that span decades, and credit decisions that move billions, yet
+                the tooling underneath was, in most firms, brittle and bespoke.
+                It didn&apos;t take long to convince myself a purpose-built
+                decision intelligence platform would change how the work feels
+                day to day.
               </p>
               <p>
-                So I built it. From the IFRS&nbsp;9 ECL engine to the scenario builder, the deal
-                generator, the AI lessee radar, and the live Excel add-in — every module is
-                written from scratch around how aviation finance teams actually operate, not
-                grafted onto a generic SaaS shell.
+                So I built it. From the IFRS&nbsp;9 ECL engine to the scenario
+                builder, the deal generator, the AI lessee radar, and the live
+                Excel add-in: every module is written from scratch around how
+                aviation finance teams actually operate, not grafted onto a
+                generic SaaS shell.
               </p>
               <p>
                 Along the way, I&apos;ve been lucky to sit with executives at{" "}
                 <span className="font-semibold text-gray-800">Aerfin</span>,{" "}
                 <span className="font-semibold text-gray-800">ELFC</span>, and{" "}
-                <span className="font-semibold text-gray-800">Grant Thornton&apos;s aviation team</span>,
-                whose feedback shaped the risk frameworks and assumptions baked into the
-                platform today. The demo conversations were long — often 30–60 minutes of
-                whiteboarding edge cases — and every one of them sharpened the product.
+                <span className="font-semibold text-gray-800">
+                  Grant Thornton&apos;s aviation team
+                </span>
+                , whose feedback shaped the risk frameworks and assumptions
+                baked into the platform today. The demo conversations were long,
+                often 30 to 60 minutes of whiteboarding edge cases, and every
+                one of them sharpened the product.
               </p>
             </div>
           </div>
@@ -278,8 +375,6 @@ function Story() {
 }
 
 /* ─── DEMOED WITH ──────────────────────────────────────────────────────────── */
-/* Per-brand heights tuned so thin lockups (aerfin, tgis, skyworks) read at
-   similar visual weight to chunkier wordmarks (ey, kpmg, grant thornton). */
 const DEMOED_WITH: { name: string; src: string; h: number }[] = [
   { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 60 },
   { name: "Genesis",                  src: "/logos/genesis.webp",        h: 40 },
@@ -300,12 +395,10 @@ function DemoedWith() {
       <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
         <FadeIn>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-            Demoed with &amp; shaped by execs at
+            Demoed with and shaped by execs at
           </p>
         </FadeIn>
         <FadeIn delay={0.1}>
-          {/* Same greyscale-by-default / colour-on-hover treatment as the
-              Landing marquee so both pages share one visual language. */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
             {DEMOED_WITH.map((f) => (
               <img
@@ -323,7 +416,8 @@ function DemoedWith() {
         <FadeIn delay={0.18}>
           <p className="mx-auto mt-8 max-w-xl text-xs text-gray-500">
             Each engagement was a 30 to 60 minute review session. Assumptions,
-            frameworks, and module priorities were refined directly from that feedback.
+            frameworks, and module priorities were refined directly from that
+            feedback.
           </p>
         </FadeIn>
       </div>
@@ -335,23 +429,23 @@ function DemoedWith() {
 const FOCUS_AREAS = [
   {
     icon: "bi-shield-check",
-    title: "Audit-grade IFRS 9",
+    title: "Audit grade IFRS 9",
     desc: "Continually refining the ECL engine, staging migration, and PD/LGD curves with feedback from external auditors.",
   },
   {
     icon: "bi-stars",
     title: "AI deal intelligence",
-    desc: "Expanding lessee radar, deal-feed comparables, and jurisdiction watch — surfacing signals before they hit public filings.",
+    desc: "Expanding lessee radar, deal feed comparables, and jurisdiction watch, surfacing signals before they hit public filings.",
   },
   {
     icon: "bi-puzzle",
     title: "Configurability",
-    desc: "Every firm runs slightly differently — pushing harder on per-team configuration so the platform fits each workflow, not the other way around.",
+    desc: "Every firm runs slightly differently, so I am pushing harder on per team configuration so the platform fits each workflow, not the other way around.",
   },
   {
     icon: "bi-file-earmark-spreadsheet",
     title: "Live Excel bridge",
-    desc: "The Excel add-in keeps growing — analysts get live portfolio data inside their models without ever leaving Excel.",
+    desc: "The Excel add-in keeps growing. Analysts get live portfolio data inside their models without ever leaving Excel.",
   },
 ];
 
@@ -360,10 +454,11 @@ function FocusAreas() {
     <section className="relative py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <FadeIn className="mb-12 flex flex-col items-center text-center">
-          <span className="inline-flex items-center rounded-full border border-[#002147]/20 bg-[#002147]/5 px-3.5 py-1 text-xs font-semibold tracking-wide text-[#002147]">
+          <Eyebrow>
+            <i className="bi bi-compass text-xs" />
             What&apos;s on the roadmap
-          </span>
-          <h2 className="mt-4 max-w-2xl text-3xl font-black tracking-tight text-gray-950 sm:text-4xl leading-[1.1]">
+          </Eyebrow>
+          <h2 className="mt-4 max-w-2xl text-3xl font-black leading-[1.1] tracking-tight text-gray-950 sm:text-4xl">
             What I&apos;m building next
           </h2>
         </FadeIn>
@@ -400,7 +495,7 @@ function Contact() {
     {
       icon: "bi-envelope",
       title: "Email",
-      desc: "Drop me a line — I read and reply to every message personally.",
+      desc: "Drop me a line. I read and reply to every message personally.",
       action: EMAIL,
       href: EMAIL_HREF,
     },
@@ -415,7 +510,7 @@ function Contact() {
     {
       icon: "bi-calendar-check",
       title: "Book a call",
-      desc: "30 minutes — walk through the platform, share your workflow, or just chat.",
+      desc: "30 minutes to walk through the platform, share your workflow, or just chat.",
       action: "Pick a slot",
       href: DEMO_LINK,
       external: true,
@@ -423,18 +518,19 @@ function Contact() {
   ];
 
   return (
-    <section className="relative py-24">
+    <section id="contact" className="relative py-24">
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         <FadeIn className="mb-12 flex flex-col items-center text-center">
-          <span className="inline-flex items-center rounded-full border border-[#002147]/20 bg-[#002147]/5 px-3.5 py-1 text-xs font-semibold tracking-wide text-[#002147]">
+          <Eyebrow>
+            <i className="bi bi-chat-dots text-xs" />
             Get in touch
-          </span>
-          <h2 className="mt-4 max-w-xl text-3xl font-black tracking-tight text-gray-950 sm:text-4xl leading-[1.1]">
+          </Eyebrow>
+          <h2 className="mt-4 max-w-xl text-3xl font-black leading-[1.1] tracking-tight text-gray-950 sm:text-4xl">
             Let&apos;s talk aviation finance.
           </h2>
           <p className="mt-4 max-w-lg text-base leading-relaxed text-gray-600">
-            Whether you want a demo, a chat about your workflow, or just to swap notes on the
-            industry — pick whichever channel works for you.
+            Whether you want a demo, a chat about your workflow, or just to swap
+            notes on the industry, pick whichever channel works for you.
           </p>
         </FadeIn>
 
@@ -472,11 +568,10 @@ function Contact() {
   );
 }
 
-/* ─── FOOTER (lightweight) ─────────────────────────────────────────────────── */
+/* ─── FOOTER (lightweight, matches Landing chrome) ─────────────────────────── */
 function Footer() {
   return (
-    /* Part of the page — transparent on the ambient bg, dark text, hairline divider. */
-    <footer className="relative pt-16 pb-10">
+    <footer className="relative pb-10 pt-16">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-px max-w-3xl"
@@ -515,7 +610,7 @@ function Footer() {
             ))}
           </div>
           <p className="text-xs text-gray-400">
-            © {new Date().getFullYear()} AeroInsights — built by Tanam Sethi.
+            © {new Date().getFullYear()} AeroInsights, built by Tanam Sethi.
           </p>
         </div>
       </div>

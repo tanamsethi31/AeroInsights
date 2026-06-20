@@ -417,6 +417,21 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <>
+    {/* Full-width blur band — fixed to the very top of the viewport, no gap,
+        spanning the full screen. Pure backdrop-filter, no surface tint, so
+        scrolling content behind the navbar is visibly blurred edge-to-edge.
+        Sits beneath the pills (z-40) so it never intercepts pointer events. */}
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[160px] backdrop-blur-[26px] backdrop-saturate-150"
+      style={{
+        WebkitMaskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 38%, rgba(0,0,0,0.85) 58%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0) 100%)",
+        maskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 38%, rgba(0,0,0,0.85) 58%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0) 100%)",
+      }}
+    />
     <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:top-4 sm:px-4">
       {/*
         Two pills side-by-side, centered as a unit:
@@ -428,12 +443,12 @@ function Navbar() {
       <div className="flex items-center gap-2">
       <div
         className={cn(
-          "flex items-center gap-1 rounded-2xl border border-white/10 px-3 py-2 shadow-2xl shadow-[#001228]/35 backdrop-blur-xl",
-          "bg-[#0a1a33]/95"
+          "flex items-center gap-7 rounded-full border border-white/15 px-5 py-2.5 shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150",
+          "bg-[#0a1a33]/92"
         )}
       >
         {/* Logo */}
-        <Link to="/home" className="flex items-center gap-2 pl-1 pr-3">
+        <Link to="/home" className="flex items-center gap-2.5 pl-1">
           <div className="flex size-7 items-center justify-center rounded-md bg-white/12 p-1">
             <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
           </div>
@@ -443,13 +458,13 @@ function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-0.5 md:flex">
+        <nav className="hidden items-center gap-3 md:flex">
           {NAV_LINKS.map((l) =>
             l.route ? (
               <Link
                 key={l.label}
                 to={l.href}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-full px-3.5 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {l.label}
               </Link>
@@ -461,7 +476,7 @@ function Navbar() {
                   e.preventDefault();
                   document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+                className="rounded-full px-3.5 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {l.label}
               </a>
@@ -471,12 +486,12 @@ function Navbar() {
 
         {/* Primary right CTA: Book a Demo only — Sign In / Dashboard moved to
             the secondary pill that follows. */}
-        <div className="hidden items-center pl-2 md:flex">
+        <div className="hidden items-center md:flex" style={{ marginLeft: 5 }}>
           <a
             href={DEMO_LINK}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
           >
             <i className="bi bi-calendar-event text-xs" />
             Book a Demo
@@ -493,31 +508,32 @@ function Navbar() {
         </button>
       </div>
 
-      {/* Secondary pill: auth-state button only (Sign In or Dashboard).
-          Hidden on mobile — the hamburger menu in the primary pill carries
-          both actions on small viewports. */}
-      <div className="hidden items-center rounded-2xl border border-white/10 bg-[#0a1a33]/95 px-1.5 py-2 shadow-2xl shadow-[#001228]/35 backdrop-blur-xl md:flex">
-        {isAuthenticated ? (
-          <a
-            href="/portfolios"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-          >
-            <i className="bi bi-grid-1x2 text-xs" />
-            Dashboard
-            <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
-          </a>
-        ) : (
-          <Link
-            to="/login"
-            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <i className="bi bi-box-arrow-in-right text-xs" />
-            Sign In
-          </Link>
-        )}
-      </div>
+      {/*
+        Secondary auth pill: ONE rounded-full button. Text reads
+        "Sign In | Dashboard" in both auth states; href flips by state
+        so signed-out users land on /login and signed-in users on the
+        dashboard. Slide-in brand-blue gradient on hover via the
+        .auth-pill-btn class (defined in fonts.css).
+      */}
+      {isAuthenticated ? (
+        <a
+          href="/portfolios"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="auth-pill-btn hidden h-[54px] items-center gap-2 rounded-full border border-white/12 bg-[#0a1a33]/92 px-5 text-sm font-semibold text-white shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150 md:inline-flex"
+        >
+          <i className="bi bi-box-arrow-in-right text-base" />
+          Sign In | Dashboard
+        </a>
+      ) : (
+        <Link
+          to="/login"
+          className="auth-pill-btn hidden h-[54px] items-center gap-2 rounded-full border border-white/12 bg-[#0a1a33]/92 px-5 text-sm font-semibold text-white shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150 md:inline-flex"
+        >
+          <i className="bi bi-box-arrow-in-right text-base" />
+          Sign In | Dashboard
+        </Link>
+      )}
       </div>
 
       {/* Mobile menu — drops below the pill, matches the pill's dark
@@ -529,7 +545,7 @@ function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute left-3 right-3 top-[calc(100%+10px)] rounded-2xl border border-white/10 bg-[#0a1a33]/97 px-4 py-3 shadow-2xl shadow-[#001228]/40 backdrop-blur-xl md:hidden"
+            className="absolute left-3 right-3 top-[calc(100%+10px)] rounded-2xl border border-white/10 bg-[#0a1a33]/97 px-4 py-3 shadow-2xl shadow-[#001228]/40 backdrop-blur-[36px] backdrop-saturate-150 md:hidden"
           >
             {NAV_LINKS.map((l) =>
               l.route ? (
@@ -573,6 +589,7 @@ function Navbar() {
         )}
       </AnimatePresence>
     </header>
+    </>
   );
 }
 
@@ -894,11 +911,18 @@ function LogoMarquee() {
 }
 
 /* ─── STATS ─────────────────────────────────────────────────────────────────── */
-const STATS = [
-  { icon: "bi-currency-dollar", value: "$45B+", label: "Assets Modelled", sub: "Across global portfolios" },
-  { icon: "bi-airplane", value: "200+", label: "Aircraft Types", sub: "Narrowbody, widebody & cargo" },
-  { icon: "bi-graph-up-arrow", value: "50+", label: "Scenario Templates", sub: "Stress-tested & regulatory" },
-  { icon: "bi-shield-check", value: "99.9%", label: "Platform Uptime", sub: "SLA-backed reliability" },
+const STATS: {
+  icon: string;
+  to: number;
+  decimals: number;
+  suffix: string;
+  label: string;
+  sub: string;
+}[] = [
+  { icon: "bi-grid-3x3-gap",   to: 6,    decimals: 0, suffix: "",  label: "Core Modules",       sub: "End-to-end lessor workflow" },
+  { icon: "bi-airplane",       to: 200,  decimals: 0, suffix: "+", label: "Aircraft Types",     sub: "Narrowbody, widebody & cargo" },
+  { icon: "bi-graph-up-arrow", to: 50,   decimals: 0, suffix: "+", label: "Scenario Templates", sub: "Stress-tested & regulatory" },
+  { icon: "bi-shield-check",   to: 99.9, decimals: 1, suffix: "%", label: "Platform Uptime",    sub: "SLA-backed reliability" },
 ];
 
 function Stats() {
@@ -921,7 +945,9 @@ function Stats() {
                     )}
                   />
                 </div>
-                <p className="text-2xl font-black tracking-tight text-gray-950">{s.value}</p>
+                <p className="text-2xl font-black tracking-tight text-gray-950 tabular-nums">
+                  <CountUp to={s.to} duration={1500 + i * 150} decimals={s.decimals} suffix={s.suffix} />
+                </p>
                 <p className="mt-1 text-sm font-semibold text-gray-700">{s.label}</p>
                 <p className="mt-1 text-xs text-gray-400">{s.sub}</p>
               </motion.div>
@@ -981,20 +1007,132 @@ function BentoCard({
   );
 }
 
+/* Typewriter cell for the Excel Add-In bento: types out the formula,
+ * pauses, deletes, and loops. Pauses at the full string for a beat so
+ * the reader can actually read it. */
+function ExcelTypewriter({ text }: { text: string }) {
+  const [shown, setShown] = useState("");
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(text);
+      return;
+    }
+    let i = 0;
+    let phase: "type" | "hold" | "delete" | "rest" = "type";
+    let holdCount = 0;
+    const tick = () => {
+      if (phase === "type") {
+        if (i < text.length) {
+          i++;
+          setShown(text.slice(0, i));
+        } else {
+          phase = "hold";
+          holdCount = 0;
+        }
+      } else if (phase === "hold") {
+        holdCount++;
+        if (holdCount > 28) phase = "delete";
+      } else if (phase === "delete") {
+        if (i > 0) {
+          i--;
+          setShown(text.slice(0, i));
+        } else {
+          phase = "rest";
+          holdCount = 0;
+        }
+      } else if (phase === "rest") {
+        holdCount++;
+        if (holdCount > 8) phase = "type";
+      }
+    };
+    const id = setInterval(tick, 65);
+    return () => clearInterval(id);
+  }, [text]);
+  return (
+    <span>
+      {shown}
+      <span className="ml-0.5 inline-block w-[2px] animate-pulse bg-blue-300 align-middle" style={{ height: "0.85em" }} />
+    </span>
+  );
+}
+
+/* Count-up animator. Uses framer-motion's useInView (matches the rest of
+ * the page's reveal triggers) plus a mount-time fallback so the numbers
+ * always end up at their target value even on browsers that throttle
+ * background-tab IO callbacks. */
+function CountUp({
+  to,
+  duration = 1400,
+  decimals = 2,
+  prefix = "",
+  suffix = "",
+}: {
+  to: number;
+  duration?: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const [value, setValue] = useState(0);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!inView || startedRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setValue(to);
+      startedRef.current = true;
+      return;
+    }
+    startedRef.current = true;
+    let raf = 0;
+    let startTs = 0;
+    const tick = (ts: number) => {
+      if (!startTs) startTs = ts;
+      const t = Math.min((ts - startTs) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(to * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, to, duration]);
+
+  return (
+    <span ref={ref}>
+      {prefix}
+      {value.toFixed(decimals)}
+      {suffix}
+    </span>
+  );
+}
+
 function PortfolioSparkline() {
+  // Each bar oscillates between its base height and +/- range, with a
+  // staggered delay so the whole sparkline reads as a live-data wave.
   const bars = [42, 58, 71, 55, 89, 62, 78, 93, 67, 85, 74, 96];
   return (
-    <div className="mt-4 flex h-20 items-end gap-1">
-      {bars.map((h, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-t transition-all"
-          style={{
-            height: `${h}%`,
-            background: `rgba(91,143,216,${0.4 + (h / 100) * 0.5})`,
-          }}
-        />
-      ))}
+    <div className="mt-4 flex shrink-0 items-end gap-1" style={{ height: 80, minHeight: 80 }}>
+      {bars.map((h, i) => {
+        const hi = Math.min(h + 14, 100);
+        const lo = Math.max(h - 22, 18);
+        return (
+          <motion.div
+            key={i}
+            className="flex-1 rounded-t"
+            initial={{ height: `${h}%` }}
+            animate={{ height: [`${h}%`, `${hi}%`, `${lo}%`, `${h}%`] }}
+            transition={{
+              duration: 3.4 + (i % 5) * 0.35,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 0.13,
+            }}
+            style={{ background: `rgba(91,143,216,${0.4 + (h / 100) * 0.5})` }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -1197,7 +1335,7 @@ function SolutionBento() {
               Pull live portfolio data directly into Excel. No API wrangling required.
             </p>
             <div className="mt-auto rounded-lg border border-white/8 bg-[#001228] px-3 py-2 font-mono text-[10px] text-blue-300">
-              =AI.Portfolio("fleet_size")
+              <ExcelTypewriter text={'=AI.Portfolio("fleet_size")'} />
             </div>
           </BentoCard>
 
@@ -1218,13 +1356,15 @@ function SolutionBento() {
             </div>
             <div className="hidden shrink-0 flex-col gap-1.5 sm:flex">
               {[
-                { label: "Base", val: "$2.41B", color: "text-emerald-400" },
-                { label: "Stress", val: "$1.87B", color: "text-amber-400" },
-                { label: "Upside", val: "$2.74B", color: "text-blue-400" },
-              ].map((sc) => (
+                { label: "Base", num: 2.41, color: "text-emerald-400" },
+                { label: "Stress", num: 1.87, color: "text-amber-400" },
+                { label: "Upside", num: 2.74, color: "text-blue-400" },
+              ].map((sc, i) => (
                 <div key={sc.label} className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-1.5">
                   <span className="w-10 text-[10px] text-white/45">{sc.label}</span>
-                  <span className={cn("text-xs font-bold", sc.color)}>{sc.val}</span>
+                  <span className={cn("text-xs font-bold tabular-nums", sc.color)}>
+                    <CountUp to={sc.num} duration={1400 + i * 200} prefix="$" suffix="B" decimals={2} />
+                  </span>
                 </div>
               ))}
             </div>
@@ -1249,14 +1389,21 @@ function PortfolioMock() {
           { label: "Narrowbody", pct: 62, val: "$1.49B", color: "#002147" },
           { label: "Widebody", pct: 28, val: "$675M", color: "#334e74" },
           { label: "Regional", pct: 10, val: "$240M", color: "#6b8cbb" },
-        ].map((r) => (
+        ].map((r, i) => (
           <div key={r.label}>
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="font-medium text-gray-700">{r.label}</span>
               <span className="text-gray-400">{r.val}</span>
             </div>
-            <div className="h-2 w-full rounded-full bg-gray-100">
-              <div className="h-2 rounded-full" style={{ width: `${r.pct}%`, background: r.color }} />
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+              <motion.div
+                className="h-2 rounded-full"
+                initial={{ width: "0%" }}
+                whileInView={{ width: `${r.pct}%` }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.15 + i * 0.18 }}
+                style={{ background: r.color }}
+              />
             </div>
           </div>
         ))}
@@ -1285,7 +1432,7 @@ function IntelligenceMock() {
           { name: "SkyWave Air", flag: "🇸🇬", signal: "Traffic recovery +18% MoM", score: "Low", color: "bg-emerald-100 text-emerald-700" },
           { name: "Pacific Wings", flag: "🇯🇵", signal: "Fleet expansion · new RFP", score: "Medium", color: "bg-amber-100 text-amber-700" },
           { name: "NordicFly", flag: "🇸🇪", signal: "CAPA restructuring alert", score: "High", color: "bg-rose-100 text-rose-700" },
-        ].map((l) => (
+        ].map((l, i) => (
           <div key={l.name} className="flex items-center justify-between px-5 py-3">
             <div className="flex items-center gap-3">
               <span className="text-xl">{l.flag}</span>
@@ -1294,9 +1441,20 @@ function IntelligenceMock() {
                 <p className="text-[10px] text-gray-400">{l.signal}</p>
               </div>
             </div>
-            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", l.color)}>
+            <motion.span
+              className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", l.color)}
+              initial={{ scale: 0, opacity: 0 }}
+              whileInView={{ scale: [0, 1.18, 0.94, 1], opacity: [0, 1, 1, 1] }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{
+                duration: 0.55,
+                times: [0, 0.55, 0.8, 1],
+                ease: "easeOut",
+                delay: 0.25 + i * 0.22,
+              }}
+            >
               {l.score}
-            </span>
+            </motion.span>
           </div>
         ))}
       </div>
