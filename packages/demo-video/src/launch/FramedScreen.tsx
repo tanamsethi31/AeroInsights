@@ -29,7 +29,6 @@ export const FramedScreen: React.FC<{
         height: wrapperH,
         overflow: 'hidden',
         borderRadius: 18,
-        border: '1px solid rgba(255,255,255,0.10)',
         boxShadow: '0 50px 140px rgba(0,0,0,0.55)',
         transform: `scale(${entryScale})`,
         background: COLORS.surface,

@@ -25,7 +25,13 @@ export const LogoScene: React.FC = () => {
   );
 };
 
-const PARTNERS = ['Aerfin', 'ELFC', 'EY', 'Grant Thornton', 'KPMG'];
+const PARTNERS = [
+  {src: 'logos/aerfin.png', h: 36},
+  {src: 'logos/elfc.png', h: 32},
+  {src: 'logos/ey.png', h: 46},
+  {src: 'logos/grant-thornton.png', h: 24},
+  {src: 'logos/kpmg.png', h: 30},
+];
 
 export const CTAScene: React.FC = () => {
   const frame = useCurrentFrame();
@@ -39,10 +45,15 @@ export const CTAScene: React.FC = () => {
       <div style={{opacity: f(16), transform: `translateY(${interpolate(f(16), [0, 1], [16, 0])}px)`}}>
         <span style={{color: '#9ec5ff', fontSize: 34, fontWeight: 600}}>Sign up in seconds — free to try</span>
       </div>
-      <div style={{opacity: f(26), display: 'flex', gap: 28, marginTop: 4}}>
-        {PARTNERS.map((p) => (
-          <span key={p} style={{color: 'rgba(255,255,255,0.6)', fontSize: 20, fontWeight: 600}}>{p}</span>
-        ))}
+      <div style={{opacity: f(24), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginTop: 6}}>
+        <span style={{color: '#9ec5ff', fontSize: 18, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase'}}>Demoed with &amp; refined by</span>
+        <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
+          {PARTNERS.map((p, i) => (
+            <div key={p.src} style={{opacity: f(28 + i * 3), background: '#fff', borderRadius: 12, height: 70, padding: '0 22px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.25)'}}>
+              <img src={staticFile(p.src)} alt="" style={{height: p.h, width: 'auto', objectFit: 'contain', display: 'block'}} />
+            </div>
+          ))}
+        </div>
       </div>
       <div style={{opacity: f(34), transform: `scale(${interpolate(f(34), [0, 1], [0.9, 1])})`, marginTop: 8}}>
         <div style={{background: '#fff', color: COLORS.brand, borderRadius: 9999, padding: '16px 42px', fontSize: 30, fontWeight: 800}}>aeroinsights.vercel.app</div>

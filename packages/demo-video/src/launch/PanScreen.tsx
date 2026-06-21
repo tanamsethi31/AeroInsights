@@ -3,16 +3,19 @@ import {AbsoluteFill, useCurrentFrame, interpolate, Easing} from 'remotion';
 import {COLORS} from '../theme/tokens';
 import {FramedScreen, LabelChip} from './FramedScreen';
 
-// Slowly travels top -> bottom down the left navigation rail of the app.
-export const SidebarScan: React.FC<{
+// Slowly travels vertically (top -> bottom by default) across a zoomed screen.
+export const PanScreen: React.FC<{
   src: string;
   label: string;
   durationInFrames: number;
-}> = ({src, label, durationInFrames}) => {
+  cx?: number;
+  scale?: number;
+  cyFrom?: number;
+  cyTo?: number;
+  accent?: string;
+}> = ({src, label, durationInFrames, cx = 0.5, scale = 1.6, cyFrom = 0.17, cyTo = 0.85, accent = '#5b8fd8'}) => {
   const frame = useCurrentFrame();
-  const s = 1.75;
-  const cx = 0.12; // sidebar column
-  const cy = interpolate(frame, [10, durationInFrames - 10], [0.17, 0.85], {
+  const cy = interpolate(frame, [10, durationInFrames - 10], [cyFrom, cyTo], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: Easing.inOut(Easing.ease),
@@ -20,8 +23,8 @@ export const SidebarScan: React.FC<{
   const labelIn = interpolate(frame, [14, 28], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   return (
     <AbsoluteFill style={{background: `radial-gradient(130% 130% at 50% 0%, ${COLORS.darkBg}, ${COLORS.brandDeep})`, alignItems: 'center', justifyContent: 'center'}}>
-      <FramedScreen src={src} s={s} cx={cx} cy={cy} />
-      <LabelChip label={label} opacity={labelIn} y={interpolate(labelIn, [0, 1], [22, 0])} accent="#5b8fd8" />
+      <FramedScreen src={src} s={scale} cx={cx} cy={cy} />
+      <LabelChip label={label} opacity={labelIn} y={interpolate(labelIn, [0, 1], [22, 0])} accent={accent} />
     </AbsoluteFill>
   );
 };

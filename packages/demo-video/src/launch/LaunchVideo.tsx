@@ -6,12 +6,12 @@ import {fade} from '@remotion/transitions/fade';
 import {FONT_FAMILY} from '../theme/fonts';
 import {HookScene, LogoScene, CTAScene} from './Scenes';
 import {ZoomScreen} from './ZoomScreen';
-import {SidebarScan} from './SidebarScan';
+import {PanScreen} from './PanScreen';
 import {LaptopMockup} from './LaptopMockup';
 
-// Sequence durations sum to 1440; ten 9-frame transitions overlap -> net 1350
-// frames (45s @ 30fps).
-export const LAUNCH_TOTAL = 1350;
+// Sequence durations sum to 1450; ten 9-frame transitions overlap -> net 1360
+// frames (~45s @ 30fps).
+export const LAUNCH_TOTAL = 1360;
 
 const lin = (d: number) => linearTiming({durationInFrames: d});
 const T = 9;
@@ -40,7 +40,7 @@ export const LaunchVideo: React.FC = () => (
       <TransitionSeries.Transition presentation={slide({direction: 'from-left'})} timing={lin(T)} />
 
       <TransitionSeries.Sequence durationInFrames={130}>
-        <SidebarScan src="captures/01-dashboard.png" label="Every workflow, one sidebar" durationInFrames={130} />
+        <PanScreen src="captures/01-dashboard.png" label="Every workflow, one sidebar" durationInFrames={130} cx={0.12} scale={1.75} cyFrom={0.17} cyTo={0.85} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={slide({direction: 'from-bottom'})} timing={lin(T)} />
 
@@ -64,8 +64,8 @@ export const LaunchVideo: React.FC = () => (
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={slide({direction: 'from-right'})} timing={lin(T)} />
 
-      <TransitionSeries.Sequence durationInFrames={130}>
-        <ZoomScreen src="captures/07-rate.png" cx={0.5} cy={0.3425} scale={1.55} mode="in" label="Forward-rate outlook" durationInFrames={130} />
+      <TransitionSeries.Sequence durationInFrames={140}>
+        <PanScreen src="captures/07-rate.png" label="Forward-rate outlook" durationInFrames={140} cx={0.58} scale={1.5} cyFrom={0.17} cyTo={0.86} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={fade()} timing={lin(T)} />
 
