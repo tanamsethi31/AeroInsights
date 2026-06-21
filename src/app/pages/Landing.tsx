@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
+import { AnimatedGroup } from "../components/ui/AnimatedGroup";
+import { useScrollRestore } from "../hooks/useScrollRestore";
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 function cn(...classes: (string | undefined | false)[]) {
@@ -411,8 +413,8 @@ const NAV_LINKS = [
 ];
 
 function Navbar() {
-  // useScrolled is kept for the mobile menu dimming logic; the floating pill
-  // itself doesn't change appearance on scroll — it's intentionally constant.
+  // The floating pill is intentionally constant — it does not transform on
+  // scroll. Mobile-menu open state is the only stateful concern here.
   const { isAuthenticated } = useAuth0();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -443,7 +445,7 @@ function Navbar() {
       <div className="flex items-center gap-2">
       <div
         className={cn(
-          "flex items-center gap-7 rounded-full border border-white/15 px-5 py-2.5 shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150",
+          "flex items-center gap-7 rounded-full border border-white/15 py-2.5 pl-5 pr-3.5 shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150",
           "bg-[#0a1a33]/92"
         )}
       >
@@ -742,19 +744,95 @@ function RotatingRole() {
   );
 }
 
+/* Tailark hero choreography ported to AeroInsights:
+ *   - top stack (badge → headline → sub) animates with a "blur-slide" stagger
+ *     and a 1s delayChildren, so the reveal reads as one continuous breath
+ *   - CTAs use the same item variant but their own container with a faster
+ *     stagger + earlier delayChildren so they overlap the headline tail
+ *   - dashboard mock sits in a framed card with a top-gradient fade so the
+ *     hero settles into the page (replaces the old motion.div fade)
+ *   - top-left radial wash + light ambient backdrop sit BEHIND everything
+ */
+const heroItemVariants = {
+  hidden: { opacity: 0, filter: "blur(12px)", y: 12 },
+  visible: {
+    opacity: 1,
+    filter: "blur(0px)",
+    y: 0,
+    transition: { type: "spring", bounce: 0.3, duration: 1.5 },
+  },
+} as const;
+
 function Hero() {
+  // Hero video modal state. Click the play button overlaid on the dashboard
+  // mockup to open; Escape, backdrop click, or the close button to dismiss.
+  // Body scroll is locked while the modal is open so the page underneath
+  // does not move when the user scrolls inside the video.
+  const [videoOpen, setVideoOpen] = useState(false);
+  useEffect(() => {
+    if (!videoOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setVideoOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [videoOpen]);
+
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16">
-      {/* Mouse-tracking radial glow — GPU-only transform, lerp for smooth follow */}
       <HeroGlow />
       <HeroStarfield />
 
+      {/* Soft top-left radial wash, à la tailark — pure visual, no layout cost */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[2] hidden opacity-50 lg:block"
+        style={{ contain: "strict" }}
+      >
+        <div
+          className="absolute left-0 top-0 h-[80rem] w-[35rem] -translate-y-[350px] -rotate-45 rounded-full"
+          style={{
+            background:
+              "radial-gradient(68.54% 68.72% at 55.02% 31.46%, hsla(212,80%,55%,0.10) 0, hsla(212,80%,55%,0.03) 50%, hsla(212,80%,55%,0) 80%)",
+          }}
+        />
+        <div
+          className="absolute left-0 top-0 h-[80rem] w-56 -rotate-45 rounded-full"
+          style={{
+            translate: "5% -50%",
+            background:
+              "radial-gradient(50% 50% at 50% 50%, hsla(212,80%,55%,0.08) 0, hsla(212,80%,55%,0.02) 80%, transparent 100%)",
+          }}
+        />
+        <div
+          className="absolute left-0 top-0 h-[80rem] w-56 -translate-y-[350px] -rotate-45"
+          style={{
+            background:
+              "radial-gradient(50% 50% at 50% 50%, hsla(212,80%,55%,0.05) 0, hsla(212,80%,55%,0.02) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
       <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-20 sm:px-6 sm:py-28">
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
+        {/* Badge → headline → sub, one stagger group, delayed so the page
+            settles before content reveals. */}
+        <AnimatedGroup
+          className="flex flex-col items-center gap-7"
+          variants={{
+            container: {
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.12, delayChildren: 0.6 },
+              },
+            },
+            item: heroItemVariants,
+          }}
         >
           <a
             href="#features"
@@ -768,70 +846,180 @@ function Hero() {
             Excel Add-In Now Available
             <i className="bi bi-arrow-right text-xs text-[#002147]/45" />
           </a>
-        </motion.div>
 
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.08 }}
-          className="max-w-4xl text-center text-5xl font-black text-gray-950 sm:text-6xl lg:text-7xl leading-[1.02]"
-          style={{ letterSpacing: "-0.035em" }}
-        >
-          Aviation Finance{" "}
-          <span className="text-[#002147]">Intelligence,</span>{" "}
-          Engineered for <RotatingRole />
-        </motion.h1>
-
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.16 }}
-          className="max-w-2xl text-center text-lg text-gray-600 leading-relaxed"
-        >
-          Portfolio analytics, scenario modelling, risk &amp; ECL, and AI-powered deal
-          intelligence in one platform, purpose-built for aviation finance teams.
-        </motion.p>
-
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.48, delay: 0.24 }}
-          className="flex flex-wrap items-center justify-center gap-3"
-        >
-          <a
-            href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
+          <h1
+            className="max-w-4xl text-center text-5xl font-black leading-[1.02] text-gray-950 sm:text-6xl lg:text-7xl"
+            style={{ letterSpacing: "-0.035em" }}
           >
-            <i className="bi bi-calendar-event text-sm" />
-            Book a Demo
-            <i className="bi bi-arrow-right text-xs" />
-          </a>
+            Aviation Finance{" "}
+            <span className="text-[#002147]">Intelligence,</span>{" "}
+            Engineered for <RotatingRole />
+          </h1>
+
+          <p className="max-w-2xl text-balance text-center text-lg leading-relaxed text-gray-600">
+            Portfolio analytics, scenario modelling, risk &amp; ECL, and AI-powered deal
+            intelligence in one platform, purpose-built for aviation finance teams.
+          </p>
+        </AnimatedGroup>
+
+        {/* CTAs — separate group with its own faster cadence so they tail
+            the headline reveal rather than block on it. */}
+        <AnimatedGroup
+          className="flex flex-wrap items-center justify-center gap-2"
+          variants={{
+            container: {
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.05, delayChildren: 0.85 },
+              },
+            },
+            item: heroItemVariants,
+          }}
+        >
+          {/* Inner-bordered primary, à la tailark */}
+          <div className="rounded-[14px] border border-[#002147]/15 bg-[#002147]/8 p-0.5">
+            <a
+              href={DEMO_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl bg-[#002147] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/25 transition hover:bg-[#001a38]"
+            >
+              <i className="bi bi-calendar-event text-sm" />
+              Book a Demo
+            </a>
+          </div>
           <a
             href="#platform"
             onClick={(e) => {
               e.preventDefault();
               document.querySelector("#platform")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="flex items-center gap-2 rounded-xl border border-[#002147]/18 bg-white px-6 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+            className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
           >
             <i className="bi bi-play-circle text-[#002147]/55" />
             See How It Works
           </a>
-        </motion.div>
+        </AnimatedGroup>
 
-        {/* Dashboard mock */}
-        <motion.div
-          initial={{ opacity: 0, y: 36, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-5xl"
+        {/* Mockup card: outer ring + inner shadow + top-fade gradient (so the
+            mockup blends into the page rather than ending in a hard edge). */}
+        <AnimatedGroup
+          className="relative -mx-4 w-screen max-w-none sm:mx-0 sm:w-full sm:max-w-[min(1320px,calc(100vw-2rem))]"
+          variants={{
+            container: {
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.05, delayChildren: 0.95 },
+              },
+            },
+            item: heroItemVariants,
+          }}
         >
-          <DashboardMock />
-        </motion.div>
+          <div className="relative overflow-hidden rounded-2xl px-2">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-10"
+              style={{
+                background:
+                  "linear-gradient(to bottom, transparent 0%, transparent 35%, rgba(244,247,253,0.85) 92%, rgba(244,247,253,1) 100%)",
+              }}
+            />
+            <div className="relative mx-auto overflow-hidden rounded-2xl shadow-2xl shadow-[#002147]/15">
+              {/* Real /portfolios screenshot — sits flush, no card chrome.
+                  Falls back to the synthetic DashboardMock if the file is
+                  missing. */}
+              <img
+                src="/portfolio-hero.png"
+                alt="AeroInsights portfolio dashboard"
+                loading="eager"
+                className="block w-full rounded-2xl"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  const mock = (e.currentTarget as HTMLImageElement)
+                    .nextElementSibling as HTMLElement | null;
+                  if (mock) mock.style.display = "block";
+                }}
+              />
+              <div style={{ display: "none" }}>
+                <DashboardMock />
+              </div>
+
+              {/* Play button overlay — opens the launch video modal. Sits
+                  above the screenshot and below the bottom-fade gradient
+                  (which is z-10 on the outer wrapper); this button is
+                  inside the inner clipping box so the rounded corners
+                  contain it. */}
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                aria-label="Play introductory video"
+                className="group absolute inset-0 z-20 flex items-center justify-center"
+              >
+                <span className="flex items-center gap-3 rounded-full bg-[#002147]/92 py-2.5 pl-2.5 pr-5 text-sm font-semibold text-white shadow-2xl shadow-[#002147]/40 ring-1 ring-white/15 backdrop-blur-md transition-all duration-300 group-hover:scale-[1.04] group-hover:bg-[#002147] group-hover:shadow-[#002147]/55">
+                  <span className="relative flex size-10 items-center justify-center rounded-full bg-white text-[#002147]">
+                    {/* Pulse halo — only animates while the mockup is hovered */}
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 rounded-full bg-white/55 opacity-0 transition-opacity duration-200 group-hover:opacity-70 motion-safe:group-hover:animate-ping"
+                    />
+                    <i className="bi bi-play-fill relative ml-0.5 text-lg" />
+                  </span>
+                  Play video
+                </span>
+              </button>
+            </div>
+          </div>
+        </AnimatedGroup>
       </div>
+
+      {/* Launch video modal. Renders only when open; click outside the
+          video, the close button, or Escape to dismiss. Body scroll is
+          locked via the effect above while open. */}
+      <AnimatePresence>
+        {videoOpen && (
+          <motion.div
+            key="video-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001228]/85 p-4 backdrop-blur-md sm:p-8"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setVideoOpen(false);
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="AeroInsights introductory video"
+          >
+            <button
+              type="button"
+              onClick={() => setVideoOpen(false)}
+              aria-label="Close video"
+              className="absolute right-4 top-4 z-[101] flex size-10 items-center justify-center rounded-full bg-white/10 text-white shadow-lg backdrop-blur transition hover:bg-white/20 sm:right-6 sm:top-6"
+            >
+              <i className="bi bi-x-lg text-lg" />
+            </button>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <video
+                src="/aeroinsights-launch.mp4"
+                controls
+                autoPlay
+                playsInline
+                className="block h-full w-full bg-black"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -2294,8 +2482,24 @@ const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
       "Press",
     ],
   },
-  { heading: "Resources", links: ["Documentation", "Help Centre", "API Reference", "Status Page"] },
-  { heading: "Legal", links: ["Privacy Policy", "Terms of Service", "Security", "Cookie Policy"] },
+  {
+    heading: "Resources",
+    links: [
+      { label: "Documentation", href: "/docs" },
+      { label: "Help Centre",   href: "/help" },
+      { label: "API Reference", href: "/api" },
+      { label: "Status Page",   href: "/status" },
+    ],
+  },
+  {
+    heading: "Legal",
+    links: [
+      { label: "Privacy Policy",   href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Security",         href: "/security" },
+      { label: "Cookie Policy",    href: "/cookies" },
+    ],
+  },
 ];
 
 function Footer() {
@@ -2402,6 +2606,10 @@ function Footer() {
 
 /* ─── PAGE ──────────────────────────────────────────────────────────────────── */
 export default function Landing() {
+  // Restore scroll position when the user comes back to /home (e.g. from a
+  // footer link or About). Mounts at top on first ever visit; thereafter
+  // snaps back to wherever they left off in the same session.
+  useScrollRestore("/home");
   return (
     <div className="relative min-h-screen font-sans text-gray-950 antialiased">
       {/* One continuous animated colour-blob layer behind everything */}

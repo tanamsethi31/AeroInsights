@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { motion, useInView, AnimatePresence } from "framer-motion";
+import { useScrollRestore } from "../hooks/useScrollRestore";
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 function cn(...c: (string | false | undefined)[]) {
@@ -620,6 +621,9 @@ function Footer() {
 
 /* ─── PAGE ─────────────────────────────────────────────────────────────────── */
 export default function About() {
+  // Restore scroll position when the user comes back to /about (e.g. from a
+  // footer link or after viewing a Legal/Resources page).
+  useScrollRestore("/about");
   return (
     <div className="relative min-h-screen font-sans text-gray-950 antialiased">
       <AmbientBackground />
