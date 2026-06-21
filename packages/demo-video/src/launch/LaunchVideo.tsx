@@ -9,9 +9,9 @@ import {ZoomScreen} from './ZoomScreen';
 import {PanScreen} from './PanScreen';
 import {LaptopMockup} from './LaptopMockup';
 
-// Sequence durations sum to 1450; ten 9-frame transitions overlap -> net 1360
-// frames (~45s @ 30fps).
-export const LAUNCH_TOTAL = 1360;
+// Sequence durations sum to 1710; twelve 9-frame transitions overlap -> net
+// 1602 frames (~53s @ 30fps).
+export const LAUNCH_TOTAL = 1602;
 
 const lin = (d: number) => linearTiming({durationInFrames: d});
 const T = 9;
@@ -49,6 +49,11 @@ export const LaunchVideo: React.FC = () => (
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={fade()} timing={lin(T)} />
 
+      <TransitionSeries.Sequence durationInFrames={125}>
+        <ZoomScreen src="captures/04-scenarios.png" cx={0.55} cy={0.48} scale={1.32} mode="in" label="Macro · Distress · Insolvency" durationInFrames={125} />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={lin(T)} />
+
       <TransitionSeries.Sequence durationInFrames={145}>
         <ZoomScreen src="captures/05-builder.png" cx={0.858} cy={0.43} scale={2.25} mode="in" label="Stress-test in one click" durationInFrames={145} />
       </TransitionSeries.Sequence>
@@ -59,13 +64,18 @@ export const LaunchVideo: React.FC = () => (
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={fade()} timing={lin(T)} />
 
-      <TransitionSeries.Sequence durationInFrames={145}>
-        <ZoomScreen src="captures/09-ai.png" cx={0.85} cy={0.415} scale={2.35} mode="in" label="Just ask. It answers." durationInFrames={145} />
+      <TransitionSeries.Sequence durationInFrames={150}>
+        <PanScreen src="captures/09-ai.png" label="Generate reports · export data · run scenarios" durationInFrames={150} cx={0.83} scale={1.65} cyFrom={0.1} cyTo={0.9} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={slide({direction: 'from-right'})} timing={lin(T)} />
 
       <TransitionSeries.Sequence durationInFrames={140}>
         <PanScreen src="captures/07-rate.png" label="Forward-rate outlook" durationInFrames={140} cx={0.58} scale={1.5} cyFrom={0.17} cyTo={0.86} />
+      </TransitionSeries.Sequence>
+      <TransitionSeries.Transition presentation={fade()} timing={lin(T)} />
+
+      <TransitionSeries.Sequence durationInFrames={130}>
+        <ZoomScreen src="captures/08-reports.png" cx={0.45} cy={0.52} scale={1.4} mode="in" label="Audit-ready reports, one click" durationInFrames={130} />
       </TransitionSeries.Sequence>
       <TransitionSeries.Transition presentation={fade()} timing={lin(T)} />
 
