@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Audio, staticFile} from 'remotion';
+import {AbsoluteFill, Audio, staticFile, interpolate} from 'remotion';
 import {TransitionSeries, linearTiming} from '@remotion/transitions';
 import {slide} from '@remotion/transitions/slide';
 import {fade} from '@remotion/transitions/fade';
@@ -84,6 +84,15 @@ export const LaunchVideo: React.FC = () => (
       </TransitionSeries.Sequence>
     </TransitionSeries>
 
-    <Audio src={staticFile('music.mp3')} volume={0.3} />
+    <Audio
+      src={staticFile('launch-music.mp3')}
+      trimBefore={300} // start from the 0:10 mark of the track
+      volume={(f) =>
+        interpolate(f, [0, 14, LAUNCH_TOTAL - 36, LAUNCH_TOTAL], [0, 0.72, 0.72, 0], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        })
+      }
+    />
   </AbsoluteFill>
 );
