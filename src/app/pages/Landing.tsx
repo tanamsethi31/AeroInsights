@@ -2299,13 +2299,6 @@ function Contact() {
 
   const cards = [
     {
-      icon: "bi-envelope",
-      title: "Email",
-      desc: "Reach me directly. Usually a reply within a day.",
-      action: CONTACT_EMAIL,
-      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%C2%B7%20Hello`,
-    },
-    {
       icon: "bi-calendar-check",
       title: "Book a Demo",
       desc: "Schedule a 30-minute walkthrough at the same address.",
@@ -2330,7 +2323,80 @@ function Contact() {
           sub="Drop a line. Every enquiry goes straight to my inbox and gets a personal reply."
         />
 
-        <div className="mt-16 grid gap-6 sm:grid-cols-3">
+        {/* Builder card — puts a face to the inbox you are about to message.
+            Sits above the cards / form grid as a single full-width band so
+            the personal context is the first thing the user sees in the
+            Contact section. */}
+        <FadeIn className="mt-12">
+          <div className="flex flex-col items-center gap-6 rounded-2xl border border-white/60 bg-white/80 p-6 shadow-sm backdrop-blur-md sm:flex-row sm:items-stretch sm:gap-7 sm:p-7">
+            <div className="relative shrink-0">
+              <div
+                aria-hidden
+                className="absolute -inset-2 rounded-full bg-[radial-gradient(closest-side,rgba(0,33,71,0.18),transparent_70%)] blur-md"
+              />
+              <div className="relative size-32 overflow-hidden rounded-full ring-4 ring-white shadow-lg shadow-[#002147]/20 sm:size-44">
+                <img
+                  src="/tanam.png"
+                  alt="Tanam Sethi"
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col justify-center text-center sm:text-left">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-baseline sm:gap-3">
+                <p className="text-xl font-black tracking-tight text-gray-950 sm:text-2xl">
+                  Tanam Sethi
+                </p>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#002147]/15 bg-[#002147]/5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#002147]">
+                  <i className="bi bi-tools text-[10px]" />
+                  Founder &amp; Builder
+                </span>
+              </div>
+              <p className="mt-2 text-[15px] leading-relaxed text-gray-600">
+                I built AeroInsights single-handedly from scratch and operate the platform
+                day to day. Every enquiry comes straight to me, and I&apos;m happy to walk
+                through methodology, pricing, or how AeroInsights would fit your workflow.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <a
+                  href="https://cal.com/tanam-sethi/30min"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#002147] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#001a38]"
+                >
+                  <i className="bi bi-calendar-event text-[11px]" />
+                  Book a 30-min call
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/tanamsethi/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#002147]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+                >
+                  <i className="bi bi-linkedin text-[11px]" />
+                  LinkedIn
+                </a>
+                <a
+                  href={`mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%C2%B7%20Hello`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#002147]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+                >
+                  <i className="bi bi-envelope text-[11px]" />
+                  {CONTACT_EMAIL}
+                </a>
+                <Link
+                  to="/about"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-[#002147]/70 transition hover:text-[#002147]"
+                >
+                  About the builder
+                  <i className="bi bi-arrow-right text-[10px]" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+
+        <div className="mt-8 grid gap-6 sm:grid-cols-3">
           <div className="flex flex-col gap-4">
             {cards.map((card, i) => (
               <FadeIn key={card.title} delay={i * 0.05}>
@@ -2477,9 +2543,7 @@ const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
     heading: "Company",
     links: [
       { label: "About the builder", href: "/about" },
-      "Careers",
-      "Blog",
-      "Press",
+      { label: "Blog",              href: "/blog" },
     ],
   },
   {
