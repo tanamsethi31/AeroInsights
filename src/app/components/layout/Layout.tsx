@@ -14,7 +14,6 @@ import Dashboard from "../../pages/Dashboard";
 import Portfolio from "../../pages/Portfolio";
 import Deals from "../../pages/Deals";
 import { TourProvider } from "../tour/TourProvider";
-import { ReplayTourPill } from "../tour/ReplayTourPill";
 
 /**
  * Persistent-mount shell for heavy pages.
@@ -180,7 +179,6 @@ export function Layout() {
             }
           >
             <LayoutContent />
-            <ReplayTourPill />
           </SidebarProvider>
         </TourProvider>
       </AgentProvider>

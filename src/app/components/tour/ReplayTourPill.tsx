@@ -1,23 +1,40 @@
 // src/app/components/tour/ReplayTourPill.tsx
 //
-// Bottom-right floating pill that replays the tour. Always visible
-// (inside the app shell only) so users who dismissed the auto-tour
-// can pick it back up at any time.
+// Header icon button that replays the tour. Lives in the right-side
+// header cluster next to the alerts bell — matches its 34x34 / hover
+// behaviour so the two read as siblings.
 
+import * as React from "react";
+import { RotateCcw } from "lucide-react";
 import { useTour } from "./TourProvider";
 
 export function ReplayTourPill() {
   const { resetTour } = useTour();
+  const [hovered, setHovered] = React.useState(false);
   return (
     <button
       type="button"
       className="aero-replay-pill"
       onClick={resetTour}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       aria-label="Replay product tour"
       title="Replay product tour"
+      style={{
+        width:        "34px",
+        height:       "34px",
+        display:      "flex",
+        alignItems:   "center",
+        justifyContent: "center",
+        borderRadius: "6px",
+        color:        hovered ? "#002147" : "#475569",
+        background:   hovered ? "#F1F5F9" : "transparent",
+        border:       "none",
+        cursor:       "pointer",
+        transition:   "background 90ms ease-out, color 90ms ease-out",
+      }}
     >
-      <span className="aero-replay-pill__icon" aria-hidden="true">↻</span>
-      <span>Tour</span>
+      <RotateCcw size={18} />
     </button>
   );
 }

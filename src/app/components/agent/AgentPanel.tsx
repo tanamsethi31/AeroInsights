@@ -338,7 +338,7 @@ export function AgentPanel() {
               Aeroinsights Intelligence
             </div>
             <div style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.55)" }}>
-              GPT-4o · EU West · Data stays in region
+              Llama 3.3 70B · Cerebras · Data stays in region
             </div>
           </div>
         )}

@@ -11,6 +11,7 @@ import { Separator } from "../ui/separator";
 import { search, type SearchResult } from "../../data/searchIndex";
 import { AlertsPanel } from "../alerts/AlertsPanel";
 import { AlertRulesConfig } from "../alerts/AlertRulesConfig";
+import { ReplayTourPill } from "../tour/ReplayTourPill";
 import { EmailReportModal } from "../reports/EmailReportModal";
 import { getUnreadCount } from "../../services/alertService";
 
@@ -312,6 +313,9 @@ export function Header() {
 
         {/* Right side */}
         <div className="ml-auto flex items-center gap-1">
+
+          {/* Replay product tour */}
+          <ReplayTourPill />
 
           {/* Notifications / Alerts */}
           <div ref={bellRef} style={{ position: "relative" }}>
