@@ -21,20 +21,25 @@ export function ReplayTourPill() {
       aria-label="Replay product tour"
       title="Replay product tour"
       style={{
-        width:        "34px",
         height:       "34px",
-        display:      "flex",
+        display:      "inline-flex",
         alignItems:   "center",
-        justifyContent: "center",
-        borderRadius: "6px",
+        gap:          "0.4rem",
+        padding:      "0 0.85rem",
+        borderRadius: "9999px",
         color:        hovered ? "#002147" : "#475569",
         background:   hovered ? "#F1F5F9" : "transparent",
-        border:       "none",
+        border:       `1px solid ${hovered ? "rgba(0,33,71,0.22)" : "#E2E8F0"}`,
         cursor:       "pointer",
-        transition:   "background 90ms ease-out, color 90ms ease-out",
+        fontFamily:   "inherit",
+        fontSize:     "0.8125rem",
+        fontWeight:   600,
+        letterSpacing: "0.01em",
+        transition:   "background 90ms ease-out, color 90ms ease-out, border-color 90ms ease-out",
       }}
     >
-      <RotateCcw size={18} />
+      <RotateCcw size={14} />
+      <span>Tour</span>
     </button>
   );
 }
