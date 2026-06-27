@@ -58,6 +58,8 @@ interface ResultBlob {
   topLessees:   ScenarioRunResult["topLessees"];
   s3LeaseCount: number;
   engine?:      string;
+  scope?:       ScenarioRunResult["scope"];
+  scopeLabel?:  string;
 }
 
 // ─── Row ↔ ScenarioRunResult mapping ───────────────────────────────────────
@@ -91,6 +93,8 @@ function rowToResult(row: ScenarioRunRow, codeToUuid: Map<string, string>): Scen
     topLessees:   result.topLessees ?? [],
     s3LeaseCount: result.s3LeaseCount ?? 0,
     parentId:     parentDisplay,
+    scope:        result.scope,
+    scopeLabel:   result.scopeLabel,
   };
 }
 
