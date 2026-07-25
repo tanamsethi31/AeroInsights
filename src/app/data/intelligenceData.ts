@@ -828,3 +828,97 @@ export const SCENARIO_CALIBRATION: ScenarioCalibrationDivergence[] = [
     suggestedValue: -0.020,
   },
 ];
+
+// ─── Live Calibration ──────────────────────────────────────────────────────────
+// Computes the same shape as SCENARIO_CALIBRATION above, but from the live
+// macro feed (useMacroSignals' `raw` field) instead of the frozen snapshot.
+//
+// Fuel is deliberately NOT live-computed: the only live fuel-adjacent feed is
+// Brent crude ($/barrel), a different commodity from Jet-A1 fuel ($/litre).
+// Converting one to the other needs a crack-spread constant this codebase
+// doesn't have — inventing one would fabricate a number to make the banner
+// *look* live, which is the exact problem this pass exists to fix. Fuel
+// stays static/reference until a genuine jet-fuel price feed is wired.
+
+interface LiveMacroDataForCalibration {
+  eurUsd: { value: number; date: string } | null;
+  gdp: Array<{ countryCode: string; year: string; value: number }>;
+}
+
+function formatCalDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return iso;
+  }
+}
+
+function gdpSeverity(ppDivergence: number): SignalSeverity {
+  const abs = Math.abs(ppDivergence);
+  if (abs >= 0.5) return "high";
+  if (abs >= 0.2) return "medium";
+  return "low";
+}
+
+function fxSeverity(pctDivergence: number): SignalSeverity {
+  const abs = Math.abs(pctDivergence);
+  if (abs > 3) return "high";
+  if (abs > 1) return "medium";
+  return "low";
+}
+
+// Baseline scenario assumptions the static entries were authored against —
+// kept as named constants so the live divergence math has something fixed
+// to diff against. These represent the model's last-run assumption, not
+// something fetched live.
+const GDP_BASELINE_PCT = 6.4;   // India GDP growth, WEO Oct 2025 assumption
+const FX_BASELINE_RATE = 1.1012; // EUR/USD, 30 Jan 2026 baseline
+
+export function computeLiveCalibration(raw: LiveMacroDataForCalibration): ScenarioCalibrationDivergence[] {
+  const staticById = new Map(SCENARIO_CALIBRATION.map(d => [d.id, d]));
+
+  const fuelStatic = staticById.get("cal-01")!;
+  const gdpStatic = staticById.get("cal-02")!;
+  const fxStatic = staticById.get("cal-03")!;
+
+  // Fuel — always static/reference, see file header comment above.
+  const fuel: ScenarioCalibrationDivergence = fuelStatic;
+
+  // GDP — live if the IMF feed has an India entry, else fall back to static.
+  const indiaGdp = raw.gdp.find(g => g.countryCode === "IND");
+  const gdp: ScenarioCalibrationDivergence = indiaGdp
+    ? (() => {
+        const divergencePp = indiaGdp.value - GDP_BASELINE_PCT;
+        return {
+          id: "cal-02",
+          label: "India GDP",
+          currentMarket: `${indiaGdp.value.toFixed(1)}% growth (IMF WEO, FY${indiaGdp.year}) · Live`,
+          scenarioAssumption: gdpStatic.scenarioAssumption,
+          divergence: `${divergencePp >= 0 ? "+" : ""}${divergencePp.toFixed(1)}pp vs scenario baseline`,
+          severity: gdpSeverity(divergencePp),
+          suggestedInputKey: "gdpDelta",
+          suggestedValue: Number((divergencePp / 100).toFixed(4)),
+        };
+      })()
+    : { ...gdpStatic, currentMarket: `${gdpStatic.currentMarket} · Reference` };
+
+  // FX — live if the ECB feed has a EUR/USD value, else fall back to static.
+  const fx: ScenarioCalibrationDivergence = raw.eurUsd
+    ? (() => {
+        const { value, date } = raw.eurUsd!;
+        const divergencePct = ((value - FX_BASELINE_RATE) / FX_BASELINE_RATE) * 100;
+        return {
+          id: "cal-03",
+          label: "EUR/USD Rate",
+          currentMarket: `${value.toFixed(4)} (ECB, ${formatCalDate(date)}) · Live`,
+          scenarioAssumption: fxStatic.scenarioAssumption,
+          divergence: `EUR ${divergencePct >= 0 ? "+" : ""}${divergencePct.toFixed(1)}% vs scenario FX baseline`,
+          severity: fxSeverity(divergencePct),
+          suggestedInputKey: "fxDelta",
+          suggestedValue: Number((divergencePct / 100).toFixed(4)),
+        };
+      })()
+    : { ...fxStatic, currentMarket: `${fxStatic.currentMarket} · Reference` };
+
+  return [fuel, gdp, fx];
+}
