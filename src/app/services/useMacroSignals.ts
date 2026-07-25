@@ -1,5 +1,5 @@
 // src/app/services/useMacroSignals.ts
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { MACRO_SIGNALS, type MacroSignal } from "../data/intelligenceData";
 
@@ -81,6 +81,10 @@ export function useMacroSignals(): UseMacroSignalsResult {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [partial, setPartial] = useState(false);
   const [rawData, setRawData] = useState<LiveMacroData | null>(null);
+  // Mirrors rawData for comparison inside fetchSignals without needing rawData
+  // in that callback's dependency array (which would defeat the stable
+  // poll-interval identity set up in the effect below).
+  const rawDataRef = useRef<LiveMacroData | null>(null);
 
   const { getAccessTokenSilently } = useAuth0();
   const fetchSignals = useCallback(async () => {
@@ -94,10 +98,22 @@ export function useMacroSignals(): UseMacroSignalsResult {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const live = await res.json() as LiveMacroData;
-      setSignals(mergeLiveData(MACRO_SIGNALS, live));
-      setLastUpdated(new Date(live.fetchedAt));
-      setPartial(live.partial);
-      setRawData(live);
+      // Skip state updates entirely when the polled payload is unchanged —
+      // otherwise every 30-minute poll produces a brand-new `rawData` object
+      // reference even when nothing actually changed, which cascades into a
+      // fresh `calibration` array in CustomBuilderPage and forces a full
+      // re-render of the React.memo-wrapped CustomBuilderTab subtree for no
+      // reason. LiveMacroData is small and plain-JSON-serializable (numbers,
+      // strings, one small array, no functions/circular refs), so a
+      // JSON.stringify comparison is safe and cheap here.
+      const unchanged = JSON.stringify(live) === JSON.stringify(rawDataRef.current);
+      if (!unchanged) {
+        setSignals(mergeLiveData(MACRO_SIGNALS, live));
+        setLastUpdated(new Date(live.fetchedAt));
+        setPartial(live.partial);
+        setRawData(live);
+        rawDataRef.current = live;
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ live, cachedAt: Date.now() }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fetch failed");
