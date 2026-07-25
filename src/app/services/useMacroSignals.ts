@@ -70,6 +70,8 @@ export interface UseMacroSignalsResult {
   lastUpdated: Date | null;
   partial: boolean;
   refresh: () => void;
+  /** Raw numeric values from the live feed — null until the first successful fetch or cache hit. */
+  raw: LiveMacroData | null;
 }
 
 export function useMacroSignals(): UseMacroSignalsResult {
@@ -78,6 +80,7 @@ export function useMacroSignals(): UseMacroSignalsResult {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [partial, setPartial] = useState(false);
+  const [rawData, setRawData] = useState<LiveMacroData | null>(null);
 
   const { getAccessTokenSilently } = useAuth0();
   const fetchSignals = useCallback(async () => {
@@ -94,16 +97,18 @@ export function useMacroSignals(): UseMacroSignalsResult {
       setSignals(mergeLiveData(MACRO_SIGNALS, live));
       setLastUpdated(new Date(live.fetchedAt));
       setPartial(live.partial);
+      setRawData(live);
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ live, cachedAt: Date.now() }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fetch failed");
       // Fallback: try localStorage cache
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const { live } = JSON.parse(raw) as { live: LiveMacroData };
+        const cached = localStorage.getItem(STORAGE_KEY);
+        if (cached) {
+          const { live } = JSON.parse(cached) as { live: LiveMacroData };
           setSignals(mergeLiveData(MACRO_SIGNALS, live));
           setLastUpdated(new Date(live.fetchedAt));
+          setRawData(live);
         }
       } catch { /* keep static defaults */ }
     } finally {
@@ -117,5 +122,5 @@ export function useMacroSignals(): UseMacroSignalsResult {
     return () => clearInterval(id);
   }, [fetchSignals]);
 
-  return { signals, loading, error, lastUpdated, partial, refresh: fetchSignals };
+  return { signals, loading, error, lastUpdated, partial, refresh: fetchSignals, raw: rawData };
 }
