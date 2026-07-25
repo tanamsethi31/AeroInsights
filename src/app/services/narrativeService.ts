@@ -1,11 +1,19 @@
 /**
- * narrativeService — Azure OpenAI narrative generation for scenario runs.
+ * narrativeService — Azure OpenAI narrative generation for scenario runs and
+ * board pack reports.
  *
- * Builds a fully-injected prompt from ScenarioRunResult data, POSTs to the
- * Azure OpenAI Chat Completions endpoint, and validates three numeric anchors
- * in the response before returning. Returns null on any error, missing env
- * vars, or validation failure — the caller (Scenarios.tsx) hides the summary
- * card when null is received.
+ * Exports two functions:
+ *   generateNarrative(run, token): Scenario-specific narratives. Posts
+ *     ScenarioRunResult data to /api/ai/narrative, validates 3 numeric anchors,
+ *     falls back to a templated string. Returns string | null (null when
+ *     malformed input or auth fails; templated fallback otherwise).
+ *   generateBoardPackSummary(data, token): Portfolio-wide Board Pack summaries.
+ *     Posts portfolio export data to /api/ai/narrative, validates 3 numeric
+ *     anchors, falls back to a templated string. Always returns string (never null).
+ *
+ * Both functions use the same /api/ai/narrative endpoint (Vercel Edge Function)
+ * with function-specific prompts and anchor validation logic. Authentication
+ * (Auth0 bearer token) is optional and forwarded to the proxy if provided.
  */
 import type { ScenarioRunResult } from "../components/scenarios/RunResultPanel";
 import type { PortfolioExportData } from "../lib/portfolioAdapters";
@@ -203,10 +211,11 @@ PORTFOLIO DATA:
     const text = responseData?.choices?.[0]?.message?.content;
     if (!text) return buildBoardPackFallback(data);
 
-    // 2-anchor validation — the two hardest numbers to hallucinate must appear verbatim.
+    // 3-anchor validation — critical numbers must appear verbatim to verify accuracy
     const anchor1 = totalEclM.toFixed(1);
     const anchor2 = eclPct;
-    if (!text.includes(anchor1) || !text.includes(anchor2)) {
+    const anchor3 = ` ${stage3Count} `;  // space-padded to avoid trivial substring matches
+    if (!text.includes(anchor1) || !text.includes(anchor2) || !text.includes(anchor3)) {
       return buildBoardPackFallback(data);
     }
 

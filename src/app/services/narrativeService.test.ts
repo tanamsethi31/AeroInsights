@@ -23,15 +23,17 @@ describe("generateBoardPackSummary", () => {
   it("returns the AI response when the anchors validate", async () => {
     const totalEcl = "1.7"; // 1.62 + 0.07 = 1.69 -> toFixed(1) = "1.7"
     const eclPct = "1.50";  // 1.69 / 112.6 * 100 = 1.5008... -> toFixed(2) = "1.50"
+    const stage3Count = "1"; // IndiGo Airlines is the only stage "3" lease
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        choices: [{ message: { content: `The portfolio carries a total ECL of $${totalEcl}M, or ${eclPct}% of book value, across 2 leases.` } }],
+        choices: [{ message: { content: `The portfolio carries a total ECL of $${totalEcl}M, or ${eclPct}% of book value, across 2 leases. ${stage3Count} lease sits in Stage 3.` } }],
       }),
     }));
     const result = await generateBoardPackSummary(SAMPLE_DATA, "tok");
     expect(result).toContain(totalEcl);
     expect(result).toContain(eclPct);
+    expect(result).toContain(stage3Count);
   });
 
   it("falls back to the deterministic summary when the AI response fails anchor validation", async () => {
@@ -60,5 +62,18 @@ describe("generateBoardPackSummary", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
     const result = await generateBoardPackSummary(SAMPLE_DATA, "tok");
     expect(result).toContain("IndiGo Airlines");
+  });
+
+  it("deterministic fallback handles empty portfolio (null topLessee) gracefully", async () => {
+    const emptyData: PortfolioExportData = {
+      eclRows: [],
+      leaseRows: [],
+      lesseeRows: [],
+      aircraftRows: [],
+    };
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
+    const result = await generateBoardPackSummary(emptyData, "tok");
+    expect(result).toContain("$0.0M");
+    expect(result).not.toContain("carries the largest single ECL exposure");
   });
 });
