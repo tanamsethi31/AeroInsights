@@ -10,6 +10,7 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
 import type { PortfolioExportData } from "../lib/portfolioAdapters";
+import { generateBoardPackSummary } from "./narrativeService";
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
@@ -266,13 +267,15 @@ function fe(usdMillions: number, currency: CurrencyCode): string {
 
 // ─── Named report generators — PDF ───────────────────────────────────────────
 
-export function generateReportPDF(
+export async function generateReportPDF(
   reportId: string,
   currency: CurrencyCode,
   data?: PortfolioExportData,
   /** T-3.3 side-channel — fired before the local download with the file blob + filename. */
   onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
-): void {
+  /** Auth0 bearer token — only used by the RPT-002 (Board Pack) narrative call. */
+  token?: string,
+): Promise<void> {
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
   const leaseRows  = data?.leaseRows    ?? LEASES;
@@ -337,8 +340,27 @@ export function generateReportPDF(
     }
     case "RPT-002": {
       addHeader("Board Pack — Q1 2026", "Executive Portfolio Summary");
+
+      const summaryData: PortfolioExportData = data ?? {
+        eclRows: ECL_ROWS, leaseRows: LEASES, lesseeRows: LESSEES, aircraftRows: AIRCRAFT,
+      };
+      const summary = await generateBoardPackSummary(summaryData, token);
+
+      let y = 45;
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text("Executive Summary", 14, y);
+      y += 5;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(51, 65, 85);
+      const summaryLines = doc.splitTextToSize(summary, 182) as string[];
+      doc.text(summaryLines, 14, y);
+      y += summaryLines.length * 4 + 6;
+
       autoTable(doc, {
-        startY: 45,
+        startY: y,
         head: [["Scenario", "ECL 12m", "ECL Lifetime", "Coverage"]],
         body: SCENARIOS.map(s => [s.scenario, s.ecl12m, s.eclLT, s.coverage]),
         styles: { fontSize: 9, cellPadding: 3 },
