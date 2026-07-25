@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useAuth0 } from "@auth0/auth0-react";
+import { AnimatedGroup } from "../components/ui/AnimatedGroup";
+import { useScrollRestore } from "../hooks/useScrollRestore";
 
 /* ─── helpers ──────────────────────────────────────────────────────────────── */
 function cn(...classes: (string | undefined | false)[]) {
@@ -411,38 +413,60 @@ const NAV_LINKS = [
 ];
 
 function Navbar() {
-  const scrolled = useScrolled();
+  // The floating pill is intentionally constant — it does not transform on
+  // scroll. Mobile-menu open state is the only stateful concern here.
   const { isAuthenticated } = useAuth0();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        scrolled
-          ? "border-b border-gray-200 bg-white/95 backdrop-blur-md shadow-sm"
-          : "bg-transparent"
-      )}
-    >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+    <>
+    {/* Full-width blur band — fixed to the very top of the viewport, no gap,
+        spanning the full screen. Pure backdrop-filter, no surface tint, so
+        scrolling content behind the navbar is visibly blurred edge-to-edge.
+        Sits beneath the pills (z-40) so it never intercepts pointer events. */}
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[160px] backdrop-blur-[26px] backdrop-saturate-150"
+      style={{
+        WebkitMaskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 38%, rgba(0,0,0,0.85) 58%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0) 100%)",
+        maskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 38%, rgba(0,0,0,0.85) 58%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0) 100%)",
+      }}
+    />
+    <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:top-4 sm:px-4">
+      {/*
+        Two pills side-by-side, centered as a unit:
+          - Primary pill: logo + nav links + Book a Demo CTA
+          - Secondary pill: auth-state button (Sign In OR Dashboard ↗)
+        The secondary pill is its own dark surface, separated from the primary
+        by a 2-unit gap, so it reads as a distinct affordance.
+      */}
+      <div className="flex items-center gap-2">
+      <div
+        className={cn(
+          "flex items-center gap-7 rounded-full border border-white/15 py-2.5 pl-5 pr-3.5 shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150",
+          "bg-[#0a1a33]/92"
+        )}
+      >
         {/* Logo */}
-        <Link to="/home" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-[#002147] p-1.5">
+        <Link to="/home" className="flex items-center gap-2.5 pl-1">
+          <div className="flex size-7 items-center justify-center rounded-md bg-white/12 p-1">
             <img src="/logo.png" alt="AeroInsights" className="h-full w-full object-contain" />
           </div>
-          <span className="text-[1.05rem] font-extrabold tracking-tight text-gray-950">
+          <span className="text-[0.95rem] font-extrabold tracking-tight text-white">
             AeroInsights
           </span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-3 md:flex">
           {NAV_LINKS.map((l) =>
             l.route ? (
               <Link
                 key={l.label}
                 to={l.href}
-                className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
+                className="rounded-full px-3.5 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {l.label}
               </Link>
@@ -454,7 +478,7 @@ function Navbar() {
                   e.preventDefault();
                   document.querySelector(l.href)?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="rounded-md px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-950"
+                className="rounded-full px-3.5 py-1.5 text-sm font-medium text-white/75 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {l.label}
               </a>
@@ -462,69 +486,68 @@ function Navbar() {
           )}
         </nav>
 
-        {/* Right CTAs */}
-        <div className="hidden items-center gap-2 md:flex">
-          {isAuthenticated ? (
-            <>
-              <a
-                href={DEMO_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg border border-[#002147]/20 px-4 py-2 text-sm font-medium text-[#002147] transition-colors hover:bg-[#002147]/5"
-              >
-                <i className="bi bi-calendar-event text-xs" />
-                Book a Demo
-              </a>
-              <a
-                href="/portfolios"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              >
-                <i className="bi bi-grid-1x2" />
-                Dashboard
-                <i className="bi bi-box-arrow-up-right text-[10px] opacity-70" />
-              </a>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
-              >
-                Sign In
-              </Link>
-              <a
-                href={DEMO_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-85"
-              >
-                <i className="bi bi-calendar-event text-xs" />
-                Book a Demo
-                <i className="bi bi-arrow-right text-xs" />
-              </a>
-            </>
-          )}
+        {/* Primary right CTA: Book a Demo only — Sign In / Dashboard moved to
+            the secondary pill that follows. */}
+        <div className="hidden items-center md:flex" style={{ marginLeft: 5 }}>
+          <a
+            href={DEMO_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-[#0a1a33] shadow-sm transition hover:bg-blue-50"
+          >
+            <i className="bi bi-calendar-event text-xs" />
+            Book a Demo
+          </a>
         </div>
 
         {/* Mobile hamburger */}
         <button
-          className="flex size-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 md:hidden"
+          className="ml-1 flex size-8 items-center justify-center rounded-lg border border-white/12 text-white/80 transition-colors hover:bg-white/10 hover:text-white md:hidden"
           onClick={() => setMobileOpen((v) => !v)}
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
           <i className={cn("bi text-lg", mobileOpen ? "bi-x" : "bi-list")} />
         </button>
       </div>
 
-      {/* Mobile menu */}
+      {/*
+        Secondary auth pill: ONE rounded-full button. Text reads
+        "Sign In | Dashboard" in both auth states; href flips by state
+        so signed-out users land on /login and signed-in users on the
+        dashboard. Slide-in brand-blue gradient on hover via the
+        .auth-pill-btn class (defined in fonts.css).
+      */}
+      {isAuthenticated ? (
+        <a
+          href="/portfolios"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="auth-pill-btn hidden h-[54px] items-center gap-2 rounded-full border border-white/12 bg-[#0a1a33]/92 px-5 text-sm font-semibold text-white shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150 md:inline-flex"
+        >
+          <i className="bi bi-box-arrow-in-right text-base" />
+          Sign In | Dashboard
+        </a>
+      ) : (
+        <Link
+          to="/login"
+          className="auth-pill-btn hidden h-[54px] items-center gap-2 rounded-full border border-white/12 bg-[#0a1a33]/92 px-5 text-sm font-semibold text-white shadow-2xl shadow-[#001228]/35 backdrop-blur-[36px] backdrop-saturate-150 md:inline-flex"
+        >
+          <i className="bi bi-box-arrow-in-right text-base" />
+          Sign In | Dashboard
+        </Link>
+      )}
+      </div>
+
+      {/* Mobile menu — drops below the pill, matches the pill's dark
+          aesthetic so it reads as the same surface expanded downward. */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden border-b border-gray-200 bg-white px-4 pb-4 md:hidden"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute left-3 right-3 top-[calc(100%+10px)] rounded-2xl border border-white/10 bg-[#0a1a33]/97 px-4 py-3 shadow-2xl shadow-[#001228]/40 backdrop-blur-[36px] backdrop-saturate-150 md:hidden"
           >
             {NAV_LINKS.map((l) =>
               l.route ? (
@@ -532,7 +555,7 @@ function Navbar() {
                   key={l.label}
                   to={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-sm text-gray-600"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                 >
                   {l.label}
                 </Link>
@@ -541,22 +564,24 @@ function Navbar() {
                   key={l.label}
                   href={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-sm text-gray-600"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                 >
                   {l.label}
                 </a>
               )
             )}
-            <div className="mt-3 flex flex-col gap-2">
+            <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3">
               <Link
                 to="/login"
-                className="rounded-lg border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-700"
+                className="rounded-lg border border-white/15 px-4 py-2 text-center text-sm font-medium text-white/85"
               >
                 Sign In
               </Link>
               <a
-                href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-[#002147] px-4 py-2 text-center text-sm font-semibold text-white"
+                href={DEMO_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 rounded-lg bg-white px-4 py-2 text-center text-sm font-semibold text-[#0a1a33]"
               >
                 <i className="bi bi-calendar-event text-xs" />
                 Book a Demo
@@ -566,6 +591,7 @@ function Navbar() {
         )}
       </AnimatePresence>
     </header>
+    </>
   );
 }
 
@@ -718,19 +744,95 @@ function RotatingRole() {
   );
 }
 
+/* Tailark hero choreography ported to AeroInsights:
+ *   - top stack (badge → headline → sub) animates with a "blur-slide" stagger
+ *     and a 1s delayChildren, so the reveal reads as one continuous breath
+ *   - CTAs use the same item variant but their own container with a faster
+ *     stagger + earlier delayChildren so they overlap the headline tail
+ *   - dashboard mock sits in a framed card with a top-gradient fade so the
+ *     hero settles into the page (replaces the old motion.div fade)
+ *   - top-left radial wash + light ambient backdrop sit BEHIND everything
+ */
+const heroItemVariants = {
+  hidden: { opacity: 0, filter: "blur(12px)", y: 12 },
+  visible: {
+    opacity: 1,
+    filter: "blur(0px)",
+    y: 0,
+    transition: { type: "spring", bounce: 0.3, duration: 1.5 },
+  },
+} as const;
+
 function Hero() {
+  // Hero video modal state. Click the play button overlaid on the dashboard
+  // mockup to open; Escape, backdrop click, or the close button to dismiss.
+  // Body scroll is locked while the modal is open so the page underneath
+  // does not move when the user scrolls inside the video.
+  const [videoOpen, setVideoOpen] = useState(false);
+  useEffect(() => {
+    if (!videoOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setVideoOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [videoOpen]);
+
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden pt-16">
-      {/* Mouse-tracking radial glow — GPU-only transform, lerp for smooth follow */}
       <HeroGlow />
       <HeroStarfield />
 
+      {/* Soft top-left radial wash, à la tailark — pure visual, no layout cost */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[2] hidden opacity-50 lg:block"
+        style={{ contain: "strict" }}
+      >
+        <div
+          className="absolute left-0 top-0 h-[80rem] w-[35rem] -translate-y-[350px] -rotate-45 rounded-full"
+          style={{
+            background:
+              "radial-gradient(68.54% 68.72% at 55.02% 31.46%, hsla(212,80%,55%,0.10) 0, hsla(212,80%,55%,0.03) 50%, hsla(212,80%,55%,0) 80%)",
+          }}
+        />
+        <div
+          className="absolute left-0 top-0 h-[80rem] w-56 -rotate-45 rounded-full"
+          style={{
+            translate: "5% -50%",
+            background:
+              "radial-gradient(50% 50% at 50% 50%, hsla(212,80%,55%,0.08) 0, hsla(212,80%,55%,0.02) 80%, transparent 100%)",
+          }}
+        />
+        <div
+          className="absolute left-0 top-0 h-[80rem] w-56 -translate-y-[350px] -rotate-45"
+          style={{
+            background:
+              "radial-gradient(50% 50% at 50% 50%, hsla(212,80%,55%,0.05) 0, hsla(212,80%,55%,0.02) 80%, transparent 100%)",
+          }}
+        />
+      </div>
+
       <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-10 px-4 py-20 sm:px-6 sm:py-28">
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
+        {/* Badge → headline → sub, one stagger group, delayed so the page
+            settles before content reveals. */}
+        <AnimatedGroup
+          className="flex flex-col items-center gap-7"
+          variants={{
+            container: {
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.12, delayChildren: 0.6 },
+              },
+            },
+            item: heroItemVariants,
+          }}
         >
           <a
             href="#features"
@@ -744,70 +846,180 @@ function Hero() {
             Excel Add-In Now Available
             <i className="bi bi-arrow-right text-xs text-[#002147]/45" />
           </a>
-        </motion.div>
 
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.08 }}
-          className="max-w-4xl text-center text-5xl font-black text-gray-950 sm:text-6xl lg:text-7xl leading-[1.02]"
-          style={{ letterSpacing: "-0.035em" }}
-        >
-          Aviation Finance{" "}
-          <span className="text-[#002147]">Intelligence,</span>{" "}
-          Engineered for <RotatingRole />
-        </motion.h1>
-
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.16 }}
-          className="max-w-2xl text-center text-lg text-gray-600 leading-relaxed"
-        >
-          Portfolio analytics, scenario modelling, risk &amp; ECL, and AI-powered deal
-          intelligence in one platform, purpose-built for aviation finance teams.
-        </motion.p>
-
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.48, delay: 0.24 }}
-          className="flex flex-wrap items-center justify-center gap-3"
-        >
-          <a
-            href={DEMO_LINK} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl bg-[#002147] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/20 transition hover:bg-[#001a38]"
+          <h1
+            className="max-w-4xl text-center text-5xl font-black leading-[1.02] text-gray-950 sm:text-6xl lg:text-7xl"
+            style={{ letterSpacing: "-0.035em" }}
           >
-            <i className="bi bi-calendar-event text-sm" />
-            Book a Demo
-            <i className="bi bi-arrow-right text-xs" />
-          </a>
+            Aviation Finance{" "}
+            <span className="text-[#002147]">Intelligence,</span>{" "}
+            Engineered for <RotatingRole />
+          </h1>
+
+          <p className="max-w-2xl text-balance text-center text-lg leading-relaxed text-gray-600">
+            Portfolio analytics, scenario modelling, risk &amp; ECL, and AI-powered deal
+            intelligence in one platform, purpose-built for aviation finance teams.
+          </p>
+        </AnimatedGroup>
+
+        {/* CTAs — separate group with its own faster cadence so they tail
+            the headline reveal rather than block on it. */}
+        <AnimatedGroup
+          className="flex flex-wrap items-center justify-center gap-2"
+          variants={{
+            container: {
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.05, delayChildren: 0.85 },
+              },
+            },
+            item: heroItemVariants,
+          }}
+        >
+          {/* Inner-bordered primary, à la tailark */}
+          <div className="rounded-[14px] border border-[#002147]/15 bg-[#002147]/8 p-0.5">
+            <a
+              href={DEMO_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl bg-[#002147] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/25 transition hover:bg-[#001a38]"
+            >
+              <i className="bi bi-calendar-event text-sm" />
+              Book a Demo
+            </a>
+          </div>
           <a
             href="#platform"
             onClick={(e) => {
               e.preventDefault();
               document.querySelector("#platform")?.scrollIntoView({ behavior: "smooth" });
             }}
-            className="flex items-center gap-2 rounded-xl border border-[#002147]/18 bg-white px-6 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+            className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
           >
             <i className="bi bi-play-circle text-[#002147]/55" />
             See How It Works
           </a>
-        </motion.div>
+        </AnimatedGroup>
 
-        {/* Dashboard mock */}
-        <motion.div
-          initial={{ opacity: 0, y: 36, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-5xl"
+        {/* Mockup card: outer ring + inner shadow + top-fade gradient (so the
+            mockup blends into the page rather than ending in a hard edge). */}
+        <AnimatedGroup
+          className="relative -mx-4 w-screen max-w-none sm:mx-0 sm:w-full sm:max-w-[min(1320px,calc(100vw-2rem))]"
+          variants={{
+            container: {
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.05, delayChildren: 0.95 },
+              },
+            },
+            item: heroItemVariants,
+          }}
         >
-          <DashboardMock />
-        </motion.div>
+          <div className="relative overflow-hidden rounded-2xl px-2">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-10"
+              style={{
+                background:
+                  "linear-gradient(to bottom, transparent 0%, transparent 35%, rgba(244,247,253,0.85) 92%, rgba(244,247,253,1) 100%)",
+              }}
+            />
+            <div className="relative mx-auto overflow-hidden rounded-2xl shadow-2xl shadow-[#002147]/15">
+              {/* Real /portfolios screenshot — sits flush, no card chrome.
+                  Falls back to the synthetic DashboardMock if the file is
+                  missing. */}
+              <img
+                src="/portfolio-hero.png"
+                alt="AeroInsights portfolio dashboard"
+                loading="eager"
+                className="block w-full rounded-2xl"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  const mock = (e.currentTarget as HTMLImageElement)
+                    .nextElementSibling as HTMLElement | null;
+                  if (mock) mock.style.display = "block";
+                }}
+              />
+              <div style={{ display: "none" }}>
+                <DashboardMock />
+              </div>
+
+              {/* Play button overlay — opens the launch video modal. Sits
+                  above the screenshot and below the bottom-fade gradient
+                  (which is z-10 on the outer wrapper); this button is
+                  inside the inner clipping box so the rounded corners
+                  contain it. */}
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                aria-label="Play introductory video"
+                className="group absolute inset-0 z-20 flex items-center justify-center"
+              >
+                <span className="flex items-center gap-3 rounded-full bg-[#002147]/92 py-2.5 pl-2.5 pr-5 text-sm font-semibold text-white shadow-2xl shadow-[#002147]/40 ring-1 ring-white/15 backdrop-blur-md transition-all duration-300 group-hover:scale-[1.04] group-hover:bg-[#002147] group-hover:shadow-[#002147]/55">
+                  <span className="relative flex size-10 items-center justify-center rounded-full bg-white text-[#002147]">
+                    {/* Pulse halo — only animates while the mockup is hovered */}
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 rounded-full bg-white/55 opacity-0 transition-opacity duration-200 group-hover:opacity-70 motion-safe:group-hover:animate-ping"
+                    />
+                    <i className="bi bi-play-fill relative ml-0.5 text-lg" />
+                  </span>
+                  Play video
+                </span>
+              </button>
+            </div>
+          </div>
+        </AnimatedGroup>
       </div>
+
+      {/* Launch video modal. Renders only when open; click outside the
+          video, the close button, or Escape to dismiss. Body scroll is
+          locked via the effect above while open. */}
+      <AnimatePresence>
+        {videoOpen && (
+          <motion.div
+            key="video-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001228]/85 p-4 backdrop-blur-md sm:p-8"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setVideoOpen(false);
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="AeroInsights introductory video"
+          >
+            <button
+              type="button"
+              onClick={() => setVideoOpen(false)}
+              aria-label="Close video"
+              className="absolute right-4 top-4 z-[101] flex size-10 items-center justify-center rounded-full bg-white/10 text-white shadow-lg backdrop-blur transition hover:bg-white/20 sm:right-6 sm:top-6"
+            >
+              <i className="bi bi-x-lg text-lg" />
+            </button>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <video
+                src="/aeroinsights-launch.mp4"
+                controls
+                autoPlay
+                playsInline
+                className="block h-full w-full bg-black"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -817,10 +1029,12 @@ const PARTNER_LOGOS: { name: string; src: string; h?: number }[] = [
   // Per-brand heights tuned so visual weights match across the rail. The
   // logos with very thin lockups (tgis, aerfin, skyworks) get extra height.
   { name: "Aerfin",                   src: "/logos/aerfin.webp",         h: 84 },
+  { name: "Genesis",                  src: "/logos/genesis.webp",        h: 56 },
   { name: "Grant Thornton",           src: "/logos/grant-thornton.webp", h: 50 },
   { name: "ELFC",                     src: "/logos/elfc.png",            h: 42 },
   { name: "KPMG",                     src: "/logos/kpmg.webp",           h: 40 },
   { name: "TGIS Aviation",            src: "/logos/tgis.webp",           h: 88 },
+  { name: "TrueNoord",                src: "/logos/truenoord.webp",      h: 70 },
   { name: "Ishka Airglobal Finance",  src: "/logos/ishka.webp",          h: 40 },
   { name: "Skyworks",                 src: "/logos/skyworks.webp",       h: 82 },
   { name: "EY",                       src: "/logos/ey.webp",             h: 50 },
@@ -885,11 +1099,18 @@ function LogoMarquee() {
 }
 
 /* ─── STATS ─────────────────────────────────────────────────────────────────── */
-const STATS = [
-  { icon: "bi-currency-dollar", value: "$45B+", label: "Assets Modelled", sub: "Across global portfolios" },
-  { icon: "bi-airplane", value: "200+", label: "Aircraft Types", sub: "Narrowbody, widebody & cargo" },
-  { icon: "bi-graph-up-arrow", value: "50+", label: "Scenario Templates", sub: "Stress-tested & regulatory" },
-  { icon: "bi-shield-check", value: "99.9%", label: "Platform Uptime", sub: "SLA-backed reliability" },
+const STATS: {
+  icon: string;
+  to: number;
+  decimals: number;
+  suffix: string;
+  label: string;
+  sub: string;
+}[] = [
+  { icon: "bi-grid-3x3-gap",   to: 6,    decimals: 0, suffix: "",  label: "Core Modules",       sub: "End-to-end lessor workflow" },
+  { icon: "bi-airplane",       to: 200,  decimals: 0, suffix: "+", label: "Aircraft Types",     sub: "Narrowbody, widebody & cargo" },
+  { icon: "bi-graph-up-arrow", to: 50,   decimals: 0, suffix: "+", label: "Scenario Templates", sub: "Stress-tested & regulatory" },
+  { icon: "bi-shield-check",   to: 99.9, decimals: 1, suffix: "%", label: "Platform Uptime",    sub: "SLA-backed reliability" },
 ];
 
 function Stats() {
@@ -912,7 +1133,9 @@ function Stats() {
                     )}
                   />
                 </div>
-                <p className="text-2xl font-black tracking-tight text-gray-950">{s.value}</p>
+                <p className="text-2xl font-black tracking-tight text-gray-950 tabular-nums">
+                  <CountUp to={s.to} duration={1500 + i * 150} decimals={s.decimals} suffix={s.suffix} />
+                </p>
                 <p className="mt-1 text-sm font-semibold text-gray-700">{s.label}</p>
                 <p className="mt-1 text-xs text-gray-400">{s.sub}</p>
               </motion.div>
@@ -972,20 +1195,132 @@ function BentoCard({
   );
 }
 
+/* Typewriter cell for the Excel Add-In bento: types out the formula,
+ * pauses, deletes, and loops. Pauses at the full string for a beat so
+ * the reader can actually read it. */
+function ExcelTypewriter({ text }: { text: string }) {
+  const [shown, setShown] = useState("");
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(text);
+      return;
+    }
+    let i = 0;
+    let phase: "type" | "hold" | "delete" | "rest" = "type";
+    let holdCount = 0;
+    const tick = () => {
+      if (phase === "type") {
+        if (i < text.length) {
+          i++;
+          setShown(text.slice(0, i));
+        } else {
+          phase = "hold";
+          holdCount = 0;
+        }
+      } else if (phase === "hold") {
+        holdCount++;
+        if (holdCount > 28) phase = "delete";
+      } else if (phase === "delete") {
+        if (i > 0) {
+          i--;
+          setShown(text.slice(0, i));
+        } else {
+          phase = "rest";
+          holdCount = 0;
+        }
+      } else if (phase === "rest") {
+        holdCount++;
+        if (holdCount > 8) phase = "type";
+      }
+    };
+    const id = setInterval(tick, 65);
+    return () => clearInterval(id);
+  }, [text]);
+  return (
+    <span>
+      {shown}
+      <span className="ml-0.5 inline-block w-[2px] animate-pulse bg-blue-300 align-middle" style={{ height: "0.85em" }} />
+    </span>
+  );
+}
+
+/* Count-up animator. Uses framer-motion's useInView (matches the rest of
+ * the page's reveal triggers) plus a mount-time fallback so the numbers
+ * always end up at their target value even on browsers that throttle
+ * background-tab IO callbacks. */
+function CountUp({
+  to,
+  duration = 1400,
+  decimals = 2,
+  prefix = "",
+  suffix = "",
+}: {
+  to: number;
+  duration?: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const [value, setValue] = useState(0);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!inView || startedRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setValue(to);
+      startedRef.current = true;
+      return;
+    }
+    startedRef.current = true;
+    let raf = 0;
+    let startTs = 0;
+    const tick = (ts: number) => {
+      if (!startTs) startTs = ts;
+      const t = Math.min((ts - startTs) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(to * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, to, duration]);
+
+  return (
+    <span ref={ref}>
+      {prefix}
+      {value.toFixed(decimals)}
+      {suffix}
+    </span>
+  );
+}
+
 function PortfolioSparkline() {
+  // Each bar oscillates between its base height and +/- range, with a
+  // staggered delay so the whole sparkline reads as a live-data wave.
   const bars = [42, 58, 71, 55, 89, 62, 78, 93, 67, 85, 74, 96];
   return (
-    <div className="mt-4 flex h-20 items-end gap-1">
-      {bars.map((h, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-t transition-all"
-          style={{
-            height: `${h}%`,
-            background: `rgba(91,143,216,${0.4 + (h / 100) * 0.5})`,
-          }}
-        />
-      ))}
+    <div className="mt-4 flex shrink-0 items-end gap-1" style={{ height: 80, minHeight: 80 }}>
+      {bars.map((h, i) => {
+        const hi = Math.min(h + 14, 100);
+        const lo = Math.max(h - 22, 18);
+        return (
+          <motion.div
+            key={i}
+            className="flex-1 rounded-t"
+            initial={{ height: `${h}%` }}
+            animate={{ height: [`${h}%`, `${hi}%`, `${lo}%`, `${h}%`] }}
+            transition={{
+              duration: 3.4 + (i % 5) * 0.35,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 0.13,
+            }}
+            style={{ background: `rgba(91,143,216,${0.4 + (h / 100) * 0.5})` }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -1188,7 +1523,7 @@ function SolutionBento() {
               Pull live portfolio data directly into Excel. No API wrangling required.
             </p>
             <div className="mt-auto rounded-lg border border-white/8 bg-[#001228] px-3 py-2 font-mono text-[10px] text-blue-300">
-              =AI.Portfolio("fleet_size")
+              <ExcelTypewriter text={'=AI.Portfolio("fleet_size")'} />
             </div>
           </BentoCard>
 
@@ -1209,13 +1544,15 @@ function SolutionBento() {
             </div>
             <div className="hidden shrink-0 flex-col gap-1.5 sm:flex">
               {[
-                { label: "Base", val: "$2.41B", color: "text-emerald-400" },
-                { label: "Stress", val: "$1.87B", color: "text-amber-400" },
-                { label: "Upside", val: "$2.74B", color: "text-blue-400" },
-              ].map((sc) => (
+                { label: "Base", num: 2.41, color: "text-emerald-400" },
+                { label: "Stress", num: 1.87, color: "text-amber-400" },
+                { label: "Upside", num: 2.74, color: "text-blue-400" },
+              ].map((sc, i) => (
                 <div key={sc.label} className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-1.5">
                   <span className="w-10 text-[10px] text-white/45">{sc.label}</span>
-                  <span className={cn("text-xs font-bold", sc.color)}>{sc.val}</span>
+                  <span className={cn("text-xs font-bold tabular-nums", sc.color)}>
+                    <CountUp to={sc.num} duration={1400 + i * 200} prefix="$" suffix="B" decimals={2} />
+                  </span>
                 </div>
               ))}
             </div>
@@ -1240,14 +1577,21 @@ function PortfolioMock() {
           { label: "Narrowbody", pct: 62, val: "$1.49B", color: "#002147" },
           { label: "Widebody", pct: 28, val: "$675M", color: "#334e74" },
           { label: "Regional", pct: 10, val: "$240M", color: "#6b8cbb" },
-        ].map((r) => (
+        ].map((r, i) => (
           <div key={r.label}>
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="font-medium text-gray-700">{r.label}</span>
               <span className="text-gray-400">{r.val}</span>
             </div>
-            <div className="h-2 w-full rounded-full bg-gray-100">
-              <div className="h-2 rounded-full" style={{ width: `${r.pct}%`, background: r.color }} />
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+              <motion.div
+                className="h-2 rounded-full"
+                initial={{ width: "0%" }}
+                whileInView={{ width: `${r.pct}%` }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.15 + i * 0.18 }}
+                style={{ background: r.color }}
+              />
             </div>
           </div>
         ))}
@@ -1276,7 +1620,7 @@ function IntelligenceMock() {
           { name: "SkyWave Air", flag: "🇸🇬", signal: "Traffic recovery +18% MoM", score: "Low", color: "bg-emerald-100 text-emerald-700" },
           { name: "Pacific Wings", flag: "🇯🇵", signal: "Fleet expansion · new RFP", score: "Medium", color: "bg-amber-100 text-amber-700" },
           { name: "NordicFly", flag: "🇸🇪", signal: "CAPA restructuring alert", score: "High", color: "bg-rose-100 text-rose-700" },
-        ].map((l) => (
+        ].map((l, i) => (
           <div key={l.name} className="flex items-center justify-between px-5 py-3">
             <div className="flex items-center gap-3">
               <span className="text-xl">{l.flag}</span>
@@ -1285,9 +1629,20 @@ function IntelligenceMock() {
                 <p className="text-[10px] text-gray-400">{l.signal}</p>
               </div>
             </div>
-            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", l.color)}>
+            <motion.span
+              className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", l.color)}
+              initial={{ scale: 0, opacity: 0 }}
+              whileInView={{ scale: [0, 1.18, 0.94, 1], opacity: [0, 1, 1, 1] }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{
+                duration: 0.55,
+                times: [0, 0.55, 0.8, 1],
+                ease: "easeOut",
+                delay: 0.25 + i * 0.22,
+              }}
+            >
               {l.score}
-            </span>
+            </motion.span>
           </div>
         ))}
       </div>
@@ -1944,13 +2299,6 @@ function Contact() {
 
   const cards = [
     {
-      icon: "bi-envelope",
-      title: "Email",
-      desc: "Reach me directly. Usually a reply within a day.",
-      action: CONTACT_EMAIL,
-      href: `mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%C2%B7%20Hello`,
-    },
-    {
       icon: "bi-calendar-check",
       title: "Book a Demo",
       desc: "Schedule a 30-minute walkthrough at the same address.",
@@ -1975,7 +2323,80 @@ function Contact() {
           sub="Drop a line. Every enquiry goes straight to my inbox and gets a personal reply."
         />
 
-        <div className="mt-16 grid gap-6 sm:grid-cols-3">
+        {/* Builder card — puts a face to the inbox you are about to message.
+            Sits above the cards / form grid as a single full-width band so
+            the personal context is the first thing the user sees in the
+            Contact section. */}
+        <FadeIn className="mt-12">
+          <div className="flex flex-col items-center gap-6 rounded-2xl border border-white/60 bg-white/80 p-6 shadow-sm backdrop-blur-md sm:flex-row sm:items-stretch sm:gap-7 sm:p-7">
+            <div className="relative shrink-0">
+              <div
+                aria-hidden
+                className="absolute -inset-2 rounded-full bg-[radial-gradient(closest-side,rgba(0,33,71,0.18),transparent_70%)] blur-md"
+              />
+              <div className="relative size-32 overflow-hidden rounded-full ring-4 ring-white shadow-lg shadow-[#002147]/20 sm:size-44">
+                <img
+                  src="/tanam.png"
+                  alt="Tanam Sethi"
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col justify-center text-center sm:text-left">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-baseline sm:gap-3">
+                <p className="text-xl font-black tracking-tight text-gray-950 sm:text-2xl">
+                  Tanam Sethi
+                </p>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#002147]/15 bg-[#002147]/5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#002147]">
+                  <i className="bi bi-tools text-[10px]" />
+                  Founder &amp; Builder
+                </span>
+              </div>
+              <p className="mt-2 text-[15px] leading-relaxed text-gray-600">
+                I built AeroInsights single-handedly from scratch and operate the platform
+                day to day. Every enquiry comes straight to me, and I&apos;m happy to walk
+                through methodology, pricing, or how AeroInsights would fit your workflow.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <a
+                  href="https://cal.com/tanam-sethi/30min"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#002147] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#001a38]"
+                >
+                  <i className="bi bi-calendar-event text-[11px]" />
+                  Book a 30-min call
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/tanamsethi/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#002147]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+                >
+                  <i className="bi bi-linkedin text-[11px]" />
+                  LinkedIn
+                </a>
+                <a
+                  href={`mailto:${CONTACT_EMAIL}?subject=AeroInsights%20%C2%B7%20Hello`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#002147]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+                >
+                  <i className="bi bi-envelope text-[11px]" />
+                  {CONTACT_EMAIL}
+                </a>
+                <Link
+                  to="/about"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-[#002147]/70 transition hover:text-[#002147]"
+                >
+                  About the builder
+                  <i className="bi bi-arrow-right text-[10px]" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+
+        <div className="mt-8 grid gap-6 sm:grid-cols-3">
           <div className="flex flex-col gap-4">
             {cards.map((card, i) => (
               <FadeIn key={card.title} delay={i * 0.05}>
@@ -2122,13 +2543,27 @@ const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
     heading: "Company",
     links: [
       { label: "About the builder", href: "/about" },
-      "Careers",
-      "Blog",
-      "Press",
+      { label: "Blog",              href: "/blog" },
     ],
   },
-  { heading: "Resources", links: ["Documentation", "Help Centre", "API Reference", "Status Page"] },
-  { heading: "Legal", links: ["Privacy Policy", "Terms of Service", "Security", "Cookie Policy"] },
+  {
+    heading: "Resources",
+    links: [
+      { label: "Documentation", href: "/docs" },
+      { label: "Help Centre",   href: "/help" },
+      { label: "API Reference", href: "/api" },
+      { label: "Status Page",   href: "/status" },
+    ],
+  },
+  {
+    heading: "Legal",
+    links: [
+      { label: "Privacy Policy",   href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Security",         href: "/security" },
+      { label: "Cookie Policy",    href: "/cookies" },
+    ],
+  },
 ];
 
 function Footer() {
@@ -2235,6 +2670,10 @@ function Footer() {
 
 /* ─── PAGE ──────────────────────────────────────────────────────────────────── */
 export default function Landing() {
+  // Restore scroll position when the user comes back to /home (e.g. from a
+  // footer link or About). Mounts at top on first ever visit; thereafter
+  // snaps back to wherever they left off in the same session.
+  useScrollRestore("/home");
   return (
     <div className="relative min-h-screen font-sans text-gray-950 antialiased">
       {/* One continuous animated colour-blob layer behind everything */}

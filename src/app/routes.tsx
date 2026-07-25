@@ -7,6 +7,9 @@ import { usePortfolio } from "./contexts/PortfolioContext";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import About from "./pages/About";
+import { PrivacyPage, TermsPage, SecurityPage, CookiePage } from "./pages/Legal";
+import { DocumentationPage, HelpPage, ApiPage, StatusPage } from "./pages/Resources";
+import { BlogPage } from "./pages/Blog";
 import PortfolioHub from "./pages/PortfolioHub";
 import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import ExcelAddinDocs from "./pages/ExcelAddinDocs";
@@ -80,6 +83,15 @@ export const router = createBrowserRouter([
   { path: "/about", Component: About, ErrorBoundary: RouteErrorBoundary },
   { path: "/login", Component: Login, ErrorBoundary: RouteErrorBoundary },
   { path: "/docs/excel-addin", Component: ExcelAddinDocs, ErrorBoundary: RouteErrorBoundary },
+  { path: "/privacy",  Component: PrivacyPage,  ErrorBoundary: RouteErrorBoundary },
+  { path: "/terms",    Component: TermsPage,    ErrorBoundary: RouteErrorBoundary },
+  { path: "/security", Component: SecurityPage, ErrorBoundary: RouteErrorBoundary },
+  { path: "/cookies",  Component: CookiePage,   ErrorBoundary: RouteErrorBoundary },
+  { path: "/docs",     Component: DocumentationPage, ErrorBoundary: RouteErrorBoundary },
+  { path: "/help",     Component: HelpPage,          ErrorBoundary: RouteErrorBoundary },
+  { path: "/api",      Component: ApiPage,           ErrorBoundary: RouteErrorBoundary },
+  { path: "/status",   Component: StatusPage,        ErrorBoundary: RouteErrorBoundary },
+  { path: "/blog",     Component: BlogPage,          ErrorBoundary: RouteErrorBoundary },
 
   // Root layout — RequireAuth gates the app shell; unauthenticated "/" → /home
   // Top-level ErrorBoundary catches anything that bubbles past the inner

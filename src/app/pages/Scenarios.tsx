@@ -62,6 +62,13 @@ import {
 } from "../utils/eclCalculator";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toDashboardKPIs } from "../lib/portfolioAdapters";
+import {
+  type ScenarioScope,
+  SCOPE_ALL,
+  applyScope,
+  scopeLabel as fmtScopeLabel,
+} from "../utils/scenarioScope";
+import { ScopePicker } from "../components/scenarios/ScopePicker";
 import { PillTabs } from "../components/ui/PillTabs";
 import {
   PATH_TAB,
@@ -219,12 +226,25 @@ export default function Scenarios() {
   // the const-before-init error as "Cannot access 'X' before initialization").
   const { assets, lessees, leases, provisions, isDemo } = usePortfolioData();
   const { jurisdictions: ingestedJurisdictions } = useJurisdictions();
+
+  // Scope state — drives which leases the scenario runs against.
+  // Default "all" preserves pre-feature behaviour (whole-portfolio runs).
+  const [scope, setScope] = React.useState<ScenarioScope>(SCOPE_ALL);
+
+  const scoped = React.useMemo(
+    () => applyScope(scope, assets, leases, provisions),
+    [scope, assets, leases, provisions],
+  );
+
+  // liveBaseECL now reflects the SCOPED portfolio. Scaling logic in
+  // computeECLFromBase will scale the macro deltas down accordingly so
+  // a Brazil-only or A320-only run produces a smaller, focused ECL.
   const liveBaseECL = React.useMemo(
     () => {
-      const kpis = toDashboardKPIs(assets, lessees, provisions);
+      const kpis = toDashboardKPIs(scoped.assets, lessees, scoped.provisions);
       return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
     },
-    [assets, lessees, provisions]
+    [scoped, lessees]
   );
 
   // Derive live Stage 3 lessees from uploaded portfolio for scenario narrative
@@ -265,6 +285,7 @@ export default function Scenarios() {
       const durationSec = cs.mode === "deterministic"
         ? `${(1.4 + seededRand(seed, 9) * 1.4).toFixed(1)}s`
         : `${Math.round(28 + seededRand(seed, 11) * 20)}s`;
+      const scopeLabelStr = fmtScopeLabel(scope, assets, lessees);
       const resultBlob = {
         durationSec,
         ecl:          computedECL,
@@ -276,6 +297,8 @@ export default function Scenarios() {
         scenarioHash: hashFromSeed(seed).slice(0, 12),
         topLessees:   computeTopLessees(stages.s3, seed, liveStage3Lessees ?? STAGE3_LESSEES),
         s3LeaseCount: computeS3LeaseCount(stages.s3),
+        scope,
+        scopeLabel:   scopeLabelStr,
       };
       const inserted = await persistRun({
         runCode,
@@ -314,11 +337,13 @@ export default function Scenarios() {
           scenarioHash: resultBlob.scenarioHash,
           topLessees:   resultBlob.topLessees,
           s3LeaseCount: resultBlob.s3LeaseCount,
+          scope:        resultBlob.scope,
+          scopeLabel:   resultBlob.scopeLabel,
         });
       }
       setCardPhase(tpl.id, { phase: "done", resultId });
     }, duration);
-  }, [cardStates, setCardPhase, persistRun, addEphemeralRun, liveBaseECL, liveStage3Lessees]);
+  }, [cardStates, setCardPhase, persistRun, addEphemeralRun, liveBaseECL, liveStage3Lessees, scope, assets, lessees]);
 
   // ── Custom Builder state ──
   const [prefillSource, setPrefillSource] = useState<string | null>(null);
@@ -732,6 +757,9 @@ export default function Scenarios() {
         cost is bounded (three mounts total per Scenarios visit).
       */}
       <div data-tour="scenarios-library" style={{ display: activeTab === "Library" ? "block" : "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+          <ScopePicker scope={scope} onChange={setScope} assets={assets} lessees={lessees} />
+        </div>
         {visitedSubTabs.has("Library") && <LibraryTab
           weightedECL={weightedECL}
           effectiveTemplates={effectiveTemplates}

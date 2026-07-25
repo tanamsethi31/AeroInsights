@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router";
 import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { useAuth0 } from "@auth0/auth0-react";
 import { motion } from "framer-motion";
-import { BarChart3, Plus, ArrowRight, Loader2, FolderOpen, Clock, Database } from "lucide-react";
+import { ArrowLeft, BarChart3, Plus, ArrowRight, Loader2, FolderOpen, Clock, Database } from "lucide-react";
 import {
   usePortfolio,
   SAMPLE_PORTFOLIO,
@@ -221,28 +222,62 @@ export default function PortfolioHub() {
             flexShrink: 0,
           }}
         >
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-            <div
+          {/* Left cluster: back-to-home + logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+            <Link
+              to="/home"
               style={{
-                width: "28px",
-                height: "28px",
-                background: "#002147",
-                borderRadius: "6px",
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                gap: "0.4rem",
+                padding: "0.4rem 0.7rem",
+                color: "#475569",
+                background: "#F8FAFC",
+                border: "1px solid #E2E8F0",
+                borderRadius: "0.4rem",
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                textDecoration: "none",
+                transition: "background 0.15s, color 0.15s, border-color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.background = "#FFFFFF";
+                (e.currentTarget as HTMLAnchorElement).style.color = "#002147";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "#CBD5E1";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLAnchorElement).style.background = "#F8FAFC";
+                (e.currentTarget as HTMLAnchorElement).style.color = "#475569";
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = "#E2E8F0";
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 28 28" fill="none">
-                <path d="M4 20L14 4L24 20H4Z" stroke="#FFF" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
-                <path d="M9 20L14 11L19 20" stroke="#FFF" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
-              </svg>
+              <ArrowLeft size={13} strokeWidth={2.2} />
+              Home
+            </Link>
+
+            {/* Logo */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+              <div
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  background: "#002147",
+                  borderRadius: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 28 28" fill="none">
+                  <path d="M4 20L14 4L24 20H4Z" stroke="#FFF" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+                  <path d="M9 20L14 11L19 20" stroke="#FFF" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
+                </svg>
+              </div>
+              <span style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#0F172A", letterSpacing: "-0.01em" }}>
+                Aeroinsights
+              </span>
             </div>
-            <span style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#0F172A", letterSpacing: "-0.01em" }}>
-              Aeroinsights
-            </span>
           </div>
 
           {/* User info */}

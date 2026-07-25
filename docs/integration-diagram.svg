@@ -1,0 +1,113 @@
+<svg viewBox="0 0 720 596" xmlns="http://www.w3.org/2000/svg" role="img" font-family="Inter, system-ui, -apple-system, sans-serif">
+  <title>AeroInsights platform module integration</title>
+  <desc>The Portfolio lease register sits at the top as the source of truth. Five modules read from it: Analytics, Risk and ECL, Deals, Maintenance, and Intelligence. All five flow into Scenarios, which flows into Reports. Cash Flow and Reconciliation feeds a reality loop back into Risk and ECL via a dashed arrow. Excel Add-in reads every layer.</desc>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#6b8cbb"/>
+    </marker>
+    <marker id="arfb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#8aa3c8"/>
+    </marker>
+  </defs>
+
+  <!-- Portfolio source-of-truth box -->
+  <g>
+    <rect x="250" y="18" width="220" height="64" rx="10" fill="#e9eef8" stroke="#002147" stroke-width="2.2"/>
+    <text x="360" y="40" text-anchor="middle" font-size="13" font-weight="800" fill="#002147" letter-spacing="0.04em">PORTFOLIO</text>
+    <text x="360" y="56" text-anchor="middle" font-size="10.5" fill="#4a5e7c">Aircraft · lessee · lease</text>
+    <text x="360" y="72" text-anchor="middle" font-size="9" fill="#6b8cbb" font-style="italic">source of truth</text>
+  </g>
+
+  <!-- Distribution: trunk + horizontal bar + 5 vertical arrows -->
+  <g stroke="#6b8cbb" stroke-width="1.5" fill="none">
+    <line x1="360" y1="82"  x2="360" y2="106"/>
+    <line x1="92"  y1="106" x2="628" y2="106"/>
+    <line x1="92"  y1="106" x2="92"  y2="126" marker-end="url(#ar)"/>
+    <line x1="226" y1="106" x2="226" y2="126" marker-end="url(#ar)"/>
+    <line x1="360" y1="106" x2="360" y2="126" marker-end="url(#ar)"/>
+    <line x1="494" y1="106" x2="494" y2="126" marker-end="url(#ar)"/>
+    <line x1="628" y1="106" x2="628" y2="126" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- 5 module boxes -->
+  <g fill="#ffffff" stroke="#002147" stroke-width="1.5">
+    <rect x="32"  y="130" width="120" height="86" rx="8"/>
+    <rect x="166" y="130" width="120" height="86" rx="8"/>
+    <rect x="300" y="130" width="120" height="86" rx="8"/>
+    <rect x="434" y="130" width="120" height="86" rx="8"/>
+    <rect x="568" y="130" width="120" height="86" rx="8"/>
+  </g>
+  <g text-anchor="middle" font-weight="700" font-size="12" fill="#002147">
+    <text x="92"  y="158">ANALYTICS</text>
+    <text x="226" y="158">RISK &amp; ECL</text>
+    <text x="360" y="158">DEALS</text>
+    <text x="494" y="158">MAINTENANCE</text>
+    <text x="628" y="158">INTELLIGENCE</text>
+  </g>
+  <g text-anchor="middle" font-size="9.5" fill="#4a5e7c">
+    <text x="92"  y="180">concentration,</text>
+    <text x="92"  y="194">maturity, mix</text>
+    <text x="226" y="180">S1/S2/S3, PD/LGD,</text>
+    <text x="226" y="194">waterfall, snapshots</text>
+    <text x="360" y="180">pricing, NPV,</text>
+    <text x="360" y="194">comparables</text>
+    <text x="494" y="180">MR, events,</text>
+    <text x="494" y="194">forecasts</text>
+    <text x="628" y="180">news, signals,</text>
+    <text x="628" y="194">jurisdictions</text>
+  </g>
+
+  <!-- Collector down arrows + bar + trunk into Scenarios -->
+  <g stroke="#6b8cbb" stroke-width="1.5" fill="none">
+    <line x1="92"  y1="216" x2="92"  y2="248"/>
+    <line x1="226" y1="216" x2="226" y2="248"/>
+    <line x1="360" y1="216" x2="360" y2="248"/>
+    <line x1="494" y1="216" x2="494" y2="248"/>
+    <line x1="628" y1="216" x2="628" y2="248"/>
+    <line x1="92"  y1="248" x2="628" y2="248"/>
+    <line x1="360" y1="248" x2="360" y2="270" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- Scenarios -->
+  <g>
+    <rect x="85" y="276" width="550" height="58" rx="9" fill="#ffffff" stroke="#002147" stroke-width="1.8"/>
+    <text x="360" y="300" text-anchor="middle" font-size="13" font-weight="800" fill="#002147" letter-spacing="0.04em">SCENARIOS</text>
+    <text x="360" y="320" text-anchor="middle" font-size="10.5" fill="#4a5e7c">parameter sets · custom builder · reproducible runs</text>
+  </g>
+
+  <line x1="360" y1="334" x2="360" y2="376" stroke="#6b8cbb" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- Reports -->
+  <g>
+    <rect x="280" y="384" width="160" height="58" rx="9" fill="#ffffff" stroke="#002147" stroke-width="1.8"/>
+    <text x="360" y="408" text-anchor="middle" font-size="13" font-weight="800" fill="#002147" letter-spacing="0.04em">REPORTS</text>
+    <text x="360" y="428" text-anchor="middle" font-size="10.5" fill="#4a5e7c">IFRS 9 · audit · board · regulator</text>
+  </g>
+
+  <!-- Cash Flow & Reconciliation (bottom-left) -->
+  <g>
+    <rect x="100" y="486" width="340" height="76" rx="9" fill="#fafcff" stroke="#002147" stroke-width="1.5"/>
+    <text x="270" y="512" text-anchor="middle" font-size="12" font-weight="700" fill="#002147">CASH FLOW &amp; RECONCILIATION</text>
+    <text x="270" y="530" text-anchor="middle" font-size="10" fill="#4a5e7c">bank ingest · auto-match · cash events</text>
+    <text x="270" y="550" text-anchor="middle" font-size="9.5" fill="#6b8cbb" font-style="italic">reality feedback into stage migration</text>
+  </g>
+
+  <!-- Feedback loop dashed arrow back up to Risk & ECL -->
+  <path d="M 200 486 C 18 460 18 220 226 218"
+        fill="none" stroke="#8aa3c8" stroke-width="1.6"
+        stroke-dasharray="5,4" marker-end="url(#arfb)"/>
+
+  <!-- Side note: Excel Add-In + legend (bottom-right) -->
+  <g font-size="10">
+    <text x="466" y="504" font-style="italic" fill="#6b8cbb">Excel Add-In reads every layer above</text>
+    <text x="466" y="520" font-style="italic" fill="#6b8cbb">(=AI.Portfolio, =AI.ECL, =AI.Scenario)</text>
+  </g>
+  <g>
+    <line x1="466" y1="540" x2="700" y2="540" stroke="#dde3ec" stroke-width="0.8"/>
+    <line x1="470" y1="552" x2="492" y2="552" stroke="#6b8cbb" stroke-width="1.5" marker-end="url(#ar)"/>
+    <text x="500" y="556" font-size="9.5" fill="#4a5e7c">data flow</text>
+    <line x1="470" y1="568" x2="492" y2="568" stroke="#8aa3c8" stroke-width="1.6" stroke-dasharray="3,3" marker-end="url(#arfb)"/>
+    <text x="500" y="572" font-size="9.5" fill="#4a5e7c">reality feedback</text>
+  </g>
+</svg>

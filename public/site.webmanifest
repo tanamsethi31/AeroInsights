@@ -1,0 +1,14 @@
+{
+  "name": "AeroInsights",
+  "short_name": "AeroInsights",
+  "description": "Aviation finance decision intelligence platform — portfolio analytics, scenario modelling, IFRS 9 ECL, and AI-powered deal intelligence.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafcff",
+  "theme_color": "#002147",
+  "icons": [
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

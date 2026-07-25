@@ -137,35 +137,7 @@
   animation:     aero-tour-ai-pulse 1.6s ease-out infinite;
 }
 
-/* Replay-tour pill. */
-.aero-replay-pill {
-  position:        fixed;
-  bottom:          1.25rem;
-  right:           1.25rem;
-  z-index:         70;
-  display:         inline-flex;
-  align-items:     center;
-  gap:             0.4rem;
-  background:      #FFFFFF;
-  color:           #002147;
-  border:          1px solid rgba(0, 33, 71, 0.18);
-  border-radius:   9999px;
-  font-size:       0.8125rem;
-  font-weight:     600;
-  padding:         0.55rem 1rem;
-  box-shadow:      0 4px 14px rgba(0, 33, 71, 0.16);
-  cursor:          pointer;
-  transition:      transform 120ms ease-out, box-shadow 160ms ease-out;
-  font-family:     inherit;
-}
-.aero-replay-pill:hover {
-  box-shadow: 0 6px 20px rgba(0, 33, 71, 0.22);
-  transform:  translateY(-1px);
-}
-.aero-replay-pill:active {
-  transform: scale(0.97);
-}
-.aero-replay-pill__icon {
-  font-size: 1rem;
-  line-height: 1;
-}
+/* Replay-tour pill — now a 34×34 header icon button. All styling lives
+   on the component itself (inline styles match the alerts-bell pattern).
+   No fixed/floating rules here; old bottom-right CSS deleted to avoid
+   pulling the new icon out of the header. */

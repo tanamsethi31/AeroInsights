@@ -1,6 +1,6 @@
 /**
  * exportService.ts
- * Generates PDF (jsPDF + autotable) and XLSX (SheetJS) exports for the
+ * Generates PDF (jsPDF + autotable) and XLSX (ExcelJS) exports for the
  * ExportSnapshotModal.  All data is self-contained static mock data that
  * mirrors the values shown in the live pages.
  */
@@ -421,7 +421,6 @@ export async function generateReportXLSX(
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
   const leaseRows  = data?.leaseRows    ?? LEASES;
-  const acRows     = data?.aircraftRows ?? AIRCRAFT;
 
   const wb   = new ExcelJS.Workbook();
   const meta = `Generated: ${new Date().toLocaleDateString("en-IE")} | Currency: ${currency}`;

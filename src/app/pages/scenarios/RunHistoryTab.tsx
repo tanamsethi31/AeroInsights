@@ -145,7 +145,13 @@ function RunHistoryTabImpl({
                         {run.id}
                       </td>
                       <td style={{ padding: isChild ? "0.75rem 1rem 0.75rem 1.75rem" : "0.75rem 1rem", fontWeight: 600, color: isChild ? "#475569" : "#0F172A" }}>
-                        {run.name}
+                        <div>{run.name}</div>
+                        {run.scopeLabel && run.scope?.dimension !== "all" && (
+                          <div style={{ marginTop: "0.2rem", display: "inline-flex", alignItems: "center", gap: "0.3rem", padding: "0.1rem 0.45rem", borderRadius: "9999px", background: "rgba(0,33,71,0.06)", color: "#002147", fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.01em" }} title={`Scoped to ${run.scopeLabel}`}>
+                            <span aria-hidden="true">◉</span>
+                            <span>{run.scopeLabel}</span>
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: "0.75rem 1rem" }}>
                         <span style={{ fontSize: "0.75rem", background: "#F4F5F7", color: "#475569", padding: "0.2rem 0.5rem", borderRadius: "0.5rem", border: "1px solid #E2E8F0" }}>

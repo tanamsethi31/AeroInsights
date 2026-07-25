@@ -33,6 +33,13 @@ import { useScenarioRuns } from "../hooks/useScenarioRuns";
 import { useStressScenarios } from "../hooks/useStressScenarios";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toDashboardKPIs } from "../lib/portfolioAdapters";
+import {
+  type ScenarioScope,
+  SCOPE_ALL,
+  applyScope,
+  scopeLabel as fmtScopeLabel,
+} from "../utils/scenarioScope";
+import { ScopePicker } from "../components/scenarios/ScopePicker";
 import { computePortfolioAssetRisk } from "../utils/assetRisk";
 import { computePortfolioDepositCoverage } from "../utils/creditDeposit";
 import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
@@ -94,11 +101,18 @@ export default function CustomBuilderPage(): React.JSX.Element {
     [dbTemplates],
   );
 
-  // ── Derived portfolio metrics ──
+  // Scope state — drives which leases the scenario runs against.
+  const [scope, setScope] = useState<ScenarioScope>(SCOPE_ALL);
+  const scoped = useMemo(
+    () => applyScope(scope, assets, leases, provisions),
+    [scope, assets, leases, provisions],
+  );
+
+  // ── Derived portfolio metrics — scoped subset, not whole portfolio ──
   const liveBaseECL = useMemo(() => {
-    const kpis = toDashboardKPIs(assets, lessees, provisions);
+    const kpis = toDashboardKPIs(scoped.assets, lessees, scoped.provisions);
     return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
-  }, [assets, lessees, provisions]);
+  }, [scoped, lessees]);
 
   const liveStage3Lessees = useMemo(() => {
     if (isDemo || lessees.length === 0 || provisions.length === 0) return null;
@@ -255,6 +269,9 @@ export default function CustomBuilderPage(): React.JSX.Element {
       newRun.p95 = engineResult.p95;
     }
     (newRun as ScenarioRunResult & { engine?: string }).engine = engineResult.engine;
+    // Stamp scope so RunHistory + clones reproduce the comparison.
+    newRun.scope      = scope;
+    newRun.scopeLabel = fmtScopeLabel(scope, assets, lessees);
 
     const elapsed = performance.now() - startedAt;
     const remainingSkeletonMs = Math.max(0, minSkeletonMs - elapsed);
@@ -270,6 +287,7 @@ export default function CustomBuilderPage(): React.JSX.Element {
           scenarioHash: newRun.scenarioHash, topLessees: newRun.topLessees,
           s3LeaseCount: newRun.s3LeaseCount,
           engine: (newRun as ScenarioRunResult & { engine?: string }).engine,
+          scope: newRun.scope, scopeLabel: newRun.scopeLabel,
         },
         parentRunCode: branchFromId,
       });
@@ -279,7 +297,7 @@ export default function CustomBuilderPage(): React.JSX.Element {
       setCustomRunning(false);
       setBranchFromId(null);
     }, remainingSkeletonMs);
-  }, [dslText, formInputs, customMode, customPaths, customName, branchFromId, liveBaseECL, liveStage3Lessees, persistRun, addEphemeralRun]);
+  }, [dslText, formInputs, customMode, customPaths, customName, branchFromId, liveBaseECL, liveStage3Lessees, persistRun, addEphemeralRun, scope, assets, lessees]);
 
   // ── Narratives ──
   const [narrativeCache, setNarrativeCache] = useState<Map<string, string | null | "loading">>(new Map());
@@ -328,6 +346,10 @@ export default function CustomBuilderPage(): React.JSX.Element {
           <ArrowLeft size={14} /> Back to Scenarios
         </button>
       </PageHeader>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+        <ScopePicker scope={scope} onChange={setScope} assets={assets} lessees={lessees} />
+      </div>
 
       <CustomBuilderTab
         prefillSource={prefillSource}

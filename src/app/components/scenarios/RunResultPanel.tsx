@@ -28,6 +28,14 @@ export interface ScenarioRunResult {
   topLessees: Array<{ name: string; ecl: number; jurisdiction: string }>;
   s3LeaseCount: number;
   parentId?: string;   // set when this run is branched from another run
+  /** Portfolio subset the run was scoped to. Absent or {dimension:"all"}
+   *  means whole-portfolio. Persisted with the run so clones reproduce
+   *  the same comparison. */
+  scope?: { dimension: "all" | "aircraft" | "lessee" | "aircraftType"; ids: string[] };
+  /** Human label e.g. "IndiGo Airlines" / "A320neo fleet" — denormalised
+   *  for display so RunHistory doesn't need to re-derive from asset/lessee
+   *  lookups every render. */
+  scopeLabel?: string;
 }
 
 // ─── Shimmer animation (injected once) ───────────────────────────────────────

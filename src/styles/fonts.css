@@ -135,3 +135,32 @@ body {
 .pill-shimmer:hover {
   animation: gradientPan 4.5s ease-in-out infinite;
 }
+
+/* ── Auth pill: gradient slides in left→right on hover ─────────
+ * Pattern: button has a ::before that grows from width 0 to 100%
+ * on hover, painting a brand-blue gradient under the text. Text
+ * colour flips dark for contrast against the bright fill.
+ */
+.auth-pill-btn {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: color 0.4s ease, border-color 0.4s ease;
+}
+.auth-pill-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(to right, #6fa6ff 0%, #6fcdf2 100%);
+  transition: width 0.55s ease;
+  z-index: -1;
+}
+.auth-pill-btn:hover::before {
+  width: 100%;
+}
+.auth-pill-btn:hover {
+  color: #0a1a33;
+  border-color: rgba(111,166,255,0.55);
+}
