@@ -1,5 +1,6 @@
 // src/app/components/reports/BoardPackModal.tsx
 import * as React from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { X, FileText, Table } from "lucide-react";
 import { useCurrency } from "../../contexts/CurrencyContext";
 import { generateReportPDF, generateReportXLSX } from "../../services/exportService";
@@ -51,6 +52,7 @@ interface BoardPackModalProps {
 export function BoardPackModal({ reportId, reportName, onClose }: BoardPackModalProps) {
   const { currency } = useCurrency();
   const { assets, lessees, leases, provisions } = usePortfolioData();
+  const { getAccessTokenSilently } = useAuth0();
 
   // Export data (mirrors ReportFormatModal)
   const exportData = toExportData(assets, lessees, leases, provisions);
@@ -109,7 +111,11 @@ export function BoardPackModal({ reportId, reportName, onClose }: BoardPackModal
   async function handleDownload() {
     setDownloading(true);
     try {
-      if (format === "pdf")  generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"));
+      if (format === "pdf") {
+        let token: string | undefined;
+        try { token = await getAccessTokenSilently(); } catch { /* falls back to deterministic summary */ }
+        await generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"), token);
+      }
       if (format === "xlsx") await generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
       setDone(true);
       setTimeout(onClose, 1200);

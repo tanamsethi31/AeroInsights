@@ -1,5 +1,6 @@
 // src/app/components/reports/ReportFormatModal.tsx
 import * as React from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { X, FileText, Table, FileType } from "lucide-react";
 import { useCurrency } from "../../contexts/CurrencyContext";
 import { generateReportPDF, generateReportXLSX } from "../../services/exportService";
@@ -33,6 +34,7 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
   const { assets, lessees, leases, provisions } = usePortfolioData();
   const exportData = toExportData(assets, lessees, leases, provisions);
   const { recordExport } = useReportExports();
+  const { getAccessTokenSilently } = useAuth0();
   const [selected, setSelected] = React.useState<Format>("pdf");
   const [downloading, setDownloading] = React.useState(false);
   const [done, setDone] = React.useState(false);
@@ -56,7 +58,11 @@ export function ReportFormatModal({ reportId, reportName, onClose }: ReportForma
   async function handleDownload() {
     setDownloading(true);
     try {
-      if (selected === "pdf")  generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"));
+      if (selected === "pdf") {
+        let token: string | undefined;
+        try { token = await getAccessTokenSilently(); } catch { /* falls back to deterministic summary */ }
+        await generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"), token);
+      }
       if (selected === "xlsx") await generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
       if (selected === "docx") await generateReportDOCX(reportId, currency, exportData, undefined, makeOnBlob("docx"));
       setDone(true);
