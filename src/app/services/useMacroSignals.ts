@@ -106,7 +106,19 @@ export function useMacroSignals(): UseMacroSignalsResult {
       // reason. LiveMacroData is small and plain-JSON-serializable (numbers,
       // strings, one small array, no functions/circular refs), so a
       // JSON.stringify comparison is safe and cheap here.
-      const unchanged = JSON.stringify(live) === JSON.stringify(rawDataRef.current);
+      // Compare everything except `fetchedAt` — that's a server timestamp
+      // stamped fresh on every non-cached response, so including it here
+      // would report "changed" on almost every poll even when the
+      // underlying economic data (ecbDepositRate/eurUsd/brentCrude/gdp)
+      // and partial-fetch status are identical to the last poll.
+      const comparable = (d: LiveMacroData) => JSON.stringify({
+        ecbDepositRate: d.ecbDepositRate,
+        eurUsd: d.eurUsd,
+        brentCrude: d.brentCrude,
+        gdp: d.gdp,
+        partial: d.partial,
+      });
+      const unchanged = rawDataRef.current !== null && comparable(live) === comparable(rawDataRef.current);
       if (!unchanged) {
         setSignals(mergeLiveData(MACRO_SIGNALS, live));
         setLastUpdated(new Date(live.fetchedAt));
