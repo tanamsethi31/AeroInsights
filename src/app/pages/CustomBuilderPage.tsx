@@ -45,6 +45,8 @@ import { computePortfolioDepositCoverage } from "../utils/creditDeposit";
 import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { computePortfolioPaymentBehaviourMix } from "../utils/paymentBehaviour";
 import { DEFAULT_RECOVERY_FACTOR } from "../data/lgdCurves";
+import { SCENARIO_CALIBRATION, computeLiveCalibration, type ScenarioCalibrationDivergence } from "../data/intelligenceData";
+import { useMacroSignals } from "../services/useMacroSignals";
 import {
   BASE_ECL,
   ZERO_INPUTS,
@@ -113,6 +115,12 @@ export default function CustomBuilderPage(): React.JSX.Element {
     const kpis = toDashboardKPIs(scoped.assets, lessees, scoped.provisions);
     return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
   }, [scoped, lessees]);
+
+  const { raw: liveMacroRaw } = useMacroSignals();
+  const calibration = useMemo<ScenarioCalibrationDivergence[]>(
+    () => (liveMacroRaw ? computeLiveCalibration(liveMacroRaw) : SCENARIO_CALIBRATION),
+    [liveMacroRaw],
+  );
 
   const liveStage3Lessees = useMemo(() => {
     if (isDemo || lessees.length === 0 || provisions.length === 0) return null;
@@ -391,6 +399,7 @@ export default function CustomBuilderPage(): React.JSX.Element {
         customResultRef={customResultRef}
         handleCustomRun={handleCustomRun}
         liveBaseECL={liveBaseECL}
+        calibration={calibration}
         portfolioJurisdictionMix={portfolioJurisdictionMix}
         portfolioAssetRisk={portfolioAssetRisk}
         portfolioDepositMix={portfolioDepositMix}

@@ -22,7 +22,7 @@ import {
   type ScenarioRunResult,
 } from "../../components/scenarios/RunResultPanel";
 import { ScenarioInsightsPanel } from "../../components/scenarios/ScenarioInsightsPanel";
-import { SCENARIO_CALIBRATION } from "../../data/intelligenceData";
+import type { ScenarioCalibrationDivergence } from "../../data/intelligenceData";
 import { RESTRUCTURING_TYPES } from "../../utils/deferralRisk";
 import {
   ScenarioInputs,
@@ -98,6 +98,7 @@ export interface CustomBuilderTabProps {
   handleCustomRun: () => Promise<void>;
   // Portfolio-derived data
   liveBaseECL: number;
+  calibration: ScenarioCalibrationDivergence[];
   portfolioJurisdictionMix: PortfolioJurisdictionMix;
   portfolioAssetRisk: PortfolioAssetRisk;
   portfolioDepositMix: PortfolioDepositCoverage;
@@ -155,6 +156,7 @@ function CustomBuilderTabImpl({
   customResultRef,
   handleCustomRun,
   liveBaseECL,
+  calibration,
   portfolioJurisdictionMix,
   portfolioAssetRisk,
   portfolioDepositMix,
@@ -230,7 +232,7 @@ function CustomBuilderTabImpl({
                         color: "#B45309",
                       }}
                     >
-                      {SCENARIO_CALIBRATION.length} signals diverged from last-run assumptions
+                      {calibration.length} signals diverged from last-run assumptions
                     </span>
                   </div>
                   <button
@@ -252,7 +254,7 @@ function CustomBuilderTabImpl({
 
                 {/* Divergence rows */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.75rem" }}>
-                  {SCENARIO_CALIBRATION.map((div) => (
+                  {calibration.map((div) => (
                     <div
                       key={div.id}
                       style={{
@@ -289,7 +291,7 @@ function CustomBuilderTabImpl({
                 <button
                   onClick={() => {
                     const patch: Record<string, number> = {};
-                    for (const d of SCENARIO_CALIBRATION) {
+                    for (const d of calibration) {
                       patch[d.suggestedInputKey] = d.suggestedValue;
                     }
                     updateFormInputs(patch as Parameters<typeof updateFormInputs>[0]);
