@@ -11,6 +11,11 @@ import * as XLSX from "xlsx";
 import { fmtCurrency, type CurrencyCode } from "../contexts/CurrencyContext";
 import type { PortfolioExportData } from "../lib/portfolioAdapters";
 import { generateBoardPackSummary } from "./narrativeService";
+import { computeECLFromBase, DEFAULT_ADVERSE_INPUTS, DEFAULT_UPSIDE_INPUTS } from "../utils/eclCalculator";
+import type { DashboardKPIs } from "../lib/portfolioAdapters";
+import type { KeyDateRow } from "../lib/keyDatesAdapters";
+import type { PaymentSchedule } from "../lib/paymentAdapters";
+import type { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
@@ -294,6 +299,24 @@ export async function generateReportPDF(
   onBlob?: (blob: Blob, filename: string) => void | Promise<void>,
   /** Auth0 bearer token — only used by the RPT-002 (Board Pack) narrative call. */
   token?: string,
+  /**
+   * RPT-002 (Board Pack) only. Which of the 8 SECTIONS checkboxes are on
+   * (keyed by the same ids as BoardPackModal.tsx's SECTIONS array) — a
+   * missing key defaults to shown, so a caller that omits this argument
+   * entirely (e.g. any future non-modal caller) still gets the full report.
+   * Also carries the pre-computed, hook-derived data (KPIs, key dates,
+   * payment schedule, jurisdiction mix) that this file has no way to fetch
+   * itself — BoardPackModal.tsx already has the hooks and raw domain data,
+   * so it computes these and passes the results down, the same way it
+   * already does for `data`.
+   */
+  sections?: Record<string, boolean>,
+  boardPackData?: {
+    kpis: DashboardKPIs;
+    keyDateRows: KeyDateRow[];
+    paymentSchedule: PaymentSchedule;
+    jurisdictionMix: ReturnType<typeof computePortfolioJurisdictionMix>;
+  },
 ): Promise<void> {
   const eclRows    = data?.eclRows      ?? ECL_ROWS;
   const lesseeRows = data?.lesseeRows   ?? LESSEES;
@@ -363,28 +386,189 @@ export async function generateReportPDF(
       const summaryData: PortfolioExportData = data ?? {
         eclRows: ECL_ROWS, leaseRows: LEASES, lesseeRows: LESSEES, aircraftRows: AIRCRAFT,
       };
-      const summary = await generateBoardPackSummary(summaryData, token);
+      const on = (id: string) => sections?.[id] !== false;
+      const lastY = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+      // Note on `on(id) && boardPackData` below: `on()` alone defaults a
+      // section to shown when `sections` is omitted, but 4 of the 8
+      // sections (kpi-dashboard, key-dates, payment-sched, jurisdiction)
+      // have no fallback data source without `boardPackData` — there's
+      // nothing in `summaryData` to build a KPI dashboard, payment
+      // schedule, or jurisdiction table from. So those 4 sections require
+      // both `on(id)` AND `boardPackData` truthy; they're silently omitted
+      // if a caller provides `sections` without `boardPackData` (today the
+      // only caller, BoardPackModal.tsx, always provides both together).
 
       let y = 45;
-      doc.setFontSize(8.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(15, 23, 42);
-      doc.text("Executive Summary", 14, y);
-      y += 5;
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(51, 65, 85);
-      const summaryLines = doc.splitTextToSize(summary, 182) as string[];
-      doc.text(summaryLines, 14, y);
-      y += summaryLines.length * 4 + 6;
 
-      autoTable(doc, {
-        startY: y,
-        head: [["Scenario", "ECL 12m", "ECL Lifetime", "Coverage"]],
-        body: SCENARIOS.map(s => [s.scenario, s.ecl12m, s.eclLT, s.coverage]),
-        styles: { fontSize: 9, cellPadding: 3 },
-        headStyles: { fillColor: [0, 33, 71], textColor: 255 },
-      });
+      // Page-break guard — 8 stacked sections realistically exceed one A4
+      // page (each section is independently 1-3 pages per the modal's own
+      // page estimates). Call before starting a new section's content.
+      function ensureSpace(minHeight: number) {
+        if (y + minHeight > 280) {
+          doc.addPage();
+          y = 20;
+        }
+      }
+
+      function sectionHeading(title: string) {
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42);
+        doc.text(title, 14, y);
+        y += 5;
+      }
+
+      // ── Executive Summary ────────────────────────────────────────────────
+      if (on("exec-summary")) {
+        ensureSpace(20);
+        const summary = await generateBoardPackSummary(summaryData, token);
+        sectionHeading("Executive Summary");
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(51, 65, 85);
+        const summaryLines = doc.splitTextToSize(summary, 182) as string[];
+        doc.text(summaryLines, 14, y);
+        y += summaryLines.length * 4 + 6;
+      }
+
+      // ── KPI Dashboard ─────────────────────────────────────────────────────
+      if (on("kpi-dashboard") && boardPackData) {
+        ensureSpace(30);
+        const k = boardPackData.kpis;
+        sectionHeading("KPI Dashboard");
+        autoTable(doc, {
+          startY: y,
+          head: [["Fleet", "Total ECL", "Watchlist (Red/Amber)", "Stage 3 Leases"]],
+          body: [[
+            `${k.fleetCount} aircraft`,
+            fe(k.totalECLm, currency),
+            `${k.watchlistRedCount} / ${k.watchlistAmberCount}`,
+            `${k.stage3Count}`,
+          ]],
+          styles: { fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+        });
+        y = lastY() + 6;
+      }
+
+      // ── Watchlist Highlights ──────────────────────────────────────────────
+      if (on("watchlist")) {
+        ensureSpace(30);
+        sectionHeading("Watchlist Highlights");
+        autoTable(doc, {
+          startY: y,
+          head: [["Lessee", "Country", "Rating", "Stage", "Score", "Leases", "Exposure", "Avg Days Late"]],
+          body: summaryData.lesseeRows.filter(l => l.stage !== "1").map(l => [
+            l.name, l.country, l.rating, `S${l.stage}`, l.behavior ?? "—", l.leases, l.exposure, l.daysLate ?? "—",
+          ]),
+          styles: { fontSize: 8, cellPadding: 2.5 },
+          headStyles: { fillColor: [185, 28, 28], textColor: 255 },
+          alternateRowStyles: { fillColor: [254, 242, 242] },
+        });
+        y = lastY() + 6;
+      }
+
+      // ── ECL Provision Summary (real Stage 1/2/3 breakdown) ────────────────
+      if (on("ecl-summary")) {
+        ensureSpace(30);
+        const { byStage, total, coveragePct } = stageBreakdown(summaryData);
+        sectionHeading("ECL Provision Summary");
+        autoTable(doc, {
+          startY: y,
+          head: [["Stage", "12m ECL"]],
+          body: [
+            ["Stage 1", fe(byStage["1"], currency)],
+            ["Stage 2", fe(byStage["2"], currency)],
+            ["Stage 3", fe(byStage["3"], currency)],
+            ["Total", fe(total, currency)],
+          ],
+          foot: [["Coverage", `${coveragePct.toFixed(2)}%`]],
+          styles: { fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+          footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: "bold" },
+        });
+        y = lastY() + 6;
+      }
+
+      // ── Upcoming Expirations ──────────────────────────────────────────────
+      if (on("key-dates") && boardPackData) {
+        ensureSpace(30);
+        const rows = boardPackData.keyDateRows.filter(r => r.urgency !== "long");
+        sectionHeading("Upcoming Expirations");
+        autoTable(doc, {
+          startY: y,
+          head: [["Lessee", "Aircraft", "Expiry", "Days", "Urgency"]],
+          body: rows.map(r => [r.lessee, r.aircraft, r.expiryDate, `${r.daysRemaining}`, r.urgency]),
+          styles: { fontSize: 8, cellPadding: 2.5 },
+          headStyles: { fillColor: [180, 83, 9], textColor: 255 },
+          alternateRowStyles: { fillColor: [255, 251, 235] },
+        });
+        y = lastY() + 6;
+      }
+
+      // ── Payment Schedule (12-month forward rent roll) ─────────────────────
+      if (on("payment-sched") && boardPackData) {
+        ensureSpace(30);
+        const sched = boardPackData.paymentSchedule;
+        sectionHeading("Payment Schedule — 12-Month Forward Rent Roll");
+        autoTable(doc, {
+          startY: y,
+          head: [sched.months],
+          // monthlyTotals/grandTotal are raw USD (from lease.monthly_rental),
+          // NOT millions — use fmtCurrency directly, not fe() (which expects
+          // a millions-scaled input, unlike every other table in this file).
+          body: [sched.monthlyTotals.map(t => fmtCurrency(t, currency, true))],
+          foot: [[`Total: ${fmtCurrency(sched.grandTotal, currency, true)}`, ...Array(sched.months.length - 1).fill("")]],
+          styles: { fontSize: 7.5, cellPadding: 2 },
+          headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+        });
+        y = lastY() + 6;
+      }
+
+      // ── Scenario Analysis (real Base/Adverse/Upside) ───────────────────────
+      if (on("scenario")) {
+        ensureSpace(30);
+        const baseline = boardPackData?.kpis.totalECLm ?? summaryData.eclRows.reduce((s, r) => s + r.ecl12m, 0);
+        const adverse = computeECLFromBase(baseline, DEFAULT_ADVERSE_INPUTS);
+        const upside = computeECLFromBase(baseline, DEFAULT_UPSIDE_INPUTS);
+        // Standard 60/25/15 weighting — matches what the old static table
+        // already showed; not pulled from the tenant's live persisted
+        // Settings weights (see spec's Scope Boundary).
+        const weighted = baseline * 0.60 + adverse * 0.25 + upside * 0.15;
+        sectionHeading("Scenario Analysis");
+        autoTable(doc, {
+          startY: y,
+          head: [["Scenario", "12m ECL"]],
+          body: [
+            ["Base (60%)", fe(baseline, currency)],
+            ["Adverse (25%)", fe(adverse, currency)],
+            ["Upside (15%)", fe(upside, currency)],
+            ["Weighted", fe(weighted, currency)],
+          ],
+          styles: { fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+        });
+        y = lastY() + 6;
+      }
+
+      // ── Jurisdiction Risk ─────────────────────────────────────────────────
+      if (on("jurisdiction") && boardPackData) {
+        ensureSpace(30);
+        const rows = boardPackData.jurisdictionMix.rows;
+        sectionHeading("Jurisdiction Risk");
+        autoTable(doc, {
+          startY: y,
+          head: [["Lessee", "Country", "CTC Tier", "CTC Score", "Repo P50 (mo)", "Fleet Weight"]],
+          body: rows.map(r => [
+            r.lesseeName, r.country, r.tier, `${r.ctcScore}`, `${r.repossP50}`, `${(r.weightPct * 100).toFixed(1)}%`,
+          ]),
+          styles: { fontSize: 8, cellPadding: 2.5 },
+          headStyles: { fillColor: [0, 33, 71], textColor: 255 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+        });
+        y = lastY() + 6;
+      }
+
       save("board-pack");
       break;
     }
