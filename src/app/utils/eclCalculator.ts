@@ -242,3 +242,45 @@ export function computeStages(ecl: number, inputs: ScenarioInputs): StageDistrib
   const s2Share = Math.max(0.05, 1 - s1Share - s3Share);
   return { s1: ecl * s1Share, s2: ecl * s2Share, s3: ecl * s3Share };
 }
+
+// Named presets for the two off-baseline forward-looking scenarios. Single
+// source of truth — RiskECL.tsx's scenario editor and any report generator
+// that needs a standard "Adverse" or "Upside" shock both import these,
+// rather than each keeping their own copy that can silently drift apart.
+export const DEFAULT_ADVERSE_INPUTS: ScenarioInputs = {
+  gdpDelta: -0.02,
+  rpkDelta: -0.25,
+  fuelDelta: 0.30,
+  fxDelta: 0,
+  rateDelta: 0.01,
+  assetValueDelta: -0.10,
+  pdS2Multi: 1.5,
+  pdS3Multi: 2.0,
+  deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
+  pbhConversionPct: 0, etpRate: 0, lecRate: 0,
+  bankruptcyScenarioType: null, leaseAssumptionPct: 0,
+  ctcGoldPct: 0, nonCtcPct: 0, repossWeightedMonths: 0,
+  remarketingMonths: 0, lgdDecayAdjFactor: 0,
+  depositCoverage: 0, maintenanceReserveCoverage: 0,
+  payBehaviourCoopPct: 0, payBehaviourAdvPct: 0,
+  restructuringType: null,
+};
+
+export const DEFAULT_UPSIDE_INPUTS: ScenarioInputs = {
+  gdpDelta: 0.01,
+  rpkDelta: 0.08,
+  fuelDelta: -0.15,
+  fxDelta: 0,
+  rateDelta: -0.005,
+  assetValueDelta: 0.05,
+  pdS2Multi: 0.8,
+  pdS3Multi: 0.8,
+  deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
+  pbhConversionPct: 0, etpRate: 0, lecRate: 0,
+  bankruptcyScenarioType: null, leaseAssumptionPct: 0,
+  ctcGoldPct: 0, nonCtcPct: 0, repossWeightedMonths: 0,
+  remarketingMonths: 0, lgdDecayAdjFactor: 0,
+  depositCoverage: 0, maintenanceReserveCoverage: 0,
+  payBehaviourCoopPct: 0, payBehaviourAdvPct: 0,
+  restructuringType: null,
+};

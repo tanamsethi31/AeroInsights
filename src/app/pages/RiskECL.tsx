@@ -66,6 +66,8 @@ import {
   BASE_ECL,
   ZERO_INPUTS,
   computeECLFromBase,
+  DEFAULT_ADVERSE_INPUTS,
+  DEFAULT_UPSIDE_INPUTS,
   type ScenarioInputs,
 } from "../utils/eclCalculator";
 import { PillTabs } from "../components/ui/PillTabs";
@@ -97,44 +99,6 @@ const eclTrendByStage = [
 
 // Named defaults for the three forward-looking scenarios (used as initial state and reset targets)
 const DEFAULT_BASE_INPUTS: ScenarioInputs = ZERO_INPUTS;
-
-const DEFAULT_ADVERSE_INPUTS: ScenarioInputs = {
-  gdpDelta: -0.02,
-  rpkDelta: -0.25,
-  fuelDelta: 0.30,
-  fxDelta: 0,
-  rateDelta: 0.01,
-  assetValueDelta: -0.10,
-  pdS2Multi: 1.5,
-  pdS3Multi: 2.0,
-  deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
-  pbhConversionPct: 0, etpRate: 0, lecRate: 0,
-  bankruptcyScenarioType: null, leaseAssumptionPct: 0,
-  ctcGoldPct: 0, nonCtcPct: 0, repossWeightedMonths: 0,
-  remarketingMonths: 0, lgdDecayAdjFactor: 0,
-  depositCoverage: 0, maintenanceReserveCoverage: 0,
-  payBehaviourCoopPct: 0, payBehaviourAdvPct: 0,
-  restructuringType: null,
-};
-
-const DEFAULT_UPSIDE_INPUTS: ScenarioInputs = {
-  gdpDelta: 0.01,
-  rpkDelta: 0.08,
-  fuelDelta: -0.15,
-  fxDelta: 0,
-  rateDelta: -0.005,
-  assetValueDelta: 0.05,
-  pdS2Multi: 0.8,
-  pdS3Multi: 0.8,
-  deferralMonths: 0, govtSupportProb: 0, forgivenessRate: 0,
-  pbhConversionPct: 0, etpRate: 0, lecRate: 0,
-  bankruptcyScenarioType: null, leaseAssumptionPct: 0,
-  ctcGoldPct: 0, nonCtcPct: 0, repossWeightedMonths: 0,
-  remarketingMonths: 0, lgdDecayAdjFactor: 0,
-  depositCoverage: 0, maintenanceReserveCoverage: 0,
-  payBehaviourCoopPct: 0, payBehaviourAdvPct: 0,
-  restructuringType: null,
-};
 
 // Default SICR config
 const defaultSicrConfig = {
