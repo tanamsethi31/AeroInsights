@@ -406,7 +406,7 @@ export async function generateReportPDF(
       function ensureSpace(minHeight: number) {
         if (y + minHeight > 280) {
           doc.addPage();
-          y = 20;
+          y = 24;
         }
       }
 
@@ -528,6 +528,11 @@ export async function generateReportPDF(
       // ── Scenario Analysis (real Base/Adverse/Upside) ───────────────────────
       if (on("scenario")) {
         ensureSpace(30);
+        // No `boardPackData` guard needed here (unlike the 4 sections
+        // above it) — unlike KPI Dashboard/Upcoming Expirations/Payment
+        // Schedule/Jurisdiction Risk, this section can always compute its
+        // baseline from summaryData.eclRows alone, so it degrades
+        // gracefully instead of needing hook-derived data to render at all.
         const baseline = boardPackData?.kpis.totalECLm ?? summaryData.eclRows.reduce((s, r) => s + r.ecl12m, 0);
         const adverse = computeECLFromBase(baseline, DEFAULT_ADVERSE_INPUTS);
         const upside = computeECLFromBase(baseline, DEFAULT_UPSIDE_INPUTS);
@@ -567,6 +572,24 @@ export async function generateReportPDF(
           alternateRowStyles: { fillColor: [248, 250, 252] },
         });
         y = lastY() + 6;
+      }
+
+      // Pages after the first are drawn cold at y=20 by ensureSpace() and
+      // had no branding — a Board Pack routinely spans multiple pages now
+      // that all 8 sections can render. Repeat a slim banner on every page
+      // after the first (page 1 already has the full addHeader() banner).
+      const totalPages = doc.getNumberOfPages();
+      for (let p = 2; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setFillColor(0, 33, 71);
+        doc.rect(0, 0, 210, 14, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("Aeroinsights — Board Pack", 14, 9);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Page ${p} of ${totalPages}`, 196, 9, { align: "right" });
       }
 
       save("board-pack");
