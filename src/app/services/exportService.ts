@@ -265,6 +265,25 @@ function fe(usdMillions: number, currency: CurrencyCode): string {
   return fmtCurrency(usdMillions * 1_000_000, currency, true);
 }
 
+// ─── Board Pack section aggregates ─────────────────────────────────────────────
+
+export function stageBreakdown(data: PortfolioExportData): {
+  byStage: Record<"1" | "2" | "3", number>;
+  total: number;
+  coveragePct: number;
+} {
+  const byStage: Record<"1" | "2" | "3", number> = { "1": 0, "2": 0, "3": 0 };
+  for (const r of data.eclRows) {
+    if (r.stage === "1" || r.stage === "2" || r.stage === "3") {
+      byStage[r.stage] += r.ecl12m;
+    }
+  }
+  const total = byStage["1"] + byStage["2"] + byStage["3"];
+  const bookValue = data.eclRows.reduce((s, r) => s + r.ead, 0);
+  const coveragePct = bookValue > 0 ? (total / bookValue) * 100 : 0;
+  return { byStage, total, coveragePct };
+}
+
 // ─── Named report generators — PDF ───────────────────────────────────────────
 
 export async function generateReportPDF(
