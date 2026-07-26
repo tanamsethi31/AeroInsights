@@ -7,6 +7,9 @@ import { generateReportPDF, generateReportXLSX } from "../../services/exportServ
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import { toExportData, toDashboardKPIs } from "../../lib/portfolioAdapters";
 import { toKeyDateRows } from "../../lib/keyDatesAdapters";
+import { toPaymentSchedule } from "../../lib/paymentAdapters";
+import { computePortfolioJurisdictionMix } from "../../utils/jurisdictionRisk";
+import { useJurisdictions } from "../../hooks/useJurisdictions";
 import { useReportExports, type ReportFormat } from "../../hooks/useReportExports";
 
 // ─── Section definitions ──────────────────────────────────────────────────────
@@ -64,6 +67,12 @@ export function BoardPackModal({ reportId, reportName, onClose }: BoardPackModal
     (r) => r.urgency === "critical" || r.urgency === "watch" || r.urgency === "expired"
   ).length;
 
+  const paymentSchedule = toPaymentSchedule(leases, assets, lessees);
+  const { jurisdictions } = useJurisdictions();
+  const jurisdictionMix = computePortfolioJurisdictionMix(lessees, leases, jurisdictions);
+
+  const boardPackData = { kpis, keyDateRows, paymentSchedule, jurisdictionMix };
+
   // Step state: 1 = configure, 2 = format
   const [step, setStep] = React.useState<1 | 2>(1);
 
@@ -114,7 +123,7 @@ export function BoardPackModal({ reportId, reportName, onClose }: BoardPackModal
       if (format === "pdf") {
         let token: string | undefined;
         try { token = await getAccessTokenSilently(); } catch { /* falls back to deterministic summary */ }
-        await generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"), token);
+        await generateReportPDF(reportId, currency, exportData, makeOnBlob("pdf"), token, selected, boardPackData);
       }
       if (format === "xlsx") await generateReportXLSX(reportId, currency, exportData, makeOnBlob("xlsx"));
       setDone(true);
