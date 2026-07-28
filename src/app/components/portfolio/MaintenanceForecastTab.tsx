@@ -12,6 +12,8 @@ import {
 import { sdmrData, type LeaseSDMR, type MRComponent } from "./SDMRTab";
 import { useServicerReport } from "../../hooks/useServicerReport";
 import type { ServicerReport } from "../../hooks/useServicerReport";
+import type { CostOverride } from "../../hooks/useCostOverrides";
+import { useCostOverrides } from "../../hooks/useCostOverrides";
 
 // ─── Lease context table (mirrors Portfolio.tsx leases[]) ─────────────────────
 export const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
@@ -62,6 +64,8 @@ export interface ComponentProjection {
   nextEventDate: Date;
   projectedBalanceAtEvent: number;
   heuristicEventCost: number;
+  costSource: "heuristic" | "override";
+  costOverrideMeta?: { createdBy: string; updatedAt: string; note: string | null };
   shortfallAtEvent: number;       // +ve = shortfall, -ve = surplus
   projectedBalanceAtEOL: number;
   eolObligation: number;          // contractual obligation at full-life return
@@ -80,6 +84,7 @@ export function buildProjections(
   aircraftType: string,
   leaseEndDate: Date,
   utilOverride?: UtilOverride,
+  costOverrides?: Record<string, CostOverride>,
 ): ComponentProjection[] {
   const heuristic = TYPE_HEURISTICS[aircraftType] ?? TYPE_HEURISTICS["A320neo"];
   const now = new Date(2026, 4, 1); // May 2026 (app reference date)
@@ -98,7 +103,9 @@ export function buildProjections(
 
     // Projected balance at next event (base: lessee keeps paying)
     const projectedBalanceAtEvent = comp.cumulativeBalance + remainingUnits * comp.rateAmount;
-    const heuristicEventCost      = h ? h.costUSD : comp.fullIntervalUnits * comp.rateAmount;
+    const costOverride            = costOverrides?.[comp.component];
+    const heuristicEventCost      = costOverride ? costOverride.costUSD : (h ? h.costUSD : comp.fullIntervalUnits * comp.rateAmount);
+    const costSource: "heuristic" | "override" = costOverride ? "override" : "heuristic";
     const shortfallAtEvent        = heuristicEventCost - projectedBalanceAtEvent;
 
     // Base EOL projection (lessee continues paying)
@@ -123,6 +130,10 @@ export function buildProjections(
       nextEventDate,
       projectedBalanceAtEvent,
       heuristicEventCost,
+      costSource,
+      costOverrideMeta: costOverride
+        ? { createdBy: costOverride.createdBy, updatedAt: costOverride.updatedAt, note: costOverride.note }
+        : undefined,
       shortfallAtEvent,
       projectedBalanceAtEOL,
       eolObligation,
@@ -135,18 +146,24 @@ export function buildProjections(
 // ─── Draft form ───────────────────────────────────────────────────────────────
 
 interface DraftForm {
-  reportDate:         string;
-  annualFH:           string;
-  annualCy:           string;
-  showComponents:     boolean;
-  componentRemaining: Record<string, string>; // component name → string (empty = not overridden)
+  reportDate:          string;
+  annualFH:            string;
+  annualCy:             string;
+  showComponents:      boolean;
+  componentRemaining:  Record<string, string>; // component name → string (empty = not overridden)
+  showCostOverrides:   boolean;
+  costOverrides:       Record<string, string>; // component name → cost string (empty = not overridden)
+  costNote:            string;                  // single shared note for whichever costs are changed
 }
 
 function emptyDraft(): DraftForm {
-  return { reportDate: "", annualFH: "", annualCy: "", showComponents: false, componentRemaining: {} };
+  return {
+    reportDate: "", annualFH: "", annualCy: "", showComponents: false, componentRemaining: {},
+    showCostOverrides: false, costOverrides: {}, costNote: "",
+  };
 }
 
-function draftFromReport(r: ServicerReport): DraftForm {
+function draftFromReport(r: ServicerReport, costOverrides: Record<string, CostOverride>): DraftForm {
   return {
     reportDate:         r.reportDate,
     annualFH:           String(r.annualFH),
@@ -155,6 +172,11 @@ function draftFromReport(r: ServicerReport): DraftForm {
     componentRemaining: Object.fromEntries(
       Object.entries(r.componentOverrides).map(([k, v]) => [k, String(v)])
     ),
+    showCostOverrides:  Object.keys(costOverrides).length > 0,
+    costOverrides:      Object.fromEntries(
+      Object.entries(costOverrides).map(([k, v]) => [k, String(v.costUSD)])
+    ),
+    costNote:           "",
   };
 }
 
@@ -183,14 +205,20 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   // ── Servicer report hook (must be above early return per Rules of Hooks) ──
   const leaseId = liveRecord?.leaseId ?? ctx?.leaseId ?? null;
   const { report, saving, saveReport, clearReport } = useServicerReport(leaseId);
+  const { overrides: costOverrides, saving: costSaving, saveOverrides, clearOverrides } = useCostOverrides(leaseId);
 
   const [panelOpen, setPanelOpen] = React.useState(false);
   const [draft,     setDraft    ] = React.useState<DraftForm>(emptyDraft);
   const [saveError, setSaveError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    setDraft(report ? draftFromReport(report) : emptyDraft());
-  }, [report]);
+    if (report) {
+      setDraft(draftFromReport(report, costOverrides));
+    } else {
+      setDraft(d => ({ ...emptyDraft(), showCostOverrides: Object.keys(costOverrides).length > 0,
+        costOverrides: Object.fromEntries(Object.entries(costOverrides).map(([k, v]) => [k, String(v.costUSD)])) }));
+    }
+  }, [report, costOverrides]);
 
   const utilOverride = report
     ? {
@@ -212,7 +240,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const now = new Date(2026, 4, 1);
   const monthsToEOL = Math.max(0, monthsBetween(now, leaseEndDate));
 
-  const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate, utilOverride);
+  const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate, utilOverride, costOverrides);
 
   const totalCurrentBalance  = projections.reduce((s, p) => s + p.currentBalance, 0);
   const totalProjectedAtEOL  = projections.reduce((s, p) => s + p.projectedBalanceAtEOL, 0);
@@ -235,11 +263,32 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
     if (!leaseId) return;
     setSaveError(null);
 
-    const fh = parseInt(draft.annualFH, 10);
-    const cy = parseInt(draft.annualCy, 10);
-    if (!draft.reportDate) { setSaveError("Report date is required."); return; }
-    if (isNaN(fh) || fh < 1 || fh > 8760) { setSaveError("Annual FH must be between 1 and 8760."); return; }
-    if (isNaN(cy) || cy < 1 || cy > 8760) { setSaveError("Annual cycles must be between 1 and 8760."); return; }
+    // Build cost-override changes — omit empty fields
+    const costChanges: Record<string, number> = {};
+    for (const [comp, val] of Object.entries(draft.costOverrides)) {
+      if (val === "") continue;
+      const n = parseFloat(val);
+      if (!isNaN(n) && n >= 0) costChanges[comp] = n;
+    }
+
+    // Servicer-report fields are only required if the user is actually
+    // providing servicer data — not just a cost override. Without this
+    // check, a user who only wants to correct one component's cost would
+    // be forced to also fill in report date/FH/cycles they may not have.
+    const wantsServicerReport = draft.reportDate !== "" || draft.annualFH !== "" || draft.annualCy !== "";
+
+    if (wantsServicerReport) {
+      const fh = parseInt(draft.annualFH, 10);
+      const cy = parseInt(draft.annualCy, 10);
+      if (!draft.reportDate) { setSaveError("Report date is required."); return; }
+      if (isNaN(fh) || fh < 1 || fh > 8760) { setSaveError("Annual FH must be between 1 and 8760."); return; }
+      if (isNaN(cy) || cy < 1 || cy > 8760) { setSaveError("Annual cycles must be between 1 and 8760."); return; }
+    }
+
+    if (!wantsServicerReport && Object.keys(costChanges).length === 0) {
+      setSaveError("Enter servicer data or a cost override before saving.");
+      return;
+    }
 
     // Build componentOverrides — omit empty fields
     const componentOverrides: Record<string, number> = {};
@@ -249,18 +298,34 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
       if (!isNaN(n) && n >= 0) componentOverrides[comp] = n;
     }
 
+    let reportSaved = false;
     try {
-      await saveReport({
-        leaseId,
-        msn,
-        reportDate:         draft.reportDate,
-        annualFH:           fh,
-        annualCy:           cy,
-        componentOverrides,
-      });
+      if (wantsServicerReport) {
+        const fh = parseInt(draft.annualFH, 10);
+        const cy = parseInt(draft.annualCy, 10);
+        await saveReport({
+          leaseId,
+          msn,
+          reportDate:         draft.reportDate,
+          annualFH:           fh,
+          annualCy:           cy,
+          componentOverrides,
+        });
+        reportSaved = true;
+      }
+      if (Object.keys(costChanges).length > 0) {
+        await saveOverrides(costChanges, draft.costNote || null);
+      }
       setPanelOpen(false);
     } catch {
-      setSaveError("Failed to save. Please try again.");
+      // If the servicer report already committed before the cost-override
+      // save threw, say so — otherwise the user has no way to know half
+      // their save landed and may re-enter data that's already saved.
+      setSaveError(
+        reportSaved
+          ? "Servicer report saved, but the cost override failed. Please try again."
+          : "Failed to save. Please try again.",
+      );
     }
   }
 
@@ -367,6 +432,55 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
               )}
             </div>
 
+            {/* Row 4: Per-component cost overrides (optional, collapsible) */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setDraft(d => ({ ...d, showCostOverrides: !d.showCostOverrides }))}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.75rem", color: "#475569", display: "flex", alignItems: "center", gap: "0.25rem" }}
+              >
+                {draft.showCostOverrides ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                Component cost overrides <span style={{ color: "#94A3B8" }}>(optional)</span>
+              </button>
+
+              {draft.showCostOverrides && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", marginTop: "0.625rem" }}>
+                  <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                    {leaseRecord.mrComponents.map(comp => {
+                      const heuristic = TYPE_HEURISTICS[aircraftType]?.components[comp.component];
+                      const placeholder = heuristic ? String(heuristic.costUSD) : "";
+                      return (
+                        <label key={comp.component} style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
+                          {comp.component} <span style={{ fontWeight: 400, color: "#94A3B8" }}>(USD)</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={draft.costOverrides[comp.component] ?? ""}
+                            placeholder={placeholder}
+                            onChange={e => setDraft(d => ({
+                              ...d,
+                              costOverrides: { ...d.costOverrides, [comp.component]: e.target.value },
+                            }))}
+                            style={{ width: "130px", padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.75rem", fontWeight: 600, color: "#475569" }}>
+                    Evidence note <span style={{ fontWeight: 400, color: "#94A3B8" }}>(optional — applies to whichever costs above you change)</span>
+                    <input
+                      type="text"
+                      value={draft.costNote}
+                      placeholder="e.g. Per MRO quote dated 2026-06-15"
+                      onChange={e => setDraft(d => ({ ...d, costNote: e.target.value }))}
+                      style={{ width: "100%", maxWidth: "420px", padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+
             {/* Save error */}
             {saveError && (
               <div style={{ fontSize: "0.75rem", color: "#B91C1C" }}>{saveError}</div>
@@ -377,16 +491,16 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
               <button
                 type="button"
                 onClick={() => void handleSave()}
-                disabled={saving}
-                style={{ padding: "0.375rem 0.875rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+                disabled={saving || costSaving}
+                style={{ padding: "0.375rem 0.875rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: (saving || costSaving) ? "not-allowed" : "pointer", opacity: (saving || costSaving) ? 0.7 : 1 }}
               >
-                {saving ? "Saving…" : "Save"}
+                {(saving || costSaving) ? "Saving…" : "Save"}
               </button>
-              {report && (
+              {(report || Object.keys(costOverrides).length > 0) && (
                 <button
                   type="button"
-                  onClick={() => { void clearReport(); setPanelOpen(false); }}
-                  disabled={saving}
+                  onClick={() => { void clearReport(); void clearOverrides(); setPanelOpen(false); }}
+                  disabled={saving || costSaving}
                   style={{ padding: "0.375rem 0.875rem", background: "transparent", color: "#B91C1C", border: "1px solid #FCA5A5", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
                 >
                   Reset to heuristic
@@ -394,7 +508,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
               )}
               <button
                 type="button"
-                onClick={() => { setPanelOpen(false); setSaveError(null); setDraft(report ? draftFromReport(report) : emptyDraft()); }}
+                onClick={() => { setPanelOpen(false); setSaveError(null); setDraft(report ? draftFromReport(report, costOverrides) : emptyDraft()); }}
                 style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#94A3B8" }}
               >
                 &#x2715; Close
@@ -485,14 +599,14 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
         <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #E2E8F0", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>Component Projection Table</span>
           <span style={{ fontWeight: 400, color: "#94A3B8", textTransform: "none" }}>
-            Source: IATA MCTF / IAWG heuristic · Cirium adapter in Phase 3
+            Source: IATA MCTF / IAWG heuristic · per-component overrides shown above when evidenced · Cirium adapter in Phase 3
           </span>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
             <thead>
               <tr style={{ background: "#F8FAFC" }}>
-                {(["Component", "Current MR Balance", "Monthly Accrual", "Next Event", "Proj. Balance @ Event", "Event Cost (Heuristic)", "Shortfall / Surplus @ Event", "Proj. Balance @ EOL", "EOL Obligation", "EOL Position"] as const).map((h) => (
+                {(["Component", "Current MR Balance", "Monthly Accrual", "Next Event", "Proj. Balance @ Event", "Event Cost", "Shortfall / Surplus @ Event", "Proj. Balance @ EOL", "EOL Obligation", "EOL Position"] as const).map((h) => (
                   <th key={h} style={{ padding: "0.5rem 0.875rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
                     {h === "Monthly Accrual" && report
                       ? <span style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
@@ -539,7 +653,23 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
                     <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums", color: "#0F172A" }}>
                       {fmtUSD(showDistressed ? p.currentBalance : p.projectedBalanceAtEvent)}
                     </td>
-                    <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums", color: "#475569" }}>{fmtUSD(p.heuristicEventCost)}</td>
+                    <td style={{ padding: "0.625rem 0.875rem", fontVariantNumeric: "tabular-nums", color: "#475569" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                        {fmtUSD(p.heuristicEventCost)}
+                        {p.costSource === "override" ? (
+                          <span
+                            title={p.costOverrideMeta ? `Set by ${p.costOverrideMeta.createdBy} on ${new Date(p.costOverrideMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}${p.costOverrideMeta.note ? ` — ${p.costOverrideMeta.note}` : ""}` : undefined}
+                            style={{ background: "#002147", color: "#fff", fontSize: "0.5625rem", fontWeight: 700, borderRadius: "9999px", padding: "1px 6px", cursor: "help" }}
+                          >
+                            Override
+                          </span>
+                        ) : (
+                          <span style={{ color: "#94A3B8", fontSize: "0.5625rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                            Heuristic
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ padding: "0.625rem 0.875rem", fontWeight: 600, color: eventColor, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                       <span>{eventIcon}</span>{" "}
                       {Math.abs(eventShortfall) >= 1_000 ? fmtUSD(Math.abs(eventShortfall)) : "—"}
@@ -611,6 +741,9 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
       {/* ── Methodology footnote ─────────────────────────────────────── */}
       <div style={{ fontSize: "0.6875rem", color: "#94A3B8", borderTop: "1px solid #F1F5F9", paddingTop: "0.75rem", lineHeight: 1.7 }}>
         <strong>Assumptions:</strong> Heuristic event costs sourced from IATA MCTF & IAWG published cost ranges.
+        {Object.keys(costOverrides).length > 0 && (
+          <> {Object.keys(costOverrides).length} component{Object.keys(costOverrides).length !== 1 ? "s" : ""} overridden from evidence on this lease ({Object.keys(costOverrides).join(", ")}) — see table above for detail.</>
+        )}
         {report
           ? <> Utilisation sourced from servicer report dated {parseDateLocal(report.reportDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · Annual FH: {report.annualFH.toLocaleString()} · Annual cycles: {report.annualCy.toLocaleString()}.</>
           : <> Base utilisation: {aircraftType} fleet average ({TYPE_HEURISTICS[aircraftType]?.utilizationFH?.toLocaleString() ?? "N/A"} FH/yr, {TYPE_HEURISTICS[aircraftType]?.utilizationCy?.toLocaleString() ?? "N/A"} cy/yr).</>

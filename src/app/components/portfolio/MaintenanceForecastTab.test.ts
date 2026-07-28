@@ -105,3 +105,59 @@ describe("buildProjections — UtilOverride.componentRemaining", () => {
     expect(p.monthsToNextEvent).toBeCloseTo(6200 / (3500 / 12), 1);
   });
 });
+
+// ── CostOverride ───────────────────────────────────────────────────────────────
+
+describe("buildProjections — cost overrides", () => {
+  it("uses the override cost instead of the heuristic when present", () => {
+    // A320neo heuristic Airframe HSI costUSD = 6_800_000 (see maintenanceHeuristics.ts)
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, {
+      "Airframe HSI": { id: "1", leaseId: "LSE-TEST-001", component: "Airframe HSI", costUSD: 7_500_000, note: null, createdBy: "test@example.com", updatedAt: "2026-07-28T00:00:00Z" },
+    });
+    expect(p.heuristicEventCost).toBe(7_500_000);
+  });
+
+  it("falls back to the heuristic cost when no override exists for that component", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, {});
+    expect(p.heuristicEventCost).toBe(6_800_000);
+  });
+
+  it("falls back to the heuristic cost when costOverrides is undefined entirely", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    expect(p.heuristicEventCost).toBe(6_800_000);
+  });
+
+  it("sets costSource to 'override' when a cost override is present", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, {
+      "Airframe HSI": { id: "1", leaseId: "LSE-TEST-001", component: "Airframe HSI", costUSD: 7_500_000, note: null, createdBy: "test@example.com", updatedAt: "2026-07-28T00:00:00Z" },
+    });
+    expect(p.costSource).toBe("override");
+  });
+
+  it("sets costSource to 'heuristic' when no override is present", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    expect(p.costSource).toBe("heuristic");
+  });
+
+  it("overriding one component's cost does not change downstream shortfall math incorrectly — it recomputes from the new cost", () => {
+    const [base] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    const [overridden] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, {
+      "Airframe HSI": { id: "1", leaseId: "LSE-TEST-001", component: "Airframe HSI", costUSD: 7_500_000, note: null, createdBy: "test@example.com", updatedAt: "2026-07-28T00:00:00Z" },
+    });
+    // shortfallAtEvent = heuristicEventCost - projectedBalanceAtEvent; projectedBalanceAtEvent
+    // is unaffected by a cost override (it depends on utilization, not event cost), so the
+    // shortfall should shift by exactly the cost delta.
+    const costDelta = overridden.heuristicEventCost - base.heuristicEventCost;
+    expect(overridden.shortfallAtEvent - base.shortfallAtEvent).toBeCloseTo(costDelta, 0);
+  });
+
+  it("populates costOverrideMeta when overridden, leaves it undefined when not", () => {
+    const [overridden] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, {
+      "Airframe HSI": { id: "1", leaseId: "LSE-TEST-001", component: "Airframe HSI", costUSD: 7_500_000, note: "Per MRO quote", createdBy: "test@example.com", updatedAt: "2026-07-28T00:00:00Z" },
+    });
+    expect(overridden.costOverrideMeta).toEqual({ createdBy: "test@example.com", updatedAt: "2026-07-28T00:00:00Z", note: "Per MRO quote" });
+
+    const [base] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    expect(base.costOverrideMeta).toBeUndefined();
+  });
+});
