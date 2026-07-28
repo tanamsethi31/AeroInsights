@@ -491,10 +491,10 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
               <button
                 type="button"
                 onClick={() => void handleSave()}
-                disabled={saving}
-                style={{ padding: "0.375rem 0.875rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+                disabled={saving || costSaving}
+                style={{ padding: "0.375rem 0.875rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: (saving || costSaving) ? "not-allowed" : "pointer", opacity: (saving || costSaving) ? 0.7 : 1 }}
               >
-                {saving ? "Saving…" : "Save"}
+                {(saving || costSaving) ? "Saving…" : "Save"}
               </button>
               {(report || Object.keys(costOverrides).length > 0) && (
                 <button
