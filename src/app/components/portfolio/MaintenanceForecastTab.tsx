@@ -12,6 +12,7 @@ import {
 import { sdmrData, type LeaseSDMR, type MRComponent } from "./SDMRTab";
 import { useServicerReport } from "../../hooks/useServicerReport";
 import type { ServicerReport } from "../../hooks/useServicerReport";
+import type { CostOverride } from "../../hooks/useCostOverrides";
 
 // ─── Lease context table (mirrors Portfolio.tsx leases[]) ─────────────────────
 export const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
@@ -62,6 +63,8 @@ export interface ComponentProjection {
   nextEventDate: Date;
   projectedBalanceAtEvent: number;
   heuristicEventCost: number;
+  costSource: "heuristic" | "override";
+  costOverrideMeta?: { createdBy: string; updatedAt: string; note: string | null };
   shortfallAtEvent: number;       // +ve = shortfall, -ve = surplus
   projectedBalanceAtEOL: number;
   eolObligation: number;          // contractual obligation at full-life return
@@ -80,6 +83,7 @@ export function buildProjections(
   aircraftType: string,
   leaseEndDate: Date,
   utilOverride?: UtilOverride,
+  costOverrides?: Record<string, CostOverride>,
 ): ComponentProjection[] {
   const heuristic = TYPE_HEURISTICS[aircraftType] ?? TYPE_HEURISTICS["A320neo"];
   const now = new Date(2026, 4, 1); // May 2026 (app reference date)
@@ -98,7 +102,9 @@ export function buildProjections(
 
     // Projected balance at next event (base: lessee keeps paying)
     const projectedBalanceAtEvent = comp.cumulativeBalance + remainingUnits * comp.rateAmount;
-    const heuristicEventCost      = h ? h.costUSD : comp.fullIntervalUnits * comp.rateAmount;
+    const costOverride            = costOverrides?.[comp.component];
+    const heuristicEventCost      = costOverride ? costOverride.costUSD : (h ? h.costUSD : comp.fullIntervalUnits * comp.rateAmount);
+    const costSource: "heuristic" | "override" = costOverride ? "override" : "heuristic";
     const shortfallAtEvent        = heuristicEventCost - projectedBalanceAtEvent;
 
     // Base EOL projection (lessee continues paying)
@@ -123,6 +129,10 @@ export function buildProjections(
       nextEventDate,
       projectedBalanceAtEvent,
       heuristicEventCost,
+      costSource,
+      costOverrideMeta: costOverride
+        ? { createdBy: costOverride.createdBy, updatedAt: costOverride.updatedAt, note: costOverride.note }
+        : undefined,
       shortfallAtEvent,
       projectedBalanceAtEOL,
       eolObligation,
