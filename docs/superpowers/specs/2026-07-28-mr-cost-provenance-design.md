@@ -38,17 +38,20 @@ create index if not exists mr_cost_overrides_org_idx
   on mr_cost_overrides(org_id);
 
 alter table mr_cost_overrides enable row level security;
-drop policy if exists mr_cost_overrides_select on mr_cost_overrides;
-create policy mr_cost_overrides_select on mr_cost_overrides for select to authenticated using (true);
-drop policy if exists mr_cost_overrides_insert on mr_cost_overrides;
-create policy mr_cost_overrides_insert on mr_cost_overrides for insert to authenticated with check (true);
-drop policy if exists mr_cost_overrides_update on mr_cost_overrides;
-create policy mr_cost_overrides_update on mr_cost_overrides for update to authenticated using (true);
-drop policy if exists mr_cost_overrides_delete on mr_cost_overrides;
-create policy mr_cost_overrides_delete on mr_cost_overrides for delete to authenticated using (true);
+alter table mr_cost_overrides force  row level security;
+
+create policy mr_cost_overrides_select_own_org on mr_cost_overrides
+  for select to public using (org_id = ((auth.jwt() ->> 'org_id')::uuid));
+create policy mr_cost_overrides_insert_own_org on mr_cost_overrides
+  for insert to public with check (org_id = ((auth.jwt() ->> 'org_id')::uuid));
+create policy mr_cost_overrides_update_own_org on mr_cost_overrides
+  for update to public using (org_id = ((auth.jwt() ->> 'org_id')::uuid))
+                          with check (org_id = ((auth.jwt() ->> 'org_id')::uuid));
+create policy mr_cost_overrides_delete_own_org on mr_cost_overrides
+  for delete to public using (org_id = ((auth.jwt() ->> 'org_id')::uuid));
 ```
 
-(RLS policy shape matches `audit_log`'s migration — `to authenticated using (true)`/`with check (true)`, with org-scoping enforced client-side via `.eq("org_id", orgId)` on every query, the same pattern `useServicerReport.ts` already uses. Unlike `audit_log`, this table needs update/delete since overrides are editable/removable — it's the corrected value itself, not an immutable event log entry. The audit trail of *who changed what and when* is the separate `audit_log` table, per below.)
+**RLS correction found while planning:** the original draft of this spec copied `audit_log`'s `to authenticated using (true)` policy shape, relying on client-side `.eq("org_id", orgId)` filtering for tenant isolation — the same pattern `servicer_reports`/`useServicerReport.ts` also uses. Checking the full migration history turned up `supabase/migrations/20260528120000_security_audit_rls_lockdown.sql`, a real remediation for exactly this bug class: two other override-style tables (`pd_curve_overrides`, `lgd_recovery_overrides`) shipped with `using (true)` and any authenticated user — not just members of the owning org — could read and write every tenant's data via PostgREST directly, bypassing the client entirely (client-side `.eq()` filtering is not a security boundary; it's just what the client happens to ask for). `mr_cost_overrides` is a new table of the same shape (an org-scoped override table), so it now follows that migration's corrected pattern instead: `enable row level security` + `force row level security`, with every policy scoped to `org_id = ((auth.jwt() ->> 'org_id')::uuid)`. This table needs update/delete (unlike `audit_log`, which is append-only) since overrides are editable/removable — it's the corrected value itself, not an immutable event log entry. The audit trail of *who changed what and when* is the separate `audit_log` table, per below, which already has this correct scoping.
 
 New hook `src/app/hooks/useCostOverrides.ts`, structurally a near-mirror of `useServicerReport.ts`:
 
