@@ -94,10 +94,12 @@ export function useCostOverrides(leaseId: string | null): UseCostOverridesReturn
     if (!orgId || !leaseId || Object.keys(changes).length === 0) return;
     setSaving(true);
 
-    // Optimistic update — capture snapshot via functional update
-    let snapshot: Record<string, CostOverride> = {};
+    const actor = (await supabase.auth.getUser()).data.user?.email ?? "unknown";
+    const now = new Date().toISOString();
+    const snapshot = overrides;
+
+    // Optimistic update
     setOverrides(prev => {
-      snapshot = prev;
       const next = { ...prev };
       for (const [component, costUSD] of Object.entries(changes)) {
         next[component] = {
@@ -106,8 +108,8 @@ export function useCostOverrides(leaseId: string | null): UseCostOverridesReturn
           component,
           costUSD,
           note,
-          createdBy: prev[component]?.createdBy ?? "unknown",
-          updatedAt: new Date().toISOString(),
+          createdBy: actor,
+          updatedAt: now,
         };
       }
       return next;
@@ -120,8 +122,8 @@ export function useCostOverrides(leaseId: string | null): UseCostOverridesReturn
         component,
         cost_usd:   costUSD,
         note,
-        created_by: (snapshot[component]?.createdBy) ?? "unknown",
-        updated_at: new Date().toISOString(),
+        created_by: actor,
+        updated_at: now,
       }));
 
       const { data: rows, error } = await supabase
@@ -167,14 +169,14 @@ export function useCostOverrides(leaseId: string | null): UseCostOverridesReturn
     } finally {
       setSaving(false);
     }
-  }, [orgId, leaseId]);
+  }, [orgId, leaseId, overrides]);
 
   const clearOverrides = useCallback(async () => {
     if (!orgId || !leaseId) return;
     setSaving(true);
 
-    let snapshot: Record<string, CostOverride> = {};
-    setOverrides(prev => { snapshot = prev; return {}; });
+    const snapshot = overrides;
+    setOverrides({});
 
     try {
       const { error } = await supabase
@@ -206,7 +208,7 @@ export function useCostOverrides(leaseId: string | null): UseCostOverridesReturn
     } finally {
       setSaving(false);
     }
-  }, [orgId, leaseId]);
+  }, [orgId, leaseId, overrides]);
 
   return { overrides, loading, saving, saveOverrides, clearOverrides };
 }
