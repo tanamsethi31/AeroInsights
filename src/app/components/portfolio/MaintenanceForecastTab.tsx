@@ -298,6 +298,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
       if (!isNaN(n) && n >= 0) componentOverrides[comp] = n;
     }
 
+    let reportSaved = false;
     try {
       if (wantsServicerReport) {
         const fh = parseInt(draft.annualFH, 10);
@@ -310,13 +311,21 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
           annualCy:           cy,
           componentOverrides,
         });
+        reportSaved = true;
       }
       if (Object.keys(costChanges).length > 0) {
         await saveOverrides(costChanges, draft.costNote || null);
       }
       setPanelOpen(false);
     } catch {
-      setSaveError("Failed to save. Please try again.");
+      // If the servicer report already committed before the cost-override
+      // save threw, say so — otherwise the user has no way to know half
+      // their save landed and may re-enter data that's already saved.
+      setSaveError(
+        reportSaved
+          ? "Servicer report saved, but the cost override failed. Please try again."
+          : "Failed to save. Please try again.",
+      );
     }
   }
 
