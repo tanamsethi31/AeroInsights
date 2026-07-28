@@ -68,11 +68,13 @@ export interface CostOverride {
 
 export interface UseCostOverridesReturn {
   /** Keyed by component name for O(1) lookup in buildProjections(). */
-  overrides:     Record<string, CostOverride>;
-  loading:       boolean;
-  saving:        boolean;
-  saveOverride:  (component: string, costUSD: number, note: string | null) => Promise<void>;
-  clearOverride: (component: string) => Promise<void>;
+  overrides:      Record<string, CostOverride>;
+  loading:        boolean;
+  saving:         boolean;
+  /** Batched — mirrors the panel's single Save button covering every changed component at once. */
+  saveOverrides:  (changes: Record<string, number>, note: string | null) => Promise<void>;
+  /** Clears every cost override for this lease — paired with the panel's existing "Reset to heuristic". */
+  clearOverrides: () => Promise<void>;
 }
 
 export function useCostOverrides(leaseId: string | null): UseCostOverridesReturn
@@ -80,9 +82,9 @@ export function useCostOverrides(leaseId: string | null): UseCostOverridesReturn
 
 Load: `select * from mr_cost_overrides where org_id = :orgId and lease_id = :leaseId` (no `.single()` — unlike `servicer_reports`, which is one row per lease, this is one row per lease+component, so a lease can have 0–5 override rows). Map to a `Record<string, CostOverride>` keyed by `component`.
 
-`saveOverride(component, costUSD, note)`: optimistic-update the local record, `upsert` on `mr_cost_overrides` with `onConflict: "org_id,lease_id,component"`, then fire-and-forget `logAudit({ orgId, entityType: "mr_cost_override", entityId: \`${leaseId}:${component}\`, action: "override", before: <previous value or null>, after: { costUSD, note }, note })` — reusing the **existing** `logAudit()` service (`src/app/services/auditLog.ts`) exactly as-is; `"override"` is already a valid `AuditAction`. No new audit infrastructure.
+`saveOverrides(changes, note)`: takes a map of only the components the user actually edited (e.g. `{ "Engine PR": 6_100_000 }`), matching the panel's existing `componentOverrides`-building pattern (`handleSave`'s "omit empty fields" loop) for utilization. Optimistically updates the local record for each changed component, then `upsert`s one row per changed component onto `mr_cost_overrides` with `onConflict: "org_id,lease_id,component"` (a single `.upsert([...])` call with an array handles all of them in one round trip). For each changed component, fire-and-forget `logAudit({ orgId, entityType: "mr_cost_override", entityId: \`${leaseId}:${component}\`, action: "override", before: <that component's previous value or null>, after: { costUSD, note }, note })` — reusing the **existing** `logAudit()` service (`src/app/services/auditLog.ts`) exactly as-is; `"override"` is already a valid `AuditAction`. No new audit infrastructure. One audit row per changed component (not one row for the whole batch) — matches the table's own one-row-per-component grain, so the audit trail for "Engine PR" stays traceable independent of whatever else was saved alongside it.
 
-`clearOverride(component)`: optimistic-remove locally, `delete from mr_cost_overrides where org_id=:orgId and lease_id=:leaseId and component=:component`, then `logAudit({ ..., action: "reset", before: <previous value>, after: null })` — `"reset"` is also already a valid `AuditAction`.
+`clearOverrides()`: optimistically clears the whole local record, `delete from mr_cost_overrides where org_id=:orgId and lease_id=:leaseId` (all components for this lease in one statement), then one `logAudit({ ..., action: "reset", ... })` per component that existed before the clear — `"reset"` is also already a valid `AuditAction`.
 
 Both mutations follow `useServicerReport`'s exact error-handling shape: swallow permission-denied errors (`code 42501` / "permission denied" — the existing pattern for demo-mode/RLS-blocked writes), roll back the optimistic update on any other error, rethrow so the caller's try/catch can show a message.
 
@@ -102,7 +104,7 @@ export function buildProjections(
 ): ComponentProjection[] {
 ```
 
-The single injection point (currently `exportService.ts`... no — `MaintenanceForecastTab.tsx` line 101):
+The single injection point, `MaintenanceForecastTab.tsx`'s `buildProjections()` (currently line 101):
 
 ```ts
 // Before:
@@ -122,11 +124,11 @@ No other calculation changes — `shortfallAtEvent`, `eolObligation`, `eolShortf
 
 ## UI layer
 
-The Component Projection Table's "Event Cost (Heuristic)" column header becomes just **"Event Cost"** (the word "Heuristic" baked into the header stops being universally true once a row can be overridden) — a per-row source badge replaces it as the per-value signal.
+**Design refinement found while planning:** the original draft specified click-to-edit table cells modeled on `ModelParametersTab.tsx`'s dirty-row grid. Re-reading `MaintenanceForecastTab.tsx` in full turned up a closer, simpler fit already in the file: the Servicer Report panel (lines 336-368) already has a collapsible **"Component remaining units (optional)"** sub-section — one labeled numeric input per component, exactly the shape a per-component cost override needs. Adding a parallel sub-section reuses proven markup/state patterns wholesale instead of building new inline-cell-edit/hover/click state machinery the table doesn't have today, and keeps both kinds of per-component override (utilization, cost) in the same, single place a user already knows to look.
 
-Each row's Event Cost cell becomes click-to-edit, following the same interaction pattern already established in `ModelParametersTab.tsx` (dirty-row state, inline Save) rather than inventing a new one:
-- **Default state:** shows the effective cost (`fmtUSD(p.heuristicEventCost)`) with a small badge — `Heuristic` (grey, e.g. matching the existing muted-text styling used for the table's "Source: IATA MCTF..." footer note) or `Override` (navy, matching the existing `LIVE` badge styling already used for servicer-report utilization overrides in the same file). Hovering the `Override` badge shows a tooltip: who set it and when (`createdBy` / `updatedAt`), plus the note if present.
-- **Click to edit:** the cell becomes a numeric input pre-filled with the current effective cost, plus a small optional note field (matching the Servicer Report panel's "optional" labeling convention). Save writes via `saveOverride`; a "Reset to heuristic" affordance (styling matches the existing "Reset to heuristic" button already present in the Servicer Report panel — same label, same destructive-outline styling) calls `clearOverride` and reverts to the heuristic value.
+Concretely: add a second collapsible sub-section, **"Component cost overrides (optional)"**, directly below "Component remaining units" inside the same Servicer Report panel — same collapsible-toggle styling, same per-component `<label>`/`<input>` layout, but each input is a cost value (pre-filled with the current effective cost as its placeholder, matching how the remaining-units inputs already use `comp.remainingUnits` as their placeholder) plus one shared optional free-text note field below the component inputs (not per-component — one note explains whichever costs were changed in that save, matching the panel's existing single-note-per-save granularity rather than adding five separate note fields). The panel's existing Save button now saves both utilization and cost overrides together in one action (two Supabase writes — `servicer_reports` unchanged, plus a `mr_cost_overrides` upsert per changed component); "Reset to heuristic" (already present) additionally clears any cost overrides for that lease.
+
+The Component Projection Table's "Event Cost (Heuristic)" column header becomes just **"Event Cost"** (the word "Heuristic" baked into the header stops being universally true once a row can be overridden). Each row's cost cell gets a small badge next to the figure — `Heuristic` (grey, matching the existing muted-text styling used for the table's "Source: IATA MCTF..." footer note) or `Override` (navy, matching the existing `LIVE` badge styling already used one section up for servicer-report utilization overrides). Hovering the `Override` badge shows a tooltip: who set it and when (`createdBy` / `updatedAt`), plus the note if present. No click-to-edit in the table itself — editing happens in the panel, viewing happens in the table, matching how utilization overrides already split those two responsibilities in this exact file.
 
 The table's existing footer note ("Source: IATA MCTF / IAWG heuristic · Cirium adapter in Phase 3") gets one clause appended: "· Per-component overrides shown above when evidenced" — so the honest state of the whole table (mixed heuristic + evidenced figures) is stated once, not just implied by badges a reader might miss.
 
@@ -137,22 +139,23 @@ The existing "Methodology footnote" at the bottom of the tab (`Assumptions: Heur
 ## Data flow
 
 ```
-mr_cost_overrides (Supabase)
+mr_cost_overrides (Supabase, org-scoped RLS)
   ↕ useCostOverrides(leaseId)
   ↓ Record<string, CostOverride>
 MaintenanceForecastTab.tsx
   → buildProjections(lease, aircraftType, leaseEndDate, utilOverride, costOverrides)
     → per component: override ?? heuristic.costUSD ?? fallback
   → ComponentProjection[] (each carries costSource + costOverrideMeta)
-  → Component Projection Table (badge + click-to-edit per row)
-  → saveOverride()/clearOverride() → mr_cost_overrides upsert/delete + logAudit()
+  → Component Projection Table (badge only, per row — view surface)
+  → Servicer Report panel's new "Component cost overrides" sub-section (edit surface)
+  → saveOverrides()/clearOverrides() → mr_cost_overrides upsert/delete + logAudit() per component
 ```
 
 ## Error handling
 
 - `useCostOverrides` mirrors `useServicerReport`'s exact permission-denied-swallowing pattern — a demo-mode or RLS-blocked user sees the heuristic value with no error toast, not a broken UI.
 - `logAudit()` already never throws (fire-and-forget, console-only on failure per its own header comment) — an audit-log outage doesn't block a cost-override save.
-- If `saveOverride`'s Supabase call fails for a real reason (not permission-denied), the optimistic update rolls back and the existing "Save error" text pattern (already present in the Servicer Report panel) shows a message.
+- If `saveOverrides`' Supabase call fails for a real reason (not permission-denied), the optimistic update rolls back and the existing "Save error" text pattern (already present in the Servicer Report panel) shows a message.
 
 ## Testing
 
