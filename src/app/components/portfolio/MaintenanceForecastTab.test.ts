@@ -195,16 +195,18 @@ describe("computeMRAdequacy", () => {
 
 describe("buildAdequacyMap", () => {
   it("keys the returned map by leaseId", () => {
-    const lease = makeLease(); // leaseId: "LSE-TEST-001", no leaseEnd field
+    const lease = makeLease(); // leaseId: "LSE-TEST-001", leaseEnd: "2030-01-01"
     const map = buildAdequacyMap([lease]);
     expect(map.has("LSE-TEST-001")).toBe(true);
   });
 
-  it("falls back to LEASE_CONTEXT for leaseEnd when lease.leaseEnd is absent (demo-mode leases)", () => {
-    // makeLease() has no leaseEnd field — buildAdequacyMap must not throw
-    // and must produce a defined MRAdequacy entry (not undefined/NaN).
-    const map = buildAdequacyMap([makeLease()]);
-    const entry = map.get("LSE-TEST-001")!;
+  it("falls back to CONTEXT_BY_LEASE_ID for leaseEnd when lease.leaseEnd is absent and leaseId is a known LEASE_CONTEXT key (demo-mode leases)", () => {
+    // "LSE-2019-001" is a real LEASE_CONTEXT leaseId (leaseEnd "2028-03-01"); no leaseEnd on the
+    // lease itself forces buildAdequacyMap through the CONTEXT_BY_LEASE_ID middle branch rather
+    // than the direct lease.leaseEnd path or the last-resort 2028-01-01 fallback.
+    const lease = { ...makeLease(), leaseId: "LSE-2019-001", leaseEnd: undefined };
+    const map = buildAdequacyMap([lease]);
+    const entry = map.get("LSE-2019-001")!;
     expect(entry).toBeDefined();
     expect(Number.isNaN(entry.eolShortfall)).toBe(false);
   });
@@ -213,5 +215,14 @@ describe("buildAdequacyMap", () => {
     const lease = { ...makeLease(), leaseEnd: "2026-06-01" }; // 1 month out — forces shortfall
     const map = buildAdequacyMap([lease]);
     expect(map.get("LSE-TEST-001")!.flag).toBe("red");
+  });
+
+  it("falls back to the 2028-01-01 last resort when leaseEnd is absent and leaseId is unknown", () => {
+    // Neither lease.leaseEnd nor a CONTEXT_BY_LEASE_ID match — must not throw and must not NaN.
+    const lease = { ...makeLease(), leaseId: "LSE-UNKNOWN-999", leaseEnd: undefined };
+    const map = buildAdequacyMap([lease]);
+    const entry = map.get("LSE-UNKNOWN-999")!;
+    expect(entry).toBeDefined();
+    expect(Number.isNaN(entry.eolShortfall)).toBe(false);
   });
 });
