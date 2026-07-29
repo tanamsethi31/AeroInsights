@@ -100,7 +100,7 @@ export interface MRAdequacy {
   flag: MRAdeqFlag;
   eolShortfall: number;            // sum of positive component eolShortfall, $
   eolShortfallPct: number;         // eolShortfall / total eolObligation, 0 if obligation is 0
-  distressedEOLShortfall: number;  // sum of component distressedEOLShortfall (not floored — can be negative)
+  distressedEOLShortfall: number;  // sum of Math.max(0, component distressedEOLShortfall) — matches MRPortfolioGrid.tsx's existing production logic
 }
 
 /** Single source of truth for MR adequacy — replaces the old MR_ADEQUACY static lookup table. */
