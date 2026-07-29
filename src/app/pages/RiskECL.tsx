@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
-import { MR_ADEQUACY, mrFlagColor } from "../data/maintenanceHeuristics";
+import { mrFlagColor } from "../data/maintenanceHeuristics";
 import { useLocation} from "react-router";
 import { useTransitionNavigate as useNavigate } from "../hooks/useTransitionNavigate";
 import { useTabSync } from "../hooks/useTabSync";
@@ -59,6 +59,9 @@ import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { useJurisdictions } from "../hooks/useJurisdictions";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
+import { useSdMr } from "../hooks/useSdMr";
+import { buildLiveSDMRData } from "../components/portfolio/SDMRTab";
+import { buildAdequacyMap } from "../components/portfolio/MaintenanceForecastTab";
 import { evaluateSICR } from "../utils/sicrEvaluator";
 import type { SICRMigrationRecommendation } from "../utils/sicrEvaluator";
 import { MOCK_SICR_DATA } from "../data/mockPortfolioData";
@@ -292,8 +295,33 @@ export default function RiskECL() {
   const { recoveryFactor, isOverridden, saveRecoveryOverride, resetToDefault: resetRecovery } = useLgdCurves();
   const [recoveryDrawerOpen, setRecoveryDrawerOpen] = useState(false);
 
-  const { assets, lessees, leases, provisions, isLoading } = usePortfolioData();
+  const { assets, lessees, leases, provisions, isLoading, isDemo } = usePortfolioData();
   const { jurisdictions: ingestedJurisdictions } = useJurisdictions();
+
+  const sdMr = useSdMr();
+  const adequacyByLeaseId = useMemo(() => {
+    if (isDemo || assets.length === 0) return buildAdequacyMap([]);
+    // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx/Dashboard.tsx
+    const liveSDMRData = buildLiveSDMRData(assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
+    return buildAdequacyMap(liveSDMRData);
+  }, [isDemo, assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
+
+  // toEclTableRows keys LeaseRow.id by provision.id, not lease id (one row per
+  // provision, not per lease) — so it can't be looked up in adequacyByLeaseId
+  // directly. Bridge via asset_id, the same join toEclTableRows itself uses to
+  // resolve lessee from a provision. provisions.lease_id isn't reliably
+  // populated (the bulk CSV import path — ReviewImportStep.tsx — leaves it
+  // null), so asset_id is the dependable key here.
+  const provisionIdToLeaseId = useMemo(() => {
+    const leaseIdByAsset = new Map<string, string>();
+    for (const l of leases) leaseIdByAsset.set(l.asset_id, l.id);
+    const m = new Map<string, string>();
+    for (const p of provisions) {
+      const leaseId = leaseIdByAsset.get(p.asset_id);
+      if (leaseId) m.set(p.id, leaseId);
+    }
+    return m;
+  }, [provisions, leases]);
 
   const portfolioLgdRisk = useMemo(
     () => computePortfolioAssetRisk(assets, leases, recoveryFactor, undefined, provisions),
@@ -1198,7 +1226,8 @@ export default function RiskECL() {
                 </td>
                 <td style={{ padding: "0.75rem 1rem" }}>
                   {(() => {
-                    const adeq = MR_ADEQUACY[row.id];
+                    const leaseId = provisionIdToLeaseId.get(row.id);
+                    const adeq = leaseId ? adequacyByLeaseId.get(leaseId) : undefined;
                     if (!adeq || adeq.eolShortfall <= 0) {
                       return <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>—</span>;
                     }
