@@ -289,8 +289,6 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const totalCurrentBalance  = projections.reduce((s, p) => s + p.currentBalance, 0);
   const totalProjectedAtEOL  = projections.reduce((s, p) => s + p.projectedBalanceAtEOL, 0);
   const totalEOLObligation   = projections.reduce((s, p) => s + p.eolObligation, 0);
-  const totalEOLShortfall    = totalEOLObligation - totalProjectedAtEOL;
-  const totalDistressedShort = projections.reduce((s, p) => s + p.distressedEOLShortfall, 0);
 
   const flag: MRAdeqFlag = adeq.flag;
   const flagColor  = mrFlagColor(flag);
@@ -753,10 +751,10 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
                   {fmtUSD(totalEOLObligation)}
                 </td>
                 <td style={{ padding: "0.625rem 0.875rem", fontWeight: 700, fontVariantNumeric: "tabular-nums",
-                  color: (showDistressed ? totalDistressedShort : totalEOLShortfall) > 0 ? "#B91C1C" : "#15803D" }}>
-                  {fmtUSD(Math.abs(showDistressed ? totalDistressedShort : totalEOLShortfall))}
+                  color: (showDistressed ? adeq.distressedEOLShortfall : adeq.eolShortfall) > 0 ? "#B91C1C" : "#15803D" }}>
+                  {fmtUSD(Math.abs(showDistressed ? adeq.distressedEOLShortfall : adeq.eolShortfall))}
                   <span style={{ fontWeight: 400, fontSize: "0.6875rem", marginLeft: "0.25rem" }}>
-                    {(showDistressed ? totalDistressedShort : totalEOLShortfall) > 0 ? "shortfall" : "surplus"}
+                    {(showDistressed ? adeq.distressedEOLShortfall : adeq.eolShortfall) > 0 ? "shortfall" : "surplus"}
                   </span>
                 </td>
               </tr>
