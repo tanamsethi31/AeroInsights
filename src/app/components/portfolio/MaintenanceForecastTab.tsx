@@ -2,7 +2,6 @@ import * as React from "react";
 import { Info, ChevronDown, ChevronUp } from "lucide-react";
 import {
   TYPE_HEURISTICS,
-  MR_ADEQUACY,
   mrFlagColor,
   mrFlagBg,
   mrFlagBorder,
@@ -246,8 +245,6 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
 
   const leaseRecord: LeaseSDMR | undefined = liveRecord ?? (ctx ? sdmrData.find((l) => l.leaseId === ctx.leaseId) : undefined);
 
-  const adeq = ctx ? MR_ADEQUACY[ctx.leaseId] : null;
-
   // ── Servicer report hook (must be above early return per Rules of Hooks) ──
   const leaseId = liveRecord?.leaseId ?? ctx?.leaseId ?? null;
   const { report, saving, saveReport, clearReport } = useServicerReport(leaseId);
@@ -287,6 +284,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const monthsToEOL = Math.max(0, monthsBetween(now, leaseEndDate));
 
   const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate, utilOverride, costOverrides);
+  const adeq = computeMRAdequacy(projections);
 
   const totalCurrentBalance  = projections.reduce((s, p) => s + p.currentBalance, 0);
   const totalProjectedAtEOL  = projections.reduce((s, p) => s + p.projectedBalanceAtEOL, 0);
@@ -294,7 +292,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const totalEOLShortfall    = totalEOLObligation - totalProjectedAtEOL;
   const totalDistressedShort = projections.reduce((s, p) => s + p.distressedEOLShortfall, 0);
 
-  const flag: MRAdeqFlag = adeq?.flag ?? "green";
+  const flag: MRAdeqFlag = adeq.flag;
   const flagColor  = mrFlagColor(flag);
   const flagBg     = mrFlagBg(flag);
   const flagBorder = mrFlagBorder(flag);
@@ -597,10 +595,10 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
             { label: "Current MR Balance",   value: fmtUSD(totalCurrentBalance),             sub: "Held today"                    },
             { label: "Projected at EOL",      value: fmtUSD(totalProjectedAtEOL),             sub: `+${monthsToEOL} months accrual` },
             {
-              label: adeq && adeq.eolShortfall > 0 ? "EOL Shortfall" : "EOL Surplus",
-              value: fmtUSD(Math.abs(adeq?.eolShortfall ?? totalEOLShortfall)),
-              sub:   `${((Math.abs(adeq?.eolShortfall ?? totalEOLShortfall) / Math.max(1, totalEOLObligation)) * 100).toFixed(1)}% of obligation`,
-              alert: (adeq?.eolShortfall ?? totalEOLShortfall) > 0,
+              label: adeq.eolShortfall > 0 ? "EOL Shortfall" : "EOL Surplus",
+              value: fmtUSD(Math.abs(adeq.eolShortfall)),
+              sub:   `${((Math.abs(adeq.eolShortfall) / Math.max(1, totalEOLObligation)) * 100).toFixed(1)}% of obligation`,
+              alert: adeq.eolShortfall > 0,
             },
           ].map(({ label, value, sub, alert }) => (
             <div key={label} style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "0.5rem", padding: "0.75rem" }}>
@@ -768,7 +766,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
       </div>
 
       {/* ── ECL Linkage Notice ────────────────────────────────────────── */}
-      {adeq && adeq.eolShortfall > 0 && (
+      {adeq.eolShortfall > 0 && (
         <div style={{
           display: "flex", gap: "0.75rem", alignItems: "flex-start",
           background: "rgba(185,28,28,0.04)", border: "1px solid rgba(185,28,28,0.15)",
