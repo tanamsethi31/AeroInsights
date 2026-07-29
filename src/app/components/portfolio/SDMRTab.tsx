@@ -3,7 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
-import { mrFlagColor, mrFlagBg, mrFlagBorder, TYPE_HEURISTICS, type MRAdeqFlag, type ComponentName } from "../../data/maintenanceHeuristics";
+import { mrFlagColor, mrFlagBg, mrFlagBorder, TYPE_HEURISTICS, type ComponentName } from "../../data/maintenanceHeuristics";
 import { type CreditDepositTier } from "../../utils/creditDeposit";
 import { mrNetRefund, totalMRBalance, refundableMRCapped, eolCompensation } from "../../utils/sdmrHelpers";
 import { buildAdequacyMap } from "./MaintenanceForecastTab";
