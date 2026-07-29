@@ -213,57 +213,6 @@ export const TYPE_HEURISTICS: Record<string, TypeHeuristic> = {
 
 export type MRAdeqFlag = "green" | "amber" | "red";
 
-export interface MRAdeqResult {
-  flag: MRAdeqFlag;
-  eolShortfall: number;       // $ – positive = shortfall, negative = surplus
-  eolShortfallPct: number;    // shortfall as % of EOL redelivery cost
-  label: string;              // human-readable
-}
-
-// ─── Pre-computed adequacy for 6 portfolio leases ─────────────────────────────
-// Derived from sdmrData + TYPE_HEURISTICS + lease end dates (May 2026 base).
-// Conservative for Stage 3 (lessee stops paying MR today).
-// Base scenario for Stage 1-2.
-
-export const MR_ADEQUACY: Record<string, MRAdeqResult> = {
-  "LSE-2019-001": {   // IndiGo, A320neo, Stage 3, EOL Mar 2028
-    flag: "amber",
-    eolShortfall:    3_130_000,
-    eolShortfallPct: 14.1,
-    label: "Shortfall",
-  },
-  "LSE-2020-014": {   // Aeromexico, B737-800, Stage 3, EOL Jun 2027
-    flag: "red",
-    eolShortfall:    4_820_000,
-    eolShortfallPct: 27.3,
-    label: "Shortfall >20%",
-  },
-  "LSE-2021-022": {   // Emirates, B777-300ER, Stage 1, EOL Jan 2030
-    flag: "green",
-    eolShortfall:   -8_240_000,
-    eolShortfallPct: -12.6,
-    label: "Surplus",
-  },
-  "LSE-2020-031": {   // SriLankan, A330-300, Stage 2, EOL Sep 2026
-    flag: "amber",
-    eolShortfall:    1_960_000,
-    eolShortfallPct: 6.4,
-    label: "Shortfall",
-  },
-  "LSE-2022-009": {   // Ryanair, B737 MAX 8, Stage 1, EOL Apr 2032
-    flag: "green",
-    eolShortfall:  -11_420_000,
-    eolShortfallPct: -18.2,
-    label: "Surplus",
-  },
-  "LSE-2018-047": {   // Air France, A350-900, Stage 1, EOL Jul 2028
-    flag: "green",
-    eolShortfall:  -14_700_000,
-    eolShortfallPct: -22.1,
-    label: "Surplus",
-  },
-};
-
 export function mrFlagColor(flag: MRAdeqFlag): string {
   return flag === "green" ? "#15803D" : flag === "amber" ? "#B45309" : "#B91C1C";
 }
