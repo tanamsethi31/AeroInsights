@@ -43,7 +43,7 @@ import { SDMRTab, buildLiveSDMRData, type LeaseSDMR } from "../components/portfo
 import { useSdMr } from "../hooks/useSdMr";
 import { MRRiskBanner } from "../components/portfolio/MRRiskBanner";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
-import { MaintenanceForecastTab } from "../components/portfolio/MaintenanceForecastTab";
+import { MaintenanceForecastTab, buildAdequacyMap } from "../components/portfolio/MaintenanceForecastTab";
 import { PerformanceVsPlan } from "../components/portfolio/PerformanceVsPlan";
 import { KeyDatesTab } from "../components/portfolio/KeyDatesTab";
 import { toKeyDateRows, toKeyDateKPIs } from "../lib/keyDatesAdapters";
@@ -104,6 +104,25 @@ export default function Portfolio() {
     [editingLeaseId, leaseData],
   );
 
+  // T-1.4 consumer wire — pull ingested SD/MR rows so the SDMR builder can
+  // override heuristic-derived numbers with real values per lease.
+  const sdMr = useSdMr();
+
+  // Live SDMR data — built once and shared with SDMRTab + MaintenanceForecastTab
+  const liveSDMRData = useMemo<LeaseSDMR[] | undefined>(() => {
+    if (isDemo || assets.length === 0) return undefined;
+    return buildLiveSDMRData(
+      // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — unify the two Asset types in a follow-up
+      assets, lesseeData, leaseData, provisions,
+      sdMr.depositsByLease, sdMr.reservesByLease,
+    );
+  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
+
+  const liveAdequacyByLeaseId = useMemo(
+    () => (liveSDMRData ? buildAdequacyMap(liveSDMRData) : undefined),
+    [liveSDMRData],
+  );
+
   // Memoize ALL row/KPI builders. Previously these ran on every render of
   // Portfolio. Now they:
   //   (a) only recompute when source data changes (memo), AND
@@ -117,7 +136,7 @@ export default function Portfolio() {
   // switches" symptom. Each slice now switches on the consumer's activeTab.
   // Switching to that tab pays the compute cost LAZILY (still within one
   // frame for 18-aircraft sample portfolios).
-  const leases          = useMemo(() => toLeaseTableRows(leaseData, assets, lesseeData),    [leaseData, assets, lesseeData]);
+  const leases          = useMemo(() => toLeaseTableRows(leaseData, assets, lesseeData, liveAdequacyByLeaseId), [leaseData, assets, lesseeData, liveAdequacyByLeaseId]);
   const mrSummary       = useMemo(() => toMRHealthSummary(leases),                          [leases]);
   const portfolioKPIs   = useMemo(() => toPortfolioKPIs(assets, leaseData, provisions),     [assets, leaseData, provisions]);
 
@@ -152,20 +171,6 @@ export default function Portfolio() {
       : { months: [], monthKeys: [], rows: [], monthlyTotals: [], grandTotal: 0 },
     [activeTab, leaseData, assets, lesseeData],
   );
-
-  // T-1.4 consumer wire — pull ingested SD/MR rows so the SDMR builder can
-  // override heuristic-derived numbers with real values per lease.
-  const sdMr = useSdMr();
-
-  // Live SDMR data — built once and shared with SDMRTab + MaintenanceForecastTab
-  const liveSDMRData = useMemo<LeaseSDMR[] | undefined>(() => {
-    if (isDemo || assets.length === 0) return undefined;
-    return buildLiveSDMRData(
-      // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — unify the two Asset types in a follow-up
-      assets, lesseeData, leaseData, provisions,
-      sdMr.depositsByLease, sdMr.reservesByLease,
-    );
-  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
 
   // Index by MSN for O(1) lookup inside aircraft accordion rows
   const liveSDMRByMsn = useMemo<Map<string, LeaseSDMR>>(() => {

@@ -3,7 +3,8 @@
 
 import type { Asset, Lessee, Lease, Provision } from "../types/portfolio";
 import type { LeaseRow } from "../components/risk-ecl/ECLDrilldownPanel";
-import { MR_ADEQUACY, type MRAdeqFlag } from "../data/maintenanceHeuristics";
+import { type MRAdeqFlag } from "../data/maintenanceHeuristics";
+import { type MRAdequacy } from "../components/portfolio/MaintenanceForecastTab";
 
 // ─── Concentration adapter ────────────────────────────────────────────────────
 
@@ -212,19 +213,24 @@ export interface LeaseTableRow {
   rentUSD: string;
   stage: string;
   status: string;
-  // MR adequacy — null when no MR_ADEQUACY entry exists for this lease id
+  // MR adequacy — null when no adequacy map is passed, or the lease id isn't in it
   mrFlag: MRAdeqFlag | null;
   eolShortfall: number | null;      // positive = shortfall, negative = surplus
   eolShortfallPct: number | null;   // shortfall as % of EOL redelivery cost
 }
 
-export function toLeaseTableRows(leases: Lease[], assets: Asset[], lessees: Lessee[]): LeaseTableRow[] {
+export function toLeaseTableRows(
+  leases: Lease[],
+  assets: Asset[],
+  lessees: Lessee[],
+  adequacyByLeaseId?: Map<string, MRAdequacy>,
+): LeaseTableRow[] {
   const assetMap = indexById(assets);
   const lesseeMap = indexById(lessees);
   return leases.map((l) => {
     const asset = assetMap.get(l.asset_id);
     const lessee = lesseeMap.get(l.lessee_id);
-    const mrData = MR_ADEQUACY[l.id] ?? null;
+    const mrData = adequacyByLeaseId?.get(l.id) ?? null;
     return {
       id: l.id,
       lessee: lessee?.name ?? "—",

@@ -140,6 +140,9 @@ import { DASHBOARD_SIGNAL_TILES, type SignalSeverity } from "../data/intelligenc
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toDashboardKPIs, toLeaseTableRows, toMRHealthSummary } from "../lib/portfolioAdapters";
 import { toKeyDateRows } from "../lib/keyDatesAdapters";
+import { useSdMr } from "../hooks/useSdMr";
+import { buildLiveSDMRData } from "../components/portfolio/SDMRTab";
+import { buildAdequacyMap } from "../components/portfolio/MaintenanceForecastTab";
 import { CalendarClock } from "lucide-react";
 
 function fmtBookValue(m: number): string {
@@ -268,14 +271,21 @@ export default function Dashboard() {
   const { refreshAll: refreshAllSignals, refreshing, getLastRefreshed } = useSignalRefresh();
   const [globeHovered, setGlobeHovered] = useState<WatchlistStatusEntry | null>(null);
 
-  const { assets, lessees: lesseeData, leases: leaseData, provisions } = usePortfolioData();
+  const { assets, lessees: lesseeData, leases: leaseData, provisions, isDemo } = usePortfolioData();
+  const sdMr = useSdMr();
+  const liveAdequacyByLeaseId = useMemo(() => {
+    if (isDemo || assets.length === 0) return undefined;
+    // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx
+    const liveSDMRData = buildLiveSDMRData(assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
+    return buildAdequacyMap(liveSDMRData);
+  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
   // Memoize every data transform. Previously these ran on every render →
   // every state change in Dashboard or its parent reran the full KPI/lease/
   // keyDate pipeline. Combined with the WatchlistGlobe leak that was
   // already patched, this contributed to the main-thread pressure that
   // produced the multi-second freeze after a few tab switches.
   const kpis         = useMemo(() => toDashboardKPIs(assets, lesseeData, provisions), [assets, lesseeData, provisions]);
-  const leases       = useMemo(() => toLeaseTableRows(leaseData, assets, lesseeData), [leaseData, assets, lesseeData]);
+  const leases       = useMemo(() => toLeaseTableRows(leaseData, assets, lesseeData, liveAdequacyByLeaseId), [leaseData, assets, lesseeData, liveAdequacyByLeaseId]);
   const mrSummary    = useMemo(() => toMRHealthSummary(leases),                       [leases]);
   const keyDateRows  = useMemo(() => toKeyDateRows(leaseData, assets, lesseeData),    [leaseData, assets, lesseeData]);
   const urgentLeases = useMemo(

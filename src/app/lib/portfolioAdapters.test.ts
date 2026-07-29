@@ -16,7 +16,6 @@ import {
   type PortfolioKPIs,
   type LeaseTableRow,
 } from "./portfolioAdapters";
-import type { Asset, Lessee, Lease } from "../types/portfolio";
 import { MOCK_ASSETS, MOCK_LESSEES, MOCK_LEASES, MOCK_PROVISIONS } from "../data/mockPortfolioData";
 
 function makeLeaseRow(overrides: Partial<LeaseTableRow> = {}): LeaseTableRow {
@@ -226,36 +225,25 @@ describe("toConcentrationData", () => {
 });
 
 describe("toLeaseTableRows — MR adequacy fields", () => {
-  const fakeAsset: Asset = {
-    id: "a1", org_id: "test", upload_id: null,
-    registration: "REG1", msn: "TEST-001", aircraft_type: "A320neo",
-    manufacturer: null, vintage: 2019, current_operator: null,
-    created_at: "2024-01-01T00:00:00Z",
-  };
-  const fakeLessee: Lessee = {
-    id: "l1", org_id: "test", name: "Test Lessee", iata_code: null,
-    country: "UAE", credit_rating: null, pd_estimate: null,
-    watchlist_status: null, created_at: "2024-01-01T00:00:00Z",
-  };
-
-  it("populates mrFlag and eolShortfall when lease id matches MR_ADEQUACY entry", () => {
-    // LSE-2019-001 is "amber" in MR_ADEQUACY with eolShortfall 3_130_000, eolShortfallPct 14.1
-    const fakeLease: Lease = {
-      id: "LSE-2019-001", org_id: "test", asset_id: "a1", lessee_id: "l1",
-      start_date: "2019-01-01", end_date: "2025-01-01", monthly_rental: 100000,
-      currency: "USD", stage: 1, created_at: "2024-01-01T00:00:00Z",
-    };
-    const rows = toLeaseTableRows([fakeLease], [fakeAsset], [fakeLessee]);
-    expect(rows[0].mrFlag).toBe("amber");
-    expect(rows[0].eolShortfall).toBe(3_130_000);
-    expect(rows[0].eolShortfallPct).toBe(14.1);
+  it("populates mrFlag and eolShortfall from the adequacy map when provided", () => {
+    const adequacyMap = new Map([
+      ["mock-ls1", { flag: "amber" as const, eolShortfall: 3_130_000, eolShortfallPct: 14.1, distressedEOLShortfall: 3_130_000 }],
+    ]);
+    const rows = toLeaseTableRows(MOCK_LEASES, MOCK_ASSETS, MOCK_LESSEES, adequacyMap);
+    const row = rows.find(r => r.id === "mock-ls1")!;
+    expect(row.mrFlag).toBe("amber");
+    expect(row.eolShortfall).toBe(3_130_000);
+    expect(row.eolShortfallPct).toBe(14.1);
   });
 
-  it("sets MR fields to null for lease id not in MR_ADEQUACY", () => {
-    // All MOCK_LEASES use "mock-ls*" ids which are not in MR_ADEQUACY
+  it("sets MR fields to null when no adequacy map is provided", () => {
     const rows = toLeaseTableRows(MOCK_LEASES, MOCK_ASSETS, MOCK_LESSEES);
     expect(rows.every(r => r.mrFlag === null)).toBe(true);
-    expect(rows.every(r => r.eolShortfall === null)).toBe(true);
+  });
+
+  it("sets MR fields to null when the adequacy map doesn't contain this lease's id", () => {
+    const rows = toLeaseTableRows(MOCK_LEASES, MOCK_ASSETS, MOCK_LESSEES, new Map());
+    expect(rows.every(r => r.mrFlag === null)).toBe(true);
   });
 });
 
