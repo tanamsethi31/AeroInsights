@@ -10,6 +10,7 @@ import type { AdjustedLease } from "../../utils/maintenanceEvents";
 import {
   buildProjections,
   LEASE_CONTEXT,
+  computeMRAdequacy,
   type ComponentProjection,
 } from "../portfolio/MaintenanceForecastTab";
 
@@ -63,20 +64,10 @@ export function MRPortfolioGrid({ adjustedLeases }: Props) {
           : new Date(2028, 0, 1); // last-resort fallback
 
         const projections = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride);
-
-        const baseEOLShortfall = projections.reduce(
-          (s, p) => s + Math.max(0, p.eolShortfall),
-          0
-        );
-        const distressedEOLShortfall = projections.reduce(
-          (s, p) => s + Math.max(0, p.distressedEOLShortfall),
-          0
-        );
-        const overallFlag: MRAdeqFlag = projections.some((p) => p.eolShortfall > 0)
-          ? "red"
-          : projections.some((p) => p.distressedEOLShortfall > 0)
-          ? "amber"
-          : "green";
+        const adequacy = computeMRAdequacy(projections);
+        const baseEOLShortfall = adequacy.eolShortfall;
+        const distressedEOLShortfall = adequacy.distressedEOLShortfall;
+        const overallFlag: MRAdeqFlag = adequacy.flag;
         const msn = ctx?.msn ?? null;
 
         return {
