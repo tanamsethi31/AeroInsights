@@ -1,7 +1,27 @@
 // src/app/components/portfolio/MaintenanceForecastTab.test.ts
 import { describe, it, expect } from "vitest";
-import { buildProjections, computeMRAdequacy, buildAdequacyMap } from "./MaintenanceForecastTab";
+import { buildProjections, computeMRAdequacy, buildAdequacyMap, type ComponentProjection } from "./MaintenanceForecastTab";
 import type { LeaseSDMR } from "./SDMRTab";
+
+// ── Minimal ComponentProjection factory — lets tests set only the fields they care about ──
+
+function baseProjection(): ComponentProjection {
+  return {
+    component:                "Airframe HSI",
+    currentBalance:            0,
+    monthlyAccrual:            0,
+    monthsToNextEvent:         0,
+    nextEventDate:             new Date(2026, 4, 1),
+    projectedBalanceAtEvent:   0,
+    heuristicEventCost:        0,
+    costSource:                "heuristic",
+    shortfallAtEvent:          0,
+    projectedBalanceAtEOL:     0,
+    eolObligation:             0,
+    eolShortfall:              0,
+    distressedEOLShortfall:    0,
+  };
+}
 
 // ── Minimal factory — one FH-based component (Airframe HSI) ───────────────────
 
@@ -178,16 +198,45 @@ describe("computeMRAdequacy", () => {
   });
 
   it("returns green when eolShortfall and distressedEOLShortfall are both non-positive", () => {
-    // Long lease end (2035) → plenty of accrual time → surplus, not shortfall
-    const [p] = buildProjections(makeLease(), "A320neo", new Date(2035, 0, 1));
+    // distressedEOLShortfall depends only on units used *so far* (cumulativeBalance vs.
+    // currentObligation), not on leaseEndDate — so a far-future lease end alone (the original
+    // version of this test) does NOT make it non-positive: makeLease()'s default component has
+    // already used 29,800 of 36,000 FH against only an $8M balance vs. a $12.5M obligation,
+    // a real distressed shortfall regardless of when the lease ends. To get a genuinely green
+    // scenario we also need low usage-to-date relative to balance: remainingUnits=35_000 of
+    // 36_000 (only 1_000 FH used) with a $500k balance comfortably covers both measures.
+    const lease: LeaseSDMR = {
+      ...makeLease(),
+      mrComponents: [{ ...makeLease().mrComponents[0], remainingUnits: 35_000, cumulativeBalance: 500_000 }],
+    };
+    const [p] = buildProjections(lease, "A320neo", new Date(2035, 0, 1));
     const result = computeMRAdequacy([p]);
-    expect(result.eolShortfall).toBeLessThanOrEqual(0.01); // computeMRAdequacy floors negative shortfalls to 0 via Math.max
-    expect(result.flag).not.toBe("red");
+    expect(result.eolShortfall).toBeLessThanOrEqual(0);
+    expect(result.distressedEOLShortfall).toBeLessThanOrEqual(0);
+    expect(result.flag).toBe("green");
   });
 
   it("computes eolShortfallPct as shortfall / total obligation, 0 when obligation is 0", () => {
     const result = computeMRAdequacy([]);
     expect(result.eolShortfallPct).toBe(0);
+  });
+
+  it("computes eolShortfallPct as (sum of positive eolShortfall / total eolObligation) * 100 for a non-trivial obligation", () => {
+    const projections: ComponentProjection[] = [
+      { ...baseProjection(), eolShortfall: 150_000, eolObligation: 600_000 },
+      { ...baseProjection(), eolShortfall: 100_000, eolObligation: 400_000 },
+    ];
+    const result = computeMRAdequacy(projections);
+    expect(result.eolShortfallPct).toBe(25);
+  });
+
+  it("floors each component's distressedEOLShortfall before summing — a surplus component cannot offset a shortfall component", () => {
+    const projections: ComponentProjection[] = [
+      { ...baseProjection(), distressedEOLShortfall: 500_000 },   // shortfall
+      { ...baseProjection(), distressedEOLShortfall: -300_000 },  // surplus
+    ];
+    const result = computeMRAdequacy(projections);
+    expect(result.distressedEOLShortfall).toBe(500_000); // NOT 200_000
   });
 });
 
@@ -209,6 +258,12 @@ describe("buildAdequacyMap", () => {
     const entry = map.get("LSE-2019-001")!;
     expect(entry).toBeDefined();
     expect(Number.isNaN(entry.eolShortfall)).toBe(false);
+
+    // Prove the fallback resolved to the CORRECT date (2028-03-01, month is 0-indexed so March = 2),
+    // not just "some" date that happened not to NaN — compute independently and deep-equal.
+    const expectedProjections = buildProjections(lease, lease.aircraft, new Date(2028, 2, 1));
+    const expected = computeMRAdequacy(expectedProjections);
+    expect(entry).toEqual(expected);
   });
 
   it("uses lease.leaseEnd directly when present (live-mode leases)", () => {

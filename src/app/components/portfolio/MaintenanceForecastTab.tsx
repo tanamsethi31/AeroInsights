@@ -77,13 +77,13 @@ export interface MRAdequacy {
   flag: MRAdeqFlag;
   eolShortfall: number;            // sum of positive component eolShortfall, $
   eolShortfallPct: number;         // eolShortfall / total eolObligation, 0 if obligation is 0
-  distressedEOLShortfall: number;  // sum of component distressedEOLShortfall (not floored — can be negative)
+  distressedEOLShortfall: number;  // sum of Math.max(0, component distressedEOLShortfall) — matches MRPortfolioGrid.tsx's existing production logic
 }
 
 /** Single source of truth for MR adequacy — replaces the old MR_ADEQUACY static lookup table. */
 export function computeMRAdequacy(projections: ComponentProjection[]): MRAdequacy {
   const eolShortfall = projections.reduce((s, p) => s + Math.max(0, p.eolShortfall), 0);
-  const distressedEOLShortfall = projections.reduce((s, p) => s + p.distressedEOLShortfall, 0);
+  const distressedEOLShortfall = projections.reduce((s, p) => s + Math.max(0, p.distressedEOLShortfall), 0);
   const totalObligation = projections.reduce((s, p) => s + p.eolObligation, 0);
   const flag: MRAdeqFlag =
     projections.some(p => p.eolShortfall > 0) ? "red"
