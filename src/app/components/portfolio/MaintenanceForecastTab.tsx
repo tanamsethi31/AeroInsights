@@ -73,6 +73,52 @@ export interface ComponentProjection {
   distressedEOLShortfall: number; // conservative: lessee stops paying today
 }
 
+export interface MRAdequacy {
+  flag: MRAdeqFlag;
+  eolShortfall: number;            // sum of positive component eolShortfall, $
+  eolShortfallPct: number;         // eolShortfall / total eolObligation, 0 if obligation is 0
+  distressedEOLShortfall: number;  // sum of component distressedEOLShortfall (not floored — can be negative)
+}
+
+/** Single source of truth for MR adequacy — replaces the old MR_ADEQUACY static lookup table. */
+export function computeMRAdequacy(projections: ComponentProjection[]): MRAdequacy {
+  const eolShortfall = projections.reduce((s, p) => s + Math.max(0, p.eolShortfall), 0);
+  const distressedEOLShortfall = projections.reduce((s, p) => s + p.distressedEOLShortfall, 0);
+  const totalObligation = projections.reduce((s, p) => s + p.eolObligation, 0);
+  const flag: MRAdeqFlag =
+    projections.some(p => p.eolShortfall > 0) ? "red"
+    : projections.some(p => p.distressedEOLShortfall > 0) ? "amber"
+    : "green";
+  return {
+    flag,
+    eolShortfall,
+    eolShortfallPct: totalObligation > 0 ? (eolShortfall / totalObligation) * 100 : 0,
+    distressedEOLShortfall,
+  };
+}
+
+// Reverse lookup: leaseId → { msn, leaseEnd } — same table MRPortfolioGrid.tsx builds inline today.
+const CONTEXT_BY_LEASE_ID: Record<string, { msn: string; leaseEnd: string }> = Object.fromEntries(
+  Object.entries(LEASE_CONTEXT).map(([msn, ctx]) => [ctx.leaseId, { msn, leaseEnd: ctx.leaseEnd }])
+);
+
+/** Adequacy for a whole book of leases, keyed by leaseId. Falls back to LEASE_CONTEXT for demo
+ *  leases that don't carry their own leaseEnd (buildLiveSDMRData always populates leaseEnd on real records). */
+export function buildAdequacyMap(leases: LeaseSDMR[]): Map<string, MRAdequacy> {
+  const map = new Map<string, MRAdequacy>();
+  for (const lease of leases) {
+    const ctx = CONTEXT_BY_LEASE_ID[lease.leaseId];
+    const leaseEndDate = lease.leaseEnd
+      ? parseDateLocal(lease.leaseEnd)
+      : ctx
+      ? parseDateLocal(ctx.leaseEnd)
+      : new Date(2028, 0, 1); // last-resort fallback, mirrors MRPortfolioGrid.tsx's existing fallback
+    const projections = buildProjections(lease, lease.aircraft, leaseEndDate);
+    map.set(lease.leaseId, computeMRAdequacy(projections));
+  }
+  return map;
+}
+
 export interface UtilOverride {
   annualFH: number;
   annualCy: number;

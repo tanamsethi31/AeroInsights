@@ -1,6 +1,6 @@
 // src/app/components/portfolio/MaintenanceForecastTab.test.ts
 import { describe, it, expect } from "vitest";
-import { buildProjections } from "./MaintenanceForecastTab";
+import { buildProjections, computeMRAdequacy, buildAdequacyMap } from "./MaintenanceForecastTab";
 import type { LeaseSDMR } from "./SDMRTab";
 
 // ── Minimal factory — one FH-based component (Airframe HSI) ───────────────────
@@ -159,5 +159,59 @@ describe("buildProjections — cost overrides", () => {
 
     const [base] = buildProjections(makeLease(), "A320neo", LEASE_END);
     expect(base.costOverrideMeta).toBeUndefined();
+  });
+});
+
+// ── computeMRAdequacy ─────────────────────────────────────────────────────────
+
+describe("computeMRAdequacy", () => {
+  it("returns green with zero shortfall for an empty projection list", () => {
+    const result = computeMRAdequacy([]);
+    expect(result).toEqual({ flag: "green", eolShortfall: 0, eolShortfallPct: 0, distressedEOLShortfall: 0 });
+  });
+
+  it("returns red and sums positive eolShortfall when any component has one", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", new Date(2026, 5, 1)); // 1 month to EOL — forces a shortfall
+    const result = computeMRAdequacy([p]);
+    expect(result.flag).toBe("red");
+    expect(result.eolShortfall).toBeCloseTo(Math.max(0, p.eolShortfall), 0);
+  });
+
+  it("returns green when eolShortfall and distressedEOLShortfall are both non-positive", () => {
+    // Long lease end (2035) → plenty of accrual time → surplus, not shortfall
+    const [p] = buildProjections(makeLease(), "A320neo", new Date(2035, 0, 1));
+    const result = computeMRAdequacy([p]);
+    expect(result.eolShortfall).toBeLessThanOrEqual(0.01); // computeMRAdequacy floors negative shortfalls to 0 via Math.max
+    expect(result.flag).not.toBe("red");
+  });
+
+  it("computes eolShortfallPct as shortfall / total obligation, 0 when obligation is 0", () => {
+    const result = computeMRAdequacy([]);
+    expect(result.eolShortfallPct).toBe(0);
+  });
+});
+
+// ── buildAdequacyMap ──────────────────────────────────────────────────────────
+
+describe("buildAdequacyMap", () => {
+  it("keys the returned map by leaseId", () => {
+    const lease = makeLease(); // leaseId: "LSE-TEST-001", no leaseEnd field
+    const map = buildAdequacyMap([lease]);
+    expect(map.has("LSE-TEST-001")).toBe(true);
+  });
+
+  it("falls back to LEASE_CONTEXT for leaseEnd when lease.leaseEnd is absent (demo-mode leases)", () => {
+    // makeLease() has no leaseEnd field — buildAdequacyMap must not throw
+    // and must produce a defined MRAdequacy entry (not undefined/NaN).
+    const map = buildAdequacyMap([makeLease()]);
+    const entry = map.get("LSE-TEST-001")!;
+    expect(entry).toBeDefined();
+    expect(Number.isNaN(entry.eolShortfall)).toBe(false);
+  });
+
+  it("uses lease.leaseEnd directly when present (live-mode leases)", () => {
+    const lease = { ...makeLease(), leaseEnd: "2026-06-01" }; // 1 month out — forces shortfall
+    const map = buildAdequacyMap([lease]);
+    expect(map.get("LSE-TEST-001")!.flag).toBe("red");
   });
 });
