@@ -3,9 +3,10 @@ import { AlertTriangle } from "lucide-react";
 import { Card } from "../ui/Card";
 import { KpiCard } from "../ui/KpiCard";
 import { StatusPill } from "../ui/StatusPill";
-import { MR_ADEQUACY, mrFlagColor, mrFlagBg, mrFlagBorder, TYPE_HEURISTICS, type MRAdeqFlag, type ComponentName } from "../../data/maintenanceHeuristics";
+import { mrFlagColor, mrFlagBg, mrFlagBorder, TYPE_HEURISTICS, type MRAdeqFlag, type ComponentName } from "../../data/maintenanceHeuristics";
 import { type CreditDepositTier } from "../../utils/creditDeposit";
 import { mrNetRefund, totalMRBalance, refundableMRCapped, eolCompensation } from "../../utils/sdmrHelpers";
+import { buildAdequacyMap } from "./MaintenanceForecastTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -609,12 +610,9 @@ export function SDMRTab({ data }: { data?: LeaseSDMR[] }) {
   }, 0);
 
   // ── Portfolio MR adequacy summary ──────────────────────────────────────────
-  // In live mode MR_ADEQUACY keys won't match live leaseIds, so flag is derived directly from projections
-  const shortfallLeases = displayData.filter((l) => {
-    const a = MR_ADEQUACY[l.leaseId];
-    return a && a.eolShortfall > 0;
-  });
-  const totalShortfall = shortfallLeases.reduce((s, l) => s + (MR_ADEQUACY[l.leaseId]?.eolShortfall ?? 0), 0);
+  const adequacyByLeaseId = buildAdequacyMap(displayData);
+  const shortfallLeases = displayData.filter((l) => (adequacyByLeaseId.get(l.leaseId)?.eolShortfall ?? 0) > 0);
+  const totalShortfall = shortfallLeases.reduce((s, l) => s + (adequacyByLeaseId.get(l.leaseId)?.eolShortfall ?? 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -632,7 +630,7 @@ export function SDMRTab({ data }: { data?: LeaseSDMR[] }) {
               {shortfallLeases.length} lease{shortfallLeases.length > 1 ? "s have" : " has"} projected MR shortfall at EOL — Total exposure: {fmtUSD(totalShortfall)}
             </div>
             <div style={{ fontSize: "0.75rem", color: "#B45309" }}>
-              {shortfallLeases.map((l) => `${l.lessee} (${fmtUSD(MR_ADEQUACY[l.leaseId]?.eolShortfall ?? 0)} shortfall)`).join(" · ")}
+              {shortfallLeases.map((l) => `${l.lessee} (${fmtUSD(adequacyByLeaseId.get(l.leaseId)?.eolShortfall ?? 0)} shortfall)`).join(" · ")}
             </div>
           </div>
         </div>
@@ -688,9 +686,10 @@ export function SDMRTab({ data }: { data?: LeaseSDMR[] }) {
                       <td style={{ padding: "0.75rem 1rem", color: "#0F172A" }}>{fmtUSD(totalMRBalance(lease))}</td>
                       <td style={{ padding: "0.75rem 1rem" }}>
                         {(() => {
-                          const adeq = MR_ADEQUACY[lease.leaseId];
+                          const adeq = adequacyByLeaseId.get(lease.leaseId);
                           if (!adeq) return <span style={{ color: "#94A3B8", fontSize: "0.75rem" }}>—</span>;
-                          const flag = adeq.flag as MRAdeqFlag;
+                          const flag = adeq.flag;
+                          const label = flag === "green" ? "Surplus" : flag === "amber" ? "Shortfall" : "Shortfall >20%";
                           return (
                             <span style={{
                               display: "inline-flex", alignItems: "center", gap: "0.25rem",
@@ -704,7 +703,7 @@ export function SDMRTab({ data }: { data?: LeaseSDMR[] }) {
                                 : flag === "amber"
                                   ? <i className="bi bi-diamond-fill" style={{ color: "#B45309", fontSize: "0.6rem", marginRight: "4px" }} />
                                   : <i className="bi bi-triangle-fill" style={{ color: "#B91C1C", fontSize: "0.6rem", marginRight: "4px" }} />
-                              }{adeq.label}
+                              }{label}
                             </span>
                           );
                         })()}
