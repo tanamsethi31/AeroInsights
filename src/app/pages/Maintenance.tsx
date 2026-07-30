@@ -14,18 +14,20 @@ import { MRCashflowChart } from "../components/maintenance/MRCashflowChart";
 import { MREventCalendar } from "../components/maintenance/MREventCalendar";
 import { AircraftDetailTab } from "../components/maintenance/AircraftDetailTab";
 import { ScenarioModellingTab } from "../components/maintenance/ScenarioModellingTab";
+import { RedeliveryRiskTab } from "../components/maintenance/RedeliveryRiskTab";
 import { useAllServicerReports } from "../hooks/useAllServicerReports";
 import { useAllMaintenanceEvents } from "../hooks/useAllMaintenanceEvents";
 import { adjustedLease } from "../utils/maintenanceEvents";
 import type { AdjustedLease } from "../utils/maintenanceEvents";
 
 const PATH_TAB: Record<string, string> = {
-  "/maintenance":           "Overview",
-  "/maintenance/aircraft":  "Aircraft Detail",
-  "/maintenance/scenarios": "Scenario Modelling",
+  "/maintenance":            "Overview",
+  "/maintenance/aircraft":   "Aircraft Detail",
+  "/maintenance/scenarios":  "Scenario Modelling",
+  "/maintenance/redelivery": "Redelivery Risk",
 };
 
-const TABS = ["Overview", "Aircraft Detail", "Scenario Modelling"];
+const TABS = ["Overview", "Aircraft Detail", "Scenario Modelling", "Redelivery Risk"];
 
 export default function Maintenance() {
   const { pathname } = useLocation();
@@ -101,6 +103,10 @@ export default function Maintenance() {
 
       {activeTab === "Scenario Modelling" && (
         <ScenarioModellingTab adjustedLeases={adjustedLeases} />
+      )}
+
+      {activeTab === "Redelivery Risk" && (
+        <RedeliveryRiskTab adjustedLeases={adjustedLeases} />
       )}
     </div>
   );
