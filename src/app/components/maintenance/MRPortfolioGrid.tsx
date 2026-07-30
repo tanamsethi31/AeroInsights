@@ -13,6 +13,8 @@ import {
   computeMRAdequacy,
   type ComponentProjection,
 } from "../portfolio/MaintenanceForecastTab";
+import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
 
 // ─── Reverse lookup: leaseId → { msn, leaseEnd } ─────────────────────────────
 const CONTEXT_BY_LEASE_ID: Record<string, { msn: string; leaseEnd: string }> =
@@ -53,6 +55,9 @@ export function MRPortfolioGrid({ adjustedLeases }: Props) {
     });
   }, []);
 
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+
   const rows = useMemo(() => {
     return adjustedLeases
       .map(({ lease, utilOverride }) => {
@@ -63,7 +68,9 @@ export function MRPortfolioGrid({ adjustedLeases }: Props) {
           ? parseDateLocal(ctx.leaseEnd)
           : new Date(2028, 0, 1); // last-resort fallback
 
-        const projections = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride);
+        const costOverrides = overridesByLeaseId.get(lease.leaseId);
+        const orgBenchmarks = benchmarksByAircraftType.get(lease.aircraft);
+        const projections = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride, costOverrides, orgBenchmarks);
         const adequacy = computeMRAdequacy(projections);
         const baseEOLShortfall = adequacy.eolShortfall;
         const distressedEOLShortfall = adequacy.distressedEOLShortfall;
@@ -80,7 +87,7 @@ export function MRPortfolioGrid({ adjustedLeases }: Props) {
         };
       })
       .sort((a, b) => b.distressedEOLShortfall - a.distressedEOLShortfall);
-  }, [adjustedLeases]);
+  }, [adjustedLeases, overridesByLeaseId, benchmarksByAircraftType]);
 
   if (adjustedLeases.length === 0) return null;
 
