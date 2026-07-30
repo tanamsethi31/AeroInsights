@@ -13,6 +13,7 @@ import { useServicerReport } from "../../hooks/useServicerReport";
 import type { ServicerReport } from "../../hooks/useServicerReport";
 import type { CostOverride } from "../../hooks/useCostOverrides";
 import { useCostOverrides } from "../../hooks/useCostOverrides";
+import type { OrgCostBenchmark } from "../../hooks/useOrgCostBenchmarks";
 
 // ─── Lease context table (mirrors Portfolio.tsx leases[]) ─────────────────────
 export const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
@@ -63,8 +64,9 @@ export interface ComponentProjection {
   nextEventDate: Date;
   projectedBalanceAtEvent: number;
   heuristicEventCost: number;
-  costSource: "heuristic" | "override";
+  costSource: "heuristic" | "org-benchmark" | "override";
   costOverrideMeta?: { createdBy: string; updatedAt: string; note: string | null };
+  orgBenchmarkMeta?: { createdBy: string; updatedAt: string; note: string | null };
   shortfallAtEvent: number;       // +ve = shortfall, -ve = surplus
   projectedBalanceAtEOL: number;
   eolObligation: number;          // contractual obligation at full-life return
@@ -130,6 +132,7 @@ export function buildProjections(
   leaseEndDate: Date,
   utilOverride?: UtilOverride,
   costOverrides?: Record<string, CostOverride>,
+  orgBenchmarks?: Record<string, OrgCostBenchmark>,
 ): ComponentProjection[] {
   const heuristic = TYPE_HEURISTICS[aircraftType] ?? TYPE_HEURISTICS["A320neo"];
   const now = new Date(2026, 4, 1); // May 2026 (app reference date)
@@ -149,8 +152,13 @@ export function buildProjections(
     // Projected balance at next event (base: lessee keeps paying)
     const projectedBalanceAtEvent = comp.cumulativeBalance + remainingUnits * comp.rateAmount;
     const costOverride            = costOverrides?.[comp.component];
-    const heuristicEventCost      = costOverride ? costOverride.costUSD : (h ? h.costUSD : comp.fullIntervalUnits * comp.rateAmount);
-    const costSource: "heuristic" | "override" = costOverride ? "override" : "heuristic";
+    const orgBenchmark            = orgBenchmarks?.[comp.component];
+    const heuristicEventCost      =
+      costOverride ? costOverride.costUSD :
+      orgBenchmark ? orgBenchmark.costUSD :
+      (h ? h.costUSD : comp.fullIntervalUnits * comp.rateAmount);
+    const costSource: "heuristic" | "org-benchmark" | "override" =
+      costOverride ? "override" : orgBenchmark ? "org-benchmark" : "heuristic";
     const shortfallAtEvent        = heuristicEventCost - projectedBalanceAtEvent;
 
     // Base EOL projection (lessee continues paying)
@@ -178,6 +186,9 @@ export function buildProjections(
       costSource,
       costOverrideMeta: costOverride
         ? { createdBy: costOverride.createdBy, updatedAt: costOverride.updatedAt, note: costOverride.note }
+        : undefined,
+      orgBenchmarkMeta: (orgBenchmark && !costOverride)
+        ? { createdBy: orgBenchmark.createdBy, updatedAt: orgBenchmark.updatedAt, note: orgBenchmark.note }
         : undefined,
       shortfallAtEvent,
       projectedBalanceAtEOL,

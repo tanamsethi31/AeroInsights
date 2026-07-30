@@ -2,6 +2,8 @@
 import { describe, it, expect } from "vitest";
 import { buildProjections, computeMRAdequacy, buildAdequacyMap, type ComponentProjection } from "./MaintenanceForecastTab";
 import type { LeaseSDMR } from "./SDMRTab";
+import type { OrgCostBenchmark } from "../../hooks/useOrgCostBenchmarks";
+import type { CostOverride } from "../../hooks/useCostOverrides";
 
 // ── Minimal ComponentProjection factory — lets tests set only the fields they care about ──
 
@@ -279,5 +281,41 @@ describe("buildAdequacyMap", () => {
     const entry = map.get("LSE-UNKNOWN-999")!;
     expect(entry).toBeDefined();
     expect(Number.isNaN(entry.eolShortfall)).toBe(false);
+  });
+});
+
+// ── buildProjections — 3-tier cost resolution (org benchmark) ─────────────────
+
+describe("buildProjections — org benchmark cost tier", () => {
+  const ORG_BENCHMARK: Record<string, OrgCostBenchmark> = {
+    "Airframe HSI": { id: "b1", aircraftType: "A320neo", component: "Airframe HSI", costUSD: 7_000_000, note: null, createdBy: "a@b.com", updatedAt: "2026-07-29T00:00:00Z" },
+  };
+  const LEASE_OVERRIDE: Record<string, CostOverride> = {
+    "Airframe HSI": { id: "o1", leaseId: "LSE-TEST-001", component: "Airframe HSI", costUSD: 7_500_000, note: null, createdBy: "c@d.com", updatedAt: "2026-07-29T00:00:00Z" },
+  };
+
+  it("uses the org benchmark when present and no per-lease override exists", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, undefined, ORG_BENCHMARK);
+    expect(p.heuristicEventCost).toBe(7_000_000);
+    expect(p.costSource).toBe("org-benchmark");
+  });
+
+  it("per-lease override wins over the org benchmark when both exist", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, LEASE_OVERRIDE, ORG_BENCHMARK);
+    expect(p.heuristicEventCost).toBe(7_500_000);
+    expect(p.costSource).toBe("override");
+  });
+
+  it("falls back to the global heuristic when neither override nor benchmark exists", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    expect(p.costSource).toBe("heuristic");
+  });
+
+  it("populates orgBenchmarkMeta only when costSource is org-benchmark", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, undefined, ORG_BENCHMARK);
+    expect(p.orgBenchmarkMeta).toEqual({ createdBy: "a@b.com", updatedAt: "2026-07-29T00:00:00Z", note: null });
+
+    const [p2] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    expect(p2.orgBenchmarkMeta).toBeUndefined();
   });
 });
