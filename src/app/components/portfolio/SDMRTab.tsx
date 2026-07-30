@@ -102,7 +102,7 @@ export const sdmrData: LeaseSDMR[] = [
     },
     mrComponents: [
       { component: "Airframe HSI", rateBasis: "$/FH", rateAmount: 360, unitsAccumulated: 20_300, cumulativeBalance: 7_308_000, refundable: true, capRule: "Max 18 months' contributions", evidencedCost: 5_900_000, fullIntervalUnits: 32_000, remainingUnits: 4_800 },
-      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 260, unitsAccumulated: 20_300, cumulativeBalance: 5_278_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 4_100_000, fullIntervalUnits: 18_000, remainingUnits: 2_600 },
+      { component: "Engine PR", rateBasis: "$/FH", rateAmount: 260, unitsAccumulated: 20_300, cumulativeBalance: 2_000_000, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 4_100_000, fullIntervalUnits: 18_000, remainingUnits: 2_600 },
       { component: "LLPs", rateBasis: "$/cycle", rateAmount: 78, unitsAccumulated: 16_000, cumulativeBalance: 1_248_000, refundable: false, capRule: "Non-refundable — lessor retains", evidencedCost: 0, fullIntervalUnits: 20_000, remainingUnits: 4_000 },
       { component: "Landing Gear", rateBasis: "$/FH", rateAmount: 56, unitsAccumulated: 20_300, cumulativeBalance: 1_136_800, refundable: true, capRule: "Max 24 months' contributions", evidencedCost: 900_000, fullIntervalUnits: 55_000, remainingUnits: 18_600 },
       { component: "APU", rateBasis: "$/FH", rateAmount: 32, unitsAccumulated: 20_300, cumulativeBalance: 649_600, refundable: true, capRule: "Max 12 months' contributions", evidencedCost: 520_000, fullIntervalUnits: 23_000, remainingUnits: 4_200 },
