@@ -154,9 +154,10 @@ const navGroups: NavGroup[] = [
         url: "/maintenance",
         icon: Wrench,
         items: [
-          { title: "Overview",           url: "/maintenance",           icon: BarChart2         },
-          { title: "Aircraft Detail",    url: "/maintenance/aircraft",  icon: PlaneTakeoff      },
-          { title: "Scenario Modelling", url: "/maintenance/scenarios", icon: SlidersHorizontal },
+          { title: "Overview",           url: "/maintenance",            icon: BarChart2         },
+          { title: "Aircraft Detail",    url: "/maintenance/aircraft",   icon: PlaneTakeoff      },
+          { title: "Scenario Modelling", url: "/maintenance/scenarios",  icon: SlidersHorizontal },
+          { title: "Redelivery Risk",    url: "/maintenance/redelivery", icon: AlertTriangle     },
         ],
       },
     ],

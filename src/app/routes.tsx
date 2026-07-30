@@ -167,9 +167,10 @@ export const router = createBrowserRouter([
           { path: "risk-ecl/rating-pd",         Component: RiskECL },
 
           // Maintenance
-          { path: "maintenance",           Component: Maintenance },
-          { path: "maintenance/aircraft",  Component: Maintenance },
-          { path: "maintenance/scenarios", Component: Maintenance },
+          { path: "maintenance",            Component: Maintenance },
+          { path: "maintenance/aircraft",   Component: Maintenance },
+          { path: "maintenance/scenarios",  Component: Maintenance },
+          { path: "maintenance/redelivery", Component: Maintenance },
 
           // Intelligence
           { path: "counterparties",             Component: Counterparties },
