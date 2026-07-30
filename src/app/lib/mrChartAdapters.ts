@@ -1,4 +1,4 @@
-import { buildProjections, LEASE_CONTEXT } from "../components/portfolio/MaintenanceForecastTab";
+import { buildProjections, LEASE_CONTEXT, computeMRAdequacy } from "../components/portfolio/MaintenanceForecastTab";
 import { type LeaseSDMR } from "../components/portfolio/SDMRTab";
 import { mrFlagColor } from "../data/maintenanceHeuristics";
 
@@ -89,13 +89,7 @@ export function toMRChartData(sdmrData: LeaseSDMR[]): MRChartData {
   const leaseRows: LeaseRow[] = sdmrData.map((lease, i) => {
     const leaseEndDate = leaseEnds[i];
     const projections = buildProjections(lease, lease.aircraft, leaseEndDate);
-    const overallFlag: "red" | "amber" | "green" = projections.some(
-      (p) => p.eolShortfall > 0
-    )
-      ? "red"
-      : projections.some((p) => p.distressedEOLShortfall > 0)
-      ? "amber"
-      : "green";
+    const overallFlag = computeMRAdequacy(projections).flag;
     return { leaseId: lease.leaseId, projections, leaseEndDate, overallFlag };
   });
 

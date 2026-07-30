@@ -6,6 +6,9 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { PillTabs } from "../components/ui/PillTabs";
 import { sdmrData } from "../components/portfolio/SDMRTab";
 import { toMRChartData } from "../lib/mrChartAdapters";
+import { usePortfolioData } from "../hooks/usePortfolioData";
+import { useSdMr } from "../hooks/useSdMr";
+import { buildLiveSDMRData } from "../components/portfolio/SDMRTab";
 import { MRPortfolioGrid } from "../components/maintenance/MRPortfolioGrid";
 import { MRCashflowChart } from "../components/maintenance/MRCashflowChart";
 import { MREventCalendar } from "../components/maintenance/MREventCalendar";
@@ -34,20 +37,29 @@ export default function Maintenance() {
   // Wraps setActiveTab to also push the matching URL — keeps state + URL in sync.
   const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
 
+  const { assets, lessees, leases, provisions, isDemo } = usePortfolioData();
+  const sdMr = useSdMr();
+  const liveSDMRData = useMemo(() => {
+    if (isDemo || assets.length === 0) return undefined;
+    // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx
+    return buildLiveSDMRData(assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
+  }, [isDemo, assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
+  const effectiveSDMRData = liveSDMRData ?? sdmrData;  // static sdmrData import stays as the demo-mode fallback
+
   const { reports, loading: reportsLoading } = useAllServicerReports();
   const { eventsMap, loading: eventsLoading } = useAllMaintenanceEvents();
 
   const adjustedLeases: AdjustedLease[] = useMemo(
-    () => sdmrData.map(raw =>
+    () => effectiveSDMRData.map(raw =>
       adjustedLease(raw, reports.get(raw.leaseId) ?? null, eventsMap.get(raw.leaseId) ?? [])
     ),
-    [reports, eventsMap],
+    [effectiveSDMRData, reports, eventsMap],
   );
 
-  const chartData = useMemo(() => toMRChartData(sdmrData), []);
+  const chartData = useMemo(() => toMRChartData(effectiveSDMRData), [effectiveSDMRData]);
   const leaseLessees = useMemo(
-    () => Object.fromEntries(sdmrData.map((l) => [l.leaseId, l.lessee])),
-    []
+    () => Object.fromEntries(effectiveSDMRData.map((l) => [l.leaseId, l.lessee])),
+    [effectiveSDMRData]
   );
 
   const isLoading = reportsLoading || eventsLoading;
