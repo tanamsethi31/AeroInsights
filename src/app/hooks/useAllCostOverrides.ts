@@ -2,20 +2,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useData } from "../contexts/DataContext";
-import type { CostOverride } from "./useCostOverrides";
+import { mapRow, type CostOverride } from "./useCostOverrides";
 import { hasAuthSession } from "../utils/authBackend";
-
-function mapRow(row: Record<string, unknown>): CostOverride {
-  return {
-    id:        row.id as string,
-    leaseId:   row.lease_id as string,
-    component: row.component as string,
-    costUSD:   Number(row.cost_usd),
-    note:      (row.note as string | null) ?? null,
-    createdBy: row.created_by as string,
-    updatedAt: row.updated_at as string,
-  };
-}
 
 export function useAllCostOverrides(): {
   overridesByLeaseId: Map<string, Record<string, CostOverride>>;

@@ -30,7 +30,7 @@ export interface UseCostOverridesReturn {
 
 // ── Row mapper ────────────────────────────────────────────────────────────────
 
-function mapRow(row: Record<string, unknown>): CostOverride {
+export function mapRow(row: Record<string, unknown>): CostOverride {
   return {
     id:        row.id as string,
     leaseId:   row.lease_id as string,
