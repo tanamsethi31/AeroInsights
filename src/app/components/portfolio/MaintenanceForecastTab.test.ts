@@ -366,12 +366,21 @@ describe("buildProjections — eolObligation/eolShortfall reflect the resolved c
     expect(withOverride.distressedEOLShortfall).toBeGreaterThan(base.distressedEOLShortfall);
   });
 
-  // TYPE_HEURISTICS sets intervalFH: 0 (not undefined) for every cycle-based component (LLPs),
-  // so `h?.intervalFH ?? comp.fullIntervalUnits` never falls through to fullIntervalUnits — it
-  // resolves intervalRefEOL to 0, floored to 1 by Math.max(1, ...). That near-zero denominator,
-  // multiplied by the full resolved cost, used to blow up eolObligation to nonsense values (e.g.
-  // -$866M on a real lease fixture). The fraction is now clamped to [0, 1] before multiplying,
-  // so a degenerate denominator resolves to a safe 0 instead.
+  // TYPE_HEURISTICS sets intervalFH: 0 (not undefined) for every cycle-based component (LLPs).
+  // eolObligation's denominator used to be `h?.intervalFH ?? comp.fullIntervalUnits`, which never
+  // falls through to fullIntervalUnits since 0 is not nullish — it resolved to 0 for every LLPs
+  // component, on every lease. With a near-zero denominator this used to blow up eolObligation to
+  // nonsense values (e.g. -$866M on this exact real lease fixture, LSE-2019-001's LLPs, before the
+  // [0,1] clamp was added). After the clamp alone (no denominator fix), the fraction becomes
+  // ALWAYS exactly 0 instead — silently hiding LLPs' real EOL obligation on every lease. The fix
+  // drops the intervalFH reference entirely and uses comp.fullIntervalUnits directly (matching
+  // currentObligation's already-correct pattern), so eolObligation is a real, non-zero fraction of
+  // heuristicEventCost proportional to actual cycle usage.
+  //
+  // This needs a lease-end horizon where remainingAtEOL doesn't floor to 0 (which would make the
+  // fix and the bug produce the same answer). LSE-2019-001's real leaseEnd (2028-03-01, ~22 months
+  // from the app's reference "now" of May 2026) is close enough that remainingAtEOL stays
+  // meaningfully positive.
   it("keeps eolObligation/currentObligation sane for a cycle-based component (LLPs) despite intervalFH: 0", () => {
     const lease: LeaseSDMR = {
       ...makeLease(),
@@ -391,9 +400,13 @@ describe("buildProjections — eolObligation/eolShortfall reflect the resolved c
       ],
     };
     // A320neo: TYPE_HEURISTICS["A320neo"].components["LLPs"].intervalFH === 0
-    const [p] = buildProjections(lease, "A320neo", LEASE_END);
+    const [p] = buildProjections(lease, "A320neo", new Date(2028, 2, 1)); // LSE-2019-001's real leaseEnd (2028-03-01)
     expect(p.eolObligation).toBeGreaterThanOrEqual(0);
     expect(p.eolObligation).toBeLessThanOrEqual(p.heuristicEventCost);
+    // The regression this guards against: the old (buggy) denominator made this ALWAYS exactly 0,
+    // silently hiding LLPs' real obligation. With meaningful remaining cycle usage at this EOL
+    // horizon, the correct obligation must be strictly positive.
+    expect(p.eolObligation).toBeGreaterThan(0);
 
     // currentObligation isn't exposed directly on ComponentProjection, but
     // distressedEOLShortfall = currentObligation - currentBalance, so recover it

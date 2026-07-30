@@ -167,9 +167,8 @@ export function buildProjections(
 
     // EOL obligation: fraction of interval used × resolved event cost (override/benchmark/heuristic)
     const remainingAtEOL = Math.max(0, remainingUnits - monthsToEOL * monthlyUtil);
-    const intervalRefEOL = h?.intervalFH ?? comp.fullIntervalUnits;
-    const usedInInterval = intervalRefEOL - remainingAtEOL;
-    const eolObligation  = Math.max(0, Math.min(1, usedInInterval / Math.max(1, intervalRefEOL))) * heuristicEventCost;
+    const usedInInterval = comp.fullIntervalUnits - remainingAtEOL;
+    const eolObligation  = Math.max(0, Math.min(1, usedInInterval / Math.max(1, comp.fullIntervalUnits))) * heuristicEventCost;
 
     // Conservative (distressed: lessee stops paying today)
     const distressedBalance     = comp.cumulativeBalance;
