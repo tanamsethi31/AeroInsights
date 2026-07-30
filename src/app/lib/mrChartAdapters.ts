@@ -1,6 +1,8 @@
 import { buildProjections, LEASE_CONTEXT, computeMRAdequacy } from "../components/portfolio/MaintenanceForecastTab";
 import { type LeaseSDMR } from "../components/portfolio/SDMRTab";
 import { mrFlagColor } from "../data/maintenanceHeuristics";
+import type { CostOverride } from "../hooks/useCostOverrides";
+import type { OrgCostBenchmark } from "../hooks/useOrgCostBenchmarks";
 
 export interface MRCashflowQuarter {
   quarter: string;       // "Q2 2026"
@@ -61,7 +63,11 @@ const CONTEXT_BY_LEASE_ID: Record<string, { msn: string; leaseEnd: string }> =
     ])
   );
 
-export function toMRChartData(sdmrData: LeaseSDMR[]): MRChartData {
+export function toMRChartData(
+  sdmrData: LeaseSDMR[],
+  overridesByLeaseId?: Map<string, Record<string, CostOverride>>,
+  benchmarksByAircraftType?: Map<string, Record<string, OrgCostBenchmark>>,
+): MRChartData {
   if (sdmrData.length === 0) {
     return { cashflow: [], events: [], leaseIds: [], leaseColors: {} };
   }
@@ -88,7 +94,9 @@ export function toMRChartData(sdmrData: LeaseSDMR[]): MRChartData {
 
   const leaseRows: LeaseRow[] = sdmrData.map((lease, i) => {
     const leaseEndDate = leaseEnds[i];
-    const projections = buildProjections(lease, lease.aircraft, leaseEndDate);
+    const costOverrides = overridesByLeaseId?.get(lease.leaseId);
+    const orgBenchmarks = benchmarksByAircraftType?.get(lease.aircraft);
+    const projections = buildProjections(lease, lease.aircraft, leaseEndDate, undefined, costOverrides, orgBenchmarks);
     const overallFlag = computeMRAdequacy(projections).flag;
     return { leaseId: lease.leaseId, projections, leaseEndDate, overallFlag };
   });

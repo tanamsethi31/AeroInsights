@@ -17,6 +17,8 @@ import { ScenarioModellingTab } from "../components/maintenance/ScenarioModellin
 import { RedeliveryRiskTab } from "../components/maintenance/RedeliveryRiskTab";
 import { useAllServicerReports } from "../hooks/useAllServicerReports";
 import { useAllMaintenanceEvents } from "../hooks/useAllMaintenanceEvents";
+import { useAllCostOverrides } from "../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../hooks/useAllOrgCostBenchmarks";
 import { adjustedLease } from "../utils/maintenanceEvents";
 import type { AdjustedLease } from "../utils/maintenanceEvents";
 
@@ -50,6 +52,8 @@ export default function Maintenance() {
 
   const { reports, loading: reportsLoading } = useAllServicerReports();
   const { eventsMap, loading: eventsLoading } = useAllMaintenanceEvents();
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
 
   const adjustedLeases: AdjustedLease[] = useMemo(
     () => effectiveSDMRData.map(raw =>
@@ -58,7 +62,10 @@ export default function Maintenance() {
     [effectiveSDMRData, reports, eventsMap],
   );
 
-  const chartData = useMemo(() => toMRChartData(effectiveSDMRData), [effectiveSDMRData]);
+  const chartData = useMemo(
+    () => toMRChartData(effectiveSDMRData, overridesByLeaseId, benchmarksByAircraftType),
+    [effectiveSDMRData, overridesByLeaseId, benchmarksByAircraftType],
+  );
   const leaseLessees = useMemo(
     () => Object.fromEntries(effectiveSDMRData.map((l) => [l.leaseId, l.lessee])),
     [effectiveSDMRData]
