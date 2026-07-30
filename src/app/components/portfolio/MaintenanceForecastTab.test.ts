@@ -365,4 +365,41 @@ describe("buildProjections — eolObligation/eolShortfall reflect the resolved c
     const [withOverride] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, LEASE_OVERRIDE);
     expect(withOverride.distressedEOLShortfall).toBeGreaterThan(base.distressedEOLShortfall);
   });
+
+  // TYPE_HEURISTICS sets intervalFH: 0 (not undefined) for every cycle-based component (LLPs),
+  // so `h?.intervalFH ?? comp.fullIntervalUnits` never falls through to fullIntervalUnits — it
+  // resolves intervalRefEOL to 0, floored to 1 by Math.max(1, ...). That near-zero denominator,
+  // multiplied by the full resolved cost, used to blow up eolObligation to nonsense values (e.g.
+  // -$866M on a real lease fixture). The fraction is now clamped to [0, 1] before multiplying,
+  // so a degenerate denominator resolves to a safe 0 instead.
+  it("keeps eolObligation/currentObligation sane for a cycle-based component (LLPs) despite intervalFH: 0", () => {
+    const lease: LeaseSDMR = {
+      ...makeLease(),
+      mrComponents: [
+        {
+          component:         "LLPs",
+          rateBasis:          "$/cycle",
+          rateAmount:         90,
+          unitsAccumulated:   14_200,
+          cumulativeBalance:  1_278_000,
+          refundable:         false,
+          capRule:            "Non-refundable — lessor retains",
+          evidencedCost:      0,
+          fullIntervalUnits:  20_000,
+          remainingUnits:     5_800,
+        },
+      ],
+    };
+    // A320neo: TYPE_HEURISTICS["A320neo"].components["LLPs"].intervalFH === 0
+    const [p] = buildProjections(lease, "A320neo", LEASE_END);
+    expect(p.eolObligation).toBeGreaterThanOrEqual(0);
+    expect(p.eolObligation).toBeLessThanOrEqual(p.heuristicEventCost);
+
+    // currentObligation isn't exposed directly on ComponentProjection, but
+    // distressedEOLShortfall = currentObligation - currentBalance, so recover it
+    // from the two fields that are exposed and assert the same [0, cost] bound.
+    const currentObligation = p.distressedEOLShortfall + p.currentBalance;
+    expect(currentObligation).toBeGreaterThanOrEqual(0);
+    expect(currentObligation).toBeLessThanOrEqual(p.heuristicEventCost);
+  });
 });

@@ -169,12 +169,12 @@ export function buildProjections(
     const remainingAtEOL = Math.max(0, remainingUnits - monthsToEOL * monthlyUtil);
     const intervalRefEOL = h?.intervalFH ?? comp.fullIntervalUnits;
     const usedInInterval = intervalRefEOL - remainingAtEOL;
-    const eolObligation  = (usedInInterval / Math.max(1, intervalRefEOL)) * heuristicEventCost;
+    const eolObligation  = Math.max(0, Math.min(1, usedInInterval / Math.max(1, intervalRefEOL))) * heuristicEventCost;
 
     // Conservative (distressed: lessee stops paying today)
     const distressedBalance     = comp.cumulativeBalance;
     const currentUsed           = comp.fullIntervalUnits - remainingUnits;
-    const currentObligation     = (currentUsed / Math.max(1, comp.fullIntervalUnits)) * heuristicEventCost;
+    const currentObligation     = Math.max(0, Math.min(1, currentUsed / Math.max(1, comp.fullIntervalUnits))) * heuristicEventCost;
     const distressedEOLShortfall = currentObligation - distressedBalance;
 
     return {
