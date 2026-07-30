@@ -193,7 +193,17 @@ describe("computeMRAdequacy", () => {
   });
 
   it("returns red and sums positive eolShortfall when any component has one", () => {
-    const [p] = buildProjections(makeLease(), "A320neo", new Date(2026, 5, 1)); // 1 month to EOL — forces a shortfall
+    // makeLease()'s default cumulativeBalance ($8M) already exceeds the A320neo Airframe HSI
+    // heuristic cost ($6.8M), so since Task 14 (eolObligation scales with the resolved cost tier,
+    // not the fixed rateAmount) no monthsToEOL alone forces a shortfall against it — the old
+    // rate-based obligation topped out at rateAmount(420) x intervalFH(36000) = $15.12M, well
+    // above the real $6.8M replacement cost, which is why this used to flag red. Lower the balance
+    // below the resolved cost so the scenario genuinely exercises the shortfall path.
+    const lease: LeaseSDMR = {
+      ...makeLease(),
+      mrComponents: [{ ...makeLease().mrComponents[0], cumulativeBalance: 2_000_000 }],
+    };
+    const [p] = buildProjections(lease, "A320neo", new Date(2026, 5, 1)); // 1 month to EOL — forces a shortfall
     const result = computeMRAdequacy([p]);
     expect(result.flag).toBe("red");
     expect(result.eolShortfall).toBeCloseTo(Math.max(0, p.eolShortfall), 0);
@@ -269,7 +279,14 @@ describe("buildAdequacyMap", () => {
   });
 
   it("uses lease.leaseEnd directly when present (live-mode leases)", () => {
-    const lease = { ...makeLease(), leaseEnd: "2026-06-01" }; // 1 month out — forces shortfall
+    // Same Task 14 reasoning as the computeMRAdequacy "returns red" test above: makeLease()'s
+    // default $8M balance already exceeds the $6.8M resolved cost, so it no longer flags red on
+    // proximity to leaseEnd alone — lower the balance to genuinely force a shortfall.
+    const lease: LeaseSDMR = {
+      ...makeLease(),
+      leaseEnd: "2026-06-01", // 1 month out — forces shortfall
+      mrComponents: [{ ...makeLease().mrComponents[0], cumulativeBalance: 2_000_000 }],
+    };
     const map = buildAdequacyMap([lease]);
     expect(map.get("LSE-TEST-001")!.flag).toBe("red");
   });
@@ -318,5 +335,34 @@ describe("buildProjections — org benchmark cost tier", () => {
 
     const [p2] = buildProjections(makeLease(), "A320neo", LEASE_END);
     expect(p2.orgBenchmarkMeta).toBeUndefined();
+  });
+});
+
+// ── buildProjections — eolObligation/eolShortfall reflect the resolved cost tier ──
+
+describe("buildProjections — eolObligation/eolShortfall reflect the resolved cost tier", () => {
+  it("eolObligation scales with the org benchmark cost, not the fixed rateAmount", () => {
+    const ORG_BENCHMARK: Record<string, OrgCostBenchmark> = {
+      "Airframe HSI": { id: "b1", aircraftType: "A320neo", component: "Airframe HSI", costUSD: 12_000_000, note: null, createdBy: "a@b.com", updatedAt: "2026-07-29T00:00:00Z" },
+    };
+    const [base] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    const [withBenchmark] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, undefined, ORG_BENCHMARK);
+    expect(withBenchmark.eolObligation).toBeGreaterThan(base.eolObligation);
+  });
+
+  it("eolObligation is proportional to usage fraction of the resolved cost", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    const impliedFraction = p.eolObligation / p.heuristicEventCost;
+    expect(impliedFraction).toBeGreaterThan(0);
+    expect(impliedFraction).toBeLessThanOrEqual(1);
+  });
+
+  it("distressedEOLShortfall's currentObligation also scales with the resolved cost tier", () => {
+    const LEASE_OVERRIDE: Record<string, CostOverride> = {
+      "Airframe HSI": { id: "o1", leaseId: "LSE-TEST-001", component: "Airframe HSI", costUSD: 15_000_000, note: null, createdBy: "c@d.com", updatedAt: "2026-07-29T00:00:00Z" },
+    };
+    const [base] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    const [withOverride] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, LEASE_OVERRIDE);
+    expect(withOverride.distressedEOLShortfall).toBeGreaterThan(base.distressedEOLShortfall);
   });
 });
