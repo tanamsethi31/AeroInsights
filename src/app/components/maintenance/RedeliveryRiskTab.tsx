@@ -4,6 +4,8 @@ import { Card } from "../ui/Card";
 import { mrFlagColor, mrFlagBg, mrFlagBorder } from "../../data/maintenanceHeuristics";
 import type { AdjustedLease } from "../../utils/maintenanceEvents";
 import { buildProjections, computeMRAdequacy, LEASE_CONTEXT, type ComponentProjection } from "../portfolio/MaintenanceForecastTab";
+import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
 
 const CONTEXT_BY_LEASE_ID: Record<string, { msn: string; leaseEnd: string }> = Object.fromEntries(
   Object.entries(LEASE_CONTEXT).map(([msn, ctx]) => [ctx.leaseId, { msn, leaseEnd: ctx.leaseEnd }])
@@ -37,6 +39,9 @@ interface Props {
 export function RedeliveryRiskTab({ adjustedLeases }: Props) {
   const NOW = new Date(2026, 4, 1);
 
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+
   const rows = useMemo(() => {
     return adjustedLeases
       .map(({ lease, utilOverride }) => {
@@ -46,7 +51,9 @@ export function RedeliveryRiskTab({ adjustedLeases }: Props) {
           : ctx
           ? parseDateLocal(ctx.leaseEnd)
           : new Date(2028, 0, 1);
-        const projections = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride);
+        const costOverrides = overridesByLeaseId.get(lease.leaseId);
+        const orgBenchmarks = benchmarksByAircraftType.get(lease.aircraft);
+        const projections = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride, costOverrides, orgBenchmarks);
         const adequacy = computeMRAdequacy(projections);
         const monthsRemaining = Math.max(0, monthsBetween(NOW, leaseEndDate));
         return {
@@ -65,7 +72,7 @@ export function RedeliveryRiskTab({ adjustedLeases }: Props) {
         if (a.adequacy.flag !== b.adequacy.flag) return a.adequacy.flag === "red" ? -1 : 1;
         return b.adequacy.eolShortfall - a.adequacy.eolShortfall;
       });
-  }, [adjustedLeases]);
+  }, [adjustedLeases, overridesByLeaseId, benchmarksByAircraftType]);
 
   if (rows.length === 0) {
     return (
