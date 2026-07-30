@@ -30,7 +30,7 @@ export interface UseOrgCostBenchmarksReturn {
 
 // ── Row mapper ────────────────────────────────────────────────────────────────
 
-function mapRow(row: Record<string, unknown>): OrgCostBenchmark {
+export function mapRow(row: Record<string, unknown>): OrgCostBenchmark {
   return {
     id:           row.id as string,
     aircraftType: row.aircraft_type as string,
