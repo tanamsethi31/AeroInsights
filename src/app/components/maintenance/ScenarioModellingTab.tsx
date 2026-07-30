@@ -6,6 +6,8 @@ import {
   buildProjections,
   type ComponentProjection,
 } from "../portfolio/MaintenanceForecastTab";
+import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -119,6 +121,9 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
   const [expanded,   setExpanded ] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+
   const rows = useMemo(() => {
     return adjustedLeases.map(({ lease, utilOverride }) => {
       const entry = Object.entries(LEASE_CONTEXT).find(([, ctx]) => ctx.leaseId === lease.leaseId);
@@ -127,14 +132,17 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
       const leaseEndDate = parseDateLocal(leaseEndStr);
       const a = { leaseId: lease.leaseId, msn, lessee: lease.lessee, aircraft: lease.aircraft, leaseEnd: leaseEndStr };
 
+      const costOverrides = overridesByLeaseId.get(lease.leaseId);
+      const orgBenchmarks = benchmarksByAircraftType.get(lease.aircraft);
+
       // Base projection uses servicer report utilization (if available), otherwise heuristic
-      const baseProj = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride);
+      const baseProj = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride, costOverrides, orgBenchmarks);
       // Scenario projection uses user-slider FH/CY values
       const scenProj = buildProjections(lease, lease.aircraft, leaseEndDate, {
         annualFH:           fh,
         annualCy:           cy,
         componentRemaining: {},
-      });
+      }, costOverrides, orgBenchmarks);
 
       const baseEOL = baseProj.reduce((s, p) => s + p.eolShortfall, 0);
       const scenEOL = scenProj.reduce((s, p) => s + p.eolShortfall, 0);
@@ -142,7 +150,7 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
 
       return { ...a, lease, leaseEndDate, baseProj, scenProj, baseEOL, scenEOL, delta, utilOverride };
     });
-  }, [adjustedLeases, fh, cy]);
+  }, [adjustedLeases, fh, cy, overridesByLeaseId, benchmarksByAircraftType]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1.5rem" }}>
