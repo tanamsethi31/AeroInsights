@@ -304,6 +304,7 @@ describe("buildProjections — org benchmark cost tier", () => {
     const [p] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, LEASE_OVERRIDE, ORG_BENCHMARK);
     expect(p.heuristicEventCost).toBe(7_500_000);
     expect(p.costSource).toBe("override");
+    expect(p.orgBenchmarkMeta).toBeUndefined();
   });
 
   it("falls back to the global heuristic when neither override nor benchmark exists", () => {
