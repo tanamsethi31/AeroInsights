@@ -122,13 +122,8 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
   const rows = useMemo(() => {
     return adjustedLeases.map(({ lease, utilOverride }) => {
       const entry = Object.entries(LEASE_CONTEXT).find(([, ctx]) => ctx.leaseId === lease.leaseId);
-      if (!entry) {
-        console.warn(`[ScenarioModellingTab] No LEASE_CONTEXT entry for leaseId ${lease.leaseId}; skipping row`);
-        return null;
-      }
-      const msn = entry[0];
-      const ctx = LEASE_CONTEXT[msn];
-      const leaseEndStr = ctx.leaseEnd;
+      const msn = entry?.[0] ?? "—";
+      const leaseEndStr = lease.leaseEnd ?? (entry ? LEASE_CONTEXT[entry[0]].leaseEnd : "2028-01-01");
       const leaseEndDate = parseDateLocal(leaseEndStr);
       const a = { leaseId: lease.leaseId, msn, lessee: lease.lessee, aircraft: lease.aircraft, leaseEnd: leaseEndStr };
 
@@ -146,7 +141,7 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
       const delta   = scenEOL - baseEOL; // +ve = scenario worsens shortfall
 
       return { ...a, lease, leaseEndDate, baseProj, scenProj, baseEOL, scenEOL, delta, utilOverride };
-    }).filter((row): row is NonNullable<typeof row> => row !== null);
+    });
   }, [adjustedLeases, fh, cy]);
 
   return (
