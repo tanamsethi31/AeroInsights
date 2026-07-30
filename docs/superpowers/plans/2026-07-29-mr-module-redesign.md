@@ -1501,6 +1501,114 @@ git commit -m "feat: org cost benchmark admin UI + 3-tier badge in Maintenance F
 
 ---
 
+### Task 14: Thread resolved cost into `eolObligation`/`eolShortfall` (added post-hoc — found during Task 13's final review)
+
+**Why this exists:** Task 13's review traced the whole 3-tier cost-provenance chain end-to-end and found that setting an org benchmark or per-lease override changes `heuristicEventCost` (the "Event Cost" column, the badge, `shortfallAtEvent`) but does **not** change `eolObligation`/`eolShortfall`/`distressedEOLShortfall` — the numbers that actually drive `computeMRAdequacy`'s flag, the KPI shortfall figure, the MR risk banner, and the LGD-offset badge in `RiskECL.tsx`. Those are computed from `comp.rateAmount`, a contractual reserve-funding rate baked into the lease data at construction time, independent of whichever cost tier currently wins. User decision: fix this so the badge and the risk numbers always agree, rather than leave two silently-different metrics next to each other.
+
+**Files:**
+- Modify: `src/app/components/portfolio/MaintenanceForecastTab.tsx`
+- Test: `src/app/components/portfolio/MaintenanceForecastTab.test.ts`
+
+**Important — this changes numbers already live in production.** `computeMRAdequacy` (Phase 1) is merged and deployed; this task changes what feeds it, for every lease, not just ones with an override/benchmark set. Even in the pure-heuristic case, the new formula won't produce bit-identical numbers to the old one, because `comp.rateAmount` (set elsewhere, e.g. `SDMRTab.tsx`'s `buildLiveSDMRData`, as `Math.round(h.costUSD / interval)`) is itself a *rounded* derivative of `h.costUSD` — the new fraction-of-cost formula is a more direct expression of the same intent, not a behavior change in kind, but the exact cents will differ. This is expected and acceptable; call it out explicitly in the commit message and to the reviewer, don't let it look like an accidental regression.
+
+- [ ] **Step 1: Write the failing tests**
+
+Add to `MaintenanceForecastTab.test.ts`, a new `describe` block:
+
+```typescript
+describe("buildProjections — eolObligation/eolShortfall reflect the resolved cost tier", () => {
+  it("eolObligation scales with the org benchmark cost, not the fixed rateAmount", () => {
+    const ORG_BENCHMARK: Record<string, OrgCostBenchmark> = {
+      "Airframe HSI": { id: "b1", aircraftType: "A320neo", component: "Airframe HSI", costUSD: 12_000_000, note: null, createdBy: "a@b.com", updatedAt: "2026-07-29T00:00:00Z" },
+    };
+    const [base] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    const [withBenchmark] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, undefined, ORG_BENCHMARK);
+    // Same usage/remaining-units inputs, different resolved cost → eolObligation must differ, and scale up (higher cost tier → higher obligation for the same usage fraction).
+    expect(withBenchmark.eolObligation).toBeGreaterThan(base.eolObligation);
+  });
+
+  it("eolObligation is proportional to usage fraction of the resolved cost", () => {
+    const [p] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    // fraction used = (fullIntervalUnits - remainingAtEOL) / intervalReference — recompute independently and compare.
+    // This test locks in the *shape* of the formula (fraction × heuristicEventCost), not just "it changed".
+    const expectedFraction = p.eolObligation / p.heuristicEventCost;
+    expect(expectedFraction).toBeGreaterThan(0);
+    expect(expectedFraction).toBeLessThanOrEqual(1);
+  });
+
+  it("distressedEOLShortfall's currentObligation also scales with the resolved cost tier", () => {
+    const LEASE_OVERRIDE: Record<string, CostOverride> = {
+      "Airframe HSI": { id: "o1", leaseId: "LSE-TEST-001", component: "Airframe HSI", costUSD: 15_000_000, note: null, createdBy: "c@d.com", updatedAt: "2026-07-29T00:00:00Z" },
+    };
+    const [base] = buildProjections(makeLease(), "A320neo", LEASE_END);
+    const [withOverride] = buildProjections(makeLease(), "A320neo", LEASE_END, undefined, LEASE_OVERRIDE);
+    expect(withOverride.distressedEOLShortfall).toBeGreaterThan(base.distressedEOLShortfall);
+  });
+});
+```
+
+Adapt these to the test file's real existing fixtures/imports (`OrgCostBenchmark`/`CostOverride`/`LEASE_END`/`makeLease` should already be imported from Task 12's work — verify before assuming).
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `npm test -- --run MaintenanceForecastTab` — expect the new tests to fail against the current rate-based formula (obligation won't move when cost tier changes).
+
+- [ ] **Step 3: Implement — swap the rate-based obligation formula for a cost-fraction-based one**
+
+In `buildProjections` (`src/app/components/portfolio/MaintenanceForecastTab.tsx`), the cost-resolution block (`costOverride`/`orgBenchmark`/`heuristicEventCost`/`costSource`) must be computed BEFORE `eolObligation`/`currentObligation` (check current ordering — if `heuristicEventCost` is derived after these lines, reorder so it's available first; do not change the cost-resolution logic itself, only its position if needed).
+
+Change (currently around lines 169-177 — re-verify exact current line numbers first):
+```typescript
+    const remainingAtEOL = Math.max(0, remainingUnits - monthsToEOL * monthlyUtil);
+    const usedInInterval = (h?.intervalFH ?? comp.fullIntervalUnits) - remainingAtEOL;
+    const eolObligation  = usedInInterval * comp.rateAmount;
+
+    const distressedBalance     = comp.cumulativeBalance;
+    const currentUsed           = comp.fullIntervalUnits - remainingUnits;
+    const currentObligation     = currentUsed * comp.rateAmount;
+    const distressedEOLShortfall = currentObligation - distressedBalance;
+```
+to:
+```typescript
+    const remainingAtEOL = Math.max(0, remainingUnits - monthsToEOL * monthlyUtil);
+    const intervalRefEOL = h?.intervalFH ?? comp.fullIntervalUnits;
+    const usedInInterval = intervalRefEOL - remainingAtEOL;
+    const eolObligation  = (usedInInterval / Math.max(1, intervalRefEOL)) * heuristicEventCost;
+
+    const distressedBalance     = comp.cumulativeBalance;
+    const currentUsed           = comp.fullIntervalUnits - remainingUnits;
+    const currentObligation     = (currentUsed / Math.max(1, comp.fullIntervalUnits)) * heuristicEventCost;
+    const distressedEOLShortfall = currentObligation - distressedBalance;
+```
+
+**Do not** change `intervalRefEOL`'s source expression (`h?.intervalFH ?? comp.fullIntervalUnits`) or `comp.fullIntervalUnits` as the distressed-case denominator — these are pre-existing, out-of-scope choices (there may be a latent issue where `h?.intervalFH` is `0` rather than `undefined` for cycle-based components, since `??` only falls through on null/undefined — if you notice this, do NOT fix it as part of this task, just preserve the existing expression exactly and note it in your report as a separate pre-existing issue worth a future ticket). This task's ONLY job is swapping `× comp.rateAmount` for `/ Math.max(1, <same interval reference as before>) × heuristicEventCost` — nothing else about the surrounding logic changes. The `Math.max(1, ...)` guard is new — it prevents a divide-by-zero that the old multiplication-based formula never risked; without it, a component with a zero interval reference would produce `NaN`/`Infinity` instead of a defined (if degenerate) number.
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `npm test -- --run MaintenanceForecastTab` — expect PASS, including all pre-existing tests in this file (the pure-heuristic-case tests may need their expected literal $ values adjusted if they hardcoded exact `eolObligation`/`eolShortfall` numbers derived from the old rate-based formula — if so, recompute the correct expected values using the NEW formula, don't just loosen the assertions to make them pass).
+
+- [ ] **Step 5: Run the full test suite**
+
+Run: `npm test -- --run` — expect all pass. This function feeds `computeMRAdequacy`, which is consumed by `MRPortfolioGrid.tsx`, `SDMRTab.tsx`, `portfolioAdapters.ts`, `RiskECL.tsx`, `RedeliveryRiskTab.tsx`, `mrChartAdapters.ts` — none of those files should need code changes (they consume `ComponentProjection`/`MRAdequacy`'s existing field names, just with different underlying values now), but their own tests (`portfolioAdapters.test.ts`) may need literal expected-value updates if they hardcode exact dollar figures derived from the old formula.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/app/components/portfolio/MaintenanceForecastTab.tsx src/app/components/portfolio/MaintenanceForecastTab.test.ts
+git commit -m "fix: eolObligation/distressedEOLShortfall now scale with the resolved cost tier, not a fixed contractual rate
+
+Previously, org benchmarks and per-lease cost overrides only changed the
+displayed Event Cost column/badge — the actual $ shortfall figures driving
+the portfolio adequacy flag, the MR risk banner, and RiskECL's LGD-offset
+badge were computed from a separately-baked rateAmount and never moved.
+Re-derive obligation as (usage fraction) x (resolved event cost) so the
+badge and the risk numbers always agree. Changes exact figures even in the
+no-override case (rateAmount was itself a rounded derivative of the
+heuristic cost), which is expected, not a regression."
+```
+
+---
+
 ## Self-Review Notes (for whoever executes this plan)
 
 - **Spec coverage:** Phase 1 covers spec section 4.1 (and extends it — 6 call sites found, not 3). Phase 2 covers 4.2. Phase 3 covers 4.3. Phase 4 covers 4.4. All four spec sections have a corresponding phase.
