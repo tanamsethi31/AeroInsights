@@ -39,7 +39,7 @@ export function AircraftDetailTab({
   // Build aircraft list from adjustedLeases (replaces static AIRCRAFT_LIST derived from sdmrData)
   const aircraftList = useMemo(() => adjustedLeases.map(({ lease, utilOverride }) => {
     const entry = Object.entries(LEASE_CONTEXT).find(([, ctx]) => ctx.leaseId === lease.leaseId);
-    const msn = entry?.[0] ?? lease.leaseId;
+    const msn = entry?.[0] ?? "—";
     const ctx = entry ? LEASE_CONTEXT[entry[0]] : null;
     return {
       leaseId:     lease.leaseId,
