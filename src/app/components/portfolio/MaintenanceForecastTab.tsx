@@ -14,6 +14,7 @@ import type { ServicerReport } from "../../hooks/useServicerReport";
 import type { CostOverride } from "../../hooks/useCostOverrides";
 import { useCostOverrides } from "../../hooks/useCostOverrides";
 import type { OrgCostBenchmark } from "../../hooks/useOrgCostBenchmarks";
+import { useOrgCostBenchmarks } from "../../hooks/useOrgCostBenchmarks";
 
 // ─── Lease context table (mirrors Portfolio.tsx leases[]) ─────────────────────
 export const LEASE_CONTEXT: Record<string, { leaseId: string; leaseEnd: string; stage: string }> = {
@@ -260,6 +261,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const leaseId = liveRecord?.leaseId ?? ctx?.leaseId ?? null;
   const { report, saving, saveReport, clearReport } = useServicerReport(leaseId);
   const { overrides: costOverrides, saving: costSaving, saveOverrides, clearOverrides } = useCostOverrides(leaseId);
+  const { benchmarks: orgBenchmarks } = useOrgCostBenchmarks(aircraftType);
 
   const [panelOpen, setPanelOpen] = React.useState(false);
   const [draft,     setDraft    ] = React.useState<DraftForm>(emptyDraft);
@@ -294,7 +296,7 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const now = new Date(2026, 4, 1);
   const monthsToEOL = Math.max(0, monthsBetween(now, leaseEndDate));
 
-  const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate, utilOverride, costOverrides);
+  const projections = buildProjections(leaseRecord, aircraftType, leaseEndDate, utilOverride, costOverrides, orgBenchmarks);
   const adeq = computeMRAdequacy(projections);
 
   const totalCurrentBalance  = projections.reduce((s, p) => s + p.currentBalance, 0);
@@ -715,6 +717,13 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
                             style={{ background: "#002147", color: "#fff", fontSize: "0.5625rem", fontWeight: 700, borderRadius: "9999px", padding: "1px 6px", cursor: "help" }}
                           >
                             Override
+                          </span>
+                        ) : p.costSource === "org-benchmark" ? (
+                          <span
+                            title={p.orgBenchmarkMeta ? `Org benchmark set by ${p.orgBenchmarkMeta.createdBy} on ${new Date(p.orgBenchmarkMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}${p.orgBenchmarkMeta.note ? ` — ${p.orgBenchmarkMeta.note}` : ""}` : undefined}
+                            style={{ background: "#0369A1", color: "#fff", fontSize: "0.5625rem", fontWeight: 700, borderRadius: "9999px", padding: "1px 6px", cursor: "help" }}
+                          >
+                            Org Benchmark
                           </span>
                         ) : (
                           <span style={{ color: "#94A3B8", fontSize: "0.5625rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>

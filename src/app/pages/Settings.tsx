@@ -35,6 +35,8 @@ import { useEclSnapshots, type EclSnapshot } from "../hooks/useEclSnapshots";
 import { AuditorPackModal } from "../components/risk-ecl/AuditorPackModal";
 import { computeRollForward } from "../utils/eclRollForward";
 import { computeCreditQualityMatrix } from "../utils/creditQualityMatrix";
+import { useOrgCostBenchmarks } from "../hooks/useOrgCostBenchmarks";
+import { TYPE_HEURISTICS } from "../data/maintenanceHeuristics";
 
 const tabs = [
   { id: "tenant",     label: "Tenant",        icon: Building2      },
@@ -544,6 +546,8 @@ export default function Settings() {
                   </button>
                 </div>
               </Card>
+
+              <OrgCostBenchmarksSection />
 
               {/* ── Concentration Policy Rules ───────────────────────────── */}
               <Card
@@ -1361,6 +1365,67 @@ const INSTALL_STEPS = [
     ],
   },
 ];
+
+function OrgCostBenchmarksSection() {
+  const [selectedType, setSelectedType] = useState<string>("A320neo");
+  const { benchmarks, saving, saveBenchmarks, clearBenchmarks } = useOrgCostBenchmarks(selectedType);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [note, setNote] = useState("");
+
+  const componentNames = ["Airframe HSI", "Engine PR", "LLPs", "Landing Gear", "APU"];
+
+  async function handleSave() {
+    const changes: Record<string, number> = {};
+    for (const [comp, val] of Object.entries(drafts)) {
+      if (val === "") continue;
+      const n = parseFloat(val);
+      if (!isNaN(n) && n >= 0) changes[comp] = n;
+    }
+    if (Object.keys(changes).length === 0) return;
+    await saveBenchmarks(changes, note || null);
+    setDrafts({});
+    setNote("");
+  }
+
+  return (
+    <Card title="Org Cost Benchmarks" subtitle="Your org's own observed maintenance costs per aircraft type — sits between the global heuristic and per-lease overrides">
+      <select value={selectedType} onChange={e => setSelectedType(e.target.value)} style={{ marginBottom: "1rem", padding: "0.375rem 0.625rem", borderRadius: "0.375rem", border: "1px solid #E2E8F0" }}>
+        {Object.keys(TYPE_HEURISTICS).map(type => <option key={type} value={type}>{type}</option>)}
+      </select>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+        {componentNames.map(comp => (
+          <div key={comp} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{ width: "8rem", fontSize: "0.8125rem", color: "#475569" }}>{comp}</span>
+            <input
+              type="number"
+              placeholder={benchmarks[comp] ? String(benchmarks[comp].costUSD) : "Heuristic default"}
+              value={drafts[comp] ?? ""}
+              onChange={e => setDrafts(d => ({ ...d, [comp]: e.target.value }))}
+              style={{ padding: "0.375rem 0.625rem", borderRadius: "0.375rem", border: "1px solid #E2E8F0", width: "12rem" }}
+            />
+          </div>
+        ))}
+        <input
+          type="text"
+          placeholder="Evidence note (optional)"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          style={{ padding: "0.375rem 0.625rem", borderRadius: "0.375rem", border: "1px solid #E2E8F0" }}
+        />
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button type="button" onClick={() => void handleSave()} disabled={saving} style={{ padding: "0.375rem 0.875rem", background: "#002147", color: "#FFFFFF", border: "none", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+          {Object.keys(benchmarks).length > 0 && (
+            <button type="button" onClick={() => void clearBenchmarks()} disabled={saving} style={{ padding: "0.375rem 0.875rem", background: "transparent", color: "#B91C1C", border: "1px solid #FCA5A5", borderRadius: "0.375rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
+              Reset to heuristic
+            </button>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 function ExcelAddinTab() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
