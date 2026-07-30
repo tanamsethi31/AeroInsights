@@ -39,14 +39,14 @@ export function AircraftDetailTab({
   // Build aircraft list from adjustedLeases (replaces static AIRCRAFT_LIST derived from sdmrData)
   const aircraftList = useMemo(() => adjustedLeases.map(({ lease, utilOverride }) => {
     const entry = Object.entries(LEASE_CONTEXT).find(([, ctx]) => ctx.leaseId === lease.leaseId);
-    const msn = entry?.[0] ?? "";
-    const ctx = msn ? LEASE_CONTEXT[msn] : null;
+    const msn = entry?.[0] ?? lease.leaseId;
+    const ctx = entry ? LEASE_CONTEXT[entry[0]] : null;
     return {
       leaseId:     lease.leaseId,
       msn,
       lessee:      lease.lessee,
       aircraft:    lease.aircraft,
-      leaseEnd:    ctx?.leaseEnd ?? "2030-01-01",
+      leaseEnd:    lease.leaseEnd ?? ctx?.leaseEnd ?? "2030-01-01",
       lease,
       utilOverride,
     };
@@ -123,6 +123,7 @@ export function AircraftDetailTab({
         msn={selected.msn}
         aircraftType={selectedLease.aircraft}
         vintage={2020}
+        liveRecord={selectedLease}
       />
 
       {/* ── Maintenance Event Log ──────────────────────────────────────────────── */}
