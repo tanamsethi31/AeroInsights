@@ -9,6 +9,8 @@ import { AircraftBalanceChart } from "./AircraftBalanceChart";
 import { useMaintenanceEvents } from "../../hooks/useMaintenanceEvents";
 import { MaintenanceEventLog } from "./MaintenanceEventLog";
 import type { AdjustedLease, MaintenanceEvent } from "../../utils/maintenanceEvents";
+import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,16 +61,21 @@ export function AircraftDetailTab({
   const selected      = aircraftList.find(a => a.leaseId === selectedLeaseId) ?? aircraftList[0];
   const selectedLease = selected?.lease;
 
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+
   // Hook must be called unconditionally (Rules of Hooks); null-safety checked after.
   const derived = useMemo(() => {
     if (!selected || !selectedLease) return null;
     const end = parseDateLocal(selected.leaseEnd);
+    const costOverrides = overridesByLeaseId.get(selectedLease.leaseId);
+    const orgBenchmarks = benchmarksByAircraftType.get(selectedLease.aircraft);
     return {
-      projections:  buildProjections(selectedLease, selectedLease.aircraft, end, selected.utilOverride),
+      projections:  buildProjections(selectedLease, selectedLease.aircraft, end, selected.utilOverride, costOverrides, orgBenchmarks),
       leaseEndDate: end,
       monthsToEOL:  Math.max(0, monthsBetween(NOW, end)),
     };
-  }, [selected, selectedLease]);
+  }, [selected, selectedLease, overridesByLeaseId, benchmarksByAircraftType]);
 
   const { events, saving, logEvent, deleteEvent } = useMaintenanceEvents(selected?.leaseId ?? null);
 
