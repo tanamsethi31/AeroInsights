@@ -9,8 +9,8 @@ import { AircraftBalanceChart } from "./AircraftBalanceChart";
 import { useMaintenanceEvents } from "../../hooks/useMaintenanceEvents";
 import { MaintenanceEventLog } from "./MaintenanceEventLog";
 import type { AdjustedLease, MaintenanceEvent } from "../../utils/maintenanceEvents";
-import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
-import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
+import { useCostOverrides } from "../../hooks/useCostOverrides";
+import { useOrgCostBenchmarks } from "../../hooks/useOrgCostBenchmarks";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -61,21 +61,19 @@ export function AircraftDetailTab({
   const selected      = aircraftList.find(a => a.leaseId === selectedLeaseId) ?? aircraftList[0];
   const selectedLease = selected?.lease;
 
-  const { overridesByLeaseId } = useAllCostOverrides();
-  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+  const { overrides: costOverrides } = useCostOverrides(selected?.leaseId ?? null);
+  const { benchmarks: orgBenchmarks } = useOrgCostBenchmarks(selected?.aircraft ?? null);
 
   // Hook must be called unconditionally (Rules of Hooks); null-safety checked after.
   const derived = useMemo(() => {
     if (!selected || !selectedLease) return null;
     const end = parseDateLocal(selected.leaseEnd);
-    const costOverrides = overridesByLeaseId.get(selectedLease.leaseId);
-    const orgBenchmarks = benchmarksByAircraftType.get(selectedLease.aircraft);
     return {
       projections:  buildProjections(selectedLease, selectedLease.aircraft, end, selected.utilOverride, costOverrides, orgBenchmarks),
       leaseEndDate: end,
       monthsToEOL:  Math.max(0, monthsBetween(NOW, end)),
     };
-  }, [selected, selectedLease, overridesByLeaseId, benchmarksByAircraftType]);
+  }, [selected, selectedLease, costOverrides, orgBenchmarks]);
 
   const { events, saving, logEvent, deleteEvent } = useMaintenanceEvents(selected?.leaseId ?? null);
 
