@@ -256,9 +256,11 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const [showDistressed, setShowDistressed] = React.useState(false);
   const [expandedComp, setExpandedComp] = React.useState<string | null>(null);
 
-  // Prefer live data; fall back to hardcoded LEASE_CONTEXT for demo mode
+  // Prefer live data; fall back to hardcoded LEASE_CONTEXT for demo mode.
+  // liveRecord itself can come from the static demo fixture (no leaseEnd of its own),
+  // so also fall back per-field when liveRecord.leaseEnd is missing.
   const ctx = liveRecord
-    ? { leaseId: liveRecord.leaseId, leaseEnd: liveRecord.leaseEnd ?? "", stage: String(liveRecord.stage ?? 1) }
+    ? { leaseId: liveRecord.leaseId, leaseEnd: liveRecord.leaseEnd || LEASE_CONTEXT[msn]?.leaseEnd || "", stage: String(liveRecord.stage ?? 1) }
     : LEASE_CONTEXT[msn];
 
   const leaseRecord: LeaseSDMR | undefined = liveRecord ?? (ctx ? sdmrData.find((l) => l.leaseId === ctx.leaseId) : undefined);
@@ -308,6 +310,10 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
   const totalCurrentBalance  = projections.reduce((s, p) => s + p.currentBalance, 0);
   const totalProjectedAtEOL  = projections.reduce((s, p) => s + p.projectedBalanceAtEOL, 0);
   const totalEOLObligation   = projections.reduce((s, p) => s + p.eolObligation, 0);
+  // Net EOL position summed straight from the per-component column (can be negative = net surplus),
+  // as opposed to adeq.eolShortfall which clamps each component to >=0 before summing for the headline tile.
+  const totalEOLPosition           = projections.reduce((s, p) => s + p.eolShortfall, 0);
+  const totalDistressedEOLPosition = projections.reduce((s, p) => s + p.distressedEOLShortfall, 0);
 
   const flag: MRAdeqFlag = adeq.flag;
   const flagColor  = mrFlagColor(flag);
@@ -777,10 +783,10 @@ export function MaintenanceForecastTab({ msn, aircraftType, vintage: _, liveReco
                   {fmtUSD(totalEOLObligation)}
                 </td>
                 <td style={{ padding: "0.625rem 0.875rem", fontWeight: 700, fontVariantNumeric: "tabular-nums",
-                  color: (showDistressed ? adeq.distressedEOLShortfall : adeq.eolShortfall) > 0 ? "#B91C1C" : "#15803D" }}>
-                  {fmtUSD(Math.abs(showDistressed ? adeq.distressedEOLShortfall : adeq.eolShortfall))}
+                  color: (showDistressed ? totalDistressedEOLPosition : totalEOLPosition) > 0 ? "#B91C1C" : "#15803D" }}>
+                  {fmtUSD(Math.abs(showDistressed ? totalDistressedEOLPosition : totalEOLPosition))}
                   <span style={{ fontWeight: 400, fontSize: "0.6875rem", marginLeft: "0.25rem" }}>
-                    {(showDistressed ? adeq.distressedEOLShortfall : adeq.eolShortfall) > 0 ? "shortfall" : "surplus"}
+                    {(showDistressed ? totalDistressedEOLPosition : totalEOLPosition) > 0 ? "shortfall" : "surplus"}
                   </span>
                 </td>
               </tr>
