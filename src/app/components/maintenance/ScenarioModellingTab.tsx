@@ -8,6 +8,7 @@ import {
 } from "../portfolio/MaintenanceForecastTab";
 import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
 import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
+import type { LeaseSDMR } from "../portfolio/SDMRTab";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,23 @@ function fmtUSD(n: number): string {
 
 function eolColor(shortfall: number): string {
   return shortfall > 0 ? "#B91C1C" : "#15803D";
+}
+
+/** Returns `lease` unchanged if no override applies, otherwise a shallow copy with the
+ *  overridden components' cumulativeBalance replaced. Invalid/empty input for a component
+ *  falls back to that component's real balance — never produces NaN or a negative balance. */
+function leaseWithBalanceOverrides(lease: LeaseSDMR, overrides: Record<string, string> | undefined): LeaseSDMR {
+  if (!overrides || Object.keys(overrides).length === 0) return lease;
+  return {
+    ...lease,
+    mrComponents: lease.mrComponents.map(c => {
+      const raw = overrides[c.component];
+      if (raw === undefined || raw === "") return c;
+      const parsed = parseFloat(raw);
+      if (isNaN(parsed) || parsed < 0) return c;
+      return { ...c, cumulativeBalance: parsed };
+    }),
+  };
 }
 
 // ── MiniProjectionTable ────────────────────────────────────────────────────────
@@ -120,6 +138,7 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
   const [cy,         setCy       ] = useState(DEFAULT_CY);
   const [expanded,   setExpanded ] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [balanceOverrides, setBalanceOverrides] = useState<Record<string, Record<string, string>>>({});
 
   const { overridesByLeaseId } = useAllCostOverrides();
   const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
@@ -134,11 +153,12 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
 
       const costOverrides = overridesByLeaseId.get(lease.leaseId);
       const orgBenchmarks = benchmarksByAircraftType.get(lease.aircraft);
+      const leaseForScenario = leaseWithBalanceOverrides(lease, balanceOverrides[lease.leaseId]);
 
       // Base projection uses servicer report utilization (if available), otherwise heuristic
       const baseProj = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride, costOverrides, orgBenchmarks);
-      // Scenario projection uses user-slider FH/CY values
-      const scenProj = buildProjections(lease, lease.aircraft, leaseEndDate, {
+      // Scenario projection uses user-slider FH/CY values, plus any per-component balance override
+      const scenProj = buildProjections(leaseForScenario, lease.aircraft, leaseEndDate, {
         annualFH:           fh,
         annualCy:           cy,
         componentRemaining: {},
@@ -150,7 +170,7 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
 
       return { ...a, lease, leaseEndDate, baseProj, scenProj, baseEOL, scenEOL, delta, utilOverride };
     });
-  }, [adjustedLeases, fh, cy, overridesByLeaseId, benchmarksByAircraftType]);
+  }, [adjustedLeases, fh, cy, overridesByLeaseId, benchmarksByAircraftType, balanceOverrides]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1.5rem" }}>
@@ -333,19 +353,65 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
                   borderBottom: "1px solid #E2E8F0",
                   padding: "1rem",
                   background: "#F8FAFC",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  display: "flex",
+                  flexDirection: "column",
                   gap: "1rem",
                 }}>
-                  <MiniProjectionTable
-                    title={row.utilOverride ? "Base (Servicer Report)" : "Base (Heuristic)"}
-                    projections={row.baseProj}
-                  />
-                  <MiniProjectionTable
-                    title={`Scenario (${fh.toLocaleString()} FH / ${cy.toLocaleString()} cy)`}
-                    projections={row.scenProj}
-                    highlight
-                  />
+                  {/* Balance override row (scenario only) */}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                        Override starting balances <span style={{ fontWeight: 400, textTransform: "none", color: "#94A3B8" }}>(scenario only)</span>
+                      </span>
+                      {Object.values(balanceOverrides[row.leaseId] ?? {}).some(v => v !== "") && (
+                        <button
+                          type="button"
+                          onClick={() => setBalanceOverrides(prev => {
+                            const next = { ...prev };
+                            delete next[row.leaseId];
+                            return next;
+                          })}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.72rem", color: "#B91C1C", fontWeight: 600 }}
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                      {row.lease.mrComponents.map(comp => (
+                        <label key={comp.component} style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.72rem", fontWeight: 600, color: "#475569" }}>
+                          {comp.component}
+                          <input
+                            type="number"
+                            min={0}
+                            value={balanceOverrides[row.leaseId]?.[comp.component] ?? ""}
+                            placeholder={String(comp.cumulativeBalance)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setBalanceOverrides(prev => ({
+                                ...prev,
+                                [row.leaseId]: { ...(prev[row.leaseId] ?? {}), [comp.component]: val },
+                              }));
+                            }}
+                            style={{ width: "130px", padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Base vs Scenario mini-tables */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <MiniProjectionTable
+                      title={row.utilOverride ? "Base (Servicer Report)" : "Base (Heuristic)"}
+                      projections={row.baseProj}
+                    />
+                    <MiniProjectionTable
+                      title={`Scenario (${fh.toLocaleString()} FH / ${cy.toLocaleString()} cy)`}
+                      projections={row.scenProj}
+                      highlight
+                    />
+                  </div>
                 </div>
               )}
             </div>
