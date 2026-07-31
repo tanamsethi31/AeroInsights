@@ -353,19 +353,65 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
                   borderBottom: "1px solid #E2E8F0",
                   padding: "1rem",
                   background: "#F8FAFC",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
+                  display: "flex",
+                  flexDirection: "column",
                   gap: "1rem",
                 }}>
-                  <MiniProjectionTable
-                    title={row.utilOverride ? "Base (Servicer Report)" : "Base (Heuristic)"}
-                    projections={row.baseProj}
-                  />
-                  <MiniProjectionTable
-                    title={`Scenario (${fh.toLocaleString()} FH / ${cy.toLocaleString()} cy)`}
-                    projections={row.scenProj}
-                    highlight
-                  />
+                  {/* Balance override row (scenario only) */}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                        Override starting balances <span style={{ fontWeight: 400, textTransform: "none", color: "#94A3B8" }}>(scenario only)</span>
+                      </span>
+                      {Object.values(balanceOverrides[row.leaseId] ?? {}).some(v => v !== "") && (
+                        <button
+                          type="button"
+                          onClick={() => setBalanceOverrides(prev => {
+                            const next = { ...prev };
+                            delete next[row.leaseId];
+                            return next;
+                          })}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.72rem", color: "#B91C1C", fontWeight: 600 }}
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                      {row.lease.mrComponents.map(comp => (
+                        <label key={comp.component} style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.72rem", fontWeight: 600, color: "#475569" }}>
+                          {comp.component}
+                          <input
+                            type="number"
+                            min={0}
+                            value={balanceOverrides[row.leaseId]?.[comp.component] ?? ""}
+                            placeholder={String(comp.cumulativeBalance)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setBalanceOverrides(prev => ({
+                                ...prev,
+                                [row.leaseId]: { ...(prev[row.leaseId] ?? {}), [comp.component]: val },
+                              }));
+                            }}
+                            style={{ width: "130px", padding: "0.375rem 0.5rem", border: "1px solid #CBD5E1", borderRadius: "0.375rem", fontSize: "0.8125rem", color: "#0F172A", background: "#FFFFFF" }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Base vs Scenario mini-tables */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <MiniProjectionTable
+                      title={row.utilOverride ? "Base (Servicer Report)" : "Base (Heuristic)"}
+                      projections={row.baseProj}
+                    />
+                    <MiniProjectionTable
+                      title={`Scenario (${fh.toLocaleString()} FH / ${cy.toLocaleString()} cy)`}
+                      projections={row.scenProj}
+                      highlight
+                    />
+                  </div>
                 </div>
               )}
             </div>
