@@ -768,6 +768,173 @@ git commit -m "feat: Maintenance page's cashflow chart reflects per-lease overri
 
 ---
 
+## Phase C — `buildAdequacyMap`'s own internal call (found post-hoc during Task 9's review)
+
+### Task 10: Thread cost tiers into `buildAdequacyMap`
+
+**Files:**
+- Modify: `src/app/components/portfolio/MaintenanceForecastTab.tsx`
+- Modify: `src/app/pages/Dashboard.tsx`
+- Modify: `src/app/pages/Portfolio.tsx`
+- Modify: `src/app/pages/RiskECL.tsx`
+- Modify: `src/app/components/portfolio/SDMRTab.tsx`
+
+**Why this exists:** `buildAdequacyMap` (which derives the red/amber/green flag and shortfall totals consumed by `Dashboard.tsx`'s KPI tile, `Portfolio.tsx`'s leases table, `SDMRTab.tsx`'s portfolio-wide shortfall banner, and `RiskECL.tsx`'s LGD-offset badge) has its own internal `buildProjections` call that was never part of Phase B's 6-call-site scope — it still resolves every component off the pure heuristic. For any lease with a per-lease override or org benchmark set, the 6 views fixed in Phase B now show the correct number while these 4 consumers of `buildAdequacyMap` would still show the heuristic-only number for the same lease. Three of the four sites are front-and-center (a homepage KPI, a leases table, a portfolio-wide dollar-figure banner) — user-approved as worth fixing in this same pass.
+
+- [ ] **Step 1: Extend `buildAdequacyMap`'s signature**
+
+In `src/app/components/portfolio/MaintenanceForecastTab.tsx`, find:
+```typescript
+export function buildAdequacyMap(leases: LeaseSDMR[]): Map<string, MRAdequacy> {
+  const map = new Map<string, MRAdequacy>();
+  for (const lease of leases) {
+    const ctx = CONTEXT_BY_LEASE_ID[lease.leaseId];
+    const leaseEndDate = lease.leaseEnd
+      ? parseDateLocal(lease.leaseEnd)
+      : ctx
+      ? parseDateLocal(ctx.leaseEnd)
+      : new Date(2028, 0, 1); // last-resort fallback, mirrors MRPortfolioGrid.tsx's existing fallback
+    const projections = buildProjections(lease, lease.aircraft, leaseEndDate);
+    map.set(lease.leaseId, computeMRAdequacy(projections));
+  }
+  return map;
+}
+```
+Change to:
+```typescript
+export function buildAdequacyMap(
+  leases: LeaseSDMR[],
+  overridesByLeaseId?: Map<string, Record<string, CostOverride>>,
+  benchmarksByAircraftType?: Map<string, Record<string, OrgCostBenchmark>>,
+): Map<string, MRAdequacy> {
+  const map = new Map<string, MRAdequacy>();
+  for (const lease of leases) {
+    const ctx = CONTEXT_BY_LEASE_ID[lease.leaseId];
+    const leaseEndDate = lease.leaseEnd
+      ? parseDateLocal(lease.leaseEnd)
+      : ctx
+      ? parseDateLocal(ctx.leaseEnd)
+      : new Date(2028, 0, 1); // last-resort fallback, mirrors MRPortfolioGrid.tsx's existing fallback
+    const costOverrides = overridesByLeaseId?.get(lease.leaseId);
+    const orgBenchmarks = benchmarksByAircraftType?.get(lease.aircraft);
+    const projections = buildProjections(lease, lease.aircraft, leaseEndDate, undefined, costOverrides, orgBenchmarks);
+    map.set(lease.leaseId, computeMRAdequacy(projections));
+  }
+  return map;
+}
+```
+Both new params optional — every existing caller (there are several beyond the 4 being fixed, e.g. `MRPortfolioGrid.tsx`'s own internal use elsewhere) keeps compiling with heuristic-only behavior if it doesn't pass them.
+
+- [ ] **Step 2: Wire `Dashboard.tsx`**
+
+Add imports:
+```typescript
+import { useAllCostOverrides } from "../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../hooks/useAllOrgCostBenchmarks";
+```
+Add near the other hooks:
+```typescript
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+```
+Find:
+```typescript
+  const liveAdequacyByLeaseId = useMemo(() => {
+    if (isDemo || assets.length === 0) return undefined;
+    // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx
+    const liveSDMRData = buildLiveSDMRData(assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
+    return buildAdequacyMap(liveSDMRData);
+  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
+```
+Change the `return`/deps to:
+```typescript
+    return buildAdequacyMap(liveSDMRData, overridesByLeaseId, benchmarksByAircraftType);
+  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease, overridesByLeaseId, benchmarksByAircraftType]);
+```
+
+- [ ] **Step 3: Wire `Portfolio.tsx`**
+
+Same pattern. Add the two hook calls near the existing `sdMr`/`liveSDMRData` block. Find:
+```typescript
+  const liveAdequacyByLeaseId = useMemo(
+    () => (liveSDMRData ? buildAdequacyMap(liveSDMRData) : undefined),
+    [liveSDMRData],
+  );
+```
+Change to:
+```typescript
+  const liveAdequacyByLeaseId = useMemo(
+    () => (liveSDMRData ? buildAdequacyMap(liveSDMRData, overridesByLeaseId, benchmarksByAircraftType) : undefined),
+    [liveSDMRData, overridesByLeaseId, benchmarksByAircraftType],
+  );
+```
+
+- [ ] **Step 4: Wire `RiskECL.tsx`**
+
+Same pattern. Add the two hook calls near the existing `sdMr` block. Find:
+```typescript
+  const adequacyByLeaseId = useMemo(() => {
+    if (isDemo || assets.length === 0) return buildAdequacyMap([]);
+    // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx/Dashboard.tsx
+    const liveSDMRData = buildLiveSDMRData(assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
+    return buildAdequacyMap(liveSDMRData);
+  }, [isDemo, assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
+```
+Change to:
+```typescript
+  const adequacyByLeaseId = useMemo(() => {
+    if (isDemo || assets.length === 0) return buildAdequacyMap([]);
+    // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx/Dashboard.tsx
+    const liveSDMRData = buildLiveSDMRData(assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
+    return buildAdequacyMap(liveSDMRData, overridesByLeaseId, benchmarksByAircraftType);
+  }, [isDemo, assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease, overridesByLeaseId, benchmarksByAircraftType]);
+```
+(The `buildAdequacyMap([])` early-return branch doesn't need the cost data — an empty input array always produces an empty map regardless.)
+
+- [ ] **Step 5: Wire `SDMRTab.tsx`**
+
+This file is a plain component that receives `data` as a prop (no existing `usePortfolioData`/`useSdMr` calls of its own) — call the two bulk hooks directly inside it, matching the pattern already used in Tasks 5/6/8.
+
+Add imports:
+```typescript
+import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
+```
+Inside `SDMRTab`, add before the `adequacyByLeaseId` line:
+```typescript
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+```
+Find:
+```typescript
+  const adequacyByLeaseId = buildAdequacyMap(displayData);
+```
+Change to:
+```typescript
+  const adequacyByLeaseId = buildAdequacyMap(displayData, overridesByLeaseId, benchmarksByAircraftType);
+```
+
+- [ ] **Step 6: Typecheck**
+
+Run: `npx tsc --noEmit` — expect no errors.
+
+- [ ] **Step 7: Run tests**
+
+Run: `npm test -- --run` — expect all pass, no regressions. If `MaintenanceForecastTab.test.ts` has existing tests for `buildAdequacyMap` that call it with only 1 arg, they should still pass unchanged (new params optional).
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/app/components/portfolio/MaintenanceForecastTab.tsx src/app/pages/Dashboard.tsx src/app/pages/Portfolio.tsx src/app/pages/RiskECL.tsx src/app/components/portfolio/SDMRTab.tsx
+git commit -m "feat: buildAdequacyMap reflects per-lease overrides and org benchmarks
+
+The last remaining gap: buildAdequacyMap (feeding Dashboard's KPI
+tile, Portfolio's leases table, SDMRTab's portfolio shortfall banner,
+and RiskECL's LGD-offset badge) had its own internal buildProjections
+call that never received cost-tier data, unlike the 6 call sites
+fixed in the prior pass. Found during that pass's final review."
+```
+
 ## Self-Review Notes
 
 - **Spec coverage:** Phase A closes 2 pre-existing, out-of-scope-but-user-approved bugs (real leases showing no data / being silently dropped). Phase B closes the previously-documented gap (org benchmarks and per-lease overrides only reaching `MaintenanceForecastTab.tsx`'s own single-lease drill-down) across all 5 remaining `buildProjections` call sites plus the chart adapter — that's every known call site now covered.
