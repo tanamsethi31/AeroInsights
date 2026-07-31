@@ -8,6 +8,7 @@ import {
 } from "../portfolio/MaintenanceForecastTab";
 import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
 import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
+import type { LeaseSDMR } from "../portfolio/SDMRTab";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,23 @@ function fmtUSD(n: number): string {
 
 function eolColor(shortfall: number): string {
   return shortfall > 0 ? "#B91C1C" : "#15803D";
+}
+
+/** Returns `lease` unchanged if no override applies, otherwise a shallow copy with the
+ *  overridden components' cumulativeBalance replaced. Invalid/empty input for a component
+ *  falls back to that component's real balance — never produces NaN or a negative balance. */
+function leaseWithBalanceOverrides(lease: LeaseSDMR, overrides: Record<string, string> | undefined): LeaseSDMR {
+  if (!overrides || Object.keys(overrides).length === 0) return lease;
+  return {
+    ...lease,
+    mrComponents: lease.mrComponents.map(c => {
+      const raw = overrides[c.component];
+      if (raw === undefined || raw === "") return c;
+      const parsed = parseFloat(raw);
+      if (isNaN(parsed) || parsed < 0) return c;
+      return { ...c, cumulativeBalance: parsed };
+    }),
+  };
 }
 
 // ── MiniProjectionTable ────────────────────────────────────────────────────────
@@ -120,6 +138,7 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
   const [cy,         setCy       ] = useState(DEFAULT_CY);
   const [expanded,   setExpanded ] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [balanceOverrides, setBalanceOverrides] = useState<Record<string, Record<string, string>>>({});
 
   const { overridesByLeaseId } = useAllCostOverrides();
   const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
@@ -134,11 +153,12 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
 
       const costOverrides = overridesByLeaseId.get(lease.leaseId);
       const orgBenchmarks = benchmarksByAircraftType.get(lease.aircraft);
+      const leaseForScenario = leaseWithBalanceOverrides(lease, balanceOverrides[lease.leaseId]);
 
       // Base projection uses servicer report utilization (if available), otherwise heuristic
       const baseProj = buildProjections(lease, lease.aircraft, leaseEndDate, utilOverride, costOverrides, orgBenchmarks);
-      // Scenario projection uses user-slider FH/CY values
-      const scenProj = buildProjections(lease, lease.aircraft, leaseEndDate, {
+      // Scenario projection uses user-slider FH/CY values, plus any per-component balance override
+      const scenProj = buildProjections(leaseForScenario, lease.aircraft, leaseEndDate, {
         annualFH:           fh,
         annualCy:           cy,
         componentRemaining: {},
@@ -150,7 +170,7 @@ export function ScenarioModellingTab({ adjustedLeases }: { adjustedLeases: Adjus
 
       return { ...a, lease, leaseEndDate, baseProj, scenProj, baseEOL, scenEOL, delta, utilOverride };
     });
-  }, [adjustedLeases, fh, cy, overridesByLeaseId, benchmarksByAircraftType]);
+  }, [adjustedLeases, fh, cy, overridesByLeaseId, benchmarksByAircraftType, balanceOverrides]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1.5rem" }}>
