@@ -324,7 +324,9 @@ export async function generateReportPDF(
   const acRows     = data?.aircraftRows ?? AIRCRAFT;
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const date = new Date().toLocaleDateString("en-IE", { dateStyle: "long" });
+  const now = new Date();
+  const date = now.toLocaleDateString("en-IE", { dateStyle: "long" });
+  const currentQuarter = `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
 
   function addHeader(title: string, subtitle: string) {
     doc.setFillColor(0, 33, 71);
@@ -381,7 +383,7 @@ export async function generateReportPDF(
       break;
     }
     case "RPT-002": {
-      addHeader("Board Pack — Q1 2026", "Executive Portfolio Summary");
+      addHeader(`Board Pack — ${currentQuarter}`, "Executive Portfolio Summary");
 
       const summaryData: PortfolioExportData = data ?? {
         eclRows: ECL_ROWS, leaseRows: LEASES, lesseeRows: LESSEES, aircraftRows: AIRCRAFT,
