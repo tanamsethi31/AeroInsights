@@ -7,6 +7,8 @@ import { mrFlagColor, mrFlagBg, mrFlagBorder, TYPE_HEURISTICS, type ComponentNam
 import { type CreditDepositTier } from "../../utils/creditDeposit";
 import { mrNetRefund, totalMRBalance, refundableMRCapped, eolCompensation } from "../../utils/sdmrHelpers";
 import { buildAdequacyMap } from "./MaintenanceForecastTab";
+import { useAllCostOverrides } from "../../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../../hooks/useAllOrgCostBenchmarks";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -610,7 +612,9 @@ export function SDMRTab({ data }: { data?: LeaseSDMR[] }) {
   }, 0);
 
   // ── Portfolio MR adequacy summary ──────────────────────────────────────────
-  const adequacyByLeaseId = buildAdequacyMap(displayData);
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
+  const adequacyByLeaseId = buildAdequacyMap(displayData, overridesByLeaseId, benchmarksByAircraftType);
   const shortfallLeases = displayData.filter((l) => (adequacyByLeaseId.get(l.leaseId)?.eolShortfall ?? 0) > 0);
   const totalShortfall = shortfallLeases.reduce((s, l) => s + (adequacyByLeaseId.get(l.leaseId)?.eolShortfall ?? 0), 0);
 

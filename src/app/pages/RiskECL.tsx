@@ -62,6 +62,8 @@ import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfol
 import { useSdMr } from "../hooks/useSdMr";
 import { buildLiveSDMRData } from "../components/portfolio/SDMRTab";
 import { buildAdequacyMap } from "../components/portfolio/MaintenanceForecastTab";
+import { useAllCostOverrides } from "../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../hooks/useAllOrgCostBenchmarks";
 import { evaluateSICR } from "../utils/sicrEvaluator";
 import type { SICRMigrationRecommendation } from "../utils/sicrEvaluator";
 import { MOCK_SICR_DATA } from "../data/mockPortfolioData";
@@ -299,12 +301,14 @@ export default function RiskECL() {
   const { jurisdictions: ingestedJurisdictions } = useJurisdictions();
 
   const sdMr = useSdMr();
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
   const adequacyByLeaseId = useMemo(() => {
     if (isDemo || assets.length === 0) return buildAdequacyMap([]);
     // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx/Dashboard.tsx
     const liveSDMRData = buildLiveSDMRData(assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
-    return buildAdequacyMap(liveSDMRData);
-  }, [isDemo, assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
+    return buildAdequacyMap(liveSDMRData, overridesByLeaseId, benchmarksByAircraftType);
+  }, [isDemo, assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease, overridesByLeaseId, benchmarksByAircraftType]);
 
   // toEclTableRows keys LeaseRow.id by provision.id, not lease id (one row per
   // provision, not per lease) — so it can't be looked up in adequacyByLeaseId

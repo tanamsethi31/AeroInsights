@@ -106,7 +106,11 @@ const CONTEXT_BY_LEASE_ID: Record<string, { msn: string; leaseEnd: string }> = O
 
 /** Adequacy for a whole book of leases, keyed by leaseId. Falls back to LEASE_CONTEXT for demo
  *  leases that don't carry their own leaseEnd (buildLiveSDMRData always populates leaseEnd on real records). */
-export function buildAdequacyMap(leases: LeaseSDMR[]): Map<string, MRAdequacy> {
+export function buildAdequacyMap(
+  leases: LeaseSDMR[],
+  overridesByLeaseId?: Map<string, Record<string, CostOverride>>,
+  benchmarksByAircraftType?: Map<string, Record<string, OrgCostBenchmark>>,
+): Map<string, MRAdequacy> {
   const map = new Map<string, MRAdequacy>();
   for (const lease of leases) {
     const ctx = CONTEXT_BY_LEASE_ID[lease.leaseId];
@@ -115,7 +119,9 @@ export function buildAdequacyMap(leases: LeaseSDMR[]): Map<string, MRAdequacy> {
       : ctx
       ? parseDateLocal(ctx.leaseEnd)
       : new Date(2028, 0, 1); // last-resort fallback, mirrors MRPortfolioGrid.tsx's existing fallback
-    const projections = buildProjections(lease, lease.aircraft, leaseEndDate);
+    const costOverrides = overridesByLeaseId?.get(lease.leaseId);
+    const orgBenchmarks = benchmarksByAircraftType?.get(lease.aircraft);
+    const projections = buildProjections(lease, lease.aircraft, leaseEndDate, undefined, costOverrides, orgBenchmarks);
     map.set(lease.leaseId, computeMRAdequacy(projections));
   }
   return map;

@@ -143,6 +143,8 @@ import { toKeyDateRows } from "../lib/keyDatesAdapters";
 import { useSdMr } from "../hooks/useSdMr";
 import { buildLiveSDMRData } from "../components/portfolio/SDMRTab";
 import { buildAdequacyMap } from "../components/portfolio/MaintenanceForecastTab";
+import { useAllCostOverrides } from "../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../hooks/useAllOrgCostBenchmarks";
 import { CalendarClock } from "lucide-react";
 
 function fmtBookValue(m: number): string {
@@ -273,12 +275,14 @@ export default function Dashboard() {
 
   const { assets, lessees: lesseeData, leases: leaseData, provisions, isDemo } = usePortfolioData();
   const sdMr = useSdMr();
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
   const liveAdequacyByLeaseId = useMemo(() => {
     if (isDemo || assets.length === 0) return undefined;
     // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx
     const liveSDMRData = buildLiveSDMRData(assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
-    return buildAdequacyMap(liveSDMRData);
-  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
+    return buildAdequacyMap(liveSDMRData, overridesByLeaseId, benchmarksByAircraftType);
+  }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease, overridesByLeaseId, benchmarksByAircraftType]);
   // Memoize every data transform. Previously these ran on every render →
   // every state change in Dashboard or its parent reran the full KPI/lease/
   // keyDate pipeline. Combined with the WatchlistGlobe leak that was

@@ -44,6 +44,8 @@ import { useSdMr } from "../hooks/useSdMr";
 import { MRRiskBanner } from "../components/portfolio/MRRiskBanner";
 import { ConcentrationTab } from "../components/portfolio/ConcentrationTab";
 import { MaintenanceForecastTab, buildAdequacyMap } from "../components/portfolio/MaintenanceForecastTab";
+import { useAllCostOverrides } from "../hooks/useAllCostOverrides";
+import { useAllOrgCostBenchmarks } from "../hooks/useAllOrgCostBenchmarks";
 import { PerformanceVsPlan } from "../components/portfolio/PerformanceVsPlan";
 import { KeyDatesTab } from "../components/portfolio/KeyDatesTab";
 import { toKeyDateRows, toKeyDateKPIs } from "../lib/keyDatesAdapters";
@@ -118,9 +120,11 @@ export default function Portfolio() {
     );
   }, [isDemo, assets, lesseeData, leaseData, provisions, sdMr.depositsByLease, sdMr.reservesByLease]);
 
+  const { overridesByLeaseId } = useAllCostOverrides();
+  const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
   const liveAdequacyByLeaseId = useMemo(
-    () => (liveSDMRData ? buildAdequacyMap(liveSDMRData) : undefined),
-    [liveSDMRData],
+    () => (liveSDMRData ? buildAdequacyMap(liveSDMRData, overridesByLeaseId, benchmarksByAircraftType) : undefined),
+    [liveSDMRData, overridesByLeaseId, benchmarksByAircraftType],
   );
 
   // Memoize ALL row/KPI builders. Previously these ran on every render of
