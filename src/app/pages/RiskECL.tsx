@@ -60,8 +60,8 @@ import { useJurisdictions } from "../hooks/useJurisdictions";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
 import { useSdMr } from "../hooks/useSdMr";
-import { buildLiveSDMRData } from "../components/portfolio/SDMRTab";
-import { buildAdequacyMap } from "../components/portfolio/MaintenanceForecastTab";
+import { buildLiveSDMRData, sdmrData } from "../components/portfolio/SDMRTab";
+import { buildAdequacyMap, LEASE_CONTEXT } from "../components/portfolio/MaintenanceForecastTab";
 import { useAllCostOverrides } from "../hooks/useAllCostOverrides";
 import { useAllOrgCostBenchmarks } from "../hooks/useAllOrgCostBenchmarks";
 import { evaluateSICR } from "../utils/sicrEvaluator";
@@ -304,7 +304,24 @@ export default function RiskECL() {
   const { overridesByLeaseId } = useAllCostOverrides();
   const { benchmarksByAircraftType } = useAllOrgCostBenchmarks();
   const adequacyByLeaseId = useMemo(() => {
-    if (isDemo || assets.length === 0) return buildAdequacyMap([]);
+    if (assets.length === 0) return buildAdequacyMap([]);
+    if (isDemo) {
+      // The demo MR fixture (sdmrData) keys leases by LSE-2020-XXX ids, unrelated to
+      // the demo ECL fixture's mock-lsN ids — bridge them via MSN (both fixtures use
+      // the same MSNs) so the MR Impact column has something to join against.
+      const msnByFixtureLeaseId = Object.fromEntries(
+        Object.entries(LEASE_CONTEXT).map(([msn, ctx]) => [ctx.leaseId, msn])
+      );
+      const assetIdByMsn = new Map(assets.map(a => [a.msn, a.id]));
+      const mockLeaseIdByAssetId = new Map(leases.map(l => [l.asset_id, l.id]));
+      const remappedSDMR = sdmrData.map(l => {
+        const msn = msnByFixtureLeaseId[l.leaseId];
+        const assetId = msn ? assetIdByMsn.get(msn) : undefined;
+        const mockLeaseId = assetId ? mockLeaseIdByAssetId.get(assetId) : undefined;
+        return mockLeaseId ? { ...l, leaseId: mockLeaseId } : l;
+      });
+      return buildAdequacyMap(remappedSDMR, overridesByLeaseId, benchmarksByAircraftType);
+    }
     // @ts-expect-error TODO(safety-net): Asset[] cast to PAAsset[] — same pre-existing cast as Portfolio.tsx/Dashboard.tsx
     const liveSDMRData = buildLiveSDMRData(assets, lessees, leases, provisions, sdMr.depositsByLease, sdMr.reservesByLease);
     return buildAdequacyMap(liveSDMRData, overridesByLeaseId, benchmarksByAircraftType);
