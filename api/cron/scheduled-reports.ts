@@ -166,7 +166,7 @@ async function renderSnapshot(format: "csv" | "pdf" | "docx" | "xlsx", rows: Sna
     case "csv":  return renderSnapshotCsv(rows);
     case "pdf":  return renderSnapshotPdf(rows, reportName);
     case "docx": return await renderSnapshotDocx(rows, reportName);
-    case "xlsx": return renderSnapshotXlsx(rows);
+    case "xlsx": return await renderSnapshotXlsx(rows);
   }
 }
 

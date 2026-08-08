@@ -7,7 +7,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, HeadingLevel, WidthType } from "docx";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 export interface SnapshotRow {
   lease_external_id: string | null;
@@ -157,29 +157,35 @@ export async function renderSnapshotDocx(rows: SnapshotRow[], reportName: string
   };
 }
 
-// ── XLSX (SheetJS) ───────────────────────────────────────────────────
+// ── XLSX (ExcelJS) ───────────────────────────────────────────────────
 
-export function renderSnapshotXlsx(rows: SnapshotRow[]): RenderedReport {
-  const wb = XLSX.utils.book_new();
-  const aoa: (string | number)[][] = [
-    ["Lease ID", "Lessee", "EAD (USD)", "ECL 12M (USD)", "ECL Lifetime (USD)", "Stage"],
-    ...rows.map((r) => [
+export async function renderSnapshotXlsx(rows: SnapshotRow[]): Promise<RenderedReport> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Portfolio Snapshot");
+
+  ws.columns = [
+    { header: "Lease ID",            key: "lease_id",    width: 18 },
+    { header: "Lessee",              key: "lessee",      width: 28 },
+    { header: "EAD (USD)",           key: "ead",         width: 14 },
+    { header: "ECL 12M (USD)",       key: "ecl_12m",     width: 14 },
+    { header: "ECL Lifetime (USD)",  key: "ecl_lt",      width: 16 },
+    { header: "Stage",               key: "stage",       width: 8  },
+  ];
+
+  for (const r of rows) {
+    ws.addRow([
       r.lease_external_id ?? "",
       r.lessee_name,
-      r.ead ?? "",
-      r.ecl_12m ?? "",
+      r.ead          ?? "",
+      r.ecl_12m      ?? "",
       r.ecl_lifetime ?? "",
       r.stage != null ? `S${r.stage}` : "",
-    ]),
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"] = [
-    { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 8 },
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, "Portfolio Snapshot");
-  const arr = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    ]);
+  }
+
+  const buf = await wb.xlsx.writeBuffer();
   return {
-    bytes:       new Uint8Array(arr),
+    bytes:       new Uint8Array(buf as ArrayBuffer),
     contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ext:         "xlsx",
   };
