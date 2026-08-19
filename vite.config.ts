@@ -3,7 +3,6 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-
 function figmaAssetResolver() {
   return {
     name: 'figma-asset-resolver',
@@ -90,6 +89,7 @@ export default defineConfig({
           if (
             id.includes('jspdf') ||
             id.includes('docx') ||
+            id.includes('exceljs') ||
             id.includes('xlsx') ||
             id.includes('html2canvas')
           ) {

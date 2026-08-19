@@ -6,7 +6,7 @@
 //
 // Architecture
 // ────────────
-// 1. parseWorkbook(file) reads the file with SheetJS, walks the named sheets
+// 1. parseWorkbook(file) reads the file with ExcelJS, walks the named sheets
 //    we care about, and dispatches each to a sheet-specific handler defined
 //    below. Handlers return typed row arrays + a sheet-level errors list.
 //
@@ -26,7 +26,8 @@
 // stubbed with the right shapes so the migration cadence and parser cadence
 // can land independently.
 
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { loadXlsx, worksheetToMatrix } from "./excelHelpers";
 
 // ─── Canonical sheet names (must match the sample portfolio Excel exactly) ──
 
@@ -245,9 +246,9 @@ export async function detectCanonical(file: File): Promise<{
   recognisedSheets: string[];
   sheetNames: string[];
 }> {
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data, { type: "array", bookSheets: true });
-  const sheetNames = wb.SheetNames ?? [];
+  const buffer = await file.arrayBuffer();
+  const wb = await loadXlsx(buffer);
+  const sheetNames = wb.worksheets.map((ws) => ws.name);
   const recognised = sheetNames.filter((n) => CANONICAL_NAMES.includes(n));
   return {
     canonical: recognised.length >= 1,
@@ -259,49 +260,44 @@ export async function detectCanonical(file: File): Promise<{
 // ─── Main entry ─────────────────────────────────────────────────────────────
 
 export async function parseWorkbook(file: File): Promise<ParsedWorkbook> {
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data, { type: "array", cellDates: true });
-  const sheetNames = wb.SheetNames ?? [];
+  const buffer = await file.arrayBuffer();
+  const wb = await loadXlsx(buffer);
+  const sheetNames = wb.worksheets.map((ws) => ws.name);
   const recognised = sheetNames.filter((n) => CANONICAL_NAMES.includes(n));
-  const unknown = sheetNames.filter((n) => !CANONICAL_NAMES.includes(n));
+  const unknown    = sheetNames.filter((n) => !CANONICAL_NAMES.includes(n));
 
   const sheets: ParsedWorkbook["sheets"] = {};
 
   if (recognised.includes(CANONICAL_SHEETS.lessees)) {
-    sheets.lessees = parseLesseeProfilesSheet(wb.Sheets[CANONICAL_SHEETS.lessees]);
+    sheets.lessees = parseLesseeProfilesSheet(wb.getWorksheet(CANONICAL_SHEETS.lessees));
   }
   if (recognised.includes(CANONICAL_SHEETS.aircraft)) {
-    sheets.aircraft = parseAircraftRegisterSheet(wb.Sheets[CANONICAL_SHEETS.aircraft]);
+    sheets.aircraft = parseAircraftRegisterSheet(wb.getWorksheet(CANONICAL_SHEETS.aircraft));
   }
   if (recognised.includes(CANONICAL_SHEETS.leases)) {
-    sheets.leases = parseLeaseRegisterSheet(wb.Sheets[CANONICAL_SHEETS.leases]);
+    sheets.leases = parseLeaseRegisterSheet(wb.getWorksheet(CANONICAL_SHEETS.leases));
   }
   if (recognised.includes(CANONICAL_SHEETS.sdMr)) {
-    const sdMr = parseSdMrSheet(wb.Sheets[CANONICAL_SHEETS.sdMr]);
-    sheets.securityDeposits = sdMr.deposits;
+    const sdMr = parseSdMrSheet(wb.getWorksheet(CANONICAL_SHEETS.sdMr));
+    sheets.securityDeposits    = sdMr.deposits;
     sheets.maintenanceReserves = sdMr.reserves;
   }
   if (recognised.includes(CANONICAL_SHEETS.ifrs9Ecl)) {
-    sheets.ifrs9Params = parseIfrs9Sheet(wb.Sheets[CANONICAL_SHEETS.ifrs9Ecl]);
+    sheets.ifrs9Params = parseIfrs9Sheet(wb.getWorksheet(CANONICAL_SHEETS.ifrs9Ecl));
   }
   if (recognised.includes(CANONICAL_SHEETS.sicrTriggers)) {
-    sheets.sicrConfig = parseSicrSheet(wb.Sheets[CANONICAL_SHEETS.sicrTriggers]);
+    sheets.sicrConfig = parseSicrSheet(wb.getWorksheet(CANONICAL_SHEETS.sicrTriggers));
   }
   if (recognised.includes(CANONICAL_SHEETS.stressScenarios)) {
-    const result = parseStressScenariosSheet(wb.Sheets[CANONICAL_SHEETS.stressScenarios]);
-    sheets.stressScenarios = result.scenarios;
+    const result = parseStressScenariosSheet(wb.getWorksheet(CANONICAL_SHEETS.stressScenarios));
+    sheets.stressScenarios      = result.scenarios;
     sheets.restructuringPresets = result.presets;
   }
   if (recognised.includes(CANONICAL_SHEETS.jurisdictionLgd)) {
-    sheets.jurisdictionLgd = parseJurisdictionLgdSheet(wb.Sheets[CANONICAL_SHEETS.jurisdictionLgd]);
+    sheets.jurisdictionLgd = parseJurisdictionLgdSheet(wb.getWorksheet(CANONICAL_SHEETS.jurisdictionLgd));
   }
 
-  return {
-    sheets,
-    sheetNames,
-    recognisedSheets: recognised,
-    unknownSheets: unknown,
-  };
+  return { sheets, sheetNames, recognisedSheets: recognised, unknownSheets: unknown };
 }
 
 // ─── Header-row detection ───────────────────────────────────────────────────
@@ -330,14 +326,11 @@ function normalise(s: string): string {
 
 /** Convert a sheet to rows of header-keyed objects, header-row aware. */
 function sheetToObjects(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): { rows: Record<string, unknown>[]; headerRowIndex: number } {
   if (!sheet) return { rows: [], headerRowIndex: 0 };
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    raw: true,
-    defval: null,
-  });
+
+  const raw = worksheetToMatrix(sheet, true);
   if (raw.length === 0) return { rows: [], headerRowIndex: 0 };
 
   const headerRowIndex = findHeaderRow(raw);
@@ -348,7 +341,6 @@ function sheetToObjects(
 
   const rows: Record<string, unknown>[] = [];
   for (const row of dataRows) {
-    // Skip wholly-empty rows — common in Excel after section breaks.
     const hasValue = (row ?? []).some(
       (c) => c !== null && c !== undefined && String(c).trim() !== "",
     );
@@ -367,6 +359,7 @@ function sheetToObjects(
 
 function asString(v: unknown): string | null {
   if (v == null) return null;
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
   const s = String(v).trim();
   return s === "" ? null : s;
 }
@@ -449,7 +442,7 @@ function pick(row: Record<string, unknown>, aliases: readonly string[]): unknown
 }
 
 export function parseLesseeProfilesSheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): ParsedLesseeRow[] {
   const { rows, headerRowIndex } = sheetToObjects(sheet);
   const out: ParsedLesseeRow[] = [];
@@ -516,7 +509,7 @@ export function parseLesseeProfilesSheet(
 // ─── Aircraft Register handler (T-1.3 — stub; full impl next slice) ─────────
 
 export function parseAircraftRegisterSheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): ParsedAircraftRow[] {
   const { rows, headerRowIndex } = sheetToObjects(sheet);
   const out: ParsedAircraftRow[] = [];
@@ -565,7 +558,7 @@ function asThousands(v: unknown): number | null {
 // ─── Lease Register handler — light parser for symmetry ─────────────────────
 
 export function parseLeaseRegisterSheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): ParsedLeaseRow[] {
   const { rows, headerRowIndex } = sheetToObjects(sheet);
   const out: ParsedLeaseRow[] = [];
@@ -613,12 +606,10 @@ interface SdMrParseResult {
 }
 
 export function parseSdMrSheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): SdMrParseResult {
   if (!sheet) return { deposits: [], reserves: [] };
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1, raw: true, defval: null,
-  });
+  const raw = worksheetToMatrix(sheet, true);
 
   // Find the row index of section B's banner. Anything before that block is
   // section A; anything after is section B.
@@ -731,7 +722,7 @@ export function parseSdMrSheet(
 // do, add pickers below; the migration already has the columns.
 
 export function parseIfrs9Sheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): ParsedIfrs9Params {
   const params: ParsedIfrs9Params = {
     discount_rate:             null,
@@ -745,9 +736,7 @@ export function parseIfrs9Sheet(
   };
   if (!sheet) return params;
 
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1, raw: true, defval: null,
-  });
+  const raw = worksheetToMatrix(sheet, true);
 
   // 1) Discount rate — scan top 5 rows for a cell whose text starts with
   //    "discount rate" (case-insensitive). The value is the first numeric
@@ -840,7 +829,7 @@ function extractIntFromText(v: unknown): number | null {
 }
 
 export function parseSicrSheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): ParsedSicrConfig {
   const cfg: ParsedSicrConfig = {
     dpd_enabled:               null,
@@ -853,9 +842,7 @@ export function parseSicrSheet(
   };
   if (!sheet) return cfg;
 
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1, raw: true, defval: null,
-  });
+  const raw = worksheetToMatrix(sheet, true);
 
   // Find the "Config:" row in the top 5 rows.
   let configRow: unknown[] | null = null;
@@ -915,12 +902,10 @@ interface StressParseResult {
 }
 
 export function parseStressScenariosSheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): StressParseResult {
   if (!sheet) return { scenarios: [], presets: [] };
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1, raw: true, defval: null,
-  });
+  const raw = worksheetToMatrix(sheet, true);
 
   // Find banner rows for each section.
   const sectionA = raw.findIndex((r) => String(r?.[0] ?? "").toUpperCase().includes("A. MACRO"));
@@ -1030,12 +1015,10 @@ function stripMultiplier(v: unknown): unknown {
 const UNCERTAINTY_BANDS = new Set(["Low", "Medium", "High", "Extreme"]);
 
 export function parseJurisdictionLgdSheet(
-  sheet: XLSX.WorkSheet | undefined,
+  sheet: ExcelJS.Worksheet | undefined,
 ): ParsedJurisdictionLgdRow[] {
   if (!sheet) return [];
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1, raw: true, defval: null,
-  });
+  const raw = worksheetToMatrix(sheet, true);
 
   // Find first section's data range — stop at "KEY PRECEDENTS" banner.
   const precedentsIdx = raw.findIndex((r) =>

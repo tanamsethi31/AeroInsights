@@ -12,9 +12,10 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, FileSpreadsheet, Download, X, CheckCircle2, ChevronDown } from "lucide-react";
-import * as XLSX from "xlsx";
-import { OUR_FIELDS, SAMPLE_ROWS } from "../../lib/columnMapper";
-import { suggestMapping } from "../../lib/columnMapper";
+import ExcelJS from "exceljs";
+import { loadXlsx, xlsxDownload } from "../../utils/excelHelpers";
+import { parseCsv } from "../../utils/csvParser";
+import { OUR_FIELDS, SAMPLE_ROWS, suggestMapping } from "../../lib/columnMapper";
 import { detectCanonical } from "../../utils/excelParser";
 import { ReviewImportStep } from "./ReviewImportStep";
 import { MultiSheetReviewStep } from "./MultiSheetReviewStep";
@@ -30,37 +31,54 @@ type Step = "intro" | "review";
 
 // ─── Template generation ─────────────────────────────────────────────────────
 
-function downloadTemplate() {
-  const headers = OUR_FIELDS.map(f => f.id);
-  // Two pre-filled sample rows — contrasting carrier / region / stage so the
-  // user sees the schema with concrete examples before adding their own.
-  const ws = XLSX.utils.json_to_sheet(SAMPLE_ROWS, { header: headers });
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Portfolio");
-  XLSX.writeFile(wb, "aeroinsights-portfolio-template.xlsx");
+async function downloadTemplate() {
+  const headers = OUR_FIELDS.map((f) => f.id);
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Portfolio");
+  ws.addRow(headers);
+  SAMPLE_ROWS.forEach((row) =>
+    ws.addRow(headers.map((h) => (row as Record<string, unknown>)[h] ?? "")),
+  );
+  ws.columns = headers.map((h) => ({ width: Math.max(h.length + 4, 14) }));
+  await xlsxDownload(wb, "aeroinsights-portfolio-template.xlsx");
 }
 
 // ─── File parsing ─────────────────────────────────────────────────────────────
 
-function parseFile(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target!.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const raw = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { raw: false });
-        if (raw.length === 0) { reject(new Error("File is empty.")); return; }
-        const headers = Object.keys(raw[0]);
-        resolve({ headers, rows: raw });
-      } catch {
-        reject(new Error("Could not parse file. Please use .csv, .xlsx, or .xls."));
+async function parseFile(
+  file: File,
+): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const lowerName = file.name.toLowerCase();
+
+  let allRows: string[][];
+  if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
+    const buffer = await file.arrayBuffer();
+    const wb     = await loadXlsx(buffer);
+    const ws     = wb.worksheets[0];
+    if (!ws) throw new Error("File is empty.");
+    const raw: string[][] = [];
+    ws.eachRow({ includeEmpty: false }, (row) => {
+      const vals: string[] = [];
+      for (let c = 1; c <= Math.max(ws.columnCount, row.cellCount); c++) {
+        vals.push(row.getCell(c).text ?? "");
       }
-    };
-    reader.onerror = () => reject(new Error("Could not read file. Please try again."));
-    reader.readAsArrayBuffer(file);
+      raw.push(vals);
+    });
+    allRows = raw;
+  } else {
+    const text = await file.text();
+    allRows = parseCsv(text);
+  }
+
+  if (allRows.length === 0) throw new Error("File is empty.");
+  const headers = allRows[0].map(String);
+  const rows    = allRows.slice(1).map((r) => {
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { obj[h] = r[i] ?? ""; });
+    return obj;
   });
+  if (rows.length === 0) throw new Error("File is empty.");
+  return { headers, rows };
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -127,12 +145,12 @@ export function TemplateUploadWizard({ orgId, portfolioId, onClose, onComplete }
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    if (file) void handleFile(file);
   }
 
   function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) void handleFile(file);
   }
 
   return (
@@ -206,7 +224,7 @@ export function TemplateUploadWizard({ orgId, portfolioId, onClose, onComplete }
                       </div>
                     </div>
                     <button
-                      onClick={downloadTemplate}
+                      onClick={() => { void downloadTemplate(); }}
                       style={{
                         display: "flex", alignItems: "center", gap: "6px",
                         padding: "7px 14px", background: "#0284C7", color: "#FFFFFF",

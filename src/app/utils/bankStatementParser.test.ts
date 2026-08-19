@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectColumns, applyMappings } from "./bankStatementParser";
+import { detectColumns, applyMappings, parseFile } from "./bankStatementParser";
 import type { ColumnMapping } from "./bankStatementParser";
 
 // ── Test 1: column detection ──────────────────────────────────────────────────
@@ -103,5 +103,48 @@ describe("applyMappings — skip invalid rows", () => {
     expect(errors[0]).toContain("not-a-date");
     expect(transactions).toHaveLength(1);
     expect(transactions[0].valueDate).toBe("2026-01-10");
+  });
+});
+
+// ── Test 6: parseFile — xlsx ──────────────────────────────────────────────────
+
+describe("parseFile — xlsx", () => {
+  async function makeMockXlsx(rows: string[][]): Promise<File> {
+    const wb = new (await import("exceljs")).default.Workbook();
+    const ws = wb.addWorksheet("Sheet1");
+    rows.forEach((r) => ws.addRow(r));
+    const buf = await wb.xlsx.writeBuffer();
+    return new File([buf as ArrayBuffer], "stmt.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  }
+
+  it("parses headers and rows from an xlsx bank statement", async () => {
+    const file = await makeMockXlsx([
+      ["Value Date", "Narrative", "DR", "CR"],
+      ["2026-01-01", "Opening balance", "0", "5000"],
+      ["2026-01-02", "Withdrawal", "200", "0"],
+    ]);
+    const result = await parseFile(file);
+    expect(result.errors).toHaveLength(0);
+    expect(result.headers).toEqual(["Value Date", "Narrative", "DR", "CR"]);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0].amount).toBe(5000);
+    expect(result.transactions[1].amount).toBe(-200);
+  });
+});
+
+// ── Test 7: parseFile — CSV ───────────────────────────────────────────────────
+
+describe("parseFile — CSV", () => {
+  it("parses headers and rows from a CSV bank statement", async () => {
+    const csv = "Date,Description,Amount\n2026-02-01,Salary,5000\n2026-02-02,Rent,-1200";
+    const file = new File([csv], "stmt.csv", { type: "text/csv" });
+    const result = await parseFile(file);
+    expect(result.errors).toHaveLength(0);
+    expect(result.headers).toEqual(["Date", "Description", "Amount"]);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0].amount).toBe(5000);
+    expect(result.transactions[1].amount).toBe(-1200);
   });
 });
