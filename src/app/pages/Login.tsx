@@ -187,6 +187,51 @@ export default function Login() {
           {isLoading ? "Loading…" : "Continue with Google"}
         </button>
 
+        {/* LinkedIn sign-in */}
+        <button
+          onClick={() => redirect({ connection: "linkedin" })}
+          disabled={isLoading}
+          style={{
+            width: "100%",
+            padding: "0.6875rem 1.5rem",
+            marginTop: "0.625rem",
+            background: "#FFFFFF",
+            color: "#1F2937",
+            border: "1.5px solid #CBD5E1",
+            borderRadius: "0.5rem",
+            fontSize: "0.9375rem",
+            fontWeight: 600,
+            cursor: isLoading ? "not-allowed" : "pointer",
+            letterSpacing: "0.01em",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.625rem",
+            transition: "border-color 0.15s, background 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "#94A3B8";
+              (e.currentTarget as HTMLButtonElement).style.background = "#F8FAFC";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading) {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "#CBD5E1";
+              (e.currentTarget as HTMLButtonElement).style.background = "#FFFFFF";
+            }
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+            <rect width="18" height="18" rx="3" fill="#0A66C2" />
+            <path
+              fill="#FFFFFF"
+              d="M5.34 6.9H3.02V14.7h2.32V6.9ZM4.18 5.87c.79 0 1.28-.52 1.28-1.18-.01-.67-.49-1.19-1.27-1.19-.77 0-1.28.52-1.28 1.19 0 .66.49 1.18 1.25 1.18h.02ZM6.6 14.7h2.32v-4.36c0-.23.02-.47.09-.63.19-.47.63-.97 1.36-.97.96 0 1.34.73 1.34 1.8v4.16h2.32v-4.46c0-2.14-1.14-3.14-2.67-3.14-1.23 0-1.77.68-2.08 1.16h.02V6.9H6.6c.03.65 0 7.8 0 7.8Z"
+            />
+          </svg>
+          {isLoading ? "Loading…" : "Continue with LinkedIn"}
+        </button>
+
         {/* Divider */}
         <div
           style={{
