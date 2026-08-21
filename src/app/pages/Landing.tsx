@@ -1973,8 +1973,12 @@ function Pricing() {
                       {plan.cta}
                     </a>
                   ) : (
-                    <Link
-                      to="/login"
+                    <a
+                      href="#contact"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
+                      }}
                       className={cn(
                         "mt-8 block w-full rounded-xl py-2.5 text-center text-sm font-semibold transition",
                         plan.highlight
@@ -1983,7 +1987,7 @@ function Pricing() {
                       )}
                     >
                       {plan.cta}
-                    </Link>
+                    </a>
                   )}
                 </motion.div>
               </FadeIn>
@@ -2536,9 +2540,19 @@ function Newsletter() {
 }
 
 /* ─── FOOTER ────────────────────────────────────────────────────────────────── */
-type FooterLink = string | { label: string; href: string };
+type FooterLink = { label: string; href: string };
 const FOOTER_COLS: { heading: string; links: FooterLink[] }[] = [
-  { heading: "Platform", links: ["Portfolio Analytics", "Scenario Engine", "Risk & ECL", "Deal Generator", "Intelligence", "Excel Add-In"] },
+  {
+    heading: "Platform",
+    links: [
+      { label: "Portfolio Analytics", href: "#platform" },
+      { label: "Scenario Engine",     href: "#platform" },
+      { label: "Risk & ECL",          href: "#platform" },
+      { label: "Deal Generator",      href: "#platform" },
+      { label: "Intelligence",        href: "#platform" },
+      { label: "Excel Add-In",        href: "/docs/excel-addin" },
+    ],
+  },
   {
     heading: "Company",
     links: [
@@ -2628,28 +2642,25 @@ function Footer() {
                 <p className="text-xs font-semibold uppercase tracking-widest text-gray-600">
                   {col.heading}
                 </p>
-                {col.links.map((link) => {
-                  const label = typeof link === "string" ? link : link.label;
-                  const href = typeof link === "string" ? "#" : link.href;
-                  const isInternal = typeof link !== "string" && link.href.startsWith("/");
-                  return isInternal ? (
+                {col.links.map((link) =>
+                  link.href.startsWith("/") ? (
                     <Link
-                      key={label}
-                      to={href}
+                      key={link.label}
+                      to={link.href}
                       className="text-sm font-medium text-gray-700 transition hover:text-[#002147]"
                     >
-                      {label}
+                      {link.label}
                     </Link>
                   ) : (
                     <a
-                      key={label}
-                      href={href}
+                      key={link.label}
+                      href={link.href}
                       className="text-sm font-medium text-gray-700 transition hover:text-[#002147]"
                     >
-                      {label}
+                      {link.label}
                     </a>
-                  );
-                })}
+                  )
+                )}
               </div>
             ))}
           </div>
