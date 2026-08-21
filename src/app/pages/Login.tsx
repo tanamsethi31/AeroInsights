@@ -235,32 +235,6 @@ export default function Login() {
           Create account
         </button>
 
-        {/* Tertiary: passwordless email OTP */}
-        <button
-          onClick={() => redirect({ connection: "email" })}
-          disabled={isLoading}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            fontSize: "0.8125rem",
-            color: "#475569",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            textDecoration: "underline",
-            textDecorationColor: "#CBD5E1",
-            textUnderlineOffset: "3px",
-            transition: "color 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            if (!isLoading) (e.currentTarget as HTMLButtonElement).style.color = "#002147";
-          }}
-          onMouseLeave={(e) => {
-            if (!isLoading) (e.currentTarget as HTMLButtonElement).style.color = "#475569";
-          }}
-        >
-          Sign in with email code instead
-        </button>
-
         <p
           style={{
             fontSize: "0.75rem",
