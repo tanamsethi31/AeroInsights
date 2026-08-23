@@ -2292,8 +2292,26 @@ export default function RiskECL() {
           {activeTab === "Rating / PD" && (
             <RatingPDTab
               onUseInCustomBuilder={(pdS2Multi, pdS3Multi) => {
-                // Navigate to Scenarios → Custom Builder with pre-filled PD multipliers
-                navigate(`/scenarios?pdS2Multi=${pdS2Multi.toFixed(3)}&pdS3Multi=${pdS3Multi.toFixed(3)}`);
+                // Hand off to the Custom Builder the same way Scenarios' own
+                // "Use in Custom Builder" CTAs do — merge onto whatever the
+                // builder form already holds and bridge via sessionStorage,
+                // since CustomBuilderPage reads aero_clone_pending once on
+                // mount (URL query params aren't read anywhere).
+                let baseInputs: ScenarioInputs = ZERO_INPUTS;
+                try {
+                  const stored = localStorage.getItem("aero_custom_inputs");
+                  if (stored) baseInputs = { ...ZERO_INPUTS, ...JSON.parse(stored) } as ScenarioInputs;
+                } catch { /* corrupt storage — fall back to zero */ }
+                sessionStorage.setItem(
+                  "aero_clone_pending",
+                  JSON.stringify({
+                    inputs: { ...baseInputs, pdS2Multi, pdS3Multi },
+                    name: "My Custom Scenario",
+                    mode: "deterministic",
+                    paths: 10000,
+                  }),
+                );
+                navigate("/build");
               }}
             />
           )}

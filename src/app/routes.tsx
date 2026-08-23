@@ -153,6 +153,7 @@ export const router = createBrowserRouter([
 
           // Transactions
           { path: "transactions",       Component: Transactions },
+          { path: "transactions/run",   Component: Transactions },
           { path: "transactions/setup", Component: Transactions },
 
           // Reconciliation

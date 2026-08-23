@@ -1,5 +1,6 @@
 // src/app/pages/Transactions.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "react-router";
 import { motion } from "framer-motion";
 import { Landmark, Plus, Play, ChevronRight } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -10,6 +11,7 @@ import { CoverageTestPanel } from "../components/transactions/CoverageTestPanel"
 import { DistributionStatement } from "../components/transactions/DistributionStatement";
 import { useAbsDeals } from "../hooks/useAbsDeals";
 import { usePortfolioData } from "../hooks/usePortfolioData";
+import { useTabSync } from "../hooks/useTabSync";
 import {
   runWaterfall,
   computePortfolioAircraftValue,
@@ -27,6 +29,14 @@ const TAB_LABELS: Record<TabId, string> = {
   statement: "Distribution Statement",
 };
 
+// The sidebar links directly to "Overview" and "Run Waterfall" — keep the
+// URL in sync with the active tab so those links land on the right pane
+// (see useTabSync for why this matters on repeat clicks).
+const PATH_TAB: Record<string, string> = {
+  "/transactions":     "overview",
+  "/transactions/run": "run",
+};
+
 const fmtM = (n: number) => `$${n.toFixed(2)}M`;
 
 function currentQuarterLabel() {
@@ -37,10 +47,13 @@ function currentQuarterLabel() {
 export default function Transactions() {
   const { deals, loading, createDeal } = useAbsDeals();
   const { assets, leases, lessees }    = usePortfolioData();
+  const { pathname } = useLocation();
 
   const [setupOpen, setSetupOpen]       = useState(false);
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
-  const [activeTab, setActiveTab]       = useState<TabId>("overview");
+  const [activeTab, setActiveTab]       = useState(() => PATH_TAB[pathname] ?? "overview");
+  useEffect(() => { setActiveTab(PATH_TAB[pathname] ?? "overview"); }, [pathname]);
+  const handleTabChange = useTabSync(PATH_TAB, setActiveTab);
   const [periodLabel, setPeriodLabel]   = useState(currentQuarterLabel);
   const [collections, setCollections]   = useState<CollectionInput[]>([]);
   const [waterfallResult, setWaterfallResult] = useState<WaterfallResult | null>(null);
@@ -167,7 +180,7 @@ export default function Transactions() {
           <PillTabs
             tabs={TABS}
             activeTab={activeTab}
-            onChange={id => setActiveTab(id as TabId)}
+            onChange={id => handleTabChange(id as TabId)}
             renderTab={(tab, isActive) => TAB_LABELS[tab as TabId] ?? tab}
           />
 

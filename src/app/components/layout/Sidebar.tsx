@@ -135,8 +135,8 @@ const navGroups: NavGroup[] = [
         url: "/transactions",
         icon: Landmark,
         items: [
-          { title: "Overview",      url: "/transactions", icon: BarChart2 },
-          { title: "Run Waterfall", url: "/transactions", icon: Play      },
+          { title: "Overview",      url: "/transactions",     icon: BarChart2 },
+          { title: "Run Waterfall", url: "/transactions/run", icon: Play      },
         ],
       },
       {
