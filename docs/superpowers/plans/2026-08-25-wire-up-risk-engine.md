@@ -326,7 +326,7 @@ git commit -m "feat: add RiskEngineStatusBanner component"
 **Files:**
 - Modify: `src/app/pages/RiskECL.tsx`
 
-- [ ] **Step 1: Add imports**
+- [x] **Step 1: Add imports**
 
 In `src/app/pages/RiskECL.tsx`, find (around line 60-61):
 
@@ -371,7 +371,7 @@ import {
 } from "../utils/eclCalculator";
 ```
 
-- [ ] **Step 2: Call the hook and replace the `liveBaseECL` definition**
+- [x] **Step 2: Call the hook and replace the `liveBaseECL` definition**
 
 Find (around line 401-404):
 
@@ -396,7 +396,7 @@ Replace with:
   })();
 ```
 
-- [ ] **Step 3: Render the banner**
+- [x] **Step 3: Render the banner**
 
 Find (the `</PageHeader>` closing tag, around line 2147):
 
@@ -422,12 +422,12 @@ Replace with:
       {/* Period History + Stage Migrations side-by-side audit panels */}
 ```
 
-- [ ] **Step 4: Typecheck**
+- [x] **Step 4: Typecheck**
 
 Run: `npx tsc --noEmit -p .`
 Expected: no errors mentioning `RiskECL.tsx`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/pages/RiskECL.tsx
