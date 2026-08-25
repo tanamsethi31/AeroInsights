@@ -53,7 +53,6 @@ import { useStressScenarios } from "../hooks/useStressScenarios";
 import { useScenarioRuns } from "../hooks/useScenarioRuns";
 import {
   ScenarioInputs,
-  BASE_ECL,
   LGD_DELTAS, // used in Insolvency Regime section (Task 5)
   ZERO_INPUTS,
   computeECL,

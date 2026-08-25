@@ -70,7 +70,6 @@ import { evaluateSICR } from "../utils/sicrEvaluator";
 import type { SICRMigrationRecommendation } from "../utils/sicrEvaluator";
 import { MOCK_SICR_DATA } from "../data/mockPortfolioData";
 import {
-  BASE_ECL,
   ZERO_INPUTS,
   computeECLFromBase,
   DEFAULT_ADVERSE_INPUTS,

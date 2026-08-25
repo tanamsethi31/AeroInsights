@@ -50,7 +50,6 @@ import { DEFAULT_RECOVERY_FACTOR } from "../data/lgdCurves";
 import { SCENARIO_CALIBRATION, computeLiveCalibration, type ScenarioCalibrationDivergence } from "../data/intelligenceData";
 import { useMacroSignals } from "../services/useMacroSignals";
 import {
-  BASE_ECL,
   ZERO_INPUTS,
   resolveBaseECL,
   type ScenarioInputs,

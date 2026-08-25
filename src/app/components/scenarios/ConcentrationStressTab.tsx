@@ -11,7 +11,7 @@ import {
 } from "../../data/concentrationPolicy";
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import { toDashboardKPIs } from "../../lib/portfolioAdapters";
-import { BASE_ECL, resolveBaseECL } from "../../utils/eclCalculator";
+import { resolveBaseECL } from "../../utils/eclCalculator";
 import { useRiskEngineECL } from "../../hooks/useRiskEngineECL";
 import { Card } from "../ui/Card";
 import { ScenarioKpiCard as KpiCard } from "../ui/KpiCard";
