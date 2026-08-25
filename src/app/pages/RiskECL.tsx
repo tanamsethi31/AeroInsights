@@ -59,6 +59,8 @@ import { computePortfolioJurisdictionMix } from "../utils/jurisdictionRisk";
 import { useJurisdictions } from "../hooks/useJurisdictions";
 import { usePortfolioData } from "../hooks/usePortfolioData";
 import { toEclTableRows, toDashboardKPIs, toPortfolioKPIs } from "../lib/portfolioAdapters";
+import { useRiskEngineECL } from "../hooks/useRiskEngineECL";
+import { RiskEngineStatusBanner } from "../components/ui/RiskEngineStatusBanner";
 import { useSdMr } from "../hooks/useSdMr";
 import { buildLiveSDMRData, sdmrData } from "../components/portfolio/SDMRTab";
 import { buildAdequacyMap, LEASE_CONTEXT } from "../components/portfolio/MaintenanceForecastTab";
@@ -73,6 +75,7 @@ import {
   computeECLFromBase,
   DEFAULT_ADVERSE_INPUTS,
   DEFAULT_UPSIDE_INPUTS,
+  resolveBaseECL,
   type ScenarioInputs,
 } from "../utils/eclCalculator";
 import { PillTabs } from "../components/ui/PillTabs";
@@ -397,10 +400,13 @@ export default function RiskECL() {
   const s1EAD  = s1Rows.reduce((s, r) => s + r.eadNum,       0);
   const s1Coverage = s1EAD > 0 ? (s1ECL / s1EAD) * 100 : 0;
 
-  // Compute live base ECL and coverage
+  // Compute live base ECL and coverage. RiskECL has no scope concept — it
+  // always shows the whole portfolio — so the engine result is used
+  // whenever it's available (real org, call succeeded).
+  const { ecl: engineECL, loading: engineLoading, error: engineError } = useRiskEngineECL();
   const liveBaseECL = (() => {
     const kpis = toDashboardKPIs(assets, lessees, provisions);
-    return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
+    return resolveBaseECL({ isUnscoped: true, engineECL, kpisTotalECLm: kpis.totalECLm });
   })();
 
   const totalEADm = provisions.reduce((s, p) => s + (p.ead ?? 0), 0) / 1_000_000;
@@ -2151,6 +2157,8 @@ export default function RiskECL() {
         <PeriodHistoryCard />
         <StageMigrationsCard />
       </div>
+
+      <RiskEngineStatusBanner loading={engineLoading} error={engineError} />
 
       {/* KPI Strip */}
       <div
