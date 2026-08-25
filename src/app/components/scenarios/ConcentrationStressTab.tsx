@@ -15,6 +15,7 @@ import { resolveBaseECL } from "../../utils/eclCalculator";
 import { useRiskEngineECL } from "../../hooks/useRiskEngineECL";
 import { Card } from "../ui/Card";
 import { ScenarioKpiCard as KpiCard } from "../ui/KpiCard";
+import { RiskEngineStatusBanner } from "../ui/RiskEngineStatusBanner";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ interface Props {
 
 export function ConcentrationStressTab({ onUseInCustomBuilder }: Props) {
   const { assets, lessees, provisions } = usePortfolioData();
-  const { ecl: engineECL } = useRiskEngineECL();
+  const { ecl: engineECL, loading: engineLoading, error: engineError } = useRiskEngineECL();
   const liveBaseECL = useMemo(() => {
     const kpis = toDashboardKPIs(assets, lessees, provisions);
     return resolveBaseECL({ isUnscoped: true, engineECL, kpisTotalECLm: kpis.totalECLm });
@@ -99,6 +100,8 @@ export function ConcentrationStressTab({ onUseInCustomBuilder }: Props) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+      <RiskEngineStatusBanner loading={engineLoading} error={engineError} />
 
       {/* ── KPI row ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
