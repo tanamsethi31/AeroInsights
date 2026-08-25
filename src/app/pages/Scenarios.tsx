@@ -59,8 +59,11 @@ import {
   computeECL,
   computeECLFromBase,
   computeStages,
+  resolveBaseECL,
 } from "../utils/eclCalculator";
 import { usePortfolioData } from "../hooks/usePortfolioData";
+import { useRiskEngineECL } from "../hooks/useRiskEngineECL";
+import { RiskEngineStatusBanner } from "../components/ui/RiskEngineStatusBanner";
 import { toDashboardKPIs } from "../lib/portfolioAdapters";
 import {
   type ScenarioScope,
@@ -236,15 +239,20 @@ export default function Scenarios() {
     [scope, assets, leases, provisions],
   );
 
+  // Scenarios can be scoped to a subset of the portfolio (ScenarioScope) —
+  // the engine only returns the org's whole portfolio, so it's only used
+  // when the view is unscoped.
+  const { ecl: engineECL, loading: engineLoading, error: engineError } = useRiskEngineECL();
+  const isUnscoped = scope === SCOPE_ALL;
   // liveBaseECL now reflects the SCOPED portfolio. Scaling logic in
   // computeECLFromBase will scale the macro deltas down accordingly so
   // a Brazil-only or A320-only run produces a smaller, focused ECL.
   const liveBaseECL = React.useMemo(
     () => {
       const kpis = toDashboardKPIs(scoped.assets, lessees, scoped.provisions);
-      return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
+      return resolveBaseECL({ isUnscoped, engineECL, kpisTotalECLm: kpis.totalECLm });
     },
-    [scoped, lessees]
+    [isUnscoped, engineECL, scoped, lessees]
   );
 
   // Derive live Stage 3 lessees from uploaded portfolio for scenario narrative
@@ -760,6 +768,7 @@ export default function Scenarios() {
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
           <ScopePicker scope={scope} onChange={setScope} assets={assets} lessees={lessees} />
         </div>
+        <RiskEngineStatusBanner loading={isUnscoped && engineLoading} error={isUnscoped ? engineError : null} />
         {visitedSubTabs.has("Library") && <LibraryTab
           weightedECL={weightedECL}
           effectiveTemplates={effectiveTemplates}
