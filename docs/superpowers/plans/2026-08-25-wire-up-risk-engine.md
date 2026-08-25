@@ -441,7 +441,7 @@ git commit -m "feat: wire RiskECL.tsx to the live risk engine"
 **Files:**
 - Modify: `src/app/pages/Scenarios.tsx`
 
-- [ ] **Step 1: Add imports**
+- [x] **Step 1: Add imports**
 
 Find (around line 63):
 
@@ -486,7 +486,7 @@ import {
 } from "../utils/eclCalculator";
 ```
 
-- [ ] **Step 2: Call the hook and replace the `liveBaseECL` definition**
+- [x] **Step 2: Call the hook and replace the `liveBaseECL` definition**
 
 Find (around line 242-248):
 
@@ -517,7 +517,7 @@ Replace with:
   );
 ```
 
-- [ ] **Step 3: Render the banner**
+- [x] **Step 3: Render the banner**
 
 Find (around line 721):
 
@@ -541,12 +541,12 @@ Replace with:
       {/* ── Tabs ── */}
 ```
 
-- [ ] **Step 4: Typecheck**
+- [x] **Step 4: Typecheck**
 
 Run: `npx tsc --noEmit -p .`
 Expected: no errors mentioning `Scenarios.tsx`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/pages/Scenarios.tsx
