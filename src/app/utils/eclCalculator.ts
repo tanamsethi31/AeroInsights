@@ -284,3 +284,22 @@ export const DEFAULT_UPSIDE_INPUTS: ScenarioInputs = {
   payBehaviourCoopPct: 0, payBehaviourAdvPct: 0,
   restructuringType: null,
 };
+
+// ─── Live-engine precedence ─────────────────────────────────────────────────
+//
+// The 4 call sites that need a "current portfolio baseline" (RiskECL,
+// Scenarios, CustomBuilderPage, ConcentrationStressTab) each used to
+// duplicate the same ternary: use the client-side toDashboardKPIs sum if
+// it's non-zero, otherwise BASE_ECL. This centralizes that rule and adds
+// one more tier ahead of it: the real risk-engine's computed total, when
+// the view isn't scoped down to a subset the engine can't represent
+// (see docs/superpowers/specs/2026-08-25-wire-up-risk-engine-design.md).
+export function resolveBaseECL(params: {
+  isUnscoped: boolean;
+  engineECL: number | null;
+  kpisTotalECLm: number;
+}): number {
+  const { isUnscoped, engineECL, kpisTotalECLm } = params;
+  if (isUnscoped && engineECL !== null) return engineECL;
+  return kpisTotalECLm > 0 ? kpisTotalECLm : BASE_ECL;
+}

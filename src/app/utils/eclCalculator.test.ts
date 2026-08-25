@@ -6,6 +6,7 @@ import {
   computeECL,
   computeECLFromBase,
   computeStages,
+  resolveBaseECL,
 } from "./eclCalculator";
 
 describe("computeECL (backward compat)", () => {
@@ -492,5 +493,31 @@ describe("vintage aircraft age LGD uplift (Sprint 22)", () => {
     // baseECL = 94.4, lgdDecayAdjFactor = 0.04 → 0.04 * 94.4 = 3.776
     const ecl = computeECLFromBase(94.4, { ...ZERO_INPUTS, lgdDecayAdjFactor: 0.04 });
     expect(ecl).toBeCloseTo(94.4 + 3.776, 3);
+  });
+});
+
+describe("resolveBaseECL", () => {
+  it("uses the engine value when unscoped and available", () => {
+    expect(resolveBaseECL({ isUnscoped: true, engineECL: 62.5, kpisTotalECLm: 10 })).toBe(62.5);
+  });
+
+  it("ignores the engine value when scoped, even if available", () => {
+    expect(resolveBaseECL({ isUnscoped: false, engineECL: 62.5, kpisTotalECLm: 10 })).toBe(10);
+  });
+
+  it("falls back to kpisTotalECLm when the engine value is null", () => {
+    expect(resolveBaseECL({ isUnscoped: true, engineECL: null, kpisTotalECLm: 10 })).toBe(10);
+  });
+
+  it("falls back to BASE_ECL when kpisTotalECLm is zero and no engine value", () => {
+    expect(resolveBaseECL({ isUnscoped: true, engineECL: null, kpisTotalECLm: 0 })).toBe(BASE_ECL);
+  });
+
+  it("falls back to BASE_ECL when scoped and kpisTotalECLm is zero", () => {
+    expect(resolveBaseECL({ isUnscoped: false, engineECL: 62.5, kpisTotalECLm: 0 })).toBe(BASE_ECL);
+  });
+
+  it("uses the engine value when it is exactly zero (a healthy portfolio)", () => {
+    expect(resolveBaseECL({ isUnscoped: true, engineECL: 0, kpisTotalECLm: 10 })).toBe(0);
   });
 });
