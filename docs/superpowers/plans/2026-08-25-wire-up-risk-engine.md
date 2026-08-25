@@ -670,7 +670,7 @@ git commit -m "feat: wire CustomBuilderPage.tsx to the live risk engine"
 
 This is a sub-tab rendered inside Scenarios.tsx / CustomBuilderPage.tsx, not a standalone page — no `PageHeader`, no banner needed here (the parent page's banner already covers it). It has no scope concept, so it's always unscoped.
 
-- [ ] **Step 1: Add imports**
+- [x] **Step 1: Add imports**
 
 Find (around line 12-14):
 
@@ -689,7 +689,7 @@ import { BASE_ECL, resolveBaseECL } from "../../utils/eclCalculator";
 import { useRiskEngineECL } from "../../hooks/useRiskEngineECL";
 ```
 
-- [ ] **Step 2: Call the hook and replace the `liveBaseECL` definition**
+- [x] **Step 2: Call the hook and replace the `liveBaseECL` definition**
 
 Find (around line 55-58):
 
@@ -710,12 +710,12 @@ Replace with:
   }, [engineECL, assets, lessees, provisions]);
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `npx tsc --noEmit -p .`
 Expected: no errors mentioning `ConcentrationStressTab.tsx`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/app/components/scenarios/ConcentrationStressTab.tsx
