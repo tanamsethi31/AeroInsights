@@ -43,28 +43,43 @@ export function parseRiskEngineResponse(
 // in-flight request instead of both firing a POST. This is a new pattern in
 // this codebase, not one borrowed from an existing hook. Not persisted
 // anywhere — a hard page reload starts fresh, which is what "once per
-// session" means here. Only successes are cached (see below): a failure is
-// left out so the next mount gets a fresh attempt instead of replaying a
-// stale error for the rest of the session.
-const cache = new Map<string, RiskEngineECL | Promise<RiskEngineECL>>();
+// session" means here. Only successes are cached: a failure is left out so
+// the next mount gets a fresh attempt instead of replaying a stale error
+// for the rest of the session.
+//
+// In-flight requests are tracked separately (`pending`), reference-counted
+// by how many mounted consumers are waiting on them, and aborted only when
+// the last one leaves — an abandoned fetch would otherwise keep a live
+// Supabase read + NumPy ECL computation running server-side for nobody.
+interface PendingEntry {
+  promise: Promise<RiskEngineECL>;
+  controller: AbortController;
+  refCount: number;
+}
 
-async function fetchRiskEngineECL(orgId: string): Promise<RiskEngineECL> {
-  try {
-    const res = await fetch("/api/risk-engine/compute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Org-Id": orgId },
-      body: JSON.stringify({ org_id: orgId, persist: false }),
-    });
-    const body = await res.json().catch(() => null);
-    const parsed = parseRiskEngineResponse(res.status, body);
-    return { ecl: parsed.ecl, loading: false, error: parsed.error };
-  } catch (err) {
-    return {
-      ecl: null,
-      loading: false,
-      error: err instanceof Error ? err.message : "Network error",
-    };
-  }
+const cache = new Map<string, RiskEngineECL>();
+const pending = new Map<string, PendingEntry>();
+
+function fetchRiskEngineECL(orgId: string, signal: AbortSignal): Promise<RiskEngineECL> {
+  return (async () => {
+    try {
+      const res = await fetch("/api/risk-engine/compute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Org-Id": orgId },
+        body: JSON.stringify({ org_id: orgId, persist: false }),
+        signal,
+      });
+      const body = await res.json().catch(() => null);
+      const parsed = parseRiskEngineResponse(res.status, body);
+      return { ecl: parsed.ecl, loading: false, error: parsed.error };
+    } catch (err) {
+      return {
+        ecl: null,
+        loading: false,
+        error: err instanceof Error ? err.message : "Network error",
+      };
+    }
+  })();
 }
 
 export function useRiskEngineECL(): RiskEngineECL {
@@ -78,37 +93,44 @@ export function useRiskEngineECL(): RiskEngineECL {
     }
 
     const cached = cache.get(orgId);
-    if (cached && !(cached instanceof Promise)) {
+    if (cached) {
       setResult(cached);
       return;
     }
 
-    let cancelled = false;
+    let entry = pending.get(orgId);
+    if (!entry) {
+      const controller = new AbortController();
+      const promise = fetchRiskEngineECL(orgId, controller.signal);
+      entry = { promise, controller, refCount: 0 };
+      pending.set(orgId, entry);
+    }
+    const activeEntry = entry;
+    activeEntry.refCount++;
     setResult({ ecl: null, loading: true, error: null });
 
-    // Reuse an in-flight request from a concurrently-mounted caller if one
-    // exists; otherwise start one and publish it to the cache immediately
-    // (synchronously, before awaiting) so any sibling mounting in the same
-    // commit finds it instead of firing its own POST.
-    const inFlight = cached instanceof Promise ? cached : fetchRiskEngineECL(orgId);
-    if (!(cached instanceof Promise)) {
-      cache.set(orgId, inFlight);
-    }
-
-    inFlight.then((next) => {
-      if (next.error === null) {
-        cache.set(orgId, next);
-      } else if (cache.get(orgId) === inFlight) {
-        // Don't memoize a failure — leave the cache empty so the next
-        // mount (e.g. next page navigation) retries instead of replaying
-        // a transient error for the rest of the session.
-        cache.delete(orgId);
+    let cancelled = false;
+    activeEntry.promise.then((next) => {
+      // Only the entry that's still current for this orgId gets to
+      // record the outcome — a superseded/aborted attempt must not
+      // clobber a newer one.
+      if (pending.get(orgId) === activeEntry) {
+        pending.delete(orgId);
+        if (next.error === null) cache.set(orgId, next);
       }
       if (!cancelled) setResult(next);
     });
 
     return () => {
       cancelled = true;
+      activeEntry.refCount--;
+      // Last interested consumer leaving before the request settles:
+      // cancel it so the backend (a Supabase read + NumPy ECL
+      // computation) doesn't keep running for nobody.
+      if (activeEntry.refCount === 0 && pending.get(orgId) === activeEntry) {
+        activeEntry.controller.abort();
+        pending.delete(orgId);
+      }
     };
   }, [orgId, hasUpload]);
 
