@@ -36,11 +36,36 @@ export function parseRiskEngineResponse(
   return { ecl: null, error: message };
 }
 
-// Module-level so a result survives remounts within the same SPA session
-// (e.g. navigating Risk & ECL → Scenarios → back) without refetching. Not
-// persisted anywhere — a hard page reload starts fresh, which is what
-// "once per session" means here.
-const cache = new Map<string, RiskEngineECL>();
+// Module-level (not React state) so a result survives remounts within the
+// same SPA session (e.g. navigating Risk & ECL → Scenarios → back) without
+// refetching, and so two components mounting in the same commit (e.g.
+// Scenarios.tsx and its child ConcentrationStressTab) converge on a single
+// in-flight request instead of both firing a POST. This is a new pattern in
+// this codebase, not one borrowed from an existing hook. Not persisted
+// anywhere — a hard page reload starts fresh, which is what "once per
+// session" means here. Only successes are cached (see below): a failure is
+// left out so the next mount gets a fresh attempt instead of replaying a
+// stale error for the rest of the session.
+const cache = new Map<string, RiskEngineECL | Promise<RiskEngineECL>>();
+
+async function fetchRiskEngineECL(orgId: string): Promise<RiskEngineECL> {
+  try {
+    const res = await fetch("/api/risk-engine/compute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Org-Id": orgId },
+      body: JSON.stringify({ org_id: orgId, persist: false }),
+    });
+    const body = await res.json().catch(() => null);
+    const parsed = parseRiskEngineResponse(res.status, body);
+    return { ecl: parsed.ecl, loading: false, error: parsed.error };
+  } catch (err) {
+    return {
+      ecl: null,
+      loading: false,
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}
 
 export function useRiskEngineECL(): RiskEngineECL {
   const { orgId, hasUpload } = useData();
@@ -51,42 +76,40 @@ export function useRiskEngineECL(): RiskEngineECL {
       setResult(IDLE);
       return;
     }
+
     const cached = cache.get(orgId);
-    if (cached) {
+    if (cached && !(cached instanceof Promise)) {
       setResult(cached);
       return;
     }
 
-    const ctrl = new AbortController();
+    let cancelled = false;
     setResult({ ecl: null, loading: true, error: null });
 
-    (async () => {
-      try {
-        const res = await fetch("/api/risk-engine/compute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Org-Id": orgId },
-          body: JSON.stringify({ org_id: orgId, persist: false }),
-          signal: ctrl.signal,
-        });
-        const body = await res.json().catch(() => null);
-        if (ctrl.signal.aborted) return;
-        const parsed = parseRiskEngineResponse(res.status, body);
-        const next: RiskEngineECL = { ecl: parsed.ecl, loading: false, error: parsed.error };
-        cache.set(orgId, next);
-        setResult(next);
-      } catch (err) {
-        if (ctrl.signal.aborted) return;
-        const next: RiskEngineECL = {
-          ecl: null,
-          loading: false,
-          error: err instanceof Error ? err.message : "Network error",
-        };
-        cache.set(orgId, next);
-        setResult(next);
-      }
-    })();
+    // Reuse an in-flight request from a concurrently-mounted caller if one
+    // exists; otherwise start one and publish it to the cache immediately
+    // (synchronously, before awaiting) so any sibling mounting in the same
+    // commit finds it instead of firing its own POST.
+    const inFlight = cached instanceof Promise ? cached : fetchRiskEngineECL(orgId);
+    if (!(cached instanceof Promise)) {
+      cache.set(orgId, inFlight);
+    }
 
-    return () => ctrl.abort();
+    inFlight.then((next) => {
+      if (next.error === null) {
+        cache.set(orgId, next);
+      } else if (cache.get(orgId) === inFlight) {
+        // Don't memoize a failure — leave the cache empty so the next
+        // mount (e.g. next page navigation) retries instead of replaying
+        // a transient error for the rest of the session.
+        cache.delete(orgId);
+      }
+      if (!cancelled) setResult(next);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [orgId, hasUpload]);
 
   return result;
