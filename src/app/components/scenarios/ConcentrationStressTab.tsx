@@ -11,7 +11,8 @@ import {
 } from "../../data/concentrationPolicy";
 import { usePortfolioData } from "../../hooks/usePortfolioData";
 import { toDashboardKPIs } from "../../lib/portfolioAdapters";
-import { BASE_ECL } from "../../utils/eclCalculator";
+import { BASE_ECL, resolveBaseECL } from "../../utils/eclCalculator";
+import { useRiskEngineECL } from "../../hooks/useRiskEngineECL";
 import { Card } from "../ui/Card";
 import { ScenarioKpiCard as KpiCard } from "../ui/KpiCard";
 
@@ -52,10 +53,11 @@ interface Props {
 
 export function ConcentrationStressTab({ onUseInCustomBuilder }: Props) {
   const { assets, lessees, provisions } = usePortfolioData();
+  const { ecl: engineECL } = useRiskEngineECL();
   const liveBaseECL = useMemo(() => {
     const kpis = toDashboardKPIs(assets, lessees, provisions);
-    return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
-  }, [assets, lessees, provisions]);
+    return resolveBaseECL({ isUnscoped: true, engineECL, kpisTotalECLm: kpis.totalECLm });
+  }, [engineECL, assets, lessees, provisions]);
 
   const enabledRules = DEFAULT_POLICY_RULES.filter((r) => r.enabled);
 
