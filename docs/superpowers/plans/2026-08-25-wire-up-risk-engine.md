@@ -728,7 +728,7 @@ git commit -m "feat: wire ConcentrationStressTab.tsx to the live risk engine"
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Run the full test suite**
+- [x] **Step 1: Run the full test suite**
 
 Run: `npm run check`
 Expected: PASS — typecheck, lint, and all vitest suites green (including the new `resolveBaseECL` and `parseRiskEngineResponse` tests, and unchanged `eclCalculator.test.ts`/other existing tests since `computeECLFromBase` itself was never touched)
