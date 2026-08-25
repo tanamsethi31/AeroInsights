@@ -32,6 +32,8 @@ import { useJurisdictions } from "../hooks/useJurisdictions";
 import { useScenarioRuns } from "../hooks/useScenarioRuns";
 import { useStressScenarios } from "../hooks/useStressScenarios";
 import { usePortfolioData } from "../hooks/usePortfolioData";
+import { useRiskEngineECL } from "../hooks/useRiskEngineECL";
+import { RiskEngineStatusBanner } from "../components/ui/RiskEngineStatusBanner";
 import { toDashboardKPIs } from "../lib/portfolioAdapters";
 import {
   type ScenarioScope,
@@ -50,6 +52,7 @@ import { useMacroSignals } from "../services/useMacroSignals";
 import {
   BASE_ECL,
   ZERO_INPUTS,
+  resolveBaseECL,
   type ScenarioInputs,
 } from "../utils/eclCalculator";
 import { runScenario as runScenarioEngine } from "../services/scenarioEngine";
@@ -111,10 +114,14 @@ export default function CustomBuilderPage(): React.JSX.Element {
   );
 
   // ── Derived portfolio metrics — scoped subset, not whole portfolio ──
+  // Same scoping rule as Scenarios.tsx: the engine only returns the org's
+  // whole portfolio, so it's only used when scope is SCOPE_ALL.
+  const { ecl: engineECL, loading: engineLoading, error: engineError } = useRiskEngineECL();
+  const isUnscoped = scope === SCOPE_ALL;
   const liveBaseECL = useMemo(() => {
     const kpis = toDashboardKPIs(scoped.assets, lessees, scoped.provisions);
-    return kpis.totalECLm > 0 ? kpis.totalECLm : BASE_ECL;
-  }, [scoped, lessees]);
+    return resolveBaseECL({ isUnscoped, engineECL, kpisTotalECLm: kpis.totalECLm });
+  }, [isUnscoped, engineECL, scoped, lessees]);
 
   const { raw: liveMacroRaw } = useMacroSignals();
   const calibration = useMemo<ScenarioCalibrationDivergence[]>(
@@ -358,6 +365,8 @@ export default function CustomBuilderPage(): React.JSX.Element {
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
         <ScopePicker scope={scope} onChange={setScope} assets={assets} lessees={lessees} />
       </div>
+
+      <RiskEngineStatusBanner loading={isUnscoped && engineLoading} error={isUnscoped ? engineError : null} />
 
       <CustomBuilderTab
         prefillSource={prefillSource}
