@@ -100,7 +100,7 @@ git commit -m "feat: add resolveBaseECL precedence rule for the live risk engine
 
 The hook itself is not unit-tested (this codebase has no `renderHook`/`@testing-library/react` convention — every existing hook test, e.g. `useMrEvidenceUpload.test.ts`, tests only the pure helper function(s) a hook exports, not the hook via a render harness). `parseRiskEngineResponse` is the pure, testable piece.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `src/app/hooks/useRiskEngineECL.test.ts`:
 
@@ -137,12 +137,12 @@ describe("parseRiskEngineResponse", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/app/hooks/useRiskEngineECL.test.ts`
 Expected: FAIL — `./useRiskEngineECL` doesn't exist yet
 
-- [ ] **Step 3: Implement the hook**
+- [x] **Step 3: Implement the hook**
 
 Create `src/app/hooks/useRiskEngineECL.ts`:
 
@@ -242,12 +242,12 @@ export function useRiskEngineECL(): RiskEngineECL {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run src/app/hooks/useRiskEngineECL.test.ts`
 Expected: PASS (5 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/hooks/useRiskEngineECL.ts src/app/hooks/useRiskEngineECL.test.ts
