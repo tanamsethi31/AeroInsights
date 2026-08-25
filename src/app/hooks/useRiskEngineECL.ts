@@ -27,7 +27,10 @@ export function parseRiskEngineResponse(
     typeof body === "object" &&
     typeof (body as { total_ecl?: unknown }).total_ecl === "number"
   ) {
-    return { ecl: (body as { total_ecl: number }).total_ecl, error: null };
+    // Engine returns total_ecl in raw USD (see api/risk-engine/engine.py);
+    // convert to $M here so it matches BASE_ECL / kpisTotalECLm units.
+    // Do not turn this back into a straight passthrough.
+    return { ecl: (body as { total_ecl: number }).total_ecl / 1_000_000, error: null };
   }
   const message =
     body !== null && typeof body === "object" && typeof (body as { error?: unknown }).error === "string"
