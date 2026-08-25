@@ -4,8 +4,7 @@
 // priority order:
 //
 //   1. CEREBRAS_API_KEY      — Cerebras Cloud direct (OpenAI-compatible).
-//                              Llama 3.3 70B on dedicated silicon. Free
-//                              tier: 64K TPM / 60 RPM / 1M TPD — about
+//                              Free tier: 64K TPM / 60 RPM / 1M TPD — about
 //                              13× Groq's TPM headroom, large enough for
 //                              the agent's tool-heavy 4-5K-token-per-call
 //                              shape. Production path as of 2026-06.
@@ -13,6 +12,13 @@
 //   2. GROQ_API_KEY          — Groq direct. Free tier 30 RPM but only
 //                              5K TPM — kept as safety-net fallback in
 //                              case Cerebras ever errors.
+//
+//   Model note (2026-08): Groq deprecated llama-3.3-70b-versatile on
+//   2026-06-17 (free/developer tier); Cerebras's dedicated-silicon
+//   catalog never carried it either. Both now point at openai/gpt-oss-120b
+//   (Groq's namespaced ID) / gpt-oss-120b (Cerebras's bare ID) instead —
+//   verify against each provider's current model list before changing
+//   these again, they don't share a naming convention.
 //
 //   3. GEMINI_API_KEY        — Google AI Studio direct. Gated by project-
 //                              level billing config; left wired but rarely
@@ -27,10 +33,10 @@
 // URL + auth header + injected model name.
 
 const CEREBRAS_URL   = "https://api.cerebras.ai/v1/chat/completions";
-const CEREBRAS_MODEL = "llama-3.3-70b";
+const CEREBRAS_MODEL = "gpt-oss-120b";
 
 const GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL    = "llama-3.3-70b-versatile";
+const GROQ_MODEL    = "openai/gpt-oss-120b";
 
 const GEMINI_URL    = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const GEMINI_MODEL  = "gemini-2.0-flash";
