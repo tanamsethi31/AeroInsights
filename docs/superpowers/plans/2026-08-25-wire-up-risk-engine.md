@@ -18,7 +18,7 @@ Spec: `docs/superpowers/specs/2026-08-25-wire-up-risk-engine-design.md`
 - Modify: `src/app/utils/eclCalculator.ts` (add function, end of file)
 - Modify: `src/app/utils/eclCalculator.test.ts` (add tests, end of file)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `src/app/utils/eclCalculator.test.ts`:
 
@@ -48,12 +48,12 @@ describe("resolveBaseECL", () => {
 
 Add `resolveBaseECL` to the existing `import { ... } from "./eclCalculator"` block at the top of the same test file (it currently imports `BASE_ECL, LGD_DELTAS, ZERO_INPUTS, computeECL, computeECLFromBase, computeStages` — add `resolveBaseECL` to that list).
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/app/utils/eclCalculator.test.ts -t resolveBaseECL`
 Expected: FAIL with "resolveBaseECL is not a function" (or similar — it doesn't exist yet)
 
-- [ ] **Step 3: Implement `resolveBaseECL`**
+- [x] **Step 3: Implement `resolveBaseECL`**
 
 Append to `src/app/utils/eclCalculator.ts` (after the existing exports, end of file):
 
@@ -78,12 +78,12 @@ export function resolveBaseECL(params: {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run src/app/utils/eclCalculator.test.ts -t resolveBaseECL`
 Expected: PASS (5 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/utils/eclCalculator.ts src/app/utils/eclCalculator.test.ts
