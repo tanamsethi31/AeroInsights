@@ -263,7 +263,7 @@ git commit -m "feat: add useRiskEngineECL hook"
 
 No test — this is a trivial presentational component with no logic branches worth unit-testing (matches the convention already followed by sibling components like `KpiCard`/`StatusPill`, which also have no test files).
 
-- [ ] **Step 1: Implement the component**
+- [x] **Step 1: Implement the component**
 
 Create `src/app/components/ui/RiskEngineStatusBanner.tsx`:
 
@@ -307,12 +307,12 @@ export function RiskEngineStatusBanner({ loading, error }: Props) {
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `npx tsc --noEmit -p .`
 Expected: no errors mentioning `RiskEngineStatusBanner.tsx`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/components/ui/RiskEngineStatusBanner.tsx
