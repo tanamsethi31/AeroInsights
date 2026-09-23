@@ -164,3 +164,38 @@ body {
   color: #0a1a33;
   border-color: rgba(111,166,255,0.55);
 }
+
+/* Hero CTA pill — light glass surface on the landing hero; fills navy on hover */
+.hero-auth-pill-btn {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition:
+    color 0.45s ease,
+    border-color 0.45s ease,
+    box-shadow 0.35s ease;
+}
+.hero-auth-pill-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(105deg, #002147 0%, #0d3a6e 52%, #1a4f8a 100%);
+  transition: width 0.55s ease;
+  z-index: -1;
+}
+.hero-auth-pill-btn:hover::before {
+  width: 100%;
+}
+.hero-auth-pill-btn:hover {
+  color: #fff;
+  border-color: rgba(0, 33, 71, 0.35);
+}
+.hero-auth-pill-btn:hover .hero-auth-pill-divider {
+  background-color: rgba(255, 255, 255, 0.35);
+}
+.hero-auth-pill-btn:hover .hero-auth-pill-icon {
+  background-color: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}

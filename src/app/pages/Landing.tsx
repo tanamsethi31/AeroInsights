@@ -763,6 +763,54 @@ const heroItemVariants = {
   },
 } as const;
 
+const HERO_AUTH_PILL_CLASS = cn(
+  "hero-auth-pill-btn group inline-flex h-12 shrink-0 items-center gap-2.5 rounded-full",
+  "border border-[#002147]/14 bg-white/85 px-2 pl-2.5 pr-5 text-sm font-semibold text-[#002147]",
+  "shadow-lg shadow-[#002147]/10 ring-1 ring-white/70 backdrop-blur-md",
+  "transition hover:shadow-xl hover:shadow-[#002147]/18"
+);
+
+function HeroAuthPill({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const label = (
+    <>
+      <span
+        className="hero-auth-pill-icon flex size-8 items-center justify-center rounded-full bg-[#002147]/8 text-[#002147] transition-colors duration-300"
+      >
+        <i className="bi bi-box-arrow-in-right text-sm" />
+      </span>
+      <span className="flex items-center gap-2.5">
+        <span>Sign In</span>
+        <span
+          className="hero-auth-pill-divider h-3.5 w-px shrink-0 bg-[#002147]/20 transition-colors duration-300"
+          aria-hidden
+        />
+        <span className="text-[#002147]/88 transition-colors duration-300 group-hover:text-white">
+          Dashboard
+        </span>
+      </span>
+    </>
+  );
+
+  if (isAuthenticated) {
+    return (
+      <a
+        href="/portfolios"
+        target="_blank"
+        rel="noopener noreferrer"
+        className={HERO_AUTH_PILL_CLASS}
+      >
+        {label}
+      </a>
+    );
+  }
+
+  return (
+    <Link to="/login" className={HERO_AUTH_PILL_CLASS}>
+      {label}
+    </Link>
+  );
+}
+
 function Hero() {
   const { isAuthenticated } = useAuth0();
   // Hero video modal state. Click the play button overlaid on the dashboard
@@ -866,7 +914,7 @@ function Hero() {
         {/* CTAs — separate group with its own faster cadence so they tail
             the headline reveal rather than block on it. */}
         <AnimatedGroup
-          className="flex flex-wrap items-center justify-center gap-2"
+          className="flex flex-wrap items-center justify-center gap-3"
           variants={{
             container: {
               hidden: { opacity: 0 },
@@ -878,37 +926,19 @@ function Hero() {
             item: heroItemVariants,
           }}
         >
-          {/* Inner-bordered primary, à la tailark */}
-          <div className="rounded-[14px] border border-[#002147]/15 bg-[#002147]/8 p-0.5">
+          {/* Pill CTAs — primary ring + glass auth pill */}
+          <div className="rounded-full border border-[#002147]/15 bg-[#002147]/8 p-0.5 shadow-sm shadow-[#002147]/8">
             <a
               href={DEMO_LINK}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl bg-[#002147] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#002147]/25 transition hover:bg-[#001a38]"
+              className="flex h-12 items-center gap-2 rounded-full bg-[#002147] px-6 text-sm font-semibold text-white shadow-lg shadow-[#002147]/25 transition hover:bg-[#001a38]"
             >
               <i className="bi bi-calendar-event text-sm" />
               Book a Demo
             </a>
           </div>
-          {isAuthenticated ? (
-            <a
-              href="/portfolios"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
-            >
-              <i className="bi bi-box-arrow-in-right text-[#002147]/55" />
-              Sign In | Dashboard
-            </a>
-          ) : (
-            <Link
-              to="/login"
-              className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
-            >
-              <i className="bi bi-box-arrow-in-right text-[#002147]/55" />
-              Sign In | Dashboard
-            </Link>
-          )}
+          <HeroAuthPill isAuthenticated={isAuthenticated} />
         </AnimatedGroup>
 
         {/* Mockup card: outer ring + inner shadow + top-fade gradient (so the
