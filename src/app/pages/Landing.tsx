@@ -764,6 +764,7 @@ const heroItemVariants = {
 } as const;
 
 function Hero() {
+  const { isAuthenticated } = useAuth0();
   // Hero video modal state. Click the play button overlaid on the dashboard
   // mockup to open; Escape, backdrop click, or the close button to dismiss.
   // Body scroll is locked while the modal is open so the page underneath
@@ -889,17 +890,25 @@ function Hero() {
               Book a Demo
             </a>
           </div>
-          <a
-            href="#platform"
-            onClick={(e) => {
-              e.preventDefault();
-              document.querySelector("#platform")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
-          >
-            <i className="bi bi-play-circle text-[#002147]/55" />
-            See How It Works
-          </a>
+          {isAuthenticated ? (
+            <a
+              href="/portfolios"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+            >
+              <i className="bi bi-box-arrow-in-right text-[#002147]/55" />
+              Sign In | Dashboard
+            </a>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-[#002147] transition hover:bg-[#002147]/5"
+            >
+              <i className="bi bi-box-arrow-in-right text-[#002147]/55" />
+              Sign In | Dashboard
+            </Link>
+          )}
         </AnimatedGroup>
 
         {/* Mockup card: outer ring + inner shadow + top-fade gradient (so the
