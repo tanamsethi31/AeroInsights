@@ -33,3 +33,8 @@ See the [README](README.md#project-structure) for the high-level map. Design his
 ## Security
 
 See [SECURITY.md](SECURITY.md) for how to report vulnerabilities privately.
+
+## GitHub branding
+
+- **README logo:** `public/logo.png` (same asset as the app navbar).
+- **Social preview card:** upload [`.github/social-preview.png`](.github/social-preview.png) under **Settings → General → Social preview** (1280×640).

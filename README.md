@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/logo.svg" alt="Aeroinsights" width="88" />
+<img src="public/logo.png" alt="Aeroinsights logo" width="120" />
 
 # Aeroinsights
 
