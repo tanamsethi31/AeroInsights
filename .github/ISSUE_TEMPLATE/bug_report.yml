@@ -1,0 +1,75 @@
+name: Bug report
+description: Report incorrect behavior, crashes, or data issues
+title: "[Bug]: "
+labels:
+  - type: bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve **Aeroinsights**. Include steps we can follow to reproduce the issue.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Portfolio & uploads
+        - ECL / IFRS 9 risk
+        - Maintenance reserves
+        - Scenarios & stress
+        - Bank reconciliation
+        - Reports & exports
+        - Deals / NPV
+        - Alerts & watchlist
+        - Excel add-in
+        - Auth / org access
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical — production or data integrity
+        - High — major workflow blocked
+        - Medium — workaround exists
+        - Low — cosmetic or minor
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect vs what you saw?
+      placeholder: Expected ECL stage to migrate to Stage 2 after SICR trigger…
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as …
+        2. Open Portfolio → …
+        3. Click …
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: e.g. aeroinsights.vercel.app, Chrome 124, org ID if relevant
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for duplicates
+          required: true

@@ -1,0 +1,61 @@
+name: Feature request
+description: Propose a new capability or improvement
+title: "[Feature]: "
+labels:
+  - type: enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the **lessor workflow** this would support. Link specs under `docs/superpowers/` if you already have one.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Portfolio & uploads
+        - ECL / IFRS 9 risk
+        - Maintenance reserves
+        - Scenarios & stress
+        - Bank reconciliation
+        - Reports & exports
+        - Deals / NPV
+        - Alerts & watchlist
+        - Excel add-in
+        - AI / extraction
+        - Platform / infra
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pain point does this solve for risk, portfolio, or finance teams?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should it work in the product?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: Spreadsheets, manual export, third-party tool, etc.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested priority
+      options:
+        - priority: critical
+        - priority: high
+        - priority: medium
+        - priority: low

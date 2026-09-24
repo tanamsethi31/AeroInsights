@@ -1,0 +1,99 @@
+# Synced to GitHub via .github/workflows/sync-labels.yml
+# Domain labels for Aeroinsights — aviation lessor risk & portfolio platform.
+
+# —— Type ——
+- name: "type: bug"
+  color: d73a4a
+  description: Something is broken or incorrect in production or dev
+- name: "type: enhancement"
+  color: a2eeef
+  description: New capability or meaningful improvement to existing behavior
+- name: "type: documentation"
+  color: 0075ca
+  description: README, specs, runbooks, or in-app copy only
+- name: "type: chore"
+  color: cfd3d7
+  description: Tooling, deps, CI, refactors with no user-visible change
+- name: "type: security"
+  color: b60205
+  description: Vulnerability, authz, or data-isolation concern
+- name: "type: compliance"
+  color: 5319e7
+  description: IFRS 9, audit trail, reporting, or regulatory alignment
+
+# —— Product areas ——
+- name: "area: portfolio"
+  color: 1d76db
+  description: Portfolio grid, uploads, lease terms, asset register
+- name: "area: ecl-risk"
+  color: 006b75
+  description: IFRS 9 ECL engine, stages, SICR, PD/LGD, snapshots
+- name: "area: maintenance"
+  color: e99695
+  description: MR tracking, MRO invoices, component costs, forecasts
+- name: "area: scenarios"
+  color: fbca04
+  description: Stress tests, what-if overrides, scenario runs
+- name: "area: reconciliation"
+  color: bfdadc
+  description: Bank statements, cash events, matching queue
+- name: "area: reports"
+  color: c5def5
+  description: Exports, schedules, board pack, PDF/Excel output
+- name: "area: deals"
+  color: d4c5f9
+  description: NPV, IRR, ABS waterfall, deal structuring
+- name: "area: intelligence"
+  color: 84b6eb
+  description: Watchlist, alerts, news signals, jurisdiction rates
+- name: "area: excel-addin"
+  color: 2ea043
+  description: Excel add-in and spreadsheet integrations
+- name: "area: ai"
+  color: 7057ff
+  description: Invoice extraction, narratives, AI gateway routing
+
+# —— Stack ——
+- name: "stack: frontend"
+  color: 149eca
+  description: React, Vite, UI components, client-side logic
+- name: "stack: api"
+  color: 333333
+  description: Vercel serverless routes under api/
+- name: "stack: database"
+  color: 3ecf8e
+  description: Supabase Postgres, migrations, RLS, storage
+- name: "stack: auth"
+  color: eb5424
+  description: Auth0, sessions, org membership
+- name: "stack: infra"
+  color: 6f42c1
+  description: CI/CD, Vercel, observability, cron jobs
+
+# —— Priority ——
+- name: "priority: critical"
+  color: b60205
+  description: Production down, data loss, or blocker for release
+- name: "priority: high"
+  color: d93f0b
+  description: Important for current sprint or demo
+- name: "priority: medium"
+  color: fbca04
+  description: Should be addressed soon
+- name: "priority: low"
+  color: 0e8a16
+  description: Nice to have or backlog
+
+# —— Workflow ——
+- name: "status: blocked"
+  color: 000000
+  description: Waiting on external input, design, or dependency
+- name: "status: needs-design"
+  color: fef2c0
+  description: Spec or UX decision required before implementation
+- name: good first issue
+  color: 7057ff
+  description: Well-scoped entry point for new contributors
+- name: help wanted
+  color: 008672
+  description: Maintainer would appreciate community help

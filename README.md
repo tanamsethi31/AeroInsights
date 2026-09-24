@@ -12,6 +12,8 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Storage-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![Vercel](https://img.shields.io/badge/Vercel-Serverless-000000?logo=vercel&logoColor=white)](https://vercel.com)
 [![Auth0](https://img.shields.io/badge/Auth0-Identity-EB5424?logo=auth0&logoColor=white)](https://auth0.com)
+[![CI](https://github.com/tanamsethi31/AeroInsights/actions/workflows/ci.yml/badge.svg)](https://github.com/tanamsethi31/AeroInsights/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/demo-aeroinsights.vercel.app-000000)](https://aeroinsights.vercel.app)
 
 <br />
 
@@ -121,8 +123,19 @@ api/
 └── _lib/                  # Shared server utilities (auth, AI gateway, Sentry)
 ```
 
+## Contributing & security
+
+- [Contributing guide](CONTRIBUTING.md) — issue templates, labels, and `npm run check` before PRs  
+- [Security policy](SECURITY.md) — report vulnerabilities privately via GitHub Security Advisories  
+
 ---
 
 <div align="center">
-<sub>Private repository — Aeroinsights is an aviation lessor decision platform built by Tanam Sethi.</sub>
+
+**[Open the live app →](https://aeroinsights.vercel.app)** · **[Report a bug](https://github.com/tanamsethi31/AeroInsights/issues/new?template=bug_report.yml)** · **[Request a feature](https://github.com/tanamsethi31/AeroInsights/issues/new?template=feature_request.yml)**
+
+<br />
+
+<sub>Aeroinsights — aviation lessor decision platform · built by Tanam Sethi</sub>
+
 </div>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Live demo (Vercel)
+    url: https://aeroinsights.vercel.app
+    about: Try the hosted Aeroinsights app
+  - name: Security concern
+    url: https://github.com/tanamsethi31/AeroInsights/security/policy
+    about: Report a vulnerability privately via GitHub Security
