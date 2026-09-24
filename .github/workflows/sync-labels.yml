@@ -1,0 +1,25 @@
+name: Sync GitHub labels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/labels.yml
+      - .github/workflows/sync-labels.yml
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply label definitions
+        uses: micnncim/action-label-syncer@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .github/labels.yml
+          delete-labels: false
